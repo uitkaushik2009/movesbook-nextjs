@@ -63,11 +63,7 @@ async function main() {
       data: [
         {
           userId: athlete.id,
-<<<<<<< HEAD
           colorSettings: JSON.stringify({
-=======
-          colorSettings: {
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
             pageBackground: '#ffffff',
             dayHeader: '#f3f4f6',
             moveframeHeader: '#e5e7eb',
@@ -79,20 +75,11 @@ async function main() {
             buttonDelete: '#ef4444',
             buttonPrint: '#6b7280',
             alternateRow: '#f8fafc'
-<<<<<<< HEAD
           })
         },
         {
           userId: coach.id,
           colorSettings: JSON.stringify({
-=======
-          },
-          mainSports: JSON.stringify(['SWIM', 'RUN', 'BIKE'])
-        },
-        {
-          userId: coach.id,
-          colorSettings: {
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
             pageBackground: '#ffffff',
             dayHeader: '#f3f4f6',
             moveframeHeader: '#e5e7eb',
@@ -104,12 +91,7 @@ async function main() {
             buttonDelete: '#ef4444',
             buttonPrint: '#6b7280',
             alternateRow: '#f8fafc'
-<<<<<<< HEAD
           })
-=======
-          },
-          mainSports: JSON.stringify(['SWIM', 'RUN', 'BIKE'])
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
         }
       ]
     });

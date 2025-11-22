@@ -123,23 +123,23 @@ const shoppingItems = [
 
 // Icons for features
 const FeatureIcons = {
-  Calendar: () => (
-    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  Calendar: ({ className }: { className?: string }) => (
+    <svg className={className || "w-10 h-10"} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
     </svg>
   ),
-  Chart: () => (
-    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  Chart: ({ className }: { className?: string }) => (
+    <svg className={className || "w-10 h-10"} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
     </svg>
   ),
-  Users: () => (
-    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  Users: ({ className }: { className?: string }) => (
+    <svg className={className || "w-10 h-10"} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
     </svg>
   ),
-  Target: () => (
-    <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  Target: ({ className }: { className?: string }) => (
+    <svg className={className || "w-10 h-10"} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
     </svg>
   ),
@@ -325,33 +325,6 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
-<<<<<<< HEAD
-=======
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-6">
-              <button
-                onClick={() => {
-                  if (handleProtectedLinkClick('/my-page')) {
-                    window.location.href = '/my-page';
-                  }
-                }}
-                className="inline-flex items-center justify-center px-12 py-6 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-xl font-bold rounded-2xl hover:from-blue-600 hover:to-purple-600 transition-all duration-300 shadow-2xl hover:shadow-3xl transform hover:scale-105 min-w-[200px] text-center"
-              >
-                Access MY PAGE
-              </button>
-              <button
-                onClick={() => {
-                  if (handleProtectedLinkClick('/my-club')) {
-                    window.location.href = '/my-club';
-                  }
-                }}
-                className="inline-flex items-center justify-center px-12 py-6 bg-gradient-to-r from-green-500 to-teal-500 text-white text-xl font-bold rounded-2xl hover:from-green-600 hover:to-teal-600 transition-all duration-300 shadow-2xl hover:shadow-3xl transform hover:scale-105 min-w-[200px] text-center"
-              >
-                Access MY CLUB
-              </button>
-            </div>
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
           </div>
         </div>
       </div>

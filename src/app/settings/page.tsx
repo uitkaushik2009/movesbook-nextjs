@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import ModernNavbar from '@/components/ModernNavbar';
 import ModernFooter from '@/components/ModernFooter';
 import BackgroundsColorsSettings from '@/components/settings/BackgroundsColorsSettings';
@@ -9,6 +10,7 @@ import FavouritesSettings from '@/components/settings/FavouritesSettings';
 import MyBestSettings from '@/components/settings/MyBestSettings';
 import LanguageSettings from '@/components/settings/LanguageSettings';
 import GridDisplaySettings from '@/components/settings/GridDisplaySettings';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   Palette,
   Settings as SettingsIcon,
@@ -23,6 +25,20 @@ import { i18n } from '@/lib/i18n';
 type SettingsSection = 'backgrounds' | 'tools' | 'favourites' | 'mybest' | 'languages' | 'grid';
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/');
+    }
+  }, [user, loading, router]);
+
+  // Don't render if not authenticated
+  if (loading || !user) {
+    return null;
+  }
   const [activeSection, setActiveSection] = useState<SettingsSection>('backgrounds');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -46,11 +62,7 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <ModernNavbar />
       
-<<<<<<< HEAD
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-=======
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>

@@ -21,7 +21,6 @@ model User {
   periods      Period[]
   sections     WorkoutSection[]
   settings     UserSettings?
-<<<<<<< HEAD
   mainSports   UserMainSport[]
 
   // Legacy coach-athlete relationship (keeping for backward compatibility)
@@ -39,11 +38,6 @@ model User {
   teamMemberships          TeamMember[]
   clubMemberships          ClubMember[]
   groupMemberships         GroupMember[]
-=======
-  athletes     CoachAthlete[] @relation("CoachAthletes")
-  coaches      CoachAthlete[] @relation("AthleteCoaches")
-  mainSports   UserMainSport[]
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
 
   @@map("users")
 }
@@ -53,10 +47,7 @@ enum UserType {
   COACH
   TEAM_MANAGER
   CLUB_TRAINER
-<<<<<<< HEAD
   GROUP_ADMIN
-=======
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
   ADMIN
 }
 
@@ -298,7 +289,6 @@ model UserMainSport {
 
   @@unique([userId, sport])
   @@map("user_main_sports")
-<<<<<<< HEAD
 }
 
 // ===== NEW ORGANIZATIONAL STRUCTURE MODELS =====
@@ -426,6 +416,4 @@ model GroupMember {
 
   @@unique([groupId, userId])
   @@map("group_members")
-=======
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
 }

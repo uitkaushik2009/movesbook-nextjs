@@ -32,6 +32,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 export default function AthleteDashboard() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  
+  // All hooks must be called before any conditional returns
   const [activeSection, setActiveSection] = useState<'overview' | 'workouts' | 'progress' | 'settings'>('overview');
   const [showAdBanner, setShowAdBanner] = useState(true);
   const [showPersonalBanner, setShowPersonalBanner] = useState(true);
@@ -46,9 +50,13 @@ export default function AthleteDashboard() {
   const [myTeams, setMyTeams] = useState<any[]>([]);
   const [myClubs, setMyClubs] = useState<any[]>([]);
   const [myGroups, setMyGroups] = useState<any[]>([]);
-  
-  const { user } = useAuth();
-  const router = useRouter();
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/');
+    }
+  }, [user, loading, router]);
 
   // Redirect if not athlete
   useEffect(() => {
@@ -66,6 +74,11 @@ export default function AthleteDashboard() {
       loadMyGroups();
     }
   }, [user]);
+
+  // Don't render if not authenticated (after all hooks are called)
+  if (loading || !user) {
+    return null;
+  }
 
   const loadMyCoaches = async () => {
     try {

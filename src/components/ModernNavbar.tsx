@@ -123,19 +123,11 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
 
   const menuItems = [
     { href: '/', label: i18n.t('nav_home'), icon: Home },
-<<<<<<< HEAD
     { href: '/athlete/dashboard', label: i18n.t('nav_athletes'), icon: Trophy },
     { href: '/coach/dashboard', label: i18n.t('nav_coaches'), icon: UserCircle },
     { href: '/team/dashboard', label: i18n.t('nav_teams'), icon: Users2 },
     { href: '/group/dashboard', label: i18n.t('nav_groups'), icon: Users },
     { href: '/club/dashboard', label: i18n.t('nav_sport_clubs'), icon: Building2 },
-=======
-    { href: '/athletes', label: i18n.t('nav_athletes'), icon: Trophy },
-    { href: '/coaches', label: i18n.t('nav_coaches'), icon: UserCircle },
-    { href: '/teams', label: i18n.t('nav_teams'), icon: Users2 },
-    { href: '/groups', label: i18n.t('nav_groups'), icon: Users },
-    { href: '/sport-clubs', label: i18n.t('nav_sport_clubs'), icon: Building2 },
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
     { href: '/testimonials', label: i18n.t('nav_testimonials'), icon: MessageCircle },
     { href: '/news', label: i18n.t('nav_news'), icon: Newspaper },
     { href: '/sell-buy', label: i18n.t('nav_sell_buy'), icon: ShoppingCart },
@@ -174,16 +166,8 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
   };
 
   const handleProfileClick = () => {
-<<<<<<< HEAD
     // All users should go to My Page first to select their entity
     router.push('/my-page');
-=======
-    if (user?.userType === 'ATHLETE') {
-      router.push('/my-page');
-    } else {
-      router.push('/my-club');
-    }
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
     setIsUserDropdownOpen(false);
     setIsMobileMenuOpen(false);
   };
@@ -210,11 +194,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
   return (
     <>
       {/* Premium Main Navigation */}
-<<<<<<< HEAD
       <nav className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 shadow-2xl border-b border-purple-600 sticky top-0 z-50">
-=======
-      <nav className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 shadow-2xl border-b border-purple-600">
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
         <div className="w-full px-4 sm:px-6 lg:px-8">
           {/* Top Bar with Contact Info & Language */}
           <div className="flex justify-between items-center py-3 border-b border-cyan-500 border-opacity-30">
@@ -305,7 +285,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                     <a
                       key={social.label}
                       href={social.href}
-                      className={`text-cyan-100 ${social.color} transition-all duration-300 transform hover:scale-110`}
+                      className={`text-cyan-100 ${social.color} transition-all duration-200 hover:opacity-80`}
                       aria-label={social.label}
                     >
                       <Icon className="w-4 h-4" />
@@ -347,17 +327,29 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                 {menuItems.map((item, index) => {
                   const isActive = pathname === item.href;
                   const isHome = item.href === '/';
+                  const isPublicRoute = isHome || item.href === '/testimonials' || item.href === '/news' || item.href === '/sell-buy' || item.href === '/job-offers' || item.href === '/promote-yourself' || item.href === '/our-shop';
+                  const canAccess = isPublicRoute || isAuthenticated;
                   
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
-                      onClick={(e) => handleProtectedLinkClick(item.href, e)}
-                      className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-105 whitespace-nowrap ${
+                      href={canAccess ? item.href : '#'}
+                      onClick={(e) => {
+                        if (!canAccess) {
+                          e.preventDefault();
+                          handleProtectedLinkClick(item.href, e);
+                        } else {
+                          handleProtectedLinkClick(item.href, e);
+                        }
+                      }}
+                      className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
                         isActive
                           ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white shadow-2xl'
-                          : 'text-cyan-100 hover:bg-white hover:bg-opacity-10 hover:text-white'
+                          : canAccess
+                          ? 'text-cyan-100 hover:bg-white hover:bg-opacity-10 hover:text-white'
+                          : 'text-cyan-100 opacity-60'
                       } ${isHome ? 'mr-8' : ''}`}
+                      style={canAccess ? {} : { cursor: 'default' }}
                     >
                       {item.label}
                     </Link>
@@ -478,17 +470,30 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
               <div className="flex flex-col space-y-3">
                 {menuItems.map((item) => {
                   const isActive = pathname === item.href;
+                  const isHome = item.href === '/';
+                  const isPublicRoute = isHome || item.href === '/testimonials' || item.href === '/news' || item.href === '/sell-buy' || item.href === '/job-offers' || item.href === '/promote-yourself' || item.href === '/our-shop';
+                  const canAccess = isPublicRoute || isAuthenticated;
                   
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
-                      onClick={(e) => handleProtectedLinkClick(item.href, e)}
+                      href={canAccess ? item.href : '#'}
+                      onClick={(e) => {
+                        if (!canAccess) {
+                          e.preventDefault();
+                          handleProtectedLinkClick(item.href, e);
+                        } else {
+                          handleProtectedLinkClick(item.href, e);
+                        }
+                      }}
                       className={`text-center px-6 py-4 rounded-2xl text-sm font-semibold transition-all duration-300 ${
                         isActive
                           ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white shadow-2xl'
-                          : 'text-cyan-100 hover:bg-white hover:bg-opacity-10'
+                          : canAccess
+                          ? 'text-cyan-100 hover:bg-white hover:bg-opacity-10'
+                          : 'text-cyan-100 opacity-60'
                       }`}
+                      style={canAccess ? {} : { cursor: 'default' }}
                     >
                       {item.label}
                     </Link>

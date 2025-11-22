@@ -28,6 +28,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 export default function GroupDashboard() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  
+  // All hooks must be called before any conditional returns
   const [showAdBanner, setShowAdBanner] = useState(true);
   const [showPersonalBanner, setShowPersonalBanner] = useState(true);
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
@@ -39,8 +43,13 @@ export default function GroupDashboard() {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [activeRightTab, setActiveRightTab] = useState<'actions-planner' | 'chat-panel'>('actions-planner');
   const [expandedActionsPlanner, setExpandedActionsPlanner] = useState(true);
-  const { user } = useAuth();
-  const router = useRouter();
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/');
+    }
+  }, [user, loading, router]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -60,6 +69,11 @@ export default function GroupDashboard() {
       loadGroups();
     }
   }, [user]);
+
+  // Don't render if not authenticated (after all hooks are called)
+  if (loading || !user) {
+    return null;
+  }
 
   const loadGroups = async () => {
     try {

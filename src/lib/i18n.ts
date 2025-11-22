@@ -15,27 +15,8 @@ export interface LanguageStrings {
     content: { [languageCode: string]: string };
   }
   
-  class I18nService {
-    private currentLanguage = 'en';
-    private languages: Language[] = [];
-    private longTexts: LongText[] = [];
-    
-    // Initialize with default English strings
-    constructor() {
-      this.initializeDefaultLanguages();
-    }
-    
-    private initializeDefaultLanguages() {
-      this.languages = [
-        {
-          code: 'en',
-          name: 'English',
-          strings: this.getDefaultEnglishStrings()
-        }
-      ];
-    }
-    
-    private getDefaultEnglishStrings(): LanguageStrings {
+  // Default English strings (exported for external use)
+  function getDefaultEnglishStrings(): LanguageStrings {
       return {
         // Navigation
         'nav_home': 'Home',
@@ -93,6 +74,26 @@ export interface LanguageStrings {
         'warning': 'Warning',
         'info': 'Information'
       };
+  }
+  
+  class I18nService {
+    private currentLanguage = 'en';
+    private languages: Language[] = [];
+    private longTexts: LongText[] = [];
+    
+    // Initialize with default English strings
+    constructor() {
+      this.initializeDefaultLanguages();
+    }
+    
+    private initializeDefaultLanguages() {
+      this.languages = [
+        {
+          code: 'en',
+          name: 'English',
+          strings: getDefaultEnglishStrings()
+        }
+      ];
     }
     
     // Get string by key
@@ -129,6 +130,11 @@ export interface LanguageStrings {
       const text = this.longTexts.find(t => t.variable === variable);
       const lang = languageCode || this.currentLanguage;
       return text?.content[lang] || text?.content['en'] || variable;
+    }
+    
+    // Get default English strings (public method)
+    getDefaultEnglishStrings(): LanguageStrings {
+      return getDefaultEnglishStrings();
     }
   }
   

@@ -5,10 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft } from 'lucide-react';
-<<<<<<< HEAD
-=======
-import { useAuth } from '@/hooks/useAuth';
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -17,21 +13,12 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-<<<<<<< HEAD
     userType: 'athlete' as 'athlete' | 'coach' | 'team' | 'club' | 'group'
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const router = useRouter();
-=======
-    userType: 'athlete' as 'athlete' | 'coach' | 'team' | 'club'
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const router = useRouter();
-  const { login } = useAuth();
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +53,6 @@ export default function RegisterPage() {
         throw new Error(data.error || 'Registration failed');
       }
 
-<<<<<<< HEAD
       // Show success message
       setSuccess(true);
       
@@ -74,13 +60,6 @@ export default function RegisterPage() {
       setTimeout(() => {
         router.push('/?showLogin=true');
       }, 2000);
-=======
-      // Store token and user data
-      login(data.token, data.user);
-      
-      // Redirect to homepage with auth success parameter
-      router.push('/?fromAuth=true');
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
 
     } catch (error: any) {
       setError(error.message);
@@ -137,15 +116,11 @@ export default function RegisterPage() {
             </div>
           )}
 
-<<<<<<< HEAD
           {success && (
             <div className="bg-green-500 bg-opacity-20 backdrop-blur-sm border border-green-400 border-opacity-30 text-green-200 px-4 py-3 rounded-xl mb-6">
               ✅ Registration successful! Redirecting to login...
             </div>
           )}
-
-=======
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               {/* User Type Selection */}
@@ -164,10 +139,7 @@ export default function RegisterPage() {
                   <option value="coach" className="text-gray-800">Coach</option>
                   <option value="team" className="text-gray-800">Team Manager</option>
                   <option value="club" className="text-gray-800">Club Trainer</option>
-<<<<<<< HEAD
                   <option value="group" className="text-gray-800">Group</option>
-=======
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
                 </select>
               </div>
 

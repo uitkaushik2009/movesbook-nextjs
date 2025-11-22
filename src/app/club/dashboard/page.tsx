@@ -29,6 +29,20 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 
 export default function ClubDashboard() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/');
+    }
+  }, [user, loading, router]);
+
+  // Don't render if not authenticated
+  if (loading || !user) {
+    return null;
+  }
   const [showAdBanner, setShowAdBanner] = useState(true);
   const [showPersonalBanner, setShowPersonalBanner] = useState(true);
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
@@ -40,8 +54,6 @@ export default function ClubDashboard() {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [activeRightTab, setActiveRightTab] = useState<'actions-planner' | 'chat-panel'>('actions-planner');
   const [expandedActionsPlanner, setExpandedActionsPlanner] = useState(true);
-  const { user } = useAuth();
-  const router = useRouter();
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

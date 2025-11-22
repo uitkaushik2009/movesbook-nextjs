@@ -1,6 +1,6 @@
 'use client';
 
-import { Handshake } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 
 export default function DealersPage() {
   return (
@@ -9,7 +9,7 @@ export default function DealersPage() {
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-4">
             <div className="w-16 h-16 bg-gradient-to-br from-cyan-400 to-purple-500 rounded-2xl flex items-center justify-center shadow-2xl">
-              <Handshake className="w-8 h-8 text-white" />
+              <Building2 className="w-8 h-8 text-white" />
             </div>
           </div>
           <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent mb-4">

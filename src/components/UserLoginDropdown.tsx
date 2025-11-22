@@ -41,16 +41,8 @@ export default function UserLoginDropdown() {
 
   const handleProfile = () => {
     setIsOpen(false);
-<<<<<<< HEAD
     // All users should go to My Page first to select their entity
     router.push('/my-page');
-=======
-    if (user?.userType === 'ATHLETE') {
-      router.push('/my-page');
-    } else {
-      router.push('/my-club');
-    }
->>>>>>> 21d778b56ceb678af8ea9a9eb545faff336aa642
   };
 
   const handleSettings = () => {
