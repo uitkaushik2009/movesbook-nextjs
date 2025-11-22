@@ -129,7 +129,7 @@ export default function ModernFooter() {
                 controls
                 loop
                 muted
-                poster="/images/sponsor-poster.jpg"
+                poster="/images/sponsor-poster.jpg.png"
               >
                 <source src="/videos/sponsors.mp4" type="video/mp4" />
                 Your browser does not support the video tag.

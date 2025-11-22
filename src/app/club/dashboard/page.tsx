@@ -32,17 +32,7 @@ export default function ClubDashboard() {
   const router = useRouter();
   const { user, loading } = useAuth();
 
-  // Redirect to home if not authenticated
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/');
-    }
-  }, [user, loading, router]);
-
-  // Don't render if not authenticated
-  if (loading || !user) {
-    return null;
-  }
+  // All useState hooks must be declared before any early returns
   const [showAdBanner, setShowAdBanner] = useState(true);
   const [showPersonalBanner, setShowPersonalBanner] = useState(true);
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
@@ -54,6 +44,27 @@ export default function ClubDashboard() {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [activeRightTab, setActiveRightTab] = useState<'actions-planner' | 'chat-panel'>('actions-planner');
   const [expandedActionsPlanner, setExpandedActionsPlanner] = useState(true);
+
+  // All function definitions and useEffect hooks must also be before any early returns
+  const loadClubs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/clubs/my-clubs', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setClubs(data.clubs || []);
+      }
+    } catch (error) {
+      console.error('Error loading clubs:', error);
+    }
+  };
+
+  const handleClubSelect = (clubId: string) => {
+    localStorage.setItem('selectedClub', clubId);
+    window.location.href = `/my-club?clubId=${clubId}`;
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -74,25 +85,17 @@ export default function ClubDashboard() {
     }
   }, [user]);
 
-  const loadClubs = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/clubs/my-clubs', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setClubs(data.clubs || []);
-      }
-    } catch (error) {
-      console.error('Error loading clubs:', error);
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/');
     }
-  };
+  }, [user, loading, router]);
 
-  const handleClubSelect = (clubId: string) => {
-    localStorage.setItem('selectedClub', clubId);
-    window.location.href = `/my-club?clubId=${clubId}`;
-  };
+  // Don't render if not authenticated
+  if (loading || !user) {
+    return null;
+  }
 
   return (
     <div className="bg-gray-50 flex flex-col" style={{ minHeight: '100vh' }}>
