@@ -22,14 +22,10 @@ import {
   MessageSquare,
   ArrowLeft,
   ArrowRight,
-  FileText,
   Newspaper,
   Link as LinkIcon,
-  Package,
-  Users2,
-  Mailbox,
-  UserPlus,
-  Search
+  BookOpen,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
@@ -68,14 +64,9 @@ export default function DarkSidebar({
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     clubAdminInfo: false,
     myClubs: false,
-    myClub: false,
-    mainToolbar: false,
     notifications: false,
     messages: false,
-    bookings: false,
-    music: false,
-    myDashboard: false,
-    friends: false
+    bookings: false
   });
   const [allowVisiting, setAllowVisiting] = useState(true);
   const [internalActiveTab, setInternalActiveTab] = useState<'my-page' | 'my-entity'>(activeTab);
@@ -297,16 +288,18 @@ export default function DarkSidebar({
 
       {/* Bottom Section - Navigation Menu */}
       <div className="bg-teal-900 flex-1 min-h-0" style={{ overflowY: 'visible', maxHeight: 'none' }}>
+        {/* User Guides - Always at the top */}
+        <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
+          <div className="flex items-center gap-3">
+            <BookOpen className="w-5 h-5" />
+            <span>{t('sidebar_user_guides')}</span>
+          </div>
+        </button>
+
         {/* Conditional Menu Based on Active Tab */}
         {currentTab === 'my-page' ? (
           <>
-            {/* My Page Menu Items */}
-            <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
-              <div className="flex items-center gap-3">
-                <Home className="w-5 h-5" />
-                <span>{t('sidebar_dashboard')}</span>
-              </div>
-            </button>
+            {/* My Page Menu Items - Dashboard removed */}
           </>
         ) : (
           <>
@@ -392,70 +385,6 @@ export default function DarkSidebar({
           </button>
         )}
 
-        {/* My page for visitors */}
-        <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
-          <span>{t('sidebar_my_page_visitors')}</span>
-          <ChevronDown className="w-4 h-4" />
-        </button>
-
-        {/* My Club - Expandable for all users */}
-        <button
-          onClick={() => toggleSection('myClub')}
-          className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700"
-        >
-          <div className="flex items-center gap-3">
-            <Mail className="w-5 h-5" />
-            <span>My Club</span>
-          </div>
-          <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.myClub ? 'rotate-180' : ''}`} />
-        </button>
-        
-        {/* Expanded My Club Submenu - Two submenus */}
-        {expandedSections.myClub && (
-          <div className="bg-gray-800 border-t border-gray-700">
-            {/* First submenu - username (full name) Admin */}
-            <button
-              onClick={() => entities.length > 0 && onEntitySelect && onEntitySelect(entities[0].id)}
-              className={`w-full text-left py-2.5 px-8 text-sm hover:bg-gray-700 transition-colors ${
-                entities.length > 0 && selectedEntityId === entities[0].id ? 'bg-gray-700 border-l-2 border-yellow-400' : ''
-              }`}
-            >
-              {entities.length > 0 && entities[0].admin ? (
-                <>
-                  <span className="text-white">{entities[0].admin.username}</span>
-                  <span className="text-white"> ({entities[0].admin.name})</span>
-                  <span className="text-yellow-400">Admin</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-white">{user?.username || 'username'} ({user?.name || 'full name'})</span>
-                  <span className="text-yellow-400">Admin</span>
-                </>
-              )}
-            </button>
-            {/* Second submenu - username (full name) Admin */}
-            <button
-              onClick={() => entities.length > 1 && onEntitySelect && onEntitySelect(entities[1].id)}
-              className={`w-full text-left py-2.5 px-8 text-sm hover:bg-gray-700 transition-colors ${
-                entities.length > 1 && selectedEntityId === entities[1].id ? 'bg-gray-700 border-l-2 border-yellow-400' : ''
-              }`}
-            >
-              {entities.length > 1 && entities[1].admin ? (
-                <>
-                  <span className="text-white">{entities[1].admin.username}</span>
-                  <span className="text-white"> ({entities[1].admin.name})</span>
-                  <span className="text-yellow-400">Admin</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-white">{user?.username || 'username'} ({user?.name || 'full name'})</span>
-                  <span className="text-yellow-400">Admin</span>
-                </>
-              )}
-            </button>
-          </div>
-        )}
-
         {/* My clubs - Keep for other user types (teams, groups, coaching groups) */}
         {userType !== 'CLUB_TRAINER' && entities.length > 0 && (
           <button
@@ -469,18 +398,6 @@ export default function DarkSidebar({
             <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.myClubs ? 'rotate-180' : ''}`} />
           </button>
         )}
-
-        {/* Main Toolbar */}
-        <button
-          onClick={() => toggleSection('mainToolbar')}
-          className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700"
-        >
-          <div className="flex items-center gap-3">
-            <LayoutDashboard className="w-5 h-5" />
-            <span>{t('sidebar_main_toolbar')}</span>
-          </div>
-          <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.mainToolbar ? 'rotate-180' : ''}`} />
-        </button>
 
         {/* Notifications */}
         <button
@@ -529,31 +446,27 @@ export default function DarkSidebar({
           <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.bookings ? 'rotate-180' : ''}`} />
         </button>
 
-        {/* My Music */}
-        <button
-          onClick={() => toggleSection('music')}
-          className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700"
-        >
-          <div className="flex items-center gap-3">
-            <Music className="w-5 h-5" />
-            <span>{t('sidebar_my_music')}</span>
-          </div>
-          <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.music ? 'rotate-180' : ''}`} />
-        </button>
-
-        {/* My Dashboard */}
+        {/* Dashboard for the members */}
         <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
           <div className="flex items-center gap-3">
             <LayoutDashboard className="w-5 h-5" />
-            <span>{t('sidebar_my_dashboard_menu')}</span>
+            <span>{t('sidebar_dashboard_members')}</span>
           </div>
         </button>
 
-        {/* Posts */}
+        {/* Music for the club */}
         <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
           <div className="flex items-center gap-3">
-            <FileText className="w-5 h-5" />
-            <span>{t('sidebar_posts')}</span>
+            <Music className="w-5 h-5" />
+            <span>{t('sidebar_music_club')}</span>
+          </div>
+        </button>
+
+        {/* Options */}
+        <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
+          <div className="flex items-center gap-3">
+            <SlidersHorizontal className="w-5 h-5" />
+            <span>{t('sidebar_options')}</span>
           </div>
         </button>
 
@@ -572,56 +485,6 @@ export default function DarkSidebar({
             <span>{t('sidebar_internet_links')}</span>
           </div>
         </button>
-
-        {/* Other Item */}
-        <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
-          <div className="flex items-center gap-3">
-            <Package className="w-5 h-5" />
-            <span>{t('sidebar_other_item')}</span>
-          </div>
-        </button>
-
-        {/* Communities */}
-        <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
-          <div className="flex items-center gap-3">
-            <Users2 className="w-5 h-5" />
-            <span>{t('sidebar_communities')}</span>
-          </div>
-        </button>
-
-        {/* FRIENDS - Expandable */}
-        <button
-          onClick={() => toggleSection('friends')}
-          className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700"
-        >
-          <div className="flex items-center gap-3">
-            <Users className="w-5 h-5" />
-            <span>{t('sidebar_friends')}</span>
-          </div>
-          <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.friends ? 'rotate-180' : ''}`} />
-        </button>
-
-        {/* Expanded FRIENDS Submenu */}
-        {expandedSections.friends && (
-          <div className="bg-teal-950 border-t border-teal-800">
-            <button className="w-full text-left py-2 px-8 text-sm text-gray-200 hover:bg-teal-900 transition-colors flex items-center gap-2">
-              <Search className="w-4 h-4" />
-              <span>friend search box</span>
-            </button>
-            <button className="w-full text-left py-2 px-8 text-sm text-gray-200 hover:bg-teal-900 transition-colors flex items-center gap-2">
-              <Mailbox className="w-4 h-4" />
-              <span>friend mail box</span>
-            </button>
-            <button className="w-full text-left py-2 px-8 text-sm text-gray-200 hover:bg-teal-900 transition-colors flex items-center gap-2">
-              <UserCircle className="w-4 h-4" />
-              <span>friend profile box</span>
-            </button>
-            <button className="w-full text-left py-2 px-8 text-sm text-gray-200 hover:bg-teal-900 transition-colors flex items-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              <span>Find New Friends box</span>
-            </button>
-          </div>
-        )}
 
         {/* Expanded sections content */}
         {expandedSections.myClubs && entities.length > 0 && (
