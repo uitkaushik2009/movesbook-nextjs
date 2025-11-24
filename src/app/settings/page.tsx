@@ -11,6 +11,7 @@ import MyBestSettings from '@/components/settings/MyBestSettings';
 import LanguageSettings from '@/components/settings/LanguageSettings';
 import GridDisplaySettings from '@/components/settings/GridDisplaySettings';
 import { useAuth } from '@/hooks/useAuth';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { 
   Palette,
   Settings as SettingsIcon,
@@ -20,13 +21,13 @@ import {
   Grid,
   Save
 } from 'lucide-react';
-import { i18n } from '@/lib/i18n';
 
 type SettingsSection = 'backgrounds' | 'tools' | 'favourites' | 'mybest' | 'languages' | 'grid';
 
 export default function SettingsPage() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { t } = useLanguage();
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -43,19 +44,19 @@ export default function SettingsPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const settingsSections = [
-    { id: 'backgrounds' as SettingsSection, label: i18n.t('settings_backgrounds'), icon: Palette },
-    { id: 'tools' as SettingsSection, label: i18n.t('settings_tools'), icon: SettingsIcon },
-    { id: 'favourites' as SettingsSection, label: i18n.t('settings_favourites'), icon: Star },
-    { id: 'mybest' as SettingsSection, label: i18n.t('settings_my_best'), icon: Trophy },
-    { id: 'languages' as SettingsSection, label: i18n.t('settings_languages'), icon: Globe },
-    { id: 'grid' as SettingsSection, label: 'Grid & Display', icon: Grid },
+    { id: 'backgrounds' as SettingsSection, label: t('settings_backgrounds'), icon: Palette },
+    { id: 'tools' as SettingsSection, label: t('settings_tools'), icon: SettingsIcon },
+    { id: 'favourites' as SettingsSection, label: t('settings_favourites'), icon: Star },
+    { id: 'mybest' as SettingsSection, label: t('settings_my_best'), icon: Trophy },
+    { id: 'languages' as SettingsSection, label: t('settings_languages'), icon: Globe },
+    { id: 'grid' as SettingsSection, label: t('settings_grid_display'), icon: Grid },
   ];
 
   const handleSaveAll = () => {
     // Save all settings logic
     setHasUnsavedChanges(false);
     // Show success message
-    alert('All settings saved successfully!');
+    alert(t('settings_saved_success'));
   };
 
   return (
@@ -67,10 +68,10 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              {i18n.t('settings_title')}
+              {t('settings_title')}
             </h1>
             <p className="text-lg text-gray-600">
-              Customize your workout management experience
+              {t('settings_customize')}
             </p>
           </div>
           
@@ -80,7 +81,7 @@ export default function SettingsPage() {
               className="flex items-center space-x-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-2xl font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
             >
               <Save className="w-5 h-5" />
-              <span>Save All Changes</span>
+              <span>{t('settings_save_all')}</span>
             </button>
           )}
         </div>

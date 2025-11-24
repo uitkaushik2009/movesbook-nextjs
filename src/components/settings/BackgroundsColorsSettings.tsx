@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Palette, Eye, RefreshCw } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ColorSettings {
   pageBackground: string;
@@ -33,19 +34,20 @@ const defaultColors: ColorSettings = {
   headerTextColor: '#000000'
 };
 
-const textColorOptions = [
-  { value: '#ffffff', label: 'White' },
-  { value: '#000000', label: 'Black' },
-  { value: '#6b7280', label: 'Grey' },
-  { value: '#ef4444', label: 'Red' },
-  { value: '#3b82f6', label: 'Blue' },
-  { value: '#10b981', label: 'Green' },
-  { value: '#eab308', label: 'Yellow' }
-];
-
 export default function BackgroundsColorsSettings() {
+  const { t } = useLanguage();
   const [colors, setColors] = useState<ColorSettings>(defaultColors);
   const [previewMode, setPreviewMode] = useState(false);
+
+  const textColorOptions = [
+    { value: '#ffffff', label: t('color_white') },
+    { value: '#000000', label: t('color_black') },
+    { value: '#6b7280', label: t('color_grey') },
+    { value: '#ef4444', label: t('color_red') },
+    { value: '#3b82f6', label: t('color_blue') },
+    { value: '#10b981', label: t('color_green') },
+    { value: '#eab308', label: t('color_yellow') }
+  ];
 
   const handleColorChange = (key: keyof ColorSettings, value: string) => {
     setColors(prev => ({ ...prev, [key]: value }));
@@ -116,42 +118,42 @@ export default function BackgroundsColorsSettings() {
           <div className="bg-gradient-to-r from-cyan-50 to-purple-50 rounded-2xl p-6 border border-cyan-200">
             <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
               <Palette className="w-6 h-6 mr-3 text-cyan-600" />
-              Color Configuration
+              {t('color_configuration')}
             </h3>
             
             <div className="space-y-4">
               <ColorPicker
-                label="Page Background"
+                label={t('color_page_background')}
                 value={colors.pageBackground}
                 onChange={(value) => handleColorChange('pageBackground', value)}
               />
               <ColorPicker
-                label="Day Header"
+                label={t('color_day_header')}
                 value={colors.dayHeader}
                 onChange={(value) => handleColorChange('dayHeader', value)}
               />
               <ColorPicker
-                label="Moveframe Header"
+                label={t('color_moveframe_header')}
                 value={colors.moveframeHeader}
                 onChange={(value) => handleColorChange('moveframeHeader', value)}
               />
               <ColorPicker
-                label="Movelap Header"
+                label={t('color_movelap_header')}
                 value={colors.movelapHeader}
                 onChange={(value) => handleColorChange('movelapHeader', value)}
               />
               <ColorPicker
-                label="Microlap Background"
+                label={t('color_microlap_background')}
                 value={colors.microlapBackground}
                 onChange={(value) => handleColorChange('microlapBackground', value)}
               />
               <ColorPicker
-                label="Selected Row"
+                label={t('color_selected_row')}
                 value={colors.selectedRow}
                 onChange={(value) => handleColorChange('selectedRow', value)}
               />
               <ColorPicker
-                label="Alternate Row"
+                label={t('color_alternate_row')}
                 value={colors.alternateRow}
                 onChange={(value) => handleColorChange('alternateRow', value)}
               />
@@ -160,25 +162,25 @@ export default function BackgroundsColorsSettings() {
 
           {/* Button Colors */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Button Colors</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">{t('color_button_colors')}</h3>
             <div className="space-y-4">
               <ColorPicker
-                label="Add Button"
+                label={t('color_button_add')}
                 value={colors.buttonAdd}
                 onChange={(value) => handleColorChange('buttonAdd', value)}
               />
               <ColorPicker
-                label="Edit Button"
+                label={t('color_button_edit')}
                 value={colors.buttonEdit}
                 onChange={(value) => handleColorChange('buttonEdit', value)}
               />
               <ColorPicker
-                label="Delete Button"
+                label={t('color_button_delete')}
                 value={colors.buttonDelete}
                 onChange={(value) => handleColorChange('buttonDelete', value)}
               />
               <ColorPicker
-                label="Print Button"
+                label={t('color_button_print')}
                 value={colors.buttonPrint}
                 onChange={(value) => handleColorChange('buttonPrint', value)}
               />
@@ -190,7 +192,7 @@ export default function BackgroundsColorsSettings() {
             <h3 className="text-xl font-semibold text-gray-900 mb-4">Text Colors</h3>
             <div className="space-y-4">
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                <span className="font-semibold text-gray-700">Header Text Color</span>
+                <span className="font-semibold text-gray-700">{t('color_header_text')}</span>
                 <select
                   value={colors.headerTextColor}
                   onChange={(e) => handleColorChange('headerTextColor', e.target.value)}

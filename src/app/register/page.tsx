@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function RegisterPage() {
+  const { t } = useLanguage();
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -27,7 +29,7 @@ export default function RegisterPage() {
 
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('alert_password_mismatch'));
       setIsLoading(false);
       return;
     }
@@ -97,7 +99,7 @@ export default function RegisterPage() {
           className="flex items-center text-white hover:text-gray-200 transition-colors bg-white bg-opacity-10 backdrop-blur-sm px-4 py-2 rounded-lg"
         >
           <ArrowLeft className="w-5 h-5 mr-2" />
-          Back to Home
+          {t('btn_back_to_home')}
         </button>
       </div>
 
@@ -107,7 +109,7 @@ export default function RegisterPage() {
           {/* Logo and Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-white mb-2">MovesBook</h1>
-            <p className="text-cyan-100 text-lg">Join our elite training community</p>
+            <p className="text-cyan-100 text-lg">{t('auth_join_community')}</p>
           </div>
 
           {error && (
@@ -118,7 +120,7 @@ export default function RegisterPage() {
 
           {success && (
             <div className="bg-green-500 bg-opacity-20 backdrop-blur-sm border border-green-400 border-opacity-30 text-green-200 px-4 py-3 rounded-xl mb-6">
-              ✅ Registration successful! Redirecting to login...
+              {t('auth_registration_success')}
             </div>
           )}
           <form className="space-y-6" onSubmit={handleSubmit}>
@@ -126,7 +128,7 @@ export default function RegisterPage() {
               {/* User Type Selection */}
               <div>
                 <label htmlFor="user-type" className="block text-sm font-medium text-white mb-2">
-                  I am a: *
+                  {t('auth_select_user_type')}: {t('auth_required_field')}
                 </label>
                 <select
                   id="user-type"
@@ -135,18 +137,18 @@ export default function RegisterPage() {
                   value={formData.userType}
                   onChange={(e) => setFormData({...formData, userType: e.target.value as any})}
                 >
-                  <option value="athlete" className="text-gray-800">Athlete</option>
-                  <option value="coach" className="text-gray-800">Coach</option>
-                  <option value="team" className="text-gray-800">Team Manager</option>
-                  <option value="club" className="text-gray-800">Club Trainer</option>
-                  <option value="group" className="text-gray-800">Group</option>
+                  <option value="athlete" className="text-gray-800">{t('user_type_athlete')}</option>
+                  <option value="coach" className="text-gray-800">{t('user_type_coach')}</option>
+                  <option value="team" className="text-gray-800">{t('user_type_team')}</option>
+                  <option value="club" className="text-gray-800">{t('user_type_club')}</option>
+                  <option value="group" className="text-gray-800">{t('user_type_group')}</option>
                 </select>
               </div>
 
               {/* Full Name Input */}
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-white mb-2">
-                  Full Name *
+                  {t('auth_full_name')} {t('auth_required_field')}
                 </label>
                 <input
                   id="name"
@@ -154,7 +156,7 @@ export default function RegisterPage() {
                   type="text"
                   required
                   className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your full name"
+                  placeholder={t('auth_full_name_placeholder')}
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                 />
@@ -163,7 +165,7 @@ export default function RegisterPage() {
               {/* Username Input */}
               <div>
                 <label htmlFor="username" className="block text-sm font-medium text-white mb-2">
-                  Username *
+                  {t('auth_username')} {t('auth_required_field')}
                 </label>
                 <input
                   id="username"
@@ -171,7 +173,7 @@ export default function RegisterPage() {
                   type="text"
                   required
                   className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  placeholder="Choose a username"
+                  placeholder={t('auth_username_placeholder')}
                   value={formData.username}
                   onChange={(e) => setFormData({...formData, username: e.target.value})}
                 />
@@ -180,7 +182,7 @@ export default function RegisterPage() {
               {/* Email Input */}
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
-                  Email Address *
+                  {t('auth_email_address')} {t('auth_required_field')}
                 </label>
                 <input
                   id="email"
@@ -189,7 +191,7 @@ export default function RegisterPage() {
                   autoComplete="email"
                   required
                   className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  placeholder="Enter your email address"
+                  placeholder={t('auth_email_placeholder')}
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                 />
@@ -198,7 +200,7 @@ export default function RegisterPage() {
               {/* Password Input */}
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
-                  Password *
+                  {t('auth_password')} {t('auth_required_field')}
                 </label>
                 <input
                   id="password"
@@ -208,7 +210,7 @@ export default function RegisterPage() {
                   required
                   minLength={6}
                   className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  placeholder="Create a password (min. 6 characters)"
+                  placeholder={t('auth_password_placeholder')}
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                 />
@@ -217,7 +219,7 @@ export default function RegisterPage() {
               {/* Confirm Password Input */}
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-2">
-                  Confirm Password *
+                  {t('auth_confirm_password')} {t('auth_required_field')}
                 </label>
                 <input
                   id="confirmPassword"
@@ -227,7 +229,7 @@ export default function RegisterPage() {
                   required
                   minLength={6}
                   className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  placeholder="Confirm your password"
+                  placeholder={t('auth_confirm_password_placeholder')}
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                 />
@@ -244,13 +246,13 @@ export default function RegisterPage() {
                 className="w-4 h-4 text-cyan-400 bg-white bg-opacity-10 border-cyan-500 border-opacity-30 rounded focus:ring-cyan-400 focus:ring-offset-transparent"
               />
               <label htmlFor="terms" className="ml-2 block text-sm text-cyan-100">
-                I agree to the{' '}
+                {t('auth_agree_to')}{' '}
                 <Link href="/terms" className="text-cyan-300 hover:text-cyan-200 underline">
-                  Terms of Service
+                  {t('footer_terms')}
                 </Link>{' '}
-                and{' '}
+                {t('auth_terms_and')}{' '}
                 <Link href="/privacy" className="text-cyan-300 hover:text-cyan-200 underline">
-                  Privacy Policy
+                  {t('footer_privacy')}
                 </Link>
               </label>
             </div>
@@ -265,10 +267,10 @@ export default function RegisterPage() {
                 {isLoading ? (
                   <div className="flex items-center justify-center">
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    Creating account...
+                    {t('btn_creating_account')}
                   </div>
                 ) : (
-                  'Create Account'
+                  t('btn_register')
                 )}
               </button>
             </div>
@@ -276,13 +278,13 @@ export default function RegisterPage() {
             {/* Sign In Link */}
             <div className="text-center">
               <span className="text-sm text-cyan-200">
-                Already have an account?{' '}
+                {t('btn_already_have_account')}{' '}
                 <button
                   type="button"
                   onClick={handleLoginClick}
                   className="font-semibold text-white hover:text-cyan-200 transition-colors underline"
                 >
-                  Sign in here
+                  {t('btn_sign_in_here')}
                 </button>
               </span>
             </div>

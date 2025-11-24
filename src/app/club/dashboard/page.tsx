@@ -27,10 +27,12 @@ import SimpleFooter from '@/components/SimpleFooter';
 import AddMemberModal from '@/components/AddMemberModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ClubDashboard() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { t } = useLanguage();
 
   // All useState hooks must be declared before any early returns
   const [showAdBanner, setShowAdBanner] = useState(true);

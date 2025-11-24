@@ -1,5 +1,8 @@
+'use client';
+
 import { useState } from 'react';
 import { Users, Target, ChevronRight, ChevronDown } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface RightSidebarProps {
   onAddMember: () => void;
@@ -9,22 +12,23 @@ interface RightSidebarProps {
 
 export default function RightSidebar({ 
   onAddMember, 
-  workoutPlanLabel = 'Workout Plan',
+  workoutPlanLabel,
   onWorkoutPlan 
 }: RightSidebarProps) {
+  const { t } = useLanguage();
   const [activeRightTab, setActiveRightTab] = useState<'actions-planner' | 'chat-panel'>('actions-planner');
   const [expandedActionsPlanner, setExpandedActionsPlanner] = useState(true);
 
   return (
     <div className="w-80 flex-shrink-0">
       <div className="bg-white rounded-lg shadow-sm border p-4 h-full flex flex-col">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('sidebar_quick_actions')}</h3>
         <div className="space-y-3">
           <button 
             onClick={onAddMember}
             className="w-full flex items-center justify-between p-4 border-2 border-dashed border-gray-300 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
           >
-            <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">Add a Member</span>
+            <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700">{t('sidebar_add_member')}</span>
             <Users className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
           </button>
           {onWorkoutPlan && (
@@ -32,7 +36,7 @@ export default function RightSidebar({
               onClick={onWorkoutPlan}
               className="w-full flex items-center justify-between p-4 border-2 border-dashed border-green-200 rounded-xl hover:border-green-300 hover:bg-green-50 transition-all duration-200 group"
             >
-              <span className="text-sm font-medium text-gray-700 group-hover:text-green-700">{workoutPlanLabel}</span>
+              <span className="text-sm font-medium text-gray-700 group-hover:text-green-700">{workoutPlanLabel || t('sidebar_workout_plan')}</span>
               <Target className="w-4 h-4 text-gray-400 group-hover:text-green-500" />
             </button>
           )}
@@ -49,7 +53,7 @@ export default function RightSidebar({
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Actions planner
+              {t('sidebar_actions_planner')}
             </button>
             <button
               onClick={() => setActiveRightTab('chat-panel')}
@@ -59,7 +63,7 @@ export default function RightSidebar({
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Chat panel
+              {t('sidebar_chat_panel')}
             </button>
           </div>
 
@@ -67,26 +71,26 @@ export default function RightSidebar({
           {activeRightTab === 'actions-planner' && (
             <div className="space-y-1">
               <button className="w-full flex items-center justify-between py-2 px-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                <span>Timeline of all users</span>
+                <span>{t('sidebar_timeline_all_users')}</span>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               </button>
               <button className="w-full flex items-center justify-between py-2 px-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                <span>Timeline of an user</span>
+                <span>{t('sidebar_timeline_user')}</span>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               </button>
               <button className="w-full flex items-center justify-between py-2 px-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                <span>Actions planned</span>
+                <span>{t('sidebar_actions_planned')}</span>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               </button>
               <button className="w-full flex items-center justify-between py-2 px-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">
-                <span>Users of the action planner</span>
+                <span>{t('sidebar_users_action_planner')}</span>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
               </button>
               <button 
                 onClick={() => setExpandedActionsPlanner(!expandedActionsPlanner)}
                 className="w-full flex items-center justify-between py-2 px-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
               >
-                <span>Settings</span>
+                <span>{t('sidebar_settings')}</span>
                 {expandedActionsPlanner ? (
                   <ChevronDown className="w-4 h-4 text-gray-400" />
                 ) : (
@@ -96,15 +100,15 @@ export default function RightSidebar({
               {expandedActionsPlanner && (
                 <div className="ml-4 space-y-1">
                   <button className="w-full flex items-center justify-between py-2 px-3 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-                    <span>Preset timelines</span>
+                    <span>{t('sidebar_preset_timelines')}</span>
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                   </button>
                   <button className="w-full flex items-center justify-between py-2 px-3 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-                    <span>Actions settings</span>
+                    <span>{t('sidebar_actions_settings')}</span>
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                   </button>
                   <button className="w-full flex items-center justify-between py-2 px-3 text-sm text-gray-600 hover:bg-gray-50 rounded-lg transition-colors">
-                    <span>Action settings by MB</span>
+                    <span>{t('sidebar_action_settings_mb')}</span>
                     <ChevronRight className="w-4 h-4 text-gray-400" />
                   </button>
                 </div>
@@ -115,7 +119,7 @@ export default function RightSidebar({
           {/* Chat Panel Content */}
           {activeRightTab === 'chat-panel' && (
             <div className="text-sm text-gray-600 py-4">
-              Chat panel content will be displayed here.
+              {t('sidebar_chat_content')}
             </div>
           )}
         </div>

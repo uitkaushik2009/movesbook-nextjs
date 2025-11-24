@@ -26,10 +26,12 @@ import SimpleFooter from '@/components/SimpleFooter';
 import AddMemberModal from '@/components/AddMemberModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function CoachDashboard() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { t } = useLanguage();
   
   // All state hooks must be called before any conditional returns
   const [showAdBanner, setShowAdBanner] = useState(true);
@@ -182,36 +184,36 @@ export default function CoachDashboard() {
                 <div className="flex items-center gap-4">
                   <button className="text-gray-300 hover:text-white transition-colors flex items-center gap-2">
                     <Home className="w-4 h-4" />
-                    <span>Home</span>
+                    <span>{t('dashboard_home')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors flex items-center gap-2">
                     <Menu className="w-4 h-4" />
-                    <span>Overview</span>
+                    <span>{t('dashboard_overview')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>Myworkout Section</span>
+                    <span>{t('dashboard_myworkout_section')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>My Social Activities</span>
+                    <span>{t('dashboard_my_social_activities')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>My Social Area</span>
+                    <span>{t('dashboard_my_social_area')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>My Internet Links</span>
+                    <span>{t('dashboard_my_internet_links')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>Socials</span>
+                    <span>{t('dashboard_socials')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>My Desk</span>
+                    <span>{t('dashboard_my_desk')}</span>
                   </button>
                 </div>
 
                 {/* Right side - Search button */}
                 <div className="flex items-center">
                   <button className="bg-red-700 hover:bg-red-800 text-lime-400 px-4 py-2 rounded transition-colors flex items-center gap-2">
-                    <span>Search in the Network</span>
+                    <span>{t('dashboard_search_network')}</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -293,7 +295,7 @@ export default function CoachDashboard() {
           {showRightSidebar && (
             <div className="w-80 flex-shrink-0">
               <div className="bg-white rounded-lg shadow-sm border p-4 h-full flex flex-col">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('sidebar_quick_actions')}</h3>
                 <div className="space-y-3">
                   <button 
                     onClick={() => setShowAddMemberModal(true)}

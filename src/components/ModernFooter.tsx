@@ -11,42 +11,44 @@ import {
   Twitter,
   ArrowRight
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ModernFooter() {
+  const { t } = useLanguage();
   const currentYear = new Date().getFullYear();
 
   const footerSections = [
     {
-      title: 'Quick Links',
+      title: t('footer_quick_links'),
       links: [
-        { label: 'Home', href: '/' },
-        { label: 'About Us', href: '/about' },
-        { label: 'Services', href: '/services' },
-        { label: 'Pricing', href: '/pricing' },
-        { label: 'Blog', href: '/blog' },
-        { label: 'Contact', href: '/contact' },
+        { label: t('nav_home'), href: '/' },
+        { label: t('nav_about'), href: '/about' },
+        { label: t('footer_services'), href: '/services' },
+        { label: t('footer_pricing'), href: '/pricing' },
+        { label: t('nav_blog'), href: '/blog' },
+        { label: t('nav_contact'), href: '/contact' },
       ],
     },
     {
-      title: 'Services',
+      title: t('footer_services'),
       links: [
-        { label: 'Personal Training', href: '/services/personal' },
-        { label: 'Group Classes', href: '/services/group' },
-        { label: 'Nutrition Plans', href: '/services/nutrition' },
-        { label: 'Progress Tracking', href: '/services/tracking' },
-        { label: 'Workout Plans', href: '/services/workouts' },
-        { label: 'Online Coaching', href: '/services/coaching' },
+        { label: t('footer_personal_training'), href: '/services/personal' },
+        { label: t('footer_group_classes'), href: '/services/group' },
+        { label: t('footer_nutrition_plans'), href: '/services/nutrition' },
+        { label: t('footer_progress_tracking'), href: '/services/tracking' },
+        { label: t('footer_workout_plans'), href: '/services/workouts' },
+        { label: t('footer_online_coaching'), href: '/services/coaching' },
       ],
     },
     {
-      title: 'Support',
+      title: t('nav_support'),
       links: [
-        { label: 'Help Center', href: '/help' },
-        { label: 'FAQs', href: '/faqs' },
-        { label: 'Privacy Policy', href: '/privacy' },
-        { label: 'Terms of Service', href: '/terms' },
-        { label: 'Cookie Policy', href: '/cookies' },
-        { label: 'Sitemap', href: '/sitemap' },
+        { label: t('footer_help'), href: '/help' },
+        { label: t('footer_faq'), href: '/faqs' },
+        { label: t('footer_privacy'), href: '/privacy' },
+        { label: t('footer_terms'), href: '/terms' },
+        { label: t('footer_cookie_policy'), href: '/cookies' },
+        { label: t('footer_sitemap'), href: '/sitemap' },
       ],
     },
   ];
@@ -71,12 +73,11 @@ export default function ModernFooter() {
               </div>
               <div className="ml-3">
                 <h3 className="text-2xl font-bold">Movesbook</h3>
-                <p className="text-blue-200 text-sm">Professional Training Platform</p>
+                <p className="text-blue-200 text-sm">{t('footer_tagline')}</p>
               </div>
             </div>
             <p className="text-gray-300 mb-6 leading-relaxed">
-              Transform your fitness journey with our comprehensive workout management system. 
-              Join thousands of athletes, coaches, and fitness enthusiasts achieving their goals.
+              {t('footer_description')}
             </p>
             
             {/* Contact Info */}
@@ -121,7 +122,7 @@ export default function ModernFooter() {
           {/* Sponsors Video Box */}
           <div>
             <h4 className="text-lg font-semibold mb-6 text-white">
-              Video of sponsors here
+              {t('footer_sponsors_video')}
             </h4>
             <div className="bg-gray-800 rounded-xl overflow-hidden aspect-video">
               <video
@@ -132,7 +133,7 @@ export default function ModernFooter() {
                 poster="/images/sponsor-poster.jpg.png"
               >
                 <source src="/videos/sponsors.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
+                {t('footer_video_not_supported')}
               </video>
             </div>
           </div>
@@ -142,17 +143,17 @@ export default function ModernFooter() {
         <div className="mt-12 pt-8 border-t border-gray-700">
           <div className="flex flex-col lg:flex-row justify-between items-center">
             <div className="mb-6 lg:mb-0">
-              <h4 className="text-xl font-semibold mb-2">Stay Updated</h4>
-              <p className="text-gray-300">Get the latest fitness tips and updates</p>
+              <h4 className="text-xl font-semibold mb-2">{t('footer_stay_updated')}</h4>
+              <p className="text-gray-300">{t('footer_newsletter_subtitle')}</p>
             </div>
             <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3 w-full lg:w-auto">
               <input
                 type="email"
-                placeholder="Enter your email"
+                placeholder={t('footer_email_placeholder')}
                 className="px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-400 flex-1 min-w-0"
               />
               <button className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-lg font-medium hover:from-blue-600 hover:to-purple-600 transition-all duration-200 shadow-lg hover:shadow-xl">
-                Subscribe
+                {t('footer_subscribe')}
               </button>
             </div>
           </div>
@@ -162,7 +163,7 @@ export default function ModernFooter() {
         <div className="mt-8 pt-8 border-t border-gray-700">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="text-gray-400 text-sm">
-              © {currentYear} Movesbook. All rights reserved.
+              {t('footer_copyright').replace('2024', currentYear.toString())}
             </div>
             
             {/* Social Links */}

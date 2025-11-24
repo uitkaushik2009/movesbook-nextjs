@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { X, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AdminLoginModalProps {
     isOpen: boolean;
@@ -11,6 +12,7 @@ interface AdminLoginModalProps {
 }
 
 export default function AdminLoginModal({ isOpen, onClose, onSwitchToUserLogin }: AdminLoginModalProps) {
+    const { t } = useLanguage();
     const [formData, setFormData] = useState({
         identifier: '', // Can be email or username
         password: '',
@@ -94,10 +96,10 @@ export default function AdminLoginModal({ isOpen, onClose, onSwitchToUserLogin }
                             <Shield className="w-8 h-8 text-red-300" />
                         </div>
                         <h2 className="text-3xl font-bold text-white mb-2">
-                            Admin Portal
+                            {t('admin_portal')}
                         </h2>
                         <p className="text-red-100">
-                            Restricted access - Authorized personnel only
+                            {t('admin_restricted_access')}
                         </p>
                     </div>
 
@@ -110,7 +112,7 @@ export default function AdminLoginModal({ isOpen, onClose, onSwitchToUserLogin }
                     <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off" key={isOpen ? 'admin-open' : 'admin-closed'}>
                         <div>
                             <label htmlFor="admin-login-identifier" className="block text-sm font-medium text-white mb-2">
-                                Email or Username
+                                {t('admin_email_or_username')}
                             </label>
                             <input
                                 type="text"
@@ -124,13 +126,13 @@ export default function AdminLoginModal({ isOpen, onClose, onSwitchToUserLogin }
                                 value={formData.identifier}
                                 onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
                                 className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-red-500 border-opacity-30 rounded-xl text-white placeholder-red-200 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent transition-all duration-200"
-                                placeholder="Enter admin email or username"
+                                placeholder={t('admin_email_placeholder')}
                             />
                         </div>
 
                         <div>
                             <label htmlFor="admin-login-password" className="block text-sm font-medium text-white mb-2">
-                                Password
+                                {t('auth_password')}
                             </label>
                             <input
                                 type="password"
@@ -141,7 +143,7 @@ export default function AdminLoginModal({ isOpen, onClose, onSwitchToUserLogin }
                                 value={formData.password}
                                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                                 className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-red-500 border-opacity-30 rounded-xl text-white placeholder-red-200 focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-transparent transition-all duration-200"
-                                placeholder="Enter admin password"
+                                placeholder={t('admin_password_placeholder')}
                             />
                         </div>
 
@@ -153,17 +155,17 @@ export default function AdminLoginModal({ isOpen, onClose, onSwitchToUserLogin }
                             {isLoading ? (
                                 <div className="flex items-center justify-center">
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                    Authenticating...
+                                    {t('admin_authenticating')}
                                 </div>
                             ) : (
-                                'Access Admin Dashboard'
+                                t('admin_access_dashboard')
                             )}
                         </button>
                     </form>
 
                     <div className="mt-6 text-center">
                         <p className="text-red-200 text-sm">
-                            Not an admin?{' '}
+                            {t('admin_not_admin')}{' '}
                             <button
                                 onClick={() => {
                                     onClose();
@@ -173,7 +175,7 @@ export default function AdminLoginModal({ isOpen, onClose, onSwitchToUserLogin }
                                 }}
                                 className="text-white font-semibold hover:text-red-200 transition-colors underline"
                             >
-                                Back to user login
+                                {t('admin_back_to_user_login')}
                             </button>
                         </p>
                     </div>

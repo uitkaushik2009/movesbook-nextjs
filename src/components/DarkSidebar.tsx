@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DarkSidebarProps {
   userType: string;
@@ -63,6 +64,7 @@ export default function DarkSidebar({
 }: DarkSidebarProps) {
   const { user } = useAuth();
   const router = useRouter();
+  const { t } = useLanguage();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     clubAdminInfo: false,
     myClubs: false,
@@ -156,12 +158,12 @@ export default function DarkSidebar({
   };
 
   const getEntityLabel = () => {
-    if (userType === 'CLUB_TRAINER') return 'My Club';
-    if (userType === 'TEAM_MANAGER') return 'My Team';
-    if (userType === 'GROUP_ADMIN') return 'My Group';
-    if (userType === 'COACH') return 'My Coaching Group';
+    if (userType === 'CLUB_TRAINER') return t('sidebar_my_club');
+    if (userType === 'TEAM_MANAGER') return t('sidebar_my_team');
+    if (userType === 'GROUP_ADMIN') return t('sidebar_my_group');
+    if (userType === 'COACH') return t('sidebar_my_coaching_group');
     // For athletes and other users, show "My Club" as default
-    return 'My Club';
+    return t('sidebar_my_club');
   };
 
   return (
@@ -176,7 +178,7 @@ export default function DarkSidebar({
               : 'bg-gray-800 text-gray-300 hover:bg-gray-750 hover:text-white'
           }`}
         >
-          My Page
+          {t('sidebar_my_page')}
         </button>
         <button
           onClick={handleMyEntityTab}
@@ -198,8 +200,8 @@ export default function DarkSidebar({
             <Plus className="w-4 h-4" />
           </button>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs">Status</span>
-            <span className="text-xs text-green-400">Online</span>
+            <span className="text-xs">{t('sidebar_status')}</span>
+            <span className="text-xs text-green-400">{t('sidebar_online')}</span>
             <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
           </div>
           <button className="text-gray-400 hover:text-white transition-colors">
@@ -221,24 +223,24 @@ export default function DarkSidebar({
             <UserCircle className="w-12 h-12 text-gray-500" />
           </div>
           <button className="text-white text-xs hover:text-yellow-400 transition-colors">
-            Change photo
+            {t('sidebar_change_photo')}
           </button>
         </div>
 
         {/* User Details - Compact Single Line */}
         <div className="space-y-1 mb-2 text-xs">
           <div className="flex items-center gap-1">
-            <span className="text-gray-300">Username:</span>
+            <span className="text-gray-300">{t('sidebar_username')}:</span>
             <span className="text-yellow-400">{user?.username || 'N/A'}</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-gray-300">Age:</span>
+            <span className="text-gray-300">{t('sidebar_age')}:</span>
             <span className="text-yellow-400">32</span>
             <span className="text-gray-300 ml-1">•</span>
             <span className="text-gray-300">American football</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="text-gray-300">City:</span>
+            <span className="text-gray-300">{t('sidebar_city')}:</span>
             <span className="text-yellow-400">Turku</span>
             <span className="text-gray-300 ml-1">•</span>
             <span className="text-gray-300">Finland</span>
@@ -253,12 +255,12 @@ export default function DarkSidebar({
             onChange={(e) => setAllowVisiting(e.target.checked)}
             className="w-3 h-3 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
           />
-          <span className="text-white text-xs">allow user to know i am visiting them</span>
+          <span className="text-white text-xs">{t('sidebar_allow_visiting')}</span>
         </div>
 
         {/* Most used buttons - Compact */}
         <button className="w-full bg-red-600 hover:bg-red-700 text-white py-1.5 px-2 rounded mb-2 flex items-center justify-between transition-colors text-xs">
-          <span>Most used buttons</span>
+          <span>{t('sidebar_most_used_buttons')}</span>
           <Settings className="w-3 h-3" />
         </button>
 
@@ -267,10 +269,10 @@ export default function DarkSidebar({
           <div className="flex items-center gap-1.5 text-white text-xs">
             <UserCircle className="w-3 h-3 text-gray-400" />
             <ArrowLeft className="w-3 h-3 text-gray-400" />
-            <span className="truncate">Users' who visited my pages</span>
+            <span className="truncate">{t('sidebar_users_visited_my_pages')}</span>
           </div>
           <div className="flex items-center gap-1.5 text-white text-xs">
-            <span>Users visited</span>
+            <span>{t('sidebar_users_visited')}</span>
             <ArrowRight className="w-3 h-3 text-gray-400" />
             <UserCircle className="w-3 h-3 text-gray-400" />
           </div>
@@ -278,7 +280,7 @@ export default function DarkSidebar({
 
         {/* Social Network Integration - Compact */}
         <div className="mb-2">
-          <span className="text-white text-xs block mb-1">My data on social networks</span>
+          <span className="text-white text-xs block mb-1">{t('sidebar_social_networks')}</span>
           <div className="flex items-center gap-2">
             <button className="text-blue-400 hover:text-blue-300 transition-colors">
               <Twitter className="w-4 h-4" />
@@ -290,7 +292,7 @@ export default function DarkSidebar({
         </div>
 
         {/* Comments Section - Compact */}
-        <div className="text-gray-500 text-xs">Comments</div>
+        <div className="text-gray-500 text-xs">{t('sidebar_comments')}</div>
       </div>
 
       {/* Bottom Section - Navigation Menu */}
@@ -302,7 +304,7 @@ export default function DarkSidebar({
             <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
               <div className="flex items-center gap-3">
                 <Home className="w-5 h-5" />
-                <span>Dashboard</span>
+                <span>{t('sidebar_dashboard')}</span>
               </div>
             </button>
           </>
@@ -314,13 +316,13 @@ export default function DarkSidebar({
                 <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
                   <div className="flex items-center gap-3">
                     <Building2 className="w-5 h-5" />
-                    <span>Club Management</span>
+                    <span>{t('sidebar_club_management')}</span>
                   </div>
                 </button>
                 <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
                   <div className="flex items-center gap-3">
                     <Users className="w-5 h-5" />
-                    <span>Members</span>
+                    <span>{t('sidebar_members')}</span>
                   </div>
                 </button>
               </>

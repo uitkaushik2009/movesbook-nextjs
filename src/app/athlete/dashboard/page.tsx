@@ -30,10 +30,12 @@ import SimpleFooter from '@/components/SimpleFooter';
 import AddMemberModal from '@/components/AddMemberModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function AthleteDashboard() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const { t } = useLanguage();
   
   // All hooks must be called before any conditional returns
   const [activeSection, setActiveSection] = useState<'overview' | 'workouts' | 'progress' | 'settings'>('overview');
@@ -253,36 +255,36 @@ export default function AthleteDashboard() {
                 <div className="flex items-center gap-4">
                   <button className="text-gray-300 hover:text-white transition-colors flex items-center gap-2">
                     <Home className="w-4 h-4" />
-                    <span>Home</span>
+                    <span>{t('dashboard_home')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors flex items-center gap-2">
                     <Menu className="w-4 h-4" />
-                    <span>Overview</span>
+                    <span>{t('dashboard_overview')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>Myworkout Section</span>
+                    <span>{t('dashboard_myworkout_section')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>My Social Activities</span>
+                    <span>{t('dashboard_my_social_activities')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>My Social Area</span>
+                    <span>{t('dashboard_my_social_area')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>My Internet Links</span>
+                    <span>{t('dashboard_my_internet_links')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>Socials</span>
+                    <span>{t('dashboard_socials')}</span>
                   </button>
                   <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>My Desk</span>
+                    <span>{t('dashboard_my_desk')}</span>
                   </button>
                 </div>
 
                 {/* Right side - Search button */}
                 <div className="flex items-center">
                   <button className="bg-red-700 hover:bg-red-800 text-lime-400 px-4 py-2 rounded transition-colors flex items-center gap-2">
-                    <span>Search in the Network</span>
+                    <span>{t('dashboard_search_network')}</span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
@@ -303,19 +305,19 @@ export default function AthleteDashboard() {
           )}
 
           <div className="flex-1 min-w-0 flex flex-col px-4">
-            {activeSection === 'overview' && <AthleteOverview />}
-            {activeSection === 'workouts' && <AthleteWorkouts />}
-            {activeSection === 'progress' && <AthleteProgress />}
-            {activeSection === 'settings' && <AthleteSettings />}
+            {activeSection === 'overview' && <AthleteOverview t={t} />}
+            {activeSection === 'workouts' && <AthleteWorkouts t={t} />}
+            {activeSection === 'progress' && <AthleteProgress t={t} />}
+            {activeSection === 'settings' && <AthleteSettings t={t} />}
           </div>
 
           {showRightSidebar && (
             <div className="w-80 flex-shrink-0">
               <div className="bg-white rounded-lg shadow-sm border p-4 h-full flex flex-col">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('sidebar_quick_actions')}</h3>
                 <div className="space-y-3">
                   <button className="w-full flex items-center justify-between p-4 border-2 border-dashed border-green-200 rounded-xl hover:border-green-300 hover:bg-green-50 transition-all duration-200 group">
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-green-700">Athlete Workout Plan</span>
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-green-700">{t('dashboard_athlete_workout_plan')}</span>
                     <Target className="w-4 h-4 text-gray-400 group-hover:text-green-500" />
                   </button>
                 </div>
@@ -411,42 +413,42 @@ export default function AthleteDashboard() {
   );
 }
 
-function AthleteOverview() {
+function AthleteOverview({ t }: { t: (key: string) => string }) {
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex flex-col">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Activity Overview</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('dashboard_activity_overview')}</h2>
       <div className="grid grid-cols-3 gap-6 mb-8">
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-white shadow-lg">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium opacity-90">This Week</h3>
+            <h3 className="text-sm font-medium opacity-90">{t('dashboard_this_week')}</h3>
             <Calendar className="w-5 h-5 opacity-90" />
           </div>
-          <p className="text-3xl font-bold mt-3">3 workouts</p>
+          <p className="text-3xl font-bold mt-3">3 {t('dashboard_workouts_count')}</p>
         </div>
         <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl text-white shadow-lg">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium opacity-90">This Month</h3>
+            <h3 className="text-sm font-medium opacity-90">{t('dashboard_this_month')}</h3>
             <Target className="w-5 h-5 opacity-90" />
           </div>
-          <p className="text-3xl font-bold mt-3">12 workouts</p>
+          <p className="text-3xl font-bold mt-3">12 {t('dashboard_workouts_count')}</p>
         </div>
         <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-xl text-white shadow-lg">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium opacity-90">Completion Rate</h3>
+            <h3 className="text-sm font-medium opacity-90">{t('dashboard_completion_rate')}</h3>
             <Award className="w-5 h-5 opacity-90" />
           </div>
           <p className="text-3xl font-bold mt-3">85%</p>
         </div>
       </div>
       <div className="flex-1">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity Feed</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard_recent_activity_feed')}</h3>
         <div className="space-y-4">
           {[1, 2, 3].map((item) => (
             <div key={item} className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-semibold text-gray-900">Workout Session #{item}</h4>
-                  <p className="text-sm text-gray-500">Completed on {new Date().toLocaleDateString()}</p>
+                  <h4 className="font-semibold text-gray-900">{t('dashboard_workout_session')} #{item}</h4>
+                  <p className="text-sm text-gray-500">{t('dashboard_completed_on')} {new Date().toLocaleDateString()}</p>
                 </div>
                 <CheckCircle className="w-6 h-6 text-green-500" />
               </div>
@@ -458,17 +460,17 @@ function AthleteOverview() {
   );
 }
 
-function AthleteWorkouts() {
+function AthleteWorkouts({ t }: { t: (key: string) => string }) {
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex flex-col">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">My Workouts</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{t('dashboard_my_workouts')}</h2>
         <button className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg">
-          Add Workout
+          {t('dashboard_add_workout')}
         </button>
       </div>
       <div className="flex-1">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Workout Plans</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard_personal_workout_plans')}</h3>
         <div className="space-y-4">
           {[1, 2, 3].map((item) => (
             <div key={item} className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200">
@@ -492,10 +494,10 @@ function AthleteWorkouts() {
   );
 }
 
-function AthleteProgress() {
+function AthleteProgress({ t }: { t: (key: string) => string }) {
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex flex-col">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Progress & Analytics</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('dashboard_progress_analytics')}</h2>
       <div className="grid grid-cols-2 gap-6 flex-1">
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center p-8">
           <div className="text-center text-gray-500">
@@ -516,10 +518,10 @@ function AthleteProgress() {
   );
 }
 
-function AthleteSettings() {
+function AthleteSettings({ t }: { t: (key: string) => string }) {
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex flex-col">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Settings</h2>
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('sidebar_settings')}</h2>
       <div className="space-y-4 flex-1">
         <div className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-300 transition-all duration-200">
           <h3 className="font-semibold text-gray-900 mb-3 text-lg">Profile Settings</h3>
