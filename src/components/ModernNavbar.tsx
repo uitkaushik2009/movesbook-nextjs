@@ -92,17 +92,16 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
 
   const menuItems = [
     { href: '/', label: t('nav_home'), icon: Home },
-    { href: '/athlete/dashboard', label: t('nav_dashboard'), icon: Trophy },
-    { href: '/coach/dashboard', label: t('nav_dashboard'), icon: UserCircle },
-    { href: '/team/dashboard', label: t('nav_dashboard'), icon: Users2 },
-    { href: '/group/dashboard', label: t('nav_dashboard'), icon: Users },
-    { href: '/club/dashboard', label: t('nav_dashboard'), icon: Building2 },
-    { href: '/testimonials', label: t('nav_blog'), icon: MessageCircle },
+    { href: '/athletes', label: 'Athletes', icon: Trophy },
+    { href: '/coaches', label: 'Coaches', icon: UserCircle },
+    { href: '/teams', label: 'Teams', icon: Users2 },
+    { href: '/groups', label: 'Groups', icon: Users },
+    { href: '/clubs', label: 'Sport Clubs', icon: Building2 },
+    { href: '/testimonials', label: 'Testimonials', icon: MessageCircle },
+    { href: '/blog', label: t('nav_blog'), icon: MessageCircle },
     { href: '/news', label: t('nav_news'), icon: Newspaper },
     { href: '/sell-buy', label: t('nav_sell_buy'), icon: ShoppingCart },
     { href: '/job-offers', label: t('nav_job_offers'), icon: Briefcase },
-    { href: '/promote-yourself', label: t('nav_promote_yourself'), icon: Megaphone },
-    { href: '/our-shop', label: t('nav_our_shop'), icon: ShoppingBag },
   ];
 
   const socialLinks = [
@@ -339,13 +338,6 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                     <Shield className="w-5 h-5 text-red-400" />
                     <span className="text-white font-medium">{adminUser?.name || 'Admin'}</span>
                   </div>
-                  <Link
-                    href="/admin/translations"
-                    className="flex items-center space-x-2 px-4 py-3 bg-purple-500 bg-opacity-20 hover:bg-opacity-30 text-white rounded-xl transition-all duration-300 font-semibold"
-                  >
-                    <Globe className="w-4 h-4" />
-                    <span>Translations</span>
-                  </Link>
                   <button
                     onClick={handleAdminLogout}
                     className="flex items-center space-x-2 px-4 py-3 bg-red-500 bg-opacity-20 hover:bg-opacity-30 text-white rounded-xl transition-all duration-300 font-semibold"
@@ -491,14 +483,6 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                         <p className="text-white font-semibold text-sm">{adminUser?.name}</p>
                         <p className="text-red-200 text-xs">{adminUser?.email}</p>
                       </div>
-                      <Link
-                        href="/admin/translations"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className="w-full flex items-center px-6 py-4 text-purple-300 hover:bg-purple-500 hover:bg-opacity-20 rounded-2xl transition-all duration-300 font-semibold"
-                      >
-                        <Globe className="w-5 h-5 mr-3" />
-                        Manage Translations
-                      </Link>
                       <button
                         onClick={handleAdminLogout}
                         className="w-full flex items-center px-6 py-4 text-red-300 hover:bg-red-500 hover:bg-opacity-20 rounded-2xl transition-all duration-300 font-semibold"

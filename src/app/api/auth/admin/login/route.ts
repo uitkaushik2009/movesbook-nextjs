@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
           token,
           user: {
             id: 'admin',
-            name: 'System Administrator',
+            name: 'Admin',
             username: FALLBACK_ADMIN.username,
             email: FALLBACK_ADMIN.email,
             userType: 'ADMIN'
