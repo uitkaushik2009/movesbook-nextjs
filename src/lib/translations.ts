@@ -307,41 +307,6 @@ export function getChineseStrings(): LanguageStrings {
     'sidebar_notifications': '通知',
     'sidebar_music': '音乐',
     'sidebar_search': '搜索',
-    'dashboard_home': '首页',
-    'dashboard_overview': '概览',
-    'dashboard_myworkout_section': '我的训练部分',
-    'dashboard_my_social_activities': '我的社交活动',
-    'dashboard_my_social_area': '我的社交区',
-    'dashboard_my_internet_links': '我的互联网链接',
-    'dashboard_socials': '社交',
-    'dashboard_my_desk': '我的桌面',
-    'dashboard_search_network': '在网络中搜索',
-    'dashboard_athlete_workout_plan': '运动员训练计划',
-    'dashboard_activity_overview': '活动概览',
-    'dashboard_recent_activity_feed': '最近活动动态',
-    'dashboard_add_workout': '添加训练',
-    'dashboard_workouts': '训练',
-    'dashboard_progress': '进度',
-    'dashboard_my_coaches': '我的教练',
-    'dashboard_my_teams': '我的团队',
-    'dashboard_my_clubs': '我的俱乐部',
-    'dashboard_my_groups': '我的群组',
-    'dashboard_this_week': '本周',
-    'dashboard_this_month': '本月',
-    'dashboard_completion_rate': '完成率',
-    'dashboard_workouts_count': '次训练',
-    'dashboard_workout_session': '训练课程',
-    'dashboard_completed_on': '完成于',
-    'dashboard_my_workouts': '我的训练',
-    'dashboard_personal_workout_plans': '个人训练计划',
-    'dashboard_progress_analytics': '进度与分析',
-    'dashboard_chart_placeholder': '图表占位符',
-    'settings_title': '设置',
-    'settings_backgrounds': '背景和颜色',
-    'settings_tools': '工具',
-    'settings_favourites': '收藏夹',
-    'settings_my_best': '我的最佳',
-    'settings_languages': '语言',
     'settings_grid_display': '网格和显示',
     'settings_customize': '自定义您的训练管理体验',
     'settings_save_all': '保存所有更改',
@@ -357,7 +322,6 @@ export function getChineseStrings(): LanguageStrings {
     'sidebar_internet_links': '互联网链接',
     'sidebar_other_item': '其他项目',
     'sidebar_communities': '社区',
-    'sidebar_friends': '朋友们',
   };
 }
 
@@ -626,7 +590,6 @@ export function getHindiStrings(): LanguageStrings {
     'sidebar_internet_links': 'इंटरनेट लिंक',
     'sidebar_other_item': 'अन्य आइटम',
     'sidebar_communities': 'समुदाय',
-    'sidebar_friends': 'दोस्त',
   };
 }
 
@@ -854,7 +817,6 @@ export function getArabicStrings(): LanguageStrings {
     'sidebar_internet_links': 'روابط الإنترنت',
     'sidebar_other_item': 'عنصر آخر',
     'sidebar_communities': 'المجتمعات',
-    'sidebar_friends': 'الأصدقاء',
   };
 }
 
@@ -1082,7 +1044,6 @@ export function getPortugueseStrings(): LanguageStrings {
     'sidebar_internet_links': 'Links da Internet',
     'sidebar_other_item': 'Outro Item',
     'sidebar_communities': 'Comunidades',
-    'sidebar_friends': 'AMIGOS',
   };
 }
 
@@ -1393,7 +1354,6 @@ export function getItalianStrings(): LanguageStrings {
     'sidebar_music': 'Musica',
     'sidebar_search': 'Cerca',
     'dashboard_home': 'Home',
-    'dashboard_overview': 'Panoramica',
     'dashboard_myworkout_section': 'Sezione Mio Allenamento',
     'dashboard_my_social_activities': 'Le Mie Attività Sociali',
     'dashboard_my_social_area': 'La Mia Area Sociale',
@@ -1421,16 +1381,6 @@ export function getItalianStrings(): LanguageStrings {
     'dashboard_personal_workout_plans': 'Piani di Allenamento Personali',
     'dashboard_progress_analytics': 'Progresso e Analisi',
     'dashboard_chart_placeholder': 'Segnaposto Grafico',
-    'settings_title': 'Impostazioni',
-    'settings_backgrounds': 'Sfondi e Colori',
-    'settings_tools': 'Strumenti',
-    'settings_favourites': 'Preferiti',
-    'settings_my_best': 'I Miei Migliori',
-    'settings_languages': 'Lingue',
-    'settings_grid_display': 'Griglia e Visualizzazione',
-    'settings_customize': 'Personalizza la tua esperienza di gestione dell\'allenamento',
-    'settings_save_all': 'Salva Tutte le Modifiche',
-    'settings_saved_success': 'Tutte le impostazioni sono state salvate con successo!',
     'sidebar_my_page_visitors': 'La mia pagina per i visitatori',
     'sidebar_main_toolbar': 'Barra degli Strumenti Principale',
     'sidebar_by_staff': 'Dallo staff di movesbook',
@@ -1442,7 +1392,6 @@ export function getItalianStrings(): LanguageStrings {
     'sidebar_internet_links': 'Link Internet',
     'sidebar_other_item': 'Altro Elemento',
     'sidebar_communities': 'Comunità',
-    'sidebar_friends': 'AMICI',
   };
 }
 
@@ -1670,7 +1619,6 @@ export function getRussianStrings(): LanguageStrings {
     'sidebar_internet_links': 'Интернет-ссылки',
     'sidebar_other_item': 'Другой Элемент',
     'sidebar_communities': 'Сообщества',
-    'sidebar_friends': 'ДРУЗЬЯ',
   };
 }
 
@@ -1981,7 +1929,6 @@ export function getFrenchStrings(): LanguageStrings {
     'sidebar_music': 'Musique',
     'sidebar_search': 'Rechercher',
     'dashboard_home': 'Accueil',
-    'dashboard_overview': 'Vue d\'ensemble',
     'dashboard_myworkout_section': 'Section Mon Entraînement',
     'dashboard_my_social_activities': 'Mes Activités Sociales',
     'dashboard_my_social_area': 'Ma Zone Sociale',
@@ -2009,16 +1956,6 @@ export function getFrenchStrings(): LanguageStrings {
     'dashboard_personal_workout_plans': 'Plans d\'Entraînement Personnels',
     'dashboard_progress_analytics': 'Progrès et Analyses',
     'dashboard_chart_placeholder': 'Espace Réservé au Graphique',
-    'settings_title': 'Paramètres',
-    'settings_backgrounds': 'Arrière-plans et Couleurs',
-    'settings_tools': 'Outils',
-    'settings_favourites': 'Favoris',
-    'settings_my_best': 'Mes Meilleurs',
-    'settings_languages': 'Langues',
-    'settings_grid_display': 'Grille et Affichage',
-    'settings_customize': 'Personnalisez votre expérience de gestion d\'entraînement',
-    'settings_save_all': 'Enregistrer Toutes les Modifications',
-    'settings_saved_success': 'Tous les paramètres ont été enregistrés avec succès!',
     'sidebar_my_page_visitors': 'Ma page pour les visiteurs',
     'sidebar_main_toolbar': 'Barre d\'Outils Principale',
     'sidebar_by_staff': 'Par l\'équipe movesbook',
@@ -2030,7 +1967,6 @@ export function getFrenchStrings(): LanguageStrings {
     'sidebar_internet_links': 'Liens Internet',
     'sidebar_other_item': 'Autre Élément',
     'sidebar_communities': 'Communautés',
-    'sidebar_friends': 'AMIS',
   };
 }
 
@@ -2132,12 +2068,6 @@ export function getGermanStrings(): LanguageStrings {
     'auth_create_account': 'Konto erstellen',
     'auth_have_account': 'Bereits ein Konto?',
     'auth_no_account': 'Noch kein Konto?',
-    'user_type_athlete': 'Athlet',
-    'user_type_coach': 'Trainer',
-    'user_type_club': 'Vereinstrainer',
-    'user_type_team': 'Teamtrainer',
-    'user_type_group': 'Gruppentrainer',
-    'user_type_group_admin': 'Gruppenadministrator',
     'dashboard_welcome': 'Willkommen',
     'dashboard_overview': 'Übersicht',
     'dashboard_statistics': 'Statistiken',
@@ -2331,7 +2261,6 @@ export function getGermanStrings(): LanguageStrings {
     'sidebar_music': 'Musik',
     'sidebar_search': 'Suchen',
     'dashboard_home': 'Startseite',
-    'dashboard_overview': 'Übersicht',
     'dashboard_myworkout_section': 'Mein Trainingsbereich',
     'dashboard_my_social_activities': 'Meine Sozialen Aktivitäten',
     'dashboard_my_social_area': 'Mein Sozialer Bereich',
@@ -2359,16 +2288,6 @@ export function getGermanStrings(): LanguageStrings {
     'dashboard_personal_workout_plans': 'Persönliche Trainingspläne',
     'dashboard_progress_analytics': 'Fortschritt und Analysen',
     'dashboard_chart_placeholder': 'Diagramm-Platzhalter',
-    'settings_title': 'Einstellungen',
-    'settings_backgrounds': 'Hintergründe und Farben',
-    'settings_tools': 'Werkzeuge',
-    'settings_favourites': 'Favoriten',
-    'settings_my_best': 'Meine Besten',
-    'settings_languages': 'Sprachen',
-    'settings_grid_display': 'Raster und Anzeige',
-    'settings_customize': 'Passen Sie Ihr Trainingsmanagement-Erlebnis an',
-    'settings_save_all': 'Alle Änderungen Speichern',
-    'settings_saved_success': 'Alle Einstellungen wurden erfolgreich gespeichert!',
     'sidebar_my_page_visitors': 'Meine Seite für Besucher',
     'sidebar_main_toolbar': 'Haupt-Symbolleiste',
     'sidebar_by_staff': 'Von movesbook-Mitarbeitern',
@@ -2380,7 +2299,6 @@ export function getGermanStrings(): LanguageStrings {
     'sidebar_internet_links': 'Internet-Links',
     'sidebar_other_item': 'Anderes Element',
     'sidebar_communities': 'Gemeinschaften',
-    'sidebar_friends': 'FREUNDE',
   };
 }
 
