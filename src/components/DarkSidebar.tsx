@@ -394,7 +394,7 @@ export default function DarkSidebar({
 
         {/* My page for visitors */}
         <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
-          <span>My page for visitors</span>
+          <span>{t('sidebar_my_page_visitors')}</span>
           <ChevronDown className="w-4 h-4" />
         </button>
 
@@ -477,7 +477,7 @@ export default function DarkSidebar({
         >
           <div className="flex items-center gap-3">
             <LayoutDashboard className="w-5 h-5" />
-            <span>Main Toolbar</span>
+            <span>{t('sidebar_main_toolbar')}</span>
           </div>
           <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.mainToolbar ? 'rotate-180' : ''}`} />
         </button>
@@ -501,7 +501,7 @@ export default function DarkSidebar({
         <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
           <div className="flex items-center gap-3">
             <Bell className="w-5 h-5" />
-            <span>By movesbook staff(0)</span>
+            <span>{t('sidebar_by_staff')}(0)</span>
           </div>
         </button>
 
@@ -524,7 +524,7 @@ export default function DarkSidebar({
         >
           <div className="flex items-center gap-3">
             <Clock className="w-5 h-5" />
-            <span>My bookings</span>
+            <span>{t('sidebar_my_bookings')}</span>
           </div>
           <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.bookings ? 'rotate-180' : ''}`} />
         </button>
@@ -536,7 +536,7 @@ export default function DarkSidebar({
         >
           <div className="flex items-center gap-3">
             <Music className="w-5 h-5" />
-            <span>My Music</span>
+            <span>{t('sidebar_my_music')}</span>
           </div>
           <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.music ? 'rotate-180' : ''}`} />
         </button>
@@ -545,7 +545,7 @@ export default function DarkSidebar({
         <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
           <div className="flex items-center gap-3">
             <LayoutDashboard className="w-5 h-5" />
-            <span>My Dashboard</span>
+            <span>{t('sidebar_my_dashboard_menu')}</span>
           </div>
         </button>
 
@@ -553,7 +553,7 @@ export default function DarkSidebar({
         <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
           <div className="flex items-center gap-3">
             <FileText className="w-5 h-5" />
-            <span>Posts</span>
+            <span>{t('sidebar_posts')}</span>
           </div>
         </button>
 
@@ -561,7 +561,7 @@ export default function DarkSidebar({
         <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
           <div className="flex items-center gap-3">
             <Newspaper className="w-5 h-5" />
-            <span>News</span>
+            <span>{t('sidebar_news')}</span>
           </div>
         </button>
 
@@ -569,7 +569,7 @@ export default function DarkSidebar({
         <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
           <div className="flex items-center gap-3">
             <LinkIcon className="w-5 h-5" />
-            <span>Internet links</span>
+            <span>{t('sidebar_internet_links')}</span>
           </div>
         </button>
 
@@ -577,7 +577,7 @@ export default function DarkSidebar({
         <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
           <div className="flex items-center gap-3">
             <Package className="w-5 h-5" />
-            <span>Other Item</span>
+            <span>{t('sidebar_other_item')}</span>
           </div>
         </button>
 
@@ -585,7 +585,7 @@ export default function DarkSidebar({
         <button className="w-full bg-teal-800 hover:bg-teal-700 text-white py-3 px-4 flex items-center justify-between transition-colors border-b border-teal-700">
           <div className="flex items-center gap-3">
             <Users2 className="w-5 h-5" />
-            <span>Communities</span>
+            <span>{t('sidebar_communities')}</span>
           </div>
         </button>
 
@@ -596,7 +596,7 @@ export default function DarkSidebar({
         >
           <div className="flex items-center gap-3">
             <Users className="w-5 h-5" />
-            <span>FRIENDS</span>
+            <span>{t('sidebar_friends')}</span>
           </div>
           <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.friends ? 'rotate-180' : ''}`} />
         </button>

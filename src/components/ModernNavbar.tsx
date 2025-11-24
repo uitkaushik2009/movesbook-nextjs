@@ -99,10 +99,10 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
     { href: '/club/dashboard', label: t('nav_dashboard'), icon: Building2 },
     { href: '/testimonials', label: t('nav_blog'), icon: MessageCircle },
     { href: '/news', label: t('nav_news'), icon: Newspaper },
-    { href: '/sell-buy', label: 'Sell-Buy', icon: ShoppingCart },
-    { href: '/job-offers', label: 'Job Offers', icon: Briefcase },
-    { href: '/promote-yourself', label: 'Promote Yourself', icon: Megaphone },
-    { href: '/our-shop', label: 'Our Shop', icon: ShoppingBag },
+    { href: '/sell-buy', label: t('nav_sell_buy'), icon: ShoppingCart },
+    { href: '/job-offers', label: t('nav_job_offers'), icon: Briefcase },
+    { href: '/promote-yourself', label: t('nav_promote_yourself'), icon: Megaphone },
+    { href: '/our-shop', label: t('nav_our_shop'), icon: ShoppingBag },
   ];
 
   const socialLinks = [
