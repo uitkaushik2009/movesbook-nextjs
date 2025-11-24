@@ -96,6 +96,8 @@ export default function TeamDashboard() {
             <RightSidebar
               onAddMember={() => setShowAddMemberModal(true)}
               workoutPlanLabel="Team Workout Plan"
+              context={activeTab === 'my-page' ? 'my-page' : 'my-club'}
+              activeTab={activeTab}
             />
           )}
           

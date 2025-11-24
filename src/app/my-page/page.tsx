@@ -166,6 +166,7 @@ export default function MyPage() {
             <RightSidebar
               user={user}
               onAddMemberClick={() => setShowAddMemberModal(true)}
+              activeTab={activeTab}
             />
           )}
         </div>

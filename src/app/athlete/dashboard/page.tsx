@@ -21,7 +21,11 @@ import {
   TrendingUp,
   Home,
   Menu,
-  HelpCircle
+  HelpCircle,
+  CalendarCheck,
+  CalendarDays,
+  CheckSquare,
+  Save
 } from 'lucide-react';
 import AdvertisementCarousel from '@/components/AdvertisementCarousel';
 import ModernNavbar from '@/components/ModernNavbar';
@@ -315,10 +319,31 @@ export default function AthleteDashboard() {
             <div className="w-80 flex-shrink-0">
               <div className="bg-white rounded-lg shadow-sm border p-4 h-full flex flex-col">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('sidebar_quick_actions')}</h3>
-                <div className="space-y-3">
-                  <button className="w-full flex items-center justify-between p-4 border-2 border-dashed border-green-200 rounded-xl hover:border-green-300 hover:bg-green-50 transition-all duration-200 group">
-                    <span className="text-sm font-medium text-gray-700 group-hover:text-green-700">{t('dashboard_athlete_workout_plan')}</span>
-                    <Target className="w-4 h-4 text-gray-400 group-hover:text-green-500" />
+                <div className="space-y-2">
+                  {/* Quick Actions for My Page (Athlete) */}
+                  <button className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
+                    <Calendar className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 text-left">{t('sidebar_plan_new_workout')}</span>
+                  </button>
+                  
+                  <button className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
+                    <CalendarDays className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 text-left">{t('sidebar_plan_3_weeks')}</span>
+                  </button>
+                  
+                  <button className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
+                    <CalendarCheck className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 text-left">{t('sidebar_plan_of_year')}</span>
+                  </button>
+                  
+                  <button className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
+                    <CheckSquare className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 text-left">{t('sidebar_log_completed')}</span>
+                  </button>
+                  
+                  <button className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
+                    <Save className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 text-left">{t('sidebar_save_session')}</span>
                   </button>
                 </div>
 

@@ -299,7 +299,7 @@ export default function DarkSidebar({
         {/* Conditional Menu Based on Active Tab */}
         {currentTab === 'my-page' ? (
           <>
-            {/* My Page Menu Items - Dashboard removed */}
+            {/* My Page Menu Items */}
           </>
         ) : (
           <>
