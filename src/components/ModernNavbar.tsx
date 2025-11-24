@@ -339,6 +339,13 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                     <Shield className="w-5 h-5 text-red-400" />
                     <span className="text-white font-medium">{adminUser?.name || 'Admin'}</span>
                   </div>
+                  <Link
+                    href="/admin/translations"
+                    className="flex items-center space-x-2 px-4 py-3 bg-purple-500 bg-opacity-20 hover:bg-opacity-30 text-white rounded-xl transition-all duration-300 font-semibold"
+                  >
+                    <Globe className="w-4 h-4" />
+                    <span>Translations</span>
+                  </Link>
                   <button
                     onClick={handleAdminLogout}
                     className="flex items-center space-x-2 px-4 py-3 bg-red-500 bg-opacity-20 hover:bg-opacity-30 text-white rounded-xl transition-all duration-300 font-semibold"
@@ -484,6 +491,14 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                         <p className="text-white font-semibold text-sm">{adminUser?.name}</p>
                         <p className="text-red-200 text-xs">{adminUser?.email}</p>
                       </div>
+                      <Link
+                        href="/admin/translations"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="w-full flex items-center px-6 py-4 text-purple-300 hover:bg-purple-500 hover:bg-opacity-20 rounded-2xl transition-all duration-300 font-semibold"
+                      >
+                        <Globe className="w-5 h-5 mr-3" />
+                        Manage Translations
+                      </Link>
                       <button
                         onClick={handleAdminLogout}
                         className="w-full flex items-center px-6 py-4 text-red-300 hover:bg-red-500 hover:bg-opacity-20 rounded-2xl transition-all duration-300 font-semibold"
