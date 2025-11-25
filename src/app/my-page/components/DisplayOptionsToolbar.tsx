@@ -26,10 +26,11 @@ export default function DisplayOptionsToolbar({
   onToggleToolbar
 }: DisplayOptionsToolbarProps) {
   return (
-    <div className={`bg-white border-b px-4 py-2 transition-all duration-300 ${showToolbar ? '' : 'overflow-hidden'}`}>
-      <div className={`flex items-center justify-between flex-wrap gap-2 transition-all duration-300 ${showToolbar ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-        <div className="flex items-center gap-4 flex-wrap">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
+    <div className="bg-white border-b px-4 py-2">
+      <div className="flex items-center justify-between gap-4 overflow-x-auto">
+        {/* Left side options */}
+        <div className={`flex items-center gap-4 transition-all duration-300 ${showToolbar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
             <input
               type="checkbox"
               checked={showAdBanner}
@@ -41,7 +42,7 @@ export default function DisplayOptionsToolbar({
               Advertising Banner
             </span>
           </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
             <input
               type="checkbox"
               checked={showPersonalBanner}
@@ -53,7 +54,7 @@ export default function DisplayOptionsToolbar({
               Personal Banner & Picture
             </span>
           </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
             <input
               type="checkbox"
               checked={showLeftSidebar}
@@ -65,7 +66,7 @@ export default function DisplayOptionsToolbar({
               Left Sidebar
             </span>
           </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap">
             <input
               type="checkbox"
               checked={showRightSidebar}
@@ -78,10 +79,9 @@ export default function DisplayOptionsToolbar({
             </span>
           </label>
         </div>
-      </div>
-      {/* Toggle button - always visible */}
-      <div className="flex items-center justify-end py-1">
-        <label className="flex items-center gap-2 text-sm cursor-pointer">
+        
+        {/* Right side - Display Options toggle */}
+        <label className="flex items-center gap-2 text-sm cursor-pointer whitespace-nowrap ml-auto">
           <input
             type="checkbox"
             checked={showToolbar}

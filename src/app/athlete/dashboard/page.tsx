@@ -25,7 +25,9 @@ import {
   CalendarCheck,
   CalendarDays,
   CheckSquare,
-  Save
+  Save,
+  Mail,
+  Filter
 } from 'lucide-react';
 import AdvertisementCarousel from '@/components/AdvertisementCarousel';
 import ModernNavbar from '@/components/ModernNavbar';
@@ -317,7 +319,7 @@ export default function AthleteDashboard() {
 
           {showRightSidebar && (
             <div className="w-80 flex-shrink-0">
-              <div className="bg-white rounded-lg shadow-sm border p-4 h-full flex flex-col">
+              <div className="bg-white rounded-lg shadow-sm border p-4 h-full flex flex-col overflow-y-auto">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('sidebar_quick_actions')}</h3>
                 <div className="space-y-2">
                   {/* Quick Actions for My Page (Athlete) */}
@@ -345,6 +347,127 @@ export default function AthleteDashboard() {
                     <Save className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
                     <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 text-left">{t('sidebar_save_session')}</span>
                   </button>
+                </div>
+
+                {/* Next Event Section - For "My Page" */}
+                <div className="mt-6 border-t pt-4">
+                  <div className="bg-gray-800 text-white px-3 py-2 rounded-t-lg flex items-center justify-between">
+                    <h4 className="text-sm font-semibold">{t('sidebar_next_event')}</h4>
+                    <button className="text-xs text-gray-300 hover:text-white">{t('sidebar_see_all')}</button>
+                  </div>
+                  
+                  <div className="bg-gray-100 px-3 py-2 space-y-2">
+                    <button className="w-full text-left text-xs text-gray-700 hover:text-gray-900 py-1">
+                      {t('sidebar_events_my_sports')}
+                    </button>
+                    <button className="w-full text-left text-xs text-gray-700 hover:text-gray-900 py-1">
+                      {t('sidebar_my_friends_events')}
+                    </button>
+                    <button className="w-full text-left text-xs text-gray-700 hover:text-gray-900 py-1">
+                      {t('sidebar_event_other_sport')}
+                    </button>
+                  </div>
+                </div>
+
+                {/* News by My Friends Section - For "My Page" */}
+                <div className="mt-6 border-t pt-4">
+                  <div className="bg-gray-800 text-white px-3 py-2 rounded-t-lg flex items-center justify-between">
+                    <h4 className="text-sm font-semibold">{t('sidebar_news_my_friends')}</h4>
+                    <button className="text-xs text-gray-300 hover:text-white">{t('sidebar_see_all')}</button>
+                  </div>
+                  
+                  <div className="mt-2 space-y-3 px-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-start gap-2 py-2 hover:bg-gray-50 rounded-lg transition-colors">
+                        <img
+                          src={`https://images.unsplash.com/photo-${1500000000000 + i * 1000000}?w=100&h=100&fit=crop`}
+                          alt={`Friend ${i}`}
+                          className="w-10 h-10 rounded object-cover"
+                        />
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-gray-800">Friend {i}</p>
+                          <p className="text-xs text-gray-600 line-clamp-2">
+                            Lorem ipsum dolor sit amet...
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Newest Members Section - For "My Page" */}
+                <div className="mt-6 border-t pt-4">
+                  <div className="bg-gray-800 text-white px-3 py-2 rounded-t-lg">
+                    <h4 className="text-sm font-semibold">{t('sidebar_newest_members')}</h4>
+                  </div>
+                  
+                  {/* Filter Button */}
+                  <button className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 px-3 text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    {t('sidebar_filter_option')}
+                  </button>
+                  
+                  {/* Members List - 3 members */}
+                  <div className="mt-3 space-y-2 px-3">
+                    {[
+                      { name: 'John Smith', img: 'photo-1500648767791-00dcc994a43e' },
+                      { name: 'Sarah Johnson', img: 'photo-1494790108377-be9c29b29330' },
+                      { name: 'Mike Davis', img: 'photo-1507003211169-0a1dd7228f2d' }
+                    ].map((member, i) => (
+                      <div key={i} className="flex items-start gap-3 py-2 hover:bg-gray-50 rounded-lg transition-colors">
+                        <img
+                          src={`https://images.unsplash.com/${member.img}?w=100&h=100&fit=crop`}
+                          alt={member.name}
+                          className="w-12 h-12 rounded object-cover"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-800">{member.name}</p>
+                          <button className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800 mt-1">
+                            <Mail className="w-3 h-3" />
+                            {t('sidebar_send_message')}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Members Last Logged In Section - For "My Page" */}
+                <div className="mt-6 border-t pt-4">
+                  <div className="bg-gray-800 text-white px-3 py-2 rounded-t-lg flex items-center justify-between">
+                    <h4 className="text-sm font-semibold">{t('sidebar_members_last_logged')}</h4>
+                    <button className="text-xs text-gray-300 hover:text-white">{t('sidebar_see_all')}</button>
+                  </div>
+                  
+                  {/* Filter Button */}
+                  <button className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 px-3 text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    {t('sidebar_filter_option')}
+                  </button>
+                  
+                  {/* Members List - 3 members */}
+                  <div className="mt-3 space-y-2 px-3">
+                    {[
+                      { name: 'Freiwildplayer', img: 'photo-1566492031773-4f4e44671857' },
+                      { name: 'Alex Runner', img: 'photo-1534528741775-53994a69daeb' },
+                      { name: 'Emma Swift', img: 'photo-1438761681033-6461ffad8d80' }
+                    ].map((member, i) => (
+                      <div key={i} className="flex items-start gap-3 py-2 hover:bg-gray-50 rounded-lg transition-colors">
+                        <img
+                          src={`https://images.unsplash.com/${member.img}?w=100&h=100&fit=crop`}
+                          alt={member.name}
+                          className="w-12 h-12 rounded object-cover"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-800">{member.name}</p>
+                          <button className="flex items-center gap-1 text-xs text-gray-600 hover:text-gray-800 mt-1">
+                            <Mail className="w-3 h-3" />
+                            {t('sidebar_send_message')}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Actions Planner and Chat Panel Tabs */}
