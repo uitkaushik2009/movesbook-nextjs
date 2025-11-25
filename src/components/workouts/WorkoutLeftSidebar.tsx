@@ -52,13 +52,13 @@ export default function WorkoutLeftSidebar({
       <div className="w-80 bg-gray-800 text-white flex flex-col h-full overflow-y-auto">
         {/* Header */}
         <div className="p-4 border-b border-gray-700">
-          <h2 className="text-xl font-bold">{t('workout_menu_title')}</h2>
+          <h2 className="text-xl font-bold">Workout Menu</h2>
         </div>
 
         {/* Workout Sections */}
         <div className="p-4 space-y-2">
           <h3 className="text-sm font-semibold text-gray-400 uppercase mb-3">
-            {t('workout_sections_title')}
+            Workout Sections
           </h3>
           
           <button
@@ -71,8 +71,8 @@ export default function WorkoutLeftSidebar({
           >
             <Calendar className="w-5 h-5" />
             <div className="flex-1 text-left">
-              <div className="font-semibold">{t('workout_section_a')}</div>
-              <div className="text-xs opacity-75">{t('workout_section_a_desc')}</div>
+              <div className="font-semibold">Section A: Current Microcycle</div>
+              <div className="text-xs opacity-75">3 Weeks View</div>
             </div>
           </button>
 
@@ -86,8 +86,8 @@ export default function WorkoutLeftSidebar({
           >
             <CalendarCheck className="w-5 h-5" />
             <div className="flex-1 text-left">
-              <div className="font-semibold">{t('workout_section_b')}</div>
-              <div className="text-xs opacity-75">{t('workout_section_b_desc')}</div>
+              <div className="font-semibold">Section B: Yearly Plan</div>
+              <div className="text-xs opacity-75">Full Year View</div>
             </div>
           </button>
 
@@ -101,8 +101,8 @@ export default function WorkoutLeftSidebar({
           >
             <CheckSquare className="w-5 h-5" />
             <div className="flex-1 text-left">
-              <div className="font-semibold">{t('workout_section_c')}</div>
-              <div className="text-xs opacity-75">{t('workout_section_c_desc')}</div>
+              <div className="font-semibold">Section C: Workouts Done</div>
+              <div className="text-xs opacity-75">Training Diary</div>
             </div>
           </button>
 
@@ -116,8 +116,8 @@ export default function WorkoutLeftSidebar({
           >
             <Archive className="w-5 h-5" />
             <div className="flex-1 text-left">
-              <div className="font-semibold">{t('workout_section_d')}</div>
-              <div className="text-xs opacity-75">{t('workout_section_d_desc')}</div>
+              <div className="font-semibold">Section D: Archive</div>
+              <div className="text-xs opacity-75">Workout Templates</div>
             </div>
           </button>
         </div>
@@ -162,7 +162,7 @@ export default function WorkoutLeftSidebar({
                 className="w-full flex items-center gap-3 px-8 py-2 hover:bg-gray-700 transition text-sm"
               >
                 <Palette className="w-4 h-4" />
-                <span>{t('workout_settings_periods')}</span>
+                <span>Periods</span>
                 <span className="ml-auto text-xs text-gray-400">
                   ({periods.length})
                 </span>
@@ -173,7 +173,7 @@ export default function WorkoutLeftSidebar({
                 className="w-full flex items-center gap-3 px-8 py-2 hover:bg-gray-700 transition text-sm"
               >
                 <ListOrdered className="w-4 h-4" />
-                <span>{t('workout_settings_sections')}</span>
+                <span>Workout Sections</span>
                 <span className="ml-auto text-xs text-gray-400">
                   ({workoutSections.length})
                 </span>
@@ -184,7 +184,7 @@ export default function WorkoutLeftSidebar({
                 className="w-full flex items-center gap-3 px-8 py-2 hover:bg-gray-700 transition text-sm"
               >
                 <Globe className="w-4 h-4" />
-                <span>{t('workout_settings_main_sports')}</span>
+                <span>Main Sports</span>
                 <span className="ml-auto text-xs text-gray-400">
                   ({mainSports.length})
                 </span>

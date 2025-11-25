@@ -90,7 +90,7 @@ export default function WorkoutRightSidebar({
     <div className="w-80 bg-gray-50 border-l flex flex-col h-full overflow-y-auto">
       {/* Header */}
       <div className="p-4 bg-white border-b">
-        <h3 className="text-lg font-bold text-gray-800">{t('workout_tools_title')}</h3>
+        <h3 className="text-lg font-bold text-gray-800">Workout Tools</h3>
       </div>
 
       {/* Main Actions */}
@@ -105,7 +105,7 @@ export default function WorkoutRightSidebar({
           }`}
         >
           <Plus className="w-5 h-5" />
-          <span>{t('workout_add_workout_btn')}</span>
+          <span>Add Workout</span>
         </button>
 
         <button
@@ -118,7 +118,7 @@ export default function WorkoutRightSidebar({
           }`}
         >
           <Plus className="w-5 h-5" />
-          <span>{t('workout_add_moveframe_btn')}</span>
+          <span>Add Moveframe</span>
         </button>
       </div>
 
@@ -164,7 +164,7 @@ export default function WorkoutRightSidebar({
       {/* Sport Icons - Draggable */}
       <div className="p-4 bg-white border-y">
         <h4 className="text-sm font-semibold text-gray-700 mb-3">
-          {t('workout_drag_sport_title')}
+          Drag Sport to Workout
         </h4>
         <div className="grid grid-cols-3 gap-2">
           {mainSports.slice(0, 12).map((sport) => (
@@ -192,7 +192,7 @@ export default function WorkoutRightSidebar({
       {/* Contextual Options */}
       <div className="p-4">
         <h4 className="text-sm font-semibold text-gray-700 mb-3">
-          {t('workout_options_title')}
+          Options
         </h4>
         
         <div className="space-y-2">
@@ -200,14 +200,14 @@ export default function WorkoutRightSidebar({
           {selectedDay && !selectedWorkout && !selectedMoveframe && (
             <div className="space-y-2">
               <p className="text-xs text-gray-500 uppercase font-semibold">
-                {t('workout_day_options')}
+                Day Options
               </p>
               <button 
                 onClick={() => onCopy && onCopy('day')}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition"
               >
                 <Copy className="w-4 h-4" />
-                <span>{t('workout_copy_day')}</span>
+                <span>Copy Day</span>
               </button>
               {clipboard?.type === 'workout' && (
                 <button 
@@ -220,11 +220,11 @@ export default function WorkoutRightSidebar({
               )}
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition">
                 <Edit className="w-4 h-4" />
-                <span>{t('workout_edit_day_info')}</span>
+                <span>Edit Day Info</span>
               </button>
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition">
                 <Printer className="w-4 h-4" />
-                <span>{t('workout_print_day')}</span>
+                <span>Print Day</span>
               </button>
             </div>
           )}
@@ -233,21 +233,21 @@ export default function WorkoutRightSidebar({
           {selectedWorkout && !selectedMoveframe && (
             <div className="space-y-2">
               <p className="text-xs text-gray-500 uppercase font-semibold">
-                {t('workout_workout_options')}
+                Workout Options
               </p>
               <button 
                 onClick={() => onCopy && onCopy('workout')}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition"
               >
                 <Copy className="w-4 h-4" />
-                <span>{t('workout_copy_workout')}</span>
+                <span>Copy Workout</span>
               </button>
               <button 
                 onClick={() => onCut && onCut('workout')}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition"
               >
                 <Move className="w-4 h-4" />
-                <span>{t('workout_move_workout')}</span>
+                <span>Move Workout</span>
               </button>
               {clipboard?.type === 'workout' && selectedDay && (
                 <button 
@@ -260,15 +260,15 @@ export default function WorkoutRightSidebar({
               )}
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition">
                 <Edit className="w-4 h-4" />
-                <span>{t('workout_edit_workout_info')}</span>
+                <span>Edit Workout Info</span>
               </button>
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition">
                 <Share2 className="w-4 h-4" />
-                <span>{t('workout_share_workout')}</span>
+                <span>Share Workout</span>
               </button>
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-red-300 text-red-600 rounded hover:bg-red-50 transition">
                 <Trash2 className="w-4 h-4" />
-                <span>{t('workout_delete_workout')}</span>
+                <span>Delete Workout</span>
               </button>
             </div>
           )}
@@ -277,21 +277,21 @@ export default function WorkoutRightSidebar({
           {selectedMoveframe && (
             <div className="space-y-2">
               <p className="text-xs text-gray-500 uppercase font-semibold">
-                {t('workout_moveframe_options')}
+                Moveframe Options
               </p>
               <button 
                 onClick={() => onCopy && onCopy('moveframe')}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition"
               >
                 <Copy className="w-4 h-4" />
-                <span>{t('workout_duplicate_moveframe')}</span>
+                <span>Duplicate Moveframe</span>
               </button>
               <button 
                 onClick={() => onCut && onCut('moveframe')}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition"
               >
                 <Move className="w-4 h-4" />
-                <span>{t('workout_move_moveframe')}</span>
+                <span>Move Moveframe</span>
               </button>
               {clipboard?.type === 'moveframe' && selectedWorkout && (
                 <button 
@@ -304,7 +304,7 @@ export default function WorkoutRightSidebar({
               )}
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-red-300 text-red-600 rounded hover:bg-red-50 transition">
                 <Trash2 className="w-4 h-4" />
-                <span>{t('workout_delete_moveframe')}</span>
+                <span>Delete Moveframe</span>
               </button>
             </div>
           )}
@@ -316,22 +316,22 @@ export default function WorkoutRightSidebar({
               className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition"
             >
               <RefreshCw className="w-4 h-4" />
-              <span>{t('workout_refresh')}</span>
+              <span>Refresh</span>
             </button>
             <button className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition">
               <Download className="w-4 h-4" />
-              <span>{t('workout_export')}</span>
+              <span>Export</span>
             </button>
             <button className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition">
               <Upload className="w-4 h-4" />
-              <span>{t('workout_import')}</span>
+              <span>Import</span>
             </button>
             <button 
               onClick={onPrint}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 transition"
             >
               <Printer className="w-4 h-4" />
-              <span>{t('workout_print')}</span>
+              <span>Print</span>
             </button>
           </div>
         </div>

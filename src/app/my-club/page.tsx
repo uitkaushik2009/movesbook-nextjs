@@ -48,18 +48,7 @@ function MyClubContent() {
   const { user, loading: authLoading } = useAuth();
   const clubId = searchParams.get('clubId');
 
-  // Redirect to home if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/');
-    }
-  }, [user, authLoading, router]);
-
-  // Don't render if not authenticated
-  if (authLoading || !user) {
-    return null;
-  }
-  
+  // All hooks must be called before any conditional returns
   const [activeSection, setActiveSection] = useState<'overview' | 'members' | 'workouts' | 'analytics'>('overview');
   const [club, setClub] = useState<Club | null>(null);
   const [members, setMembers] = useState<ClubMember[]>([]);
@@ -70,20 +59,7 @@ function MyClubContent() {
   const [addingMember, setAddingMember] = useState(false);
   const [addMemberError, setAddMemberError] = useState('');
 
-  useEffect(() => {
-    if (!clubId) {
-      // If no clubId selected, redirect to My Page to select a club
-      // This ensures users must select a club from My Page first
-      if (user?.userType === 'CLUB_TRAINER') {
-        router.push('/my-page');
-        return;
-      }
-      setLoading(false);
-    } else {
-      loadClubData();
-    }
-  }, [clubId, user, router]);
-
+  // Helper function for loading club data
   const loadClubData = async () => {
     if (!clubId) return;
     
@@ -152,6 +128,33 @@ function MyClubContent() {
       setAddingMember(false);
     }
   };
+
+  // Redirect to home if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/');
+    }
+  }, [user, authLoading, router]);
+
+  // Load club data when clubId changes
+  useEffect(() => {
+    if (!clubId) {
+      // If no clubId selected, redirect to My Page to select a club
+      // This ensures users must select a club from My Page first
+      if (user?.userType === 'CLUB_TRAINER') {
+        router.push('/my-page');
+        return;
+      }
+      setLoading(false);
+    } else {
+      loadClubData();
+    }
+  }, [clubId, user, router]);
+
+  // Don't render if not authenticated
+  if (authLoading || !user) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex flex-col">

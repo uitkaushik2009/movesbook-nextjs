@@ -16,13 +16,7 @@
   }
 }
 
-html, body, #__next {
-  width: 100%;
-  min-width: 0;
-}
-
 body {
-  margin: 0;
   color: rgb(var(--foreground-rgb));
   background: linear-gradient(
       to bottom,
@@ -36,4 +30,49 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Prevent horizontal overflow but allow vertical for dropdowns */
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  position: relative;
+}
+
+/* Ensure all containers respect viewport width */
+* {
+  box-sizing: border-box;
+}
+
+/* Ensure dropdowns appear above everything */
+nav {
+  position: relative !important;
+  overflow: visible !important;
+}
+
+nav > * {
+  overflow: visible !important;
+}
+
+/* Ensure dropdown menus are always on top */
+[role="menu"],
+.dropdown-menu {
+  position: absolute !important;
+  z-index: 9999 !important;
+  overflow: visible !important;
 }

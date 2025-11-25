@@ -134,13 +134,6 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
     router.push('/');
   };
 
-  const handleProfileClick = () => {
-    // All users should go to My Page first to select their entity
-    router.push('/my-page');
-    setIsUserDropdownOpen(false);
-    setIsMobileMenuOpen(false);
-  };
-
   const handleProtectedLinkClick = (href: string, event: React.MouseEvent) => {
     // All navigation items are now public - no protection needed
     setIsMobileMenuOpen(false);
@@ -163,19 +156,19 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
   return (
     <>
       {/* Premium Main Navigation */}
-      <nav className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 shadow-2xl border-b border-purple-600 sticky top-0 z-50">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
+      <nav className="bg-gradient-to-r from-slate-900 via-purple-900 to-slate-900 shadow-2xl border-b border-purple-600 sticky top-0 z-50" style={{ overflow: 'visible' }}>
+        <div className="max-w-full px-4 sm:px-6 lg:px-8" style={{ overflow: 'visible' }}>
           {/* Top Bar with Contact Info & Language */}
-          <div className="flex justify-between items-center py-3 border-b border-cyan-500 border-opacity-30">
+          <div className="flex justify-between items-center py-3 border-b border-cyan-500 border-opacity-30" style={{ overflow: 'visible' }}>
             {/* Contact Information */}
-            <div className="flex items-center space-x-6 text-cyan-100">
+            <div className="hidden md:flex items-center space-x-6 text-cyan-100">
               <div className="flex items-center space-x-2">
                 <Phone className="w-4 h-4" />
-                <span className="font-medium">+1 (555) 123-4567</span>
+                <span className="font-medium text-xs sm:text-sm">+1 (555) 123-4567</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="w-4 h-4" />
-                <span className="font-medium">info@movesbook.com</span>
+                <span className="font-medium text-xs sm:text-sm">info@movesbook.com</span>
               </div>
             </div>
 
@@ -217,7 +210,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
             {/* Language & Social */}
             <div className="flex items-center space-x-4">
               {/* Language Selector */}
-              <div className="relative" ref={languageDropdownRef}>
+              <div className="relative" ref={languageDropdownRef} style={{ zIndex: 150 }}>
                 <button
                   onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
                   className="flex items-center space-x-2 text-cyan-100 hover:text-white transition-all duration-200 px-3 py-1 rounded-lg hover:bg-white hover:bg-opacity-10"
@@ -227,7 +220,13 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                 </button>
                 
                 {isLanguageDropdownOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-200 z-50">
+                  <div 
+                    className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-200"
+                    style={{ 
+                      zIndex: 9999,
+                      position: 'absolute'
+                    }}
+                  >
                     <div className="p-2">
                       {availableLanguages.map((lang) => (
                         <button
@@ -268,11 +267,11 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
           </div>
 
           {/* Main Navigation Bar */}
-          <div className="flex justify-between items-center h-20">
+          <div className="flex justify-between items-center h-20 relative" style={{ overflow: 'visible' }}>
             {/* Logo */}
-            <div className="flex items-center space-x-4 flex-shrink-0">
+            <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
               <div className="relative">
-                <div className="w-16 h-16 flex items-center justify-center">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 flex items-center justify-center">
                   <Image
                     src="/sidelogo.png"
                     alt="Movesbook Logo"
@@ -284,8 +283,8 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                   />
                 </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+              <div className="hidden sm:block">
+                <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
                   Movesbook
                 </h1>
                 <p className="text-cyan-200 text-xs font-light">Elite Training Platform</p>
@@ -293,8 +292,8 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
             </div>
 
             {/* Desktop Menu */}
-            <div className="hidden lg:flex items-center justify-center flex-1 mx-4">
-              <div className="flex items-center gap-2 w-full justify-center overflow-x-auto">
+            <div className="hidden lg:flex items-center justify-center flex-1 mx-2 lg:mx-4 overflow-hidden">
+              <div className="flex items-center gap-1 lg:gap-2 justify-center overflow-x-auto scrollbar-hide">
                 {menuItems.map((item, index) => {
                   const isActive = pathname === item.href;
                   const isHome = item.href === '/';
@@ -313,7 +312,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                           handleProtectedLinkClick(item.href, e);
                         }
                       }}
-                      className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
+                      className={`px-2 lg:px-4 py-2.5 rounded-xl text-xs lg:text-sm font-semibold transition-all duration-200 whitespace-nowrap ${
                         isActive
                           ? 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white shadow-2xl'
                           : canAccess
@@ -330,7 +329,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
             </div>
 
             {/* User Actions */}
-            <div className="hidden lg:flex items-center space-x-4 flex-shrink-0">
+            <div className="hidden lg:flex items-center space-x-4 flex-shrink-0" style={{ overflow: 'visible', position: 'relative', zIndex: 100 }}>
               {isAdmin ? (
                 /* Admin Logged In - Show Logout Button */
                 <div className="flex items-center space-x-3">
@@ -348,7 +347,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                 </div>
               ) : isAuthenticated ? (
                 /* User Dropdown */
-                <div className="relative" ref={userDropdownRef}>
+                <div className="relative" ref={userDropdownRef} style={{ zIndex: 150 }}>
                   <button
                     onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
                     className="flex items-center space-x-2 p-2 rounded-2xl hover:bg-white hover:bg-opacity-10 transition-all duration-300"
@@ -364,31 +363,20 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                   </button>
 
                   {isUserDropdownOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200 z-50">
+                    <div 
+                      className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200"
+                      style={{ 
+                        zIndex: 9999,
+                        position: 'absolute',
+                        overflow: 'visible'
+                      }}
+                    >
                       <div className="p-4 border-b border-gray-100">
                         <p className="font-semibold text-gray-900">{user?.name}</p>
                         <p className="text-sm text-gray-500">{user?.email}</p>
                       </div>
                       
                       <div className="p-2">
-                        <button
-                          onClick={handleProfileClick}
-                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                        >
-                          <User className="w-4 h-4 mr-3" />
-                          {t('nav_profile')}
-                        </button>
-                        
-                        <button
-                          onClick={handleAdminClick}
-                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
-                        >
-                          <Shield className="w-4 h-4 mr-3" />
-                          {t('nav_dashboard')}
-                        </button>
-
-                        <div className="border-t border-gray-100 my-1" />
-
                         <button
                           onClick={handleLogout}
                           className="w-full flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -497,13 +485,6 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                         <p className="text-white font-semibold text-sm">{user?.name}</p>
                         <p className="text-cyan-200 text-xs">{user?.email}</p>
                       </div>
-                      <button
-                        onClick={handleProfileClick}
-                        className="w-full flex items-center px-6 py-4 text-cyan-100 hover:bg-white hover:bg-opacity-10 rounded-2xl transition-all duration-300 font-semibold"
-                      >
-                        <User className="w-5 h-5 mr-3" />
-                        {t('nav_profile')}
-                      </button>
                       <button
                         onClick={handleLogout}
                         className="w-full flex items-center px-6 py-4 text-red-400 hover:bg-red-500 hover:bg-opacity-20 rounded-2xl transition-all duration-300 font-semibold"
