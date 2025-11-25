@@ -142,9 +142,11 @@ export default function DarkSidebar({
       onMyGroupClick();
     } else if (userType === 'COACH' && onMyCoachingGroupClick) {
       onMyCoachingGroupClick();
+    } else if (userType === 'ATHLETE' && onMyClubClick) {
+      onMyClubClick();
     } else {
-      // Default behavior - navigate to my-page
-      router.push('/my-page');
+      // Default behavior - just change tab without navigation
+      // The tab change is already handled by setCurrentTab above
     }
   };
 

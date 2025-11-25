@@ -1,6 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
+// Force dynamic rendering for authenticated pages
+export const dynamic = 'force-dynamic';
 import { 
   Calendar, 
   BarChart3, 
@@ -52,6 +55,8 @@ export default function AthleteDashboard() {
   const [showToolbar, setShowToolbar] = useState(true);
   const [activeRightTab, setActiveRightTab] = useState<'actions-planner' | 'chat-panel'>('actions-planner');
   const [expandedActionsPlanner, setExpandedActionsPlanner] = useState(true);
+  const [activeTab, setActiveTab] = useState<'my-page' | 'my-entity'>('my-page');
+  const [showWorkoutSection, setShowWorkoutSection] = useState(false);
   
   // Entities athlete belongs to
   const [myCoaches, setMyCoaches] = useState<any[]>([]);
@@ -82,6 +87,13 @@ export default function AthleteDashboard() {
       loadMyGroups();
     }
   }, [user]);
+
+  // Reset workout section when switching to my-page
+  useEffect(() => {
+    if (activeTab === 'my-page') {
+      setShowWorkoutSection(false);
+    }
+  }, [activeTab]);
 
   // Don't render if not authenticated (after all hooks are called)
   if (loading || !user) {
@@ -301,6 +313,18 @@ export default function AthleteDashboard() {
                   <button className="text-lime-400 hover:text-lime-300 transition-colors whitespace-nowrap font-semibold">
                     <span>Club Magiw Avellino</span>
                   </button>
+                  {activeTab === 'my-entity' && (
+                    <button 
+                      onClick={() => setShowWorkoutSection(!showWorkoutSection)}
+                      className={`transition-colors whitespace-nowrap ${
+                        showWorkoutSection 
+                          ? 'text-lime-400 hover:text-lime-300 font-semibold' 
+                          : 'text-gray-300 hover:text-white'
+                      }`}
+                    >
+                      <span>Workouts section</span>
+                    </button>
+                  )}
                   <button className="text-gray-300 hover:text-white transition-colors whitespace-nowrap">
                     <span>FunClub</span>
                   </button>
@@ -315,15 +339,17 @@ export default function AthleteDashboard() {
                   </button>
                 </div>
 
-                {/* Right side - Action buttons */}
-                <div className="flex items-center gap-3 ml-4">
-                  <button className="bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded transition-colors whitespace-nowrap text-sm font-medium">
-                    Upgrade informations
-                  </button>
-                  <button className="bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded transition-colors whitespace-nowrap text-sm font-medium">
-                    Logger of activities
-                  </button>
-                </div>
+                {/* Right side - Action buttons (only for My Page) */}
+                {activeTab === 'my-page' && (
+                  <div className="flex items-center gap-3 ml-4">
+                    <button className="bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded transition-colors whitespace-nowrap text-sm font-medium">
+                      Upgrade informations
+                    </button>
+                    <button className="bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded transition-colors whitespace-nowrap text-sm font-medium">
+                      Logger of activities
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -334,17 +360,48 @@ export default function AthleteDashboard() {
             <div className="w-80 flex-shrink-0 sticky top-0 self-start">
               <DarkSidebar
                 userType={user?.userType || ''}
-                entities={[]}
-                onMyPageClick={() => router.push('/my-page')}
+                entities={myClubs}
+                selectedEntityId={null}
+                onEntitySelect={(id) => {}}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                onMyPageClick={() => setActiveTab('my-page')}
+                onMyClubClick={() => setActiveTab('my-entity')}
               />
             </div>
           )}
 
           <div className="flex-1 min-w-0 flex flex-col px-4">
-            {activeSection === 'overview' && <AthleteOverview t={t} />}
-            {activeSection === 'workouts' && <AthleteWorkouts t={t} />}
-            {activeSection === 'progress' && <AthleteProgress t={t} />}
-            {activeSection === 'settings' && <AthleteSettings t={t} />}
+            {activeTab === 'my-page' && (
+              <div className="flex-1">
+                {activeSection === 'overview' && <AthleteOverview t={t} />}
+                {activeSection === 'workouts' && <AthleteWorkouts t={t} />}
+                {activeSection === 'progress' && <AthleteProgress t={t} />}
+                {activeSection === 'settings' && <AthleteSettings t={t} />}
+              </div>
+            )}
+            
+            {activeTab === 'my-entity' && !showWorkoutSection && (
+              <div className="bg-white rounded-lg shadow-sm border p-8 flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Your Athlete Dashboard</h2>
+                  <p className="text-gray-600 mb-6">Click on "Workouts section" in the navigation bar above to view and manage workouts.</p>
+                  <button 
+                    onClick={() => setShowWorkoutSection(true)}
+                    className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition"
+                  >
+                    Go to Workouts Section
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {activeTab === 'my-entity' && showWorkoutSection && (
+              <div className="bg-white rounded-lg shadow-sm border p-6 flex-1">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Athlete Workouts</h2>
+                <p className="text-gray-600">Workout management content for athletes goes here.</p>
+              </div>
+            )}
           </div>
 
           {showRightSidebar && (
