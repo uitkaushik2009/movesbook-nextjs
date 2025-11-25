@@ -26,7 +26,7 @@ export default function DisplayOptionsToolbar({
   onToggleToolbar
 }: DisplayOptionsToolbarProps) {
   return (
-    <div className="bg-white border-b px-4 py-2">
+    <div className="bg-white border-b px-4 py-1">
       <div className="flex items-center justify-between gap-4 overflow-x-auto">
         {/* Left side options */}
         <div className={`flex items-center gap-4 transition-all duration-300 ${showToolbar ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>

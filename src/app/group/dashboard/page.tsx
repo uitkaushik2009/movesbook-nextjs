@@ -112,7 +112,7 @@ export default function GroupDashboard() {
       <ModernNavbar />
 
       {/* Display Options Toolbar */}
-      <div className={`bg-white border-b px-4 py-2 transition-all duration-300 ${showToolbar ? '' : 'overflow-hidden'}`}>
+      <div className={`bg-white border-b px-4 py-1 transition-all duration-300 ${showToolbar ? '' : 'overflow-hidden'}`}>
         <div className={`flex items-center justify-between flex-wrap gap-2 transition-all duration-300 ${showToolbar ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="flex items-center gap-4 flex-wrap">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -144,19 +144,17 @@ export default function GroupDashboard() {
               </span>
             </label>
           </div>
-        </div>
-        <div className="flex items-center justify-end py-1">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="checkbox" checked={showToolbar} onChange={(e) => setShowToolbar(e.target.checked)} className="w-4 h-4" />
-            <span className="flex items-center gap-1 text-gray-600">
-              {showToolbar ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-              <span className="font-medium">Display Options</span>
-            </span>
-          </label>
-        </div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer ml-auto">
+              <input type="checkbox" checked={showToolbar} onChange={(e) => setShowToolbar(e.target.checked)} className="w-4 h-4" />
+              <span className="flex items-center gap-1 text-gray-600">
+                {showToolbar ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                <span className="font-medium">Display Options</span>
+              </span>
+            </label>
+          </div>
       </div>
 
-      <div className="flex-1 flex flex-col w-full py-6">
+      <div className="flex-1 flex flex-col w-full py-2">
         {showAdBanner && (
           <div className="mb-6 flex-shrink-0 px-4">
             <AdvertisementCarousel />
