@@ -221,75 +221,107 @@ export default function AthleteDashboard() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col w-full py-6">
+      <div className="flex-1 flex flex-col w-full py-2">
         {showAdBanner && (
-          <div className="mb-6 flex-shrink-0 px-4">
+          <div className="flex-shrink-0">
             <AdvertisementCarousel />
+          </div>
+        )}
+
+        {/* Video/Image Banner with Info Cards */}
+        {showPersonalBanner && (
+          <div className="flex-shrink-0">
+            <div className="relative overflow-hidden shadow-lg" style={{ height: '300px' }}>
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800">
+                <img 
+                  src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200&h=300&fit=crop" 
+                  alt="Athlete Background"
+                  className="w-full h-full object-cover opacity-60"
+                />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-20 h-14 bg-red-600 rounded-lg flex items-center justify-center cursor-pointer hover:bg-red-700 transition">
+                    <div className="w-0 h-0 border-t-8 border-t-transparent border-l-12 border-l-white border-b-8 border-b-transparent ml-1"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="absolute top-4 right-4 flex gap-3">
+                <div className="bg-gray-800/90 backdrop-blur-sm rounded-lg p-3 text-white min-w-[120px]">
+                  <p className="text-xs text-gray-400 uppercase mb-1">Active Season</p>
+                  <p className="font-semibold">2025 Indoor</p>
+                  <p className="text-sm">Championship</p>
+                </div>
+                <div className="bg-teal-600/90 backdrop-blur-sm rounded-lg p-3 text-white min-w-[120px]">
+                  <p className="text-xs text-gray-200 uppercase mb-1">Period</p>
+                  <p className="font-semibold">Base</p>
+                  <p className="text-sm">Conditioning</p>
+                </div>
+                <div className="bg-blue-600/90 backdrop-blur-sm rounded-lg p-3 text-white min-w-[100px]">
+                  <p className="text-xs text-gray-200 uppercase mb-1">Week</p>
+                  <p className="text-2xl font-bold">14</p>
+                </div>
+                <div className="bg-green-700/90 backdrop-blur-sm rounded-lg p-3 text-white min-w-[140px]">
+                  <p className="text-xs text-gray-200 uppercase mb-1">Next Event</p>
+                  <p className="font-semibold">Continental Cup 21 Jul</p>
+                </div>
+              </div>
+
+              <div className="absolute bottom-4 left-4 flex gap-2">
+                <span className="bg-blue-600/90 backdrop-blur-sm text-white px-3 py-1 rounded text-sm">CURRENT 2 WEEKS</span>
+                <span className="bg-gray-700/90 backdrop-blur-sm text-white px-3 py-1 rounded text-sm">REST OF THE YEAR</span>
+                <span className="bg-gray-700/90 backdrop-blur-sm text-white px-3 py-1 rounded text-sm">COMPLETED SESSIONS</span>
+              </div>
+
+              <div className="absolute bottom-4 left-4 mt-12">
+                <div className="bg-blue-800/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-medium">
+                  My Training
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
         {/* Personal Banner - Horizontal Navigation Bar */}
         {showPersonalBanner && (
-          <div className="mb-6 flex-shrink-0 px-4">
-            <div className="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-              <div className="flex items-center justify-between px-4 py-3 text-sm">
-                {/* Left side - Profile Picture, FAQ and Most used buttons */}
-                <div className="flex items-center gap-4">
-                  {/* Profile Picture */}
-                  <div className="w-10 h-10 bg-gray-700 rounded-full flex items-center justify-center flex-shrink-0">
-                    {user ? (
-                      <UserCircle className="w-8 h-8 text-lime-400" />
-                    ) : (
-                      <UserCircle className="w-8 h-8 text-gray-400" />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <button className="text-lime-400 hover:text-lime-300 transition-colors flex items-center gap-2">
-                      <HelpCircle className="w-4 h-4" />
-                      <span>FAQ Suggest Movesbook</span>
-                    </button>
-                    <button className="text-lime-400 hover:text-lime-300 transition-colors flex items-center gap-2">
-                      <span>Most used buttons</span>
-                      <Settings className="w-4 h-4 text-gray-400" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Center - Navigation items */}
-                <div className="flex items-center gap-4">
-                  <button className="text-gray-300 hover:text-white transition-colors flex items-center gap-2">
+          <div className="flex-shrink-0">
+            <div className="bg-gray-800 overflow-hidden shadow-lg" style={{ height: '52px' }}>
+              <div className="flex items-center justify-between px-4 text-sm h-full">
+                {/* Left side - Navigation items */}
+                <div className="flex items-center gap-4 overflow-x-auto">
+                  <button className="text-gray-300 hover:text-white transition-colors flex items-center gap-2 whitespace-nowrap">
                     <Home className="w-4 h-4" />
-                    <span>{t('dashboard_home')}</span>
+                    <span>Home</span>
                   </button>
-                  <button className="text-gray-300 hover:text-white transition-colors flex items-center gap-2">
-                    <Menu className="w-4 h-4" />
-                    <span>{t('dashboard_overview')}</span>
+                  <button className="text-gray-300 hover:text-white transition-colors whitespace-nowrap">
+                    <span>FAQ</span>
                   </button>
-                  <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>{t('dashboard_myworkout_section')}</span>
+                  <button className="text-gray-300 hover:text-white transition-colors whitespace-nowrap">
+                    <span>My Clubs</span>
                   </button>
-                  <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>{t('dashboard_my_social_activities')}</span>
+                  <button className="text-lime-400 hover:text-lime-300 transition-colors whitespace-nowrap font-semibold">
+                    <span>Club Magiw Avellino</span>
                   </button>
-                  <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>{t('dashboard_my_social_area')}</span>
+                  <button className="text-gray-300 hover:text-white transition-colors whitespace-nowrap">
+                    <span>FunClub</span>
                   </button>
-                  <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>{t('dashboard_my_internet_links')}</span>
+                  <button className="text-gray-300 hover:text-white transition-colors whitespace-nowrap">
+                    <span>My Shared Clubs</span>
                   </button>
-                  <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>{t('dashboard_socials')}</span>
+                  <button className="text-gray-300 hover:text-white transition-colors whitespace-nowrap">
+                    <span>Other Clubs</span>
                   </button>
-                  <button className="text-gray-300 hover:text-white transition-colors">
-                    <span>{t('dashboard_my_desk')}</span>
+                  <button className="text-gray-300 hover:text-white transition-colors whitespace-nowrap">
+                    <span>Populars</span>
                   </button>
                 </div>
 
-                {/* Right side - Search button */}
-                <div className="flex items-center">
-                  <button className="bg-red-700 hover:bg-red-800 text-lime-400 px-4 py-2 rounded transition-colors flex items-center gap-2">
-                    <span>{t('dashboard_search_network')}</span>
-                    <ChevronRight className="w-4 h-4" />
+                {/* Right side - Action buttons */}
+                <div className="flex items-center gap-3 ml-4">
+                  <button className="bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded transition-colors whitespace-nowrap text-sm font-medium">
+                    Upgrade informations
+                  </button>
+                  <button className="bg-white hover:bg-gray-100 text-gray-800 px-4 py-2 rounded transition-colors whitespace-nowrap text-sm font-medium">
+                    Logger of activities
                   </button>
                 </div>
               </div>
