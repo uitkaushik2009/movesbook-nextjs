@@ -22,6 +22,7 @@ model User {
   sections     WorkoutSection[]
   settings     UserSettings?
   mainSports   UserMainSport[]
+  workoutTemplates WorkoutTemplate[]
 
   // Legacy coach-athlete relationship (keeping for backward compatibility)
   athletes     CoachAthlete[] @relation("CoachAthletes")
@@ -89,6 +90,7 @@ model CoachAthlete {
   id        String   @id @default(cuid())
   coachId   String
   athleteId String
+  notes     String?  // Coach's notes about this athlete
   createdAt DateTime @default(now())
 
   coach   User @relation("CoachAthletes", fields: [coachId], references: [id], onDelete: Cascade)
@@ -323,6 +325,42 @@ model UserMainSport {
 
   @@unique([userId, sport])
   @@map("user_main_sports")
+}
+
+// Workout Templates - Archive/Library for saving and reusing workouts
+model WorkoutTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  category    String?  // "Swim", "Bike", "Run", "Mixed", "Strength", etc.
+  tags        String?  // JSON array of tags for search/filter
+  templateType String @default("workout") // "workout" or "day"
+  
+  // Template data stored as JSON
+  // For "workout": { workoutSession: {...}, moveframes: [...], movelaps: [...] }
+  // For "day": { day: {...}, workouts: [...], moveframes: [...], movelaps: [...] }
+  templateData String  // JSON string
+  
+  // Metadata
+  sports       String?  // Comma-separated list of sports in template
+  totalDistance Int?    // Total distance in meters (if applicable)
+  totalDuration Int?    // Total duration in minutes (if applicable)
+  difficulty   String?  // "easy", "moderate", "hard", "extreme"
+  
+  isPublic     Boolean  @default(false) // Can be shared with other users
+  isShared     Boolean  @default(false) // Shared by coach with athletes
+  timesUsed    Int      @default(0)     // Track popularity
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([category])
+  @@index([templateType])
+  @@map("workout_templates")
 }
 
 // ===== NEW ORGANIZATIONAL STRUCTURE MODELS =====

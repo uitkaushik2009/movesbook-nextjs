@@ -92,6 +92,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
 
   const menuItems = [
     { href: '/', label: t('nav_home'), icon: Home },
+    { href: '/workouts', label: 'Workouts', icon: Dumbbell },
     { href: '/athletes', label: 'Athletes', icon: Trophy },
     { href: '/coaches', label: 'Coaches', icon: UserCircle },
     { href: '/teams', label: 'Teams', icon: Users2 },
