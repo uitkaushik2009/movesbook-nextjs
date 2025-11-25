@@ -40,6 +40,7 @@ import AddMemberModal from '@/components/AddMemberModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
+import WorkoutSection from '@/components/workouts/WorkoutSection';
 
 export default function AthleteDashboard() {
   const router = useRouter();
@@ -189,7 +190,7 @@ export default function AthleteDashboard() {
   return (
     <div className="bg-gray-50 flex flex-col" style={{ minHeight: '100vh' }}>
       <ModernNavbar />
-
+      
       {/* Display Options Toolbar */}
       <div className={`bg-white border-b px-4 py-1 transition-all duration-300 ${showToolbar ? '' : 'overflow-hidden'}`}>
         <div className={`flex items-center justify-between flex-wrap gap-2 transition-all duration-300 ${showToolbar ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
@@ -397,10 +398,7 @@ export default function AthleteDashboard() {
             )}
             
             {activeTab === 'my-entity' && showWorkoutSection && (
-              <div className="bg-white rounded-lg shadow-sm border p-6 flex-1">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Athlete Workouts</h2>
-                <p className="text-gray-600">Workout management content for athletes goes here.</p>
-              </div>
+              <WorkoutSection onClose={() => setShowWorkoutSection(false)} />
             )}
           </div>
 
