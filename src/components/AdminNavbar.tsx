@@ -50,6 +50,14 @@ export default function AdminNavbar() {
       const timeAgo = '1 minute ago';
       setLastLogin(`${loginTime}\n${timeAgo}`);
     }
+
+    // Track current admin page
+    if (typeof window !== 'undefined') {
+      const currentPath = window.location.pathname;
+      if (currentPath.startsWith('/admin/')) {
+        localStorage.setItem('lastAdminPage', currentPath);
+      }
+    }
   }, []);
 
   // Close language dropdown when clicking outside

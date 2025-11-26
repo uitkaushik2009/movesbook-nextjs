@@ -92,6 +92,26 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
     return () => window.removeEventListener('storage', checkAdminStatus);
   }, []);
 
+  // Track last visited page for each user type
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Save last visited page for each user type
+      if (pathname.startsWith('/admin/')) {
+        localStorage.setItem('lastAdminPage', pathname);
+      } else if (pathname.startsWith('/athlete/')) {
+        localStorage.setItem('lastAthletePage', pathname);
+      } else if (pathname.startsWith('/coach/')) {
+        localStorage.setItem('lastCoachPage', pathname);
+      } else if (pathname.startsWith('/team/')) {
+        localStorage.setItem('lastTeamPage', pathname);
+      } else if (pathname.startsWith('/group/')) {
+        localStorage.setItem('lastGroupPage', pathname);
+      } else if (pathname.startsWith('/club/')) {
+        localStorage.setItem('lastClubPage', pathname);
+      }
+    }
+  }, [pathname]);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -164,8 +184,51 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
   };
 
   const handleAdminClick = () => {
-    if (onAdminClick) {
-      onAdminClick();
+    // If admin is already logged in, redirect to last admin page or dashboard
+    if (isAdmin) {
+      const lastAdminPage = localStorage.getItem('lastAdminPage');
+      router.push(lastAdminPage || '/admin/dashboard');
+      setIsMobileMenuOpen(false);
+    } else {
+      // Show admin login modal
+      if (onAdminClick) {
+        onAdminClick();
+      }
+      setIsMobileMenuOpen(false);
+    }
+  };
+
+  const handleDashboardClick = () => {
+    // Redirect to appropriate dashboard based on user type
+    if (user) {
+      const userType = user.userType?.toLowerCase();
+      let lastPage = null;
+      let defaultPage = '/my-page';
+
+      switch (userType) {
+        case 'athlete':
+          lastPage = localStorage.getItem('lastAthletePage');
+          defaultPage = '/athlete/dashboard';
+          break;
+        case 'coach':
+          lastPage = localStorage.getItem('lastCoachPage');
+          defaultPage = '/coach/dashboard';
+          break;
+        case 'team':
+          lastPage = localStorage.getItem('lastTeamPage');
+          defaultPage = '/team/dashboard';
+          break;
+        case 'group':
+          lastPage = localStorage.getItem('lastGroupPage');
+          defaultPage = '/group/dashboard';
+          break;
+        case 'club':
+          lastPage = localStorage.getItem('lastClubPage');
+          defaultPage = '/club/dashboard';
+          break;
+      }
+
+      router.push(lastPage || defaultPage);
     }
     setIsMobileMenuOpen(false);
   };
@@ -367,12 +430,15 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
             {/* User Actions */}
             <div className="hidden lg:flex items-center space-x-4 flex-shrink-0" style={{ overflow: 'visible', position: 'relative', zIndex: 100 }}>
               {isAdmin ? (
-                /* Admin Logged In - Show Logout Button */
+                /* Admin Logged In - Show Admin Button and Logout */
                 <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2 px-4 py-2 bg-red-500 bg-opacity-10 rounded-xl border border-red-500 border-opacity-30">
+                  <button
+                    onClick={handleAdminClick}
+                    className="flex items-center space-x-2 px-4 py-2 bg-red-500 bg-opacity-10 hover:bg-opacity-20 rounded-xl border border-red-500 border-opacity-30 transition-all duration-300 cursor-pointer"
+                  >
                     <Shield className="w-5 h-5 text-red-400" />
                     <span className="text-white font-medium">{adminUser?.name || 'Admin'}</span>
-                  </div>
+                  </button>
                   <button
                     onClick={handleAdminLogout}
                     className="flex items-center space-x-2 px-4 py-3 bg-red-500 bg-opacity-20 hover:bg-opacity-30 text-white rounded-xl transition-all duration-300 font-semibold"
@@ -413,6 +479,14 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                       </div>
                       
                       <div className="p-2">
+                        <button
+                          onClick={handleDashboardClick}
+                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          <Home className="w-4 h-4 mr-3" />
+                          Dashboard
+                        </button>
+
                         <button
                           onClick={() => {
                             router.push('/profile');
@@ -510,14 +584,17 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                   {isAdmin ? (
                     /* Admin Logged In - Mobile View */
                     <>
-                      <div className="px-6 py-3 bg-red-500 bg-opacity-10 rounded-2xl border border-red-500 border-opacity-30">
+                      <button
+                        onClick={handleAdminClick}
+                        className="w-full px-6 py-3 bg-red-500 bg-opacity-10 hover:bg-opacity-20 rounded-2xl border border-red-500 border-opacity-30 transition-all duration-300"
+                      >
                         <div className="flex items-center space-x-2 mb-1">
                           <Shield className="w-4 h-4 text-red-400" />
                           <p className="text-white font-semibold text-sm">{t('nav_admin_access')}</p>
                         </div>
                         <p className="text-white font-semibold text-sm">{adminUser?.name}</p>
                         <p className="text-red-200 text-xs">{adminUser?.email}</p>
-                      </div>
+                      </button>
                       <button
                         onClick={handleAdminLogout}
                         className="w-full flex items-center px-6 py-4 text-red-300 hover:bg-red-500 hover:bg-opacity-20 rounded-2xl transition-all duration-300 font-semibold"
@@ -532,6 +609,13 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                         <p className="text-white font-semibold text-sm">{user?.name}</p>
                         <p className="text-cyan-200 text-xs">{user?.email}</p>
                       </div>
+                      <button
+                        onClick={handleDashboardClick}
+                        className="w-full flex items-center px-6 py-4 text-cyan-100 hover:bg-white hover:bg-opacity-10 rounded-2xl transition-all duration-300 font-semibold"
+                      >
+                        <Home className="w-5 h-5 mr-3" />
+                        Dashboard
+                      </button>
                       <button
                         onClick={() => {
                           router.push('/profile');

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ModernNavbar from '@/components/ModernNavbar';
+import AdminNavbar from '@/components/AdminNavbar';
 import ModernFooter from '@/components/ModernFooter';
 import BackgroundsColorsSettings from '@/components/settings/BackgroundsColorsSettings';
 import ToolsSettings from '@/components/settings/ToolsSettings';
@@ -70,7 +71,7 @@ export default function SettingsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <ModernNavbar />
+      {isAdmin ? <AdminNavbar /> : <ModernNavbar />}
       
       <div className="w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
