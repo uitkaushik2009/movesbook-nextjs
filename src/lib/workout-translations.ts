@@ -93,7 +93,6 @@ export const workoutTranslations = {
 
   // Moveframe form
   workout_add_moveframe: 'Add Exercise',
-  workout_edit_moveframe: 'Edit Exercise',
   workout_moveframe_data: 'Exercise Data',
   workout_workout_info: 'Workout Info',
   workout_day_info: 'Day Info',

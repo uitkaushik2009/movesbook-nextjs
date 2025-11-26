@@ -95,11 +95,11 @@ export async function GET(request: NextRequest) {
           stats.done++;
           stats.doneDifferently++;
           break;
-        case 'DONE_UNDER_75':
+        case 'DONE_LESS_75':
           stats.done++;
           stats.doneUnder75++;
           break;
-        case 'DONE_OVER_75':
+        case 'DONE_MORE_75':
           stats.done++;
           stats.doneOver75++;
           break;

@@ -805,14 +805,11 @@ export default function WorkoutsPage() {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              workoutId: workoutSession.id,
+              workoutSessionId: workoutSession.id,
               sport: mf.sport,
               type: mf.type,
-              annotation: mf.annotation,
-              annotationColor: mf.annotationColor,
-              workoutSectionId: mf.workoutSectionId,
+              sectionId: mf.sectionId,
               description: mf.description,
-              reps: mf.movelaps?.length || 0,
               movelaps: mf.movelaps || []
             })
           });
@@ -838,14 +835,11 @@ export default function WorkoutsPage() {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            workoutId: selectedWorkout,
+            workoutSessionId: selectedWorkout,
             sport: clipboard.data.sport,
             type: clipboard.data.type,
-            annotation: clipboard.data.annotation,
-            annotationColor: clipboard.data.annotationColor,
-            workoutSectionId: clipboard.data.workoutSectionId,
+            sectionId: clipboard.data.sectionId,
             description: clipboard.data.description,
-            reps: clipboard.data.movelaps?.length || 0,
             movelaps: clipboard.data.movelaps || []
           })
         });

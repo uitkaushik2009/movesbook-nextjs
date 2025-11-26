@@ -128,14 +128,12 @@ export async function POST(
       for (const mfData of workoutData.moveframes) {
         const moveframe = await prisma.moveframe.create({
           data: {
-            workoutId: workoutSession.id,
+            workoutSessionId: workoutSession.id,
             letter: mfData.letter || 'A',
             sport: mfData.sport,
             type: mfData.type || 'WORK',
-            annotation: mfData.annotation,
-            annotationColor: mfData.annotationColor,
-            workoutSectionId: mfData.workoutSectionId,
-            description: mfData.description
+            sectionId: mfData.workoutSectionId || mfData.sectionId,
+            description: mfData.description || ''
           }
         });
 
@@ -155,6 +153,7 @@ export async function POST(
                 alarm: lapData.alarm,
                 sound: lapData.sound,
                 notes: lapData.notes,
+                status: lapData.status || 'PENDING',
                 isDisabled: lapData.isDisabled || false
               }
             });

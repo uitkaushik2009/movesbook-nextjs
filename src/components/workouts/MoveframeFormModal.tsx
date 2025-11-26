@@ -30,7 +30,7 @@ export default function MoveframeFormModal({
   const [activeTab, setActiveTab] = useState<'moveframe' | 'workout' | 'day'>('moveframe');
   
   // Moveframe data
-  const [moveframeType, setMoveframeType] = useState<MoveframeType>('STANDARD');
+  const [moveframeType, setMoveframeType] = useState<MoveframeType>(MoveframeType.STANDARD);
   const [selectedSport, setSelectedSport] = useState<SportType | null>(null);
   const [selectedSection, setSelectedSection] = useState<string>('');
   const [inputMode, setInputMode] = useState<'mono' | 'battery'>('mono');
@@ -43,7 +43,7 @@ export default function MoveframeFormModal({
     pace: '',
     time: '',
     reps: '1',
-    restType: 'SET_TIME' as RestType,
+    restType: RestType.SET_TIME,
     pause: '',
     alarm: '',
     sound: '',
@@ -173,11 +173,31 @@ export default function MoveframeFormModal({
       pace: '',
       time: '',
       reps: '1',
-      restType: 'SET_TIME',
+      restType: RestType.SET_TIME,
       pause: '',
       alarm: '',
       sound: '',
-      description: ''
+      description: '',
+      // Cycling fields
+      cadence: '',
+      power: '',
+      gear: '',
+      terrain: '',
+      // Running fields
+      incline: '',
+      hrZone: '',
+      // Strength fields
+      exerciseName: '',
+      weight: '',
+      sets: '',
+      repsPerSet: '',
+      restBetweenSets: '',
+      tempo: '',
+      // Rowing fields
+      strokeRate: '',
+      // Generic fields
+      duration: '',
+      intensity: ''
     });
   };
 
@@ -824,9 +844,9 @@ export default function MoveframeFormModal({
                 </label>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setMoveframeType('ANNOTATION')}
+                    onClick={() => setMoveframeType(MoveframeType.ANNOTATION)}
                     className={`px-4 py-2 rounded-lg font-medium transition ${
-                      moveframeType === 'ANNOTATION'
+                      moveframeType === MoveframeType.ANNOTATION
                         ? 'bg-yellow-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
@@ -834,9 +854,9 @@ export default function MoveframeFormModal({
                     {t('workout_annotation')}
                   </button>
                   <button
-                    onClick={() => setMoveframeType('STANDARD')}
+                    onClick={() => setMoveframeType(MoveframeType.STANDARD)}
                     className={`px-4 py-2 rounded-lg font-medium transition ${
-                      moveframeType === 'STANDARD' || moveframeType === 'BATTERY'
+                      moveframeType === MoveframeType.STANDARD || moveframeType === MoveframeType.BATTERY
                         ? 'bg-blue-600 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
@@ -846,7 +866,7 @@ export default function MoveframeFormModal({
                 </div>
               </div>
 
-              {moveframeType !== 'ANNOTATION' && (
+              {moveframeType !== MoveframeType.ANNOTATION && (
                 <>
                   {/* Sport Selection */}
                   <div>
@@ -930,7 +950,7 @@ export default function MoveframeFormModal({
                 </>
               )}
 
-              {moveframeType === 'ANNOTATION' && (
+              {moveframeType === MoveframeType.ANNOTATION && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     {t('workout_annotation_text')}
@@ -1148,9 +1168,9 @@ export default function MoveframeFormModal({
           </button>
           <button
             onClick={handleSaveMoveframe}
-            disabled={!selectedSport && moveframeType !== 'ANNOTATION'}
+            disabled={!selectedSport && moveframeType !== MoveframeType.ANNOTATION}
             className={`flex items-center gap-2 px-6 py-2 rounded-lg transition ${
-              selectedSport || moveframeType === 'ANNOTATION'
+              selectedSport || moveframeType === MoveframeType.ANNOTATION
                 ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}

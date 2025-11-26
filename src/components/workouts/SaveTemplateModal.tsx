@@ -34,7 +34,7 @@ export default function SaveTemplateModal({
       
       // Determine category from moveframes' sports
       if (sourceData.moveframes && sourceData.moveframes.length > 0) {
-        const sports = [...new Set(sourceData.moveframes.map((mf: any) => mf.sport))];
+        const sports = Array.from(new Set(sourceData.moveframes.map((mf: any) => mf.sport))) as string[];
         if (sports.length === 1) {
           setCategory(sports[0]);
         } else {

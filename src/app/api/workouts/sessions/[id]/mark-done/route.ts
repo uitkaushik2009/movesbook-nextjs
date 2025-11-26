@@ -60,13 +60,13 @@ export async function PATCH(
     }
 
     // Determine status based on completion
-    let newStatus = 'DONE_OVER_75';
+    let newStatus = 'DONE_MORE_75';
     if (asDifferent) {
       newStatus = 'DONE_DIFFERENTLY';
     } else if (completionPercentage < 75) {
-      newStatus = 'DONE_UNDER_75';
+      newStatus = 'DONE_LESS_75';
     } else {
-      newStatus = 'DONE_OVER_75';
+      newStatus = 'DONE_MORE_75';
     }
 
     // Update workout session
@@ -78,8 +78,7 @@ export async function PATCH(
         heartRateAvg: actualHeartRateAvg !== undefined ? actualHeartRateAvg : session.heartRateAvg,
         calories: actualCalories !== undefined ? actualCalories : session.calories,
         feelingStatus: actualFeelingStatus !== undefined ? actualFeelingStatus : session.feelingStatus,
-        notes: actualNotes !== undefined ? actualNotes : session.notes,
-        updatedAt: new Date()
+        notes: actualNotes !== undefined ? actualNotes : session.notes
       }
     });
 

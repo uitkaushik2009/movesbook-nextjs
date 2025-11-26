@@ -159,12 +159,12 @@ export async function GET(request: NextRequest) {
         });
       };
 
-      if (workoutPlan.weeks) {
-        workoutPlan.weeks.forEach((week: any) => {
+      if ((workoutPlan as any).weeks) {
+        (workoutPlan as any).weeks.forEach((week: any) => {
           week.days?.forEach((day: any) => processWorkouts(day, week.weekNumber));
         });
-      } else if (workoutPlan.days) {
-        workoutPlan.days.forEach((day: any) => processWorkouts(day, day.weekNumber));
+      } else if ((workoutPlan as any).days) {
+        (workoutPlan as any).days.forEach((day: any) => processWorkouts(day, day.weekNumber));
       }
 
       const csv = csvLines.join('\n');

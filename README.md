@@ -35,6 +35,59 @@ npm run build
 npm start
 ```
 
+## 📦 Database Migration
+
+### Migrating from Old movesbook.net
+
+If you're migrating data from the old movesbook.net (MySQL) database:
+
+```bash
+# Option 1: Migrate Everything (Users + Profiles + Clubs)
+node scripts/migrate-all.js
+
+# Option 2: Migrate Only Users (Quick Start)
+node scripts/migrate-database.js
+
+# Option 3: Custom Migration
+node scripts/migrate-database.js          # Users
+node scripts/migrate-athlete-profiles.js  # Athlete data
+node scripts/migrate-relationships.js     # Clubs & relationships
+```
+
+**What Gets Migrated**:
+- ✅ **User accounts** - Email, username, password (SHA1→bcrypt on login)
+- ✅ **Athlete profiles** - Personal data, sports, measurements, bio
+- ✅ **Clubs & teams** - Organizations, memberships, relationships
+- ✅ **Coach-athlete links** - Training relationships preserved
+- ❌ **Workout data** - Cannot migrate (different architecture)
+
+**Features**:
+- ✅ Automatic duplicate detection
+- ✅ Creates default settings for each user
+- ✅ Real-time progress tracking
+- ✅ Comprehensive error logging
+- ✅ Automatic database backup
+- ✅ Batch processing for large datasets
+
+**Documentation**:
+- 🎯 **Start Here**: [`docs/HOW-TO-USE-OLD-DATABASE.md`](docs/HOW-TO-USE-OLD-DATABASE.md) ← **READ THIS FIRST**
+- 🖥️ **Display Data**: [`docs/HOW-TO-DISPLAY-MIGRATED-DATA.md`](docs/HOW-TO-DISPLAY-MIGRATED-DATA.md) ← **Using Migrated Data**
+- 📖 **Quick Reference**: [`docs/MIGRATION-SUMMARY.md`](docs/MIGRATION-SUMMARY.md)
+- 📚 **Detailed Guide**: [`docs/DATABASE-MIGRATION-GUIDE.md`](docs/DATABASE-MIGRATION-GUIDE.md)
+- 🔧 **Complete Process**: [`docs/FULL-DATABASE-MIGRATION.md`](docs/FULL-DATABASE-MIGRATION.md)
+
+**After Migration**:
+- View user profiles at: `/profile`
+- Admin users list at: `/admin/users` (admin only)
+- All migrated data accessible via Prisma Client
+
+### Password Compatibility
+
+Old users can login immediately with existing credentials:
+- **Old passwords** (SHA1) are preserved during migration
+- **Auto-upgrade** to bcrypt happens transparently on first login
+- **No password reset** required for users
+
 ## 🔐 Authentication
 
 ### User Login

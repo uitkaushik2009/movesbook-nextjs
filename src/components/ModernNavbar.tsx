@@ -378,6 +378,17 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                       
                       <div className="p-2">
                         <button
+                          onClick={() => {
+                            router.push('/profile');
+                            setIsUserDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                        >
+                          <User className="w-4 h-4 mr-3" />
+                          Profile
+                        </button>
+                        
+                        <button
                           onClick={handleLogout}
                           className="w-full flex items-center px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         >
@@ -485,6 +496,16 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                         <p className="text-white font-semibold text-sm">{user?.name}</p>
                         <p className="text-cyan-200 text-xs">{user?.email}</p>
                       </div>
+                      <button
+                        onClick={() => {
+                          router.push('/profile');
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center px-6 py-4 text-cyan-100 hover:bg-white hover:bg-opacity-10 rounded-2xl transition-all duration-300 font-semibold"
+                      >
+                        <User className="w-5 h-5 mr-3" />
+                        Profile
+                      </button>
                       <button
                         onClick={handleLogout}
                         className="w-full flex items-center px-6 py-4 text-red-400 hover:bg-red-500 hover:bg-opacity-20 rounded-2xl transition-all duration-300 font-semibold"

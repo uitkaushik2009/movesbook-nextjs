@@ -12,18 +12,18 @@ interface MainSportsModalProps {
 }
 
 const ALL_SPORTS: SportType[] = [
-  'SWIM',
-  'BIKE',
-  'RUN',
-  'BODY_BUILDING',
-  'ROWING',
-  'SKATE',
-  'GYMNASTIC',
-  'STRETCHING',
-  'PILATES',
-  'SKI',
-  'TECHNICAL_MOVES',
-  'FREE_MOVES'
+  SportType.SWIM,
+  SportType.BIKE,
+  SportType.RUN,
+  SportType.BODY_BUILDING,
+  SportType.ROWING,
+  SportType.SKATE,
+  SportType.GYMNASTIC,
+  SportType.STRETCHING,
+  SportType.PILATES,
+  SportType.SKI,
+  SportType.TECHNICAL_MOVES,
+  SportType.FREE_MOVES
 ];
 
 export default function MainSportsModal({

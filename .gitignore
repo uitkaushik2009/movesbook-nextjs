@@ -34,7 +34,8 @@ next-env.d.ts
 # Database
 *.sql
 *.sql.gz
-
+/docs/
+/scripts/
 # IDE
 .vscode/
 .idea/
@@ -54,4 +55,6 @@ logs
 temp/
 tmp/
 *.tmp
-
+*.js
+*.txt
+*.md
