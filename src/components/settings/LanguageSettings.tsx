@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Globe, Settings as SettingsIcon, FileText } from 'lucide-react';
@@ -49,11 +49,16 @@ export default function LanguageSettings() {
   const [newKeyName, setNewKeyName] = useState('');
   const [newKeyCategory, setNewKeyCategory] = useState('system');
   const [newKeyTranslations, setNewKeyTranslations] = useState<Record<string, string>>({});
+  const [isLongTextModal, setIsLongTextModal] = useState(false);
   
   // Auto-translation state
   const [isTranslating, setIsTranslating] = useState(false);
   const [englishText, setEnglishText] = useState('');
   const [showAllLanguages, setShowAllLanguages] = useState(false);
+  
+  // Tab 2 pagination state
+  const [tab2Page, setTab2Page] = useState(1);
+  const itemsPerPage = 10;
 
   // Load data on mount
   useEffect(() => {
@@ -82,6 +87,7 @@ export default function LanguageSettings() {
     
     setFilteredKeys(filtered);
     setCurrentIndex(0);
+    setTab2Page(1); // Reset to page 1 when filters change
   }, [searchQuery, searchField, allKeys, selectedCategory, activeTab]);
 
   // Update current key when index changes
@@ -114,16 +120,16 @@ export default function LanguageSettings() {
     }
     
     const availableLanguages: Language[] = [
-      { id: '1', code: 'en', name: 'English', nativeName: 'English', flag: 'ðŸ‡¬ðŸ‡§', isActive: activeLanguageCodes.includes('en') },
-      { id: '2', code: 'fr', name: 'French', nativeName: 'FranÃ§ais', flag: 'ðŸ‡«ðŸ‡·', isActive: activeLanguageCodes.includes('fr') },
-      { id: '3', code: 'de', name: 'German', nativeName: 'Deutsch', flag: 'ðŸ‡©ðŸ‡ª', isActive: activeLanguageCodes.includes('de') },
-      { id: '4', code: 'it', name: 'Italian', nativeName: 'Italiano', flag: 'ðŸ‡®ðŸ‡¹', isActive: activeLanguageCodes.includes('it') },
-      { id: '5', code: 'es', name: 'Spanish', nativeName: 'EspaÃ±ol', flag: 'ðŸ‡ªðŸ‡¸', isActive: activeLanguageCodes.includes('es') },
-      { id: '6', code: 'pt', name: 'Portuguese', nativeName: 'PortuguÃªs', flag: 'ðŸ‡µðŸ‡¹', isActive: activeLanguageCodes.includes('pt') },
-      { id: '7', code: 'ru', name: 'Russian', nativeName: 'Ð ÑƒÑÑÐºÐ¸Ð¹', flag: 'ðŸ‡·ðŸ‡º', isActive: activeLanguageCodes.includes('ru') },
-      { id: '8', code: 'hi', name: 'Hindi', nativeName: 'à¤¹à¤¿à¤¨à¥à¤¦à¥€', flag: 'ðŸ‡®ðŸ‡³', isActive: activeLanguageCodes.includes('hi') },
-      { id: '9', code: 'zh', name: 'Chinese', nativeName: 'ä¸­æ–‡', flag: 'ðŸ‡¨ðŸ‡³', isActive: activeLanguageCodes.includes('zh') },
-      { id: '10', code: 'ar', name: 'Arabic', nativeName: 'Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©', flag: 'ðŸ‡¸ðŸ‡¦', isActive: activeLanguageCodes.includes('ar') },
+      { id: '1', code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧', isActive: activeLanguageCodes.includes('en') },
+      { id: '2', code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷', isActive: activeLanguageCodes.includes('fr') },
+      { id: '3', code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪', isActive: activeLanguageCodes.includes('de') },
+      { id: '4', code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹', isActive: activeLanguageCodes.includes('it') },
+      { id: '5', code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isActive: activeLanguageCodes.includes('es') },
+      { id: '6', code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹', isActive: activeLanguageCodes.includes('pt') },
+      { id: '7', code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺', isActive: activeLanguageCodes.includes('ru') },
+      { id: '8', code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳', isActive: activeLanguageCodes.includes('hi') },
+      { id: '9', code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳', isActive: activeLanguageCodes.includes('zh') },
+      { id: '10', code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', isActive: activeLanguageCodes.includes('ar') },
     ];
     
     setLanguages(availableLanguages);
@@ -204,21 +210,24 @@ export default function LanguageSettings() {
   };
 
   const getCategoryFromKey = (key: string): string => {
+    const lowerKey = key.toLowerCase();
+    
     // System Administration & Homepage
-    if (key.startsWith('nav_')) return 'system';
-    if (key.startsWith('auth_')) return 'system';
-    if (key.startsWith('dashboard_')) return 'system';
-    if (key.startsWith('settings_')) return 'system';
-    if (key.startsWith('footer_')) return 'system';
-    if (key.startsWith('admin_')) return 'system';
+    if (lowerKey.includes('nav') || lowerKey.includes('navigation')) return 'system';
+    if (lowerKey.includes('auth') || lowerKey.includes('login') || lowerKey.includes('register')) return 'system';
+    if (lowerKey.includes('dashboard') || lowerKey.includes('home')) return 'system';
+    if (lowerKey.includes('settings') || lowerKey.includes('config')) return 'system';
+    if (lowerKey.includes('footer') || lowerKey.includes('header')) return 'system';
+    if (lowerKey.includes('admin')) return 'system';
+    if (lowerKey.includes('system')) return 'system';
     
     // Social & Sport
-    if (key.startsWith('sport_')) return 'social';
-    if (key.startsWith('club_')) return 'social';
-    if (key.startsWith('athlete_')) return 'social';
-    if (key.startsWith('coach_')) return 'social';
-    if (key.startsWith('team_')) return 'social';
-    if (key.startsWith('group_')) return 'social';
+    if (lowerKey.includes('sport') || lowerKey.includes('workout') || lowerKey.includes('training')) return 'social';
+    if (lowerKey.includes('club')) return 'social';
+    if (lowerKey.includes('athlete')) return 'social';
+    if (lowerKey.includes('coach')) return 'social';
+    if (lowerKey.includes('team')) return 'social';
+    if (lowerKey.includes('group')) return 'social';
     
     // Management
     if (key.startsWith('member_')) return 'management';
@@ -263,7 +272,7 @@ export default function LanguageSettings() {
           searchQuery.trim() === '' || k.key.toLowerCase().includes(searchQuery.toLowerCase())
         ));
         
-        console.log('âœ… Translations saved successfully!');
+        console.log('✅ Translations saved successfully!');
       } else {
         const errorData = await response.json();
         console.error('Save failed with error:', errorData);
@@ -272,7 +281,7 @@ export default function LanguageSettings() {
     } catch (error) {
       console.error('Error saving translations:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`âŒ Failed to save translations!\n\nError: ${errorMessage}\n\nCheck browser console (F12) for details.`);
+      alert(`❌ Failed to save translations!\n\nError: ${errorMessage}\n\nCheck browser console (F12) for details.`);
     }
   };
 
@@ -368,17 +377,21 @@ export default function LanguageSettings() {
     
     // Close modal
     setShowNewKeyModal(false);
+    setIsLongTextModal(false);
     
     // Navigate to the new key
     setCurrentIndex(updatedKeys.length - 1);
     
-    alert('âœ… New translation key created successfully!');
+    alert(isLongTextModal 
+      ? '✅ New language long text created successfully!' 
+      : '✅ New translation key created successfully!');
   };
 
   const handleCancelNewKey = () => {
     setShowNewKeyModal(false);
     setNewKeyName('');
     setNewKeyTranslations({});
+    setIsLongTextModal(false);
   };
 
   const handleAutoTranslate = async () => {
@@ -386,7 +399,7 @@ export default function LanguageSettings() {
     console.log('English text:', englishText);
     
     if (!englishText.trim()) {
-      alert('âš ï¸ Please enter English text first');
+      alert('⚠️ Please enter English text first');
       return;
     }
 
@@ -401,7 +414,7 @@ export default function LanguageSettings() {
       console.log('Target languages:', targetLanguages);
 
       if (targetLanguages.length === 0) {
-        alert('âš ï¸ No target languages selected. Please activate at least one language in Tab 1.');
+        alert('⚠️ No target languages selected. Please activate at least one language in Tab 1.');
         setIsTranslating(false);
         return;
       }
@@ -439,7 +452,7 @@ export default function LanguageSettings() {
         };
         
         console.log('Updated translations:', updatedTranslations);
-        console.log(`âœ… Translation completed for ${Object.keys(data.translations).length} languages`);
+        console.log(`✅ Translation completed for ${Object.keys(data.translations).length} languages`);
         setTranslations(updatedTranslations);
         setShowAllLanguages(true);
         
@@ -450,7 +463,7 @@ export default function LanguageSettings() {
     } catch (error) {
       console.error('Translation error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`âŒ Translation failed!\n\nError: ${errorMessage}\n\n` +
+      alert(`❌ Translation failed!\n\nError: ${errorMessage}\n\n` +
             'Please try again or enter translations manually.\n' +
             'Check the browser console (F12) for more details.');
     } finally {
@@ -464,7 +477,7 @@ export default function LanguageSettings() {
 
   const handleSaveLanguageSelection = () => {
     const activeCount = languages.filter(l => l.isActive).length;
-    alert(`âœ… Language selection saved!\n\n${activeCount} languages are now active in the navbar language selector.`);
+    alert(`✅ Language selection saved!\n\n${activeCount} languages are now active in the navbar language selector.`);
   };
 
   const totalPages = filteredKeys.length;
@@ -613,7 +626,17 @@ export default function LanguageSettings() {
               <div className="flex items-center gap-4">
                 <h3 className="text-lg font-bold text-gray-900">Languages</h3>
                 <button 
-                  onClick={handleNewKey}
+                  onClick={() => {
+                    setShowNewKeyModal(true);
+                    setIsLongTextModal(false);
+                    setNewKeyName('');
+                    setNewKeyCategory('system');
+                    const initialTranslations: Record<string, string> = {};
+                    languages.filter(l => l.isActive).forEach(lang => {
+                      initialTranslations[lang.code] = '';
+                    });
+                    setNewKeyTranslations(initialTranslations);
+                  }}
                   className="px-6 py-2 bg-gray-700 text-white font-semibold hover:bg-gray-800 transition"
                 >
                   New Language
@@ -621,9 +644,26 @@ export default function LanguageSettings() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-gray-700">Language Page</span>
-                <button className="px-4 py-2 bg-gray-700 text-white font-semibold">1</button>
-                <button className="px-4 py-2 bg-gray-300 text-gray-700 font-semibold hover:bg-gray-400 transition">2</button>
-                <button className="px-4 py-2 bg-gray-300 text-gray-700 font-semibold hover:bg-gray-400 transition">3</button>
+                {Array.from({ length: Math.ceil(filteredKeys.length / itemsPerPage) }, (_, i) => i + 1)
+                  .slice(0, 5)
+                  .map(page => (
+                    <button 
+                      key={page}
+                      onClick={() => setTab2Page(page)}
+                      className={`px-4 py-2 font-semibold transition ${
+                        tab2Page === page
+                          ? 'bg-gray-700 text-white'
+                          : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                {Math.ceil(filteredKeys.length / itemsPerPage) > 5 && (
+                  <span className="text-gray-600 px-2">
+                    ... {Math.ceil(filteredKeys.length / itemsPerPage)}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -677,9 +717,9 @@ export default function LanguageSettings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredKeys.slice(0, 10).map((key, index) => (
+                  {filteredKeys.slice((tab2Page - 1) * itemsPerPage, tab2Page * itemsPerPage).map((key, index) => (
                     <tr key={key.key} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{index + 1}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{(tab2Page - 1) * itemsPerPage + index + 1}</td>
                       <td className="px-4 py-3 text-sm text-red-700 font-semibold">{key.key}</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{key.values.en || ''}</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{key.values.it || ''}</td>
@@ -717,87 +757,37 @@ export default function LanguageSettings() {
         {/* Tab 3: Language Long Texts */}
         {activeTab === 'texts' && (
           <div className="space-y-6">
-            {/* Search Bar */}
-            <div className="bg-white border border-gray-300 p-4">
+            {/* Header Section */}
+            <div className="flex items-center justify-between bg-white border border-gray-300 p-4 rounded">
               <div className="flex items-center gap-4">
-                <label className="font-semibold text-gray-700 whitespace-nowrap">Search in</label>
-                <select
-                  value={searchField}
-                  onChange={(e) => setSearchField(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 bg-white focus:outline-none focus:border-gray-500 min-w-[200px]"
+                <h3 className="text-lg font-bold text-gray-900">System Administration & Homepage</h3>
+                <button 
+                  onClick={() => {
+                    setShowNewKeyModal(true);
+                    setIsLongTextModal(true);
+                    setNewKeyName('');
+                    setNewKeyCategory('system');
+                    const initialTranslations: Record<string, string> = {};
+                    languages.filter(l => l.isActive).forEach(lang => {
+                      initialTranslations[lang.code] = '';
+                    });
+                    setNewKeyTranslations(initialTranslations);
+                  }}
+                  className="px-6 py-2 bg-gray-700 text-white font-semibold hover:bg-gray-800 transition"
                 >
-                  <option value="variable_name">variable_name</option>
-                </select>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="variable_name"
-                  className="flex-1 px-4 py-2 border border-gray-300 focus:outline-none focus:border-gray-500"
-                />
-                <button
-                  onClick={handleSearch}
-                  className="px-8 py-2 bg-red-500 text-white font-semibold hover:bg-red-600 transition whitespace-nowrap"
-                >
-                  Proceed
-                </button>
-                <button
-                  onClick={handleResetSearch}
-                  className="px-8 py-2 bg-gray-800 text-white font-semibold hover:bg-gray-900 transition whitespace-nowrap"
-                >
-                  Reset
+                  New Language Long Text
                 </button>
               </div>
             </div>
-
-            {/* Category Tabs - PROMINENTLY STYLED */}
-            <div className="bg-gradient-to-r from-gray-100 to-gray-200 p-2 rounded-xl shadow-inner flex items-center gap-3 border-2 border-gray-300">
-              <span className="text-sm font-bold text-gray-600 ml-2">CATEGORIES:</span>
-              <button
-                onClick={() => setSelectedCategory('system')}
-                className={`px-8 py-4 font-bold text-sm transition-all duration-300 rounded-lg shadow-md hover:shadow-xl transform hover:scale-105 ${
-                  selectedCategory === 'system'
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white ring-4 ring-blue-300 scale-105 shadow-xl'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                ðŸ  System Administration & Homepage
-              </button>
-              <button
-                onClick={() => setSelectedCategory('social')}
-                className={`px-8 py-4 font-bold text-sm transition-all duration-300 rounded-lg shadow-md hover:shadow-xl transform hover:scale-105 ${
-                  selectedCategory === 'social'
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white ring-4 ring-blue-300 scale-105 shadow-xl'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                âš½ Social & Sport
-              </button>
-              <button
-                onClick={() => setSelectedCategory('management')}
-                className={`px-8 py-4 font-bold text-sm transition-all duration-300 rounded-lg shadow-md hover:shadow-xl transform hover:scale-105 ${
-                  selectedCategory === 'management'
-                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white ring-4 ring-blue-300 scale-105 shadow-xl'
-                    : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
-              >
-                ðŸ“Š Management
-              </button>
-            </div>
-
-            {/* Category indicator */}
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-              <p className="text-sm text-blue-900">
-                <strong>Currently viewing:</strong> {
-                  selectedCategory === 'system' ? 'System Administration & Homepage' :
-                  selectedCategory === 'social' ? 'Social & Sport' :
-                  'Management'
-                } translations
-                <span className="ml-2 text-gray-600">({filteredKeys.length} items)</span>
-              </p>
-            </div>
-
-            {currentKey && (
+            
+            {/* Display message if no key selected */}
+            {!currentKey && (
+              <div className="bg-white border border-gray-300 p-8 text-center">
+                <p className="text-gray-600">Please select a translation key to edit or create a new one</p>
+              </div>
+            )}
+            
+                        {currentKey && (
               <div className="space-y-6">
                 {/* Pagination */}
                 <div className="flex items-center justify-center gap-2 bg-gray-100 p-3 rounded">
@@ -913,7 +903,7 @@ export default function LanguageSettings() {
                     <div className="space-y-6">
                       <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
                         <p className="text-sm text-green-900 font-semibold">
-                          âœ… Translations ready! Review and edit if needed.
+                          ✅ Translations ready! Review and edit if needed.
                         </p>
                       </div>
                       
@@ -952,7 +942,106 @@ export default function LanguageSettings() {
           </div>
         )}
       </div>
+
+      {/* New Language Modal */}
+      {showNewKeyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
+              <h3 className="text-xl font-bold text-gray-900">
+                {isLongTextModal ? 'Add New Language Long Text' : 'Add New Translation Key'}
+              </h3>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Variable Name */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Variable Name (Key) *
+                </label>
+                <input
+                  type="text"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="e.g., welcome_message, button_submit"
+                  className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Category *
+                </label>
+                <select
+                  value={newKeyCategory}
+                  onChange={(e) => setNewKeyCategory(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                >
+                  <option value="system">System Administration & Homepage</option>
+                  <option value="social">Social & Sport</option>
+                  <option value="management">Management</option>
+                </select>
+              </div>
+
+              {/* Translation Fields */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900">
+                  {isLongTextModal ? 'Long Text Translations' : 'Translations'}
+                </h4>
+                {languages.filter(l => l.isActive).map((lang) => (
+                  <div key={lang.code}>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {lang.name} ({lang.nativeName})
+                    </label>
+                    {isLongTextModal ? (
+                      <textarea
+                        value={newKeyTranslations[lang.code] || ''}
+                        onChange={(e) => setNewKeyTranslations({ 
+                          ...newKeyTranslations, 
+                          [lang.code]: e.target.value 
+                        })}
+                        placeholder={`Enter ${lang.name} long text translation...`}
+                        rows={4}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 resize-y"
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={newKeyTranslations[lang.code] || ''}
+                        onChange={(e) => setNewKeyTranslations({ 
+                          ...newKeyTranslations, 
+                          [lang.code]: e.target.value 
+                        })}
+                        placeholder={`Enter ${lang.name} translation...`}
+                        className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={handleCancelNewKey}
+                className="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded hover:bg-gray-400 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNewKey}
+                className="px-6 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
+              >
+                {isLongTextModal ? 'Create Long Text' : 'Create Translation Key'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
