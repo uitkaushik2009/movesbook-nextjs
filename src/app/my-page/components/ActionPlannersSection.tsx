@@ -1,6 +1,9 @@
 import { useRef, useState, useEffect } from 'react';
 import { AlertCircle, ChevronDown, Loader2 } from 'lucide-react';
-import { ActionTable } from '@/components/actions/ActionTable';
+import {
+  ActionTable,
+  ActionTableColumn,
+} from '@/components/actions/ActionTable';
 import {
   AddActionPlannerDialog,
   AddActionPlannerFormData,
@@ -10,39 +13,94 @@ import {
   User,
 } from '@/components/actions/AddUserFromDBDialog';
 
-interface ActionPlanner {
+interface ActionPlannerTableData extends Record<string, unknown> {
   id: string;
-  name: string;
+  username: string;
   fullName: string;
-  description: string;
   imageUrl: string;
   category: string;
   startDate: string;
   createFrom: 'scratch' | 'movesbook';
-  createdAt: string;
-  updatedAt: string;
+  origin: string;
+}
+
+interface ActionPlanner {
+  id: string;
+  username: string;
+  name: string;
+  surname: string;
+  fullName: string;
+  dateOfBirth: string;
+  description: string;
+  imageUrl: string;
+  category: string;
+  annotation: string;
+  startDate: string;
+  email: string;
+  createFrom: 'scratch' | 'movesbook';
+  origin: string;
 }
 
 export default function ActionPlannersSection() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const [actionPlanners, setActionPlanners] = useState<ActionPlanner[]>([]);
+  const [actionPlannersTableData, setActionPlannersTableData] = useState<
+    ActionPlannerTableData[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Server-side pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentSort, setCurrentSort] = useState<{
+    column: string;
+    direction: 'asc' | 'desc';
+  } | null>(null);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
 
-  const fetchActionPlanners = async () => {
+  const fetchActionPlannersTableData = async (
+    page: number = currentPage,
+    limit: number = itemsPerPage,
+    search: string = searchTerm,
+    sort: { column: string; direction: 'asc' | 'desc' } | null = currentSort
+  ) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/action-planners');
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+
+      if (search) {
+        params.append('search', search);
+      }
+
+      if (sort) {
+        params.append('sortBy', sort.column);
+        params.append('sortOrder', sort.direction);
+      }
+
+      const response = await fetch(`/api/action-planners?${params.toString()}`);
       if (!response.ok) {
         throw new Error('Failed to fetch action planners');
       }
       const data = await response.json();
-      setActionPlanners(data);
+
+      // Handle both array response and paginated response
+      if (Array.isArray(data)) {
+        setActionPlannersTableData(data);
+        setTotal(data.length);
+      } else {
+        setActionPlannersTableData(data.items || data.data || []);
+        setTotal(data.total || 0);
+      }
       setError(null);
     } catch (error) {
       setError(
@@ -56,7 +114,8 @@ export default function ActionPlannersSection() {
   };
 
   useEffect(() => {
-    fetchActionPlanners();
+    fetchActionPlannersTableData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Close dropdown when clicking outside
@@ -102,20 +161,28 @@ export default function ActionPlannersSection() {
     console.log('Set action planner');
   };
 
-  const handlePageChange = () => {
-    console.log('Page change');
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchActionPlannersTableData(page, itemsPerPage, searchTerm, currentSort);
   };
 
-  const handleItemsPerPageChange = () => {
-    console.log('Items per page change');
+  const handleItemsPerPageChange = (limit: number) => {
+    setItemsPerPage(limit);
+    setCurrentPage(1);
+    fetchActionPlannersTableData(1, limit, searchTerm, currentSort);
   };
 
-  const handleSort = () => {
-    console.log('Sort');
+  const handleSort = (column: string, direction: 'asc' | 'desc') => {
+    const newSort = { column, direction };
+    setCurrentSort(newSort);
+    setCurrentPage(1);
+    fetchActionPlannersTableData(1, itemsPerPage, searchTerm, newSort);
   };
 
-  const handleSearch = () => {
-    console.log('Search');
+  const handleSearch = (search: string) => {
+    setSearchTerm(search);
+    setCurrentPage(1);
+    fetchActionPlannersTableData(1, itemsPerPage, search, currentSort);
   };
 
   // Search users function for AddUserFromDBDialog
@@ -222,7 +289,12 @@ export default function ActionPlannersSection() {
         // Clear selected users and close dialog
         setSelectedUsers([]);
         setIsUserDialogOpen(false);
-        await fetchActionPlanners();
+        await fetchActionPlannersTableData(
+          currentPage,
+          itemsPerPage,
+          searchTerm,
+          currentSort
+        );
       } catch (error) {
         setError(
           error instanceof Error
@@ -272,7 +344,12 @@ export default function ActionPlannersSection() {
 
       // Close dialog and refresh data
       setIsDialogOpen(false);
-      await fetchActionPlanners();
+      await fetchActionPlannersTableData(
+        currentPage,
+        itemsPerPage,
+        searchTerm,
+        currentSort
+      );
     } catch (error) {
       setError(
         error instanceof Error ? error.message : 'Failed to save action planner'
@@ -280,19 +357,42 @@ export default function ActionPlannersSection() {
     }
   };
 
-  const columns = [
-    { label: 'Name', key: 'name' },
-    { label: 'Description', key: 'description' },
-    { label: 'Category', key: 'category' },
-    { label: 'Start Date', key: 'startDate' },
+  const columns: ActionTableColumn<ActionPlannerTableData>[] = [
+    {
+      key: 'imageUrl',
+      label: 'Image',
+      imageKey: 'imageUrl',
+      render: (item) =>
+        item.imageUrl ? (
+          <img
+            src={item.imageUrl}
+            alt={item.fullName}
+            className="h-10 w-10 rounded object-cover"
+          />
+        ) : (
+          <span className="text-slate-400">No image</span>
+        ),
+    },
+    { key: 'fullName', label: 'Full Name', sortable: true },
+    { key: 'category', label: 'Category', sortable: true },
+    {
+      key: 'startDate',
+      label: 'Start Date',
+      render: (item) => new Date(item.startDate).toLocaleDateString(),
+      sortable: true,
+    },
+    { key: 'createFrom', label: 'Create From', sortable: true },
+    { key: 'origin', label: 'Origin', sortable: true },
   ];
 
-  const data = actionPlanners.map((actionPlanner) => ({
-    name: actionPlanner.name,
-    description: actionPlanner.description,
-    category: actionPlanner.category,
-    startDate: actionPlanner.startDate,
-  }));
+  // const data = actionPlannersTableData.map((actionPlannerTableData) => ({
+  //   id: actionPlannerTableData.id,
+  //   username: actionPlannerTableData.username,
+  //   fullName: actionPlannerTableData.fullName,
+  //   category: actionPlannerTableData.category,
+  //   startDate: actionPlannerTableData.startDate,
+  //   createFrom: actionPlannerTableData.createFrom as 'scratch' | 'movesbook',
+  // }));
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex flex-col">
@@ -335,16 +435,24 @@ export default function ActionPlannersSection() {
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
         </div>
       ) : (
-        <ActionTable
+        <ActionTable<ActionPlannerTableData>
           columns={columns}
-          data={data}
+          data={actionPlannersTableData}
           onEdit={handleTableEdit}
           onDelete={handleTableDelete}
           onSet={handleTableSet}
+          pagination={{
+            page: currentPage,
+            limit: itemsPerPage,
+            total: total,
+            totalPages: Math.ceil(total / itemsPerPage),
+          }}
           onPageChange={handlePageChange}
           onItemsPerPageChange={handleItemsPerPageChange}
           onSort={handleSort}
           onSearch={handleSearch}
+          currentSort={currentSort || undefined}
+          searchTerm={searchTerm}
           showSearch={true}
           showPrint={true}
           showViewChange={true}
