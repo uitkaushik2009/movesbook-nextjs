@@ -8,11 +8,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Received translation update request:', body);
 
-    // Check if this is bulk update (new format: { key, translations })
+    // Check if this is bulk update (new format: { key, translations, category })
     // or single update (old format: { key, languageCode, value })
     if (body.translations && typeof body.translations === 'object') {
       // Bulk update for all languages
-      const { key, translations } = body;
+      const { key, translations, category } = body;
 
       if (!key || !translations) {
         return NextResponse.json(
@@ -21,8 +21,9 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.log(`Bulk updating translations for key: ${key}`);
+      console.log(`Bulk updating translations for key: ${key} with category: ${category || 'general'}`);
       const results = [];
+      const translationCategory = category || 'general';
 
       // Update each language
       for (const [languageCode, value] of Object.entries(translations)) {
@@ -47,12 +48,13 @@ export async function POST(request: NextRequest) {
             },
             update: {
               value: value as string || '',
+              category: translationCategory,
             },
             create: {
               key,
               languageId: language.id,
               value: value as string || '',
-              category: 'general',
+              category: translationCategory,
               descriptionEn: `Translation for ${key}`,
             },
           });

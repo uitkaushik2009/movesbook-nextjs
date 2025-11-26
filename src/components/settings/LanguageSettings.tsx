@@ -169,9 +169,10 @@ export default function LanguageSettings() {
     );
   };
 
-  const loadStaticTranslations = () => {
+  const loadStaticTranslations = async () => {
     setIsLoading(true);
     try {
+      // Step 1: Load base translations from i18n (always available)
       const availableLanguages = i18n.getLanguages();
       const englishLang = availableLanguages.find(l => l.code === 'en');
       
@@ -182,7 +183,7 @@ export default function LanguageSettings() {
       }
 
       const keys = Object.keys(englishLang.strings);
-      const translationData: TranslationKey[] = keys.map((key) => {
+      const i18nData: TranslationKey[] = keys.map((key) => {
         const values: Record<string, string> = {};
         
         availableLanguages.forEach((lang) => {
@@ -197,9 +198,61 @@ export default function LanguageSettings() {
         };
       });
 
-      setAllKeys(translationData);
-      setFilteredKeys(translationData);
-      if (translationData.length > 0) {
+      console.log('📖 Loaded base translations from i18n:', i18nData.length);
+      
+      // Step 2: Load edited translations from database and merge them
+      try {
+        const response = await fetch('/api/admin/translations');
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          if (data.success && data.translations && data.translations.length > 0) {
+            console.log('💾 Loaded edited translations from database:', data.translations.length);
+            
+            // Create a map of database translations by key
+            const dbMap = new Map<string, TranslationKey>();
+            data.translations.forEach((trans: TranslationKey) => {
+              dbMap.set(trans.key, trans);
+            });
+            
+            // Merge: use database version if exists, otherwise use i18n
+            const mergedData = i18nData.map(i18nTrans => {
+              const dbTrans = dbMap.get(i18nTrans.key);
+              if (dbTrans) {
+                // Database version exists - use it (admin edited this)
+                return dbTrans;
+              }
+              // No database version - use i18n default
+              return i18nTrans;
+            });
+            
+            // Also add any database translations that aren't in i18n (custom ones)
+            data.translations.forEach((trans: TranslationKey) => {
+              if (!i18nData.find(t => t.key === trans.key)) {
+                mergedData.push(trans);
+              }
+            });
+            
+            console.log('✅ Merged data ready:', mergedData.length, 'translations');
+            setAllKeys(mergedData);
+            setFilteredKeys(mergedData);
+            if (mergedData.length > 0) {
+              setCurrentIndex(0);
+            }
+            setIsLoading(false);
+            return;
+          }
+        }
+      } catch (dbError) {
+        console.warn('Database load failed, using i18n only:', dbError);
+      }
+      
+      // If database load failed, just use i18n
+      console.log('📖 Using i18n translations only');
+      setAllKeys(i18nData);
+      setFilteredKeys(i18nData);
+      if (i18nData.length > 0) {
         setCurrentIndex(0);
       }
     } catch (error) {
@@ -241,47 +294,93 @@ export default function LanguageSettings() {
   const handleSave = async () => {
     if (!currentKey) {
       console.error('No current key selected');
+      alert('⚠️ No translation key selected to save');
       return;
     }
 
-    console.log('Saving translations for key:', variableName);
-    console.log('Translation data:', translations);
+    console.log('\n🔄 ======= STARTING SAVE PROCESS =======');
+    console.log('📝 Key:', variableName);
+    console.log('📂 Category:', currentKey?.category);
+    console.log('🌍 Translations:', translations);
+    console.log('📊 Number of languages:', Object.keys(translations).length);
+
+    // Show loading state
+    const originalButtonText = 'Save';
+    setIsLoading(true);
 
     try {
+      const requestBody = {
+        key: variableName,
+        translations: translations,
+        category: currentKey?.category || 'general',
+      };
+      
+      console.log('📤 Sending POST request to /api/admin/translations/update');
+      console.log('📦 Request body:', JSON.stringify(requestBody, null, 2));
+
       const response = await fetch('/api/admin/translations/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: variableName,
-          translations: translations,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
-      console.log('Save response status:', response.status);
+      console.log('📥 Response status:', response.status, response.statusText);
 
       if (response.ok) {
         const result = await response.json();
-        console.log('Save successful:', result);
+        console.log('✅ API SUCCESS:', result);
         
         // Update local state
         const updatedKeys = allKeys.map(k => 
-          k.key === currentKey.key ? { ...k, key: variableName, values: translations } : k
+          k.key === currentKey.key ? { ...k, key: variableName, values: translations, category: currentKey?.category || 'general' } : k
         );
         setAllKeys(updatedKeys);
         setFilteredKeys(updatedKeys.filter(k => 
           searchQuery.trim() === '' || k.key.toLowerCase().includes(searchQuery.toLowerCase())
         ));
         
-        console.log('✅ Translations saved successfully!');
+        console.log('✅ Local state updated successfully!');
+        console.log('======= SAVE COMPLETE =======\n');
+        
+        // Show detailed success message
+        const savedLanguages = Object.keys(translations).join(', ');
+        alert(
+          `✅ SAVE SUCCESSFUL!\n\n` +
+          `Key: "${variableName}"\n` +
+          `Category: ${currentKey?.category || 'general'}\n` +
+          `Languages saved: ${Object.keys(translations).length}\n` +
+          `(${savedLanguages})\n\n` +
+          `✓ Saved to database\n` +
+          `✓ View in Prisma Studio: localhost:5555\n\n` +
+          `💡 Reload the page to verify persistence!`
+        );
+        
+        // Reload translations from database to verify
+        console.log('🔄 Reloading translations from database...');
+        await loadStaticTranslations();
+        console.log('✅ Translations reloaded!');
       } else {
         const errorData = await response.json();
-        console.error('Save failed with error:', errorData);
-        throw new Error(errorData.error || 'Save failed');
+        console.error('❌ API ERROR:', errorData);
+        throw new Error(errorData.error || `Server returned ${response.status}`);
       }
     } catch (error) {
-      console.error('Error saving translations:', error);
+      console.error('❌ SAVE FAILED:', error);
+      console.error('Stack trace:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`❌ Failed to save translations!\n\nError: ${errorMessage}\n\nCheck browser console (F12) for details.`);
+      alert(
+        `❌ SAVE FAILED!\n\n` +
+        `Error: ${errorMessage}\n\n` +
+        `Troubleshooting:\n` +
+        `1. Check browser console (F12) for details\n` +
+        `2. Verify Prisma Studio is running: localhost:5555\n` +
+        `3. Check server terminal for errors\n` +
+        `4. Verify database connection\n\n` +
+        `Key: "${variableName}"\n` +
+        `Languages: ${Object.keys(translations).length}`
+      );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -350,7 +449,7 @@ export default function LanguageSettings() {
     setNewKeyTranslations(initialTranslations);
   };
 
-  const handleSaveNewKey = () => {
+  const handleSaveNewKey = async () => {
     if (!newKeyName.trim()) {
       alert('Please enter a variable name');
       return;
@@ -362,29 +461,53 @@ export default function LanguageSettings() {
       return;
     }
 
-    // Create new translation key
-    const newKey: TranslationKey = {
-      key: newKeyName,
-      category: newKeyCategory,
-      descriptionEn: `Translation for ${newKeyName}`,
-      values: newKeyTranslations
-    };
+    try {
+      // Save to database
+      const response = await fetch('/api/admin/translations/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: newKeyName,
+          translations: newKeyTranslations,
+          category: newKeyCategory,
+        }),
+      });
 
-    // Add to the list
-    const updatedKeys = [...allKeys, newKey];
-    setAllKeys(updatedKeys);
-    setFilteredKeys(updatedKeys);
-    
-    // Close modal
-    setShowNewKeyModal(false);
-    setIsLongTextModal(false);
-    
-    // Navigate to the new key
-    setCurrentIndex(updatedKeys.length - 1);
-    
-    alert(isLongTextModal 
-      ? '✅ New language long text created successfully!' 
-      : '✅ New translation key created successfully!');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save to database');
+      }
+
+      console.log('✅ New translation key saved to database');
+
+      // Create new translation key
+      const newKey: TranslationKey = {
+        key: newKeyName,
+        category: newKeyCategory,
+        descriptionEn: `Translation for ${newKeyName}`,
+        values: newKeyTranslations
+      };
+
+      // Add to the list
+      const updatedKeys = [...allKeys, newKey];
+      setAllKeys(updatedKeys);
+      setFilteredKeys(updatedKeys);
+      
+      // Close modal
+      setShowNewKeyModal(false);
+      setIsLongTextModal(false);
+      
+      // Navigate to the new key
+      setCurrentIndex(updatedKeys.length - 1);
+      
+      alert(isLongTextModal 
+        ? '✅ New language long text created successfully!' 
+        : '✅ New translation key created successfully!');
+    } catch (error) {
+      console.error('Error saving new key:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`❌ Failed to save new translation key!\n\nError: ${errorMessage}`);
+    }
   };
 
   const handleCancelNewKey = () => {
@@ -395,8 +518,9 @@ export default function LanguageSettings() {
   };
 
   const handleAutoTranslate = async () => {
-    console.log('Translation button clicked!');
-    console.log('English text:', englishText);
+    console.log('\n🌐 ======= STARTING TRANSLATION =======');
+    console.log('📝 English text:', englishText);
+    console.log('📏 Text length:', englishText.length);
     
     if (!englishText.trim()) {
       alert('⚠️ Please enter English text first');
@@ -411,16 +535,19 @@ export default function LanguageSettings() {
         .filter(l => l.isActive && l.code !== 'en')
         .map(l => l.code);
 
-      console.log('Target languages:', targetLanguages);
+      console.log('🌍 Target languages:', targetLanguages.join(', '));
+      console.log('📊 Total languages to translate:', targetLanguages.length);
 
       if (targetLanguages.length === 0) {
-        alert('⚠️ No target languages selected. Please activate at least one language in Tab 1.');
+        alert('⚠️ No target languages selected.\n\nPlease activate at least one language in Tab 1 ("Set Official Languages").');
         setIsTranslating(false);
         return;
       }
 
       // Call translation API
-      console.log('Calling translation API...');
+      console.log('📤 Sending translation request to API...');
+      const startTime = Date.now();
+      
       const response = await fetch('/api/translate', {
         method: 'POST',
         headers: {
@@ -432,18 +559,28 @@ export default function LanguageSettings() {
         }),
       });
 
-      console.log('API Response status:', response.status);
+      const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`📥 API Response received in ${duration}s - Status: ${response.status}`);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API Error response:', errorText);
-        throw new Error(`Translation API request failed: ${response.status}`);
+        console.error('❌ API Error response:', errorText);
+        throw new Error(`Translation API returned ${response.status}: ${errorText.substring(0, 100)}`);
       }
 
       const data = await response.json();
-      console.log('Translation data received:', data);
+      console.log('📦 Translation data received:', data);
 
       if (data.translations) {
+        const receivedLanguages = Object.keys(data.translations).filter(k => k !== 'en');
+        console.log(`✅ Received translations for ${receivedLanguages.length} languages:`, receivedLanguages.join(', '));
+        
+        // Check for incomplete translations
+        const missingLanguages = targetLanguages.filter(lang => !data.translations[lang]);
+        if (missingLanguages.length > 0) {
+          console.warn('⚠️  Missing translations for:', missingLanguages.join(', '));
+        }
+        
         // Update translations state with new translations
         const updatedTranslations = {
           ...translations,
@@ -451,21 +588,31 @@ export default function LanguageSettings() {
           ...data.translations  // Add all translated languages
         };
         
-        console.log('Updated translations:', updatedTranslations);
-        console.log(`✅ Translation completed for ${Object.keys(data.translations).length} languages`);
+        console.log('💾 Updated translations:', updatedTranslations);
+        console.log('======= TRANSLATION COMPLETE =======\n');
+        
         setTranslations(updatedTranslations);
         setShowAllLanguages(true);
         
-        // No alert - just show the translations
+        // Show brief success notification
+        console.log(`🎉 SUCCESS: Translated to ${receivedLanguages.length}/${targetLanguages.length} languages in ${duration}s`);
       } else {
-        throw new Error('Invalid translation response - no translations field');
+        throw new Error('Invalid translation response - no translations field found');
       }
     } catch (error) {
-      console.error('Translation error:', error);
+      console.error('❌ TRANSLATION FAILED:', error);
+      console.error('Stack trace:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`❌ Translation failed!\n\nError: ${errorMessage}\n\n` +
-            'Please try again or enter translations manually.\n' +
-            'Check the browser console (F12) for more details.');
+      alert(
+        `❌ TRANSLATION FAILED!\n\n` +
+        `Error: ${errorMessage}\n\n` +
+        `Options:\n` +
+        `1. Try again (sometimes APIs are temporarily busy)\n` +
+        `2. Click "Manual Edit" to enter translations manually\n` +
+        `3. Check browser console (F12) for technical details\n\n` +
+        `Text length: ${englishText.length} characters\n` +
+        `Target languages: ${languages.filter(l => l.isActive && l.code !== 'en').length}`
+      );
     } finally {
       setIsTranslating(false);
     }
