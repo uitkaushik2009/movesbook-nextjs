@@ -1,13 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, RotateCcw } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Globe, Settings as SettingsIcon, FileText } from 'lucide-react';
 import { i18n } from '@/lib/i18n';
 
 interface Language {
   id: string;
   code: string;
   name: string;
+  nativeName: string;
+  flag: string;
   isActive: boolean;
 }
 
@@ -18,8 +20,10 @@ interface TranslationKey {
   values: Record<string, string>;
 }
 
+type LanguageTab = 'official' | 'settings' | 'texts';
+
 export default function LanguageSettings() {
-  const [activeTab, setActiveTab] = useState<'edit' | 'new'>('edit');
+  const [activeTab, setActiveTab] = useState<LanguageTab>('official');
   const [languages, setLanguages] = useState<Language[]>([]);
   const [allKeys, setAllKeys] = useState<TranslationKey[]>([]);
   const [filteredKeys, setFilteredKeys] = useState<TranslationKey[]>([]);
@@ -31,26 +35,53 @@ export default function LanguageSettings() {
   const [searchField, setSearchField] = useState('variable_name');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load translations from static files
+  // Language settings state
+  const [defaultLanguage, setDefaultLanguage] = useState('en');
+  const [fallbackLanguage, setFallbackLanguage] = useState('en');
+  const [autoDetect, setAutoDetect] = useState(true);
+  
+  // Category filter for Language Long Texts
+  const [selectedCategory, setSelectedCategory] = useState<'system' | 'social' | 'management'>('system');
+  
+  // New language/translation key state
+  const [showNewKeyModal, setShowNewKeyModal] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [newKeyCategory, setNewKeyCategory] = useState('system');
+  const [newKeyTranslations, setNewKeyTranslations] = useState<Record<string, string>>({});
+  
+  // Auto-translation state
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [englishText, setEnglishText] = useState('');
+  const [showAllLanguages, setShowAllLanguages] = useState(false);
+
+  // Load data on mount
   useEffect(() => {
+    loadLanguagesData();
     loadStaticTranslations();
   }, []);
 
-  // Handle search filtering
+  // Handle search and category filtering
   useEffect(() => {
-    if (searchQuery.trim() === '') {
-      setFilteredKeys(allKeys);
-    } else {
-      const filtered = allKeys.filter((key) => {
+    let filtered = allKeys;
+    
+    // Filter by category
+    if (activeTab === 'texts') {
+      filtered = filtered.filter(key => key.category === selectedCategory);
+    }
+    
+    // Filter by search query
+    if (searchQuery.trim() !== '') {
+      filtered = filtered.filter((key) => {
         if (searchField === 'variable_name') {
           return key.key.toLowerCase().includes(searchQuery.toLowerCase());
         }
         return true;
       });
-      setFilteredKeys(filtered);
     }
-    setCurrentIndex(0); // Reset to first page when search changes
-  }, [searchQuery, searchField, allKeys]);
+    
+    setFilteredKeys(filtered);
+    setCurrentIndex(0);
+  }, [searchQuery, searchField, allKeys, selectedCategory, activeTab]);
 
   // Update current key when index changes
   useEffect(() => {
@@ -59,24 +90,84 @@ export default function LanguageSettings() {
       setCurrentKey(key);
       setVariableName(key.key);
       setTranslations(key.values);
+      setEnglishText(key.values.en || '');
+      setShowAllLanguages(false);
     }
   }, [currentIndex, filteredKeys]);
+
+  const loadLanguagesData = () => {
+    // Default active languages
+    const defaultActiveLanguages = ['en', 'fr', 'de', 'it', 'es', 'hi'];
+    
+    // Load saved active languages from localStorage
+    let activeLanguageCodes = defaultActiveLanguages;
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('activeLanguages');
+      if (saved) {
+        try {
+          activeLanguageCodes = JSON.parse(saved);
+        } catch (e) {
+          console.error('Error parsing active languages:', e);
+        }
+      }
+    }
+    
+    const availableLanguages: Language[] = [
+      { id: '1', code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧', isActive: activeLanguageCodes.includes('en') },
+      { id: '2', code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷', isActive: activeLanguageCodes.includes('fr') },
+      { id: '3', code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪', isActive: activeLanguageCodes.includes('de') },
+      { id: '4', code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹', isActive: activeLanguageCodes.includes('it') },
+      { id: '5', code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isActive: activeLanguageCodes.includes('es') },
+      { id: '6', code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹', isActive: activeLanguageCodes.includes('pt') },
+      { id: '7', code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺', isActive: activeLanguageCodes.includes('ru') },
+      { id: '8', code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳', isActive: activeLanguageCodes.includes('hi') },
+      { id: '9', code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳', isActive: activeLanguageCodes.includes('zh') },
+      { id: '10', code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', isActive: activeLanguageCodes.includes('ar') },
+    ];
+    
+    setLanguages(availableLanguages);
+  };
+  
+  const getFlagComponent = (code: string, size: 'small' | 'medium' | 'large' = 'medium') => {
+    // Map language codes to flag image filenames
+    const flagFiles: Record<string, string> = {
+      'en': 'en.png',
+      'fr': 'fr.png', 
+      'de': 'de.png',
+      'it': 'it.png',
+      'es': 'es.png',
+      'pt': 'por.png',
+      'ru': 'rus.png',
+      'hi': 'ind.png',
+      'zh': 'chin.png',
+      'ar': 'arab.png'
+    };
+    
+    const flagFile = flagFiles[code] || 'en.png';
+    
+    const sizeClasses = {
+      small: 'w-8 h-8',
+      medium: 'w-10 h-10',
+      large: 'w-16 h-16'
+    };
+    
+    return (
+      <div className={`flex items-center justify-center ${sizeClasses[size]} rounded border border-gray-300 shadow-sm overflow-hidden bg-white`}>
+        <img 
+          src={`/flags/${flagFile}`} 
+          alt={`${code} flag`}
+          className="w-full h-full object-cover"
+        />
+      </div>
+    );
+  };
 
   const loadStaticTranslations = () => {
     setIsLoading(true);
     try {
-      // Get available languages from i18n
       const availableLanguages = i18n.getLanguages();
-      const langs: Language[] = availableLanguages.map((lang, index) => ({
-        id: String(index + 1),
-        code: lang.code,
-        name: lang.name,
-        isActive: true,
-      }));
-      setLanguages(langs);
-
-      // Get all translation keys from English (base language)
       const englishLang = availableLanguages.find(l => l.code === 'en');
+      
       if (!englishLang) {
         console.error('English language not found');
         setIsLoading(false);
@@ -84,12 +175,9 @@ export default function LanguageSettings() {
       }
 
       const keys = Object.keys(englishLang.strings);
-
-      // Build translation data for all languages
       const translationData: TranslationKey[] = keys.map((key) => {
         const values: Record<string, string> = {};
         
-        // Get translation for each language
         availableLanguages.forEach((lang) => {
           values[lang.code] = lang.strings[key] || '';
         });
@@ -115,22 +203,35 @@ export default function LanguageSettings() {
   };
 
   const getCategoryFromKey = (key: string): string => {
-    if (key.startsWith('nav_')) return 'navigation';
-    if (key.startsWith('auth_')) return 'authentication';
-    if (key.startsWith('dashboard_')) return 'dashboard';
-    if (key.startsWith('settings_')) return 'settings';
-    if (key.startsWith('sidebar_')) return 'sidebar';
-    if (key.startsWith('footer_')) return 'footer';
-    if (key.startsWith('user_type_')) return 'user_type';
-    if (key.startsWith('member_')) return 'member';
-    return 'general';
+    // System Administration & Homepage
+    if (key.startsWith('nav_')) return 'system';
+    if (key.startsWith('auth_')) return 'system';
+    if (key.startsWith('dashboard_')) return 'system';
+    if (key.startsWith('settings_')) return 'system';
+    if (key.startsWith('footer_')) return 'system';
+    if (key.startsWith('admin_')) return 'system';
+    
+    // Social & Sport
+    if (key.startsWith('sport_')) return 'social';
+    if (key.startsWith('club_')) return 'social';
+    if (key.startsWith('athlete_')) return 'social';
+    if (key.startsWith('coach_')) return 'social';
+    if (key.startsWith('team_')) return 'social';
+    if (key.startsWith('group_')) return 'social';
+    
+    // Management
+    if (key.startsWith('member_')) return 'management';
+    if (key.startsWith('user_type_')) return 'management';
+    if (key.startsWith('sidebar_')) return 'management';
+    if (key.startsWith('workout_')) return 'management';
+    
+    return 'system';
   };
 
   const handleSave = async () => {
     if (!currentKey) return;
 
     try {
-      // Save to API endpoint (which will update the database)
       const response = await fetch('/api/admin/translations/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,7 +244,6 @@ export default function LanguageSettings() {
       if (response.ok) {
         alert('✅ Translations saved successfully!\n\nNote: To apply these changes to the live site, you need to export translations and rebuild the application.');
         
-        // Update the local state
         const updatedKeys = allKeys.map(k => 
           k.key === currentKey.key ? { ...k, key: variableName, values: translations } : k
         );
@@ -165,6 +265,25 @@ export default function LanguageSettings() {
       setVariableName(currentKey.key);
       setTranslations(currentKey.values);
     }
+  };
+
+  const toggleLanguage = (langCode: string) => {
+    setLanguages(prev => {
+      const updated = prev.map(lang => 
+        lang.code === langCode ? { ...lang, isActive: !lang.isActive } : lang
+      );
+      
+      // Save active languages to localStorage
+      const activeLanguageCodes = updated.filter(l => l.isActive).map(l => l.code);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('activeLanguages', JSON.stringify(activeLanguageCodes));
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new Event('activeLanguagesChanged'));
+      }
+      
+      return updated;
+    });
   };
 
   const goToPage = (pageNumber: number) => {
@@ -195,10 +314,116 @@ export default function LanguageSettings() {
     setSearchField('variable_name');
   };
 
+  const handleNewKey = () => {
+    setShowNewKeyModal(true);
+    setNewKeyName('');
+    setNewKeyCategory('system');
+    const initialTranslations: Record<string, string> = {};
+    languages.filter(l => l.isActive).forEach(lang => {
+      initialTranslations[lang.code] = '';
+    });
+    setNewKeyTranslations(initialTranslations);
+  };
+
+  const handleSaveNewKey = () => {
+    if (!newKeyName.trim()) {
+      alert('Please enter a variable name');
+      return;
+    }
+
+    // Check if key already exists
+    if (allKeys.find(k => k.key === newKeyName)) {
+      alert('This variable name already exists. Please use a different name.');
+      return;
+    }
+
+    // Create new translation key
+    const newKey: TranslationKey = {
+      key: newKeyName,
+      category: newKeyCategory,
+      descriptionEn: `Translation for ${newKeyName}`,
+      values: newKeyTranslations
+    };
+
+    // Add to the list
+    const updatedKeys = [...allKeys, newKey];
+    setAllKeys(updatedKeys);
+    setFilteredKeys(updatedKeys);
+    
+    // Close modal
+    setShowNewKeyModal(false);
+    
+    // Navigate to the new key
+    setCurrentIndex(updatedKeys.length - 1);
+    
+    alert('✅ New translation key created successfully!');
+  };
+
+  const handleCancelNewKey = () => {
+    setShowNewKeyModal(false);
+    setNewKeyName('');
+    setNewKeyTranslations({});
+  };
+
+  const handleAutoTranslate = async () => {
+    if (!englishText.trim()) {
+      alert('Please enter English text first');
+      return;
+    }
+
+    setIsTranslating(true);
+    
+    try {
+      // Get all active language codes except English
+      const targetLanguages = languages
+        .filter(l => l.isActive && l.code !== 'en')
+        .map(l => l.code);
+
+      // Call translation API
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: englishText,
+          targetLanguages: targetLanguages,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Translation API request failed');
+      }
+
+      const data = await response.json();
+
+      if (data.translations) {
+        setTranslations(data.translations);
+        setShowAllLanguages(true);
+        alert('✅ Translation completed! Review and edit as needed, then save.');
+      } else {
+        throw new Error('Invalid translation response');
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+      alert('❌ Translation failed. Please try again or enter translations manually.\n\nNote: Make sure you have configured a translation API or check your internet connection.');
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleManualEdit = () => {
+    setShowAllLanguages(true);
+  };
+
+  const handleSaveLanguageSelection = () => {
+    const activeCount = languages.filter(l => l.isActive).length;
+    alert(`✅ Language selection saved!\n\n${activeCount} languages are now active in the navbar language selector.`);
+  };
+
   const totalPages = filteredKeys.length;
   const currentPage = currentIndex + 1;
   
-  // Calculate page numbers to show (max 9)
   const getPageNumbers = () => {
     const pages = [];
     const maxPages = 9;
@@ -225,305 +450,699 @@ export default function LanguageSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
-      <div className="bg-white border border-gray-300 p-4">
-        <div className="flex items-center gap-4">
-          <label className="font-semibold text-gray-700 whitespace-nowrap">Search in</label>
-          <select
-            value={searchField}
-            onChange={(e) => setSearchField(e.target.value)}
-            className="px-4 py-2 border border-gray-300 bg-white focus:outline-none focus:border-gray-500 min-w-[200px]"
-          >
-            <option value="variable_name">variable_name</option>
-          </select>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="variable_name"
-            className="flex-1 px-4 py-2 border border-gray-300 focus:outline-none focus:border-gray-500"
-          />
-          <button
-            onClick={handleSearch}
-            className="px-8 py-2 bg-red-500 text-white font-semibold hover:bg-red-600 transition whitespace-nowrap"
-          >
-            Proceed
-          </button>
-          <button
-            onClick={handleResetSearch}
-            className="px-8 py-2 bg-gray-800 text-white font-semibold hover:bg-gray-900 transition whitespace-nowrap"
-          >
-            Reset
-          </button>
-        </div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">Language Management</h2>
       </div>
 
-      {/* Tabs */}
-      <div className="flex items-center gap-2">
+      {/* Main Tabs */}
+      <div className="flex items-center gap-2 border-b border-gray-300">
         <button
-          onClick={() => setActiveTab('edit')}
-          className={`px-8 py-3 font-semibold transition-all duration-300 ${
-            activeTab === 'edit'
-              ? 'bg-gray-700 text-white'
-              : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+          onClick={() => setActiveTab('official')}
+          className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all duration-300 border-b-4 ${
+            activeTab === 'official'
+              ? 'border-blue-600 text-blue-600 bg-blue-50'
+              : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
           }`}
         >
-          System Administration & Homepage
+          <Globe className="w-5 h-5" />
+          Set Official Languages
         </button>
         <button
-          onClick={() => setActiveTab('new')}
-          className={`px-8 py-3 font-semibold transition-all duration-300 ${
-            activeTab === 'new'
-              ? 'bg-gray-700 text-white'
-              : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+          onClick={() => setActiveTab('settings')}
+          className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all duration-300 border-b-4 ${
+            activeTab === 'settings'
+              ? 'border-blue-600 text-blue-600 bg-blue-50'
+              : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
           }`}
         >
-          New Language
+          <SettingsIcon className="w-5 h-5" />
+          Language Settings
+        </button>
+        <button
+          onClick={() => setActiveTab('texts')}
+          className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all duration-300 border-b-4 ${
+            activeTab === 'texts'
+              ? 'border-blue-600 text-blue-600 bg-blue-50'
+              : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+          }`}
+        >
+          <FileText className="w-5 h-5" />
+          Language Long Texts
         </button>
       </div>
 
-      {activeTab === 'edit' && currentKey && (
-        <div className="space-y-6">
-          {/* Pagination */}
-          <div className="flex items-center justify-center gap-2 bg-gray-100 p-3 rounded">
-            <button
-              onClick={prevPage}
-              disabled={currentIndex === 0}
-              className="px-4 py-2 bg-gray-600 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
-            >
-              prev
-            </button>
-            {getPageNumbers().map((page) => (
-              <button
-                key={page}
-                onClick={() => goToPage(page)}
-                className={`px-4 py-2 font-semibold transition ${
-                  page === currentPage
-                    ? 'bg-gray-800 text-white'
-                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={nextPage}
-              disabled={currentIndex === filteredKeys.length - 1}
-              className="px-4 py-2 bg-gray-600 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
-            >
-              next
-            </button>
+      {/* Tab Content */}
+      <div className="mt-6">
+        {/* Tab 1: Set Official Languages */}
+        {activeTab === 'official' && (
+          <div className="bg-white border border-gray-300 rounded-lg p-6 shadow">
+            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <Globe className="w-6 h-6 text-blue-600" />
+              Set languages to be used in Movesbook
+            </h3>
+            
+            {/* Center the table with max-width */}
+            <div className="max-w-3xl mx-auto">
+              <div className="bg-white rounded-lg shadow border border-gray-200 overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Flag</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Language</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {languages.map((lang) => (
+                      <tr key={lang.code} className="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
+                        <td className="px-4 py-3 w-20">
+                          {getFlagComponent(lang.code, 'small')}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-gray-900">{lang.name}</span>
+                            <span className="text-xs text-gray-500">{lang.nativeName}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center w-32">
+                          <button
+                            onClick={() => toggleLanguage(lang.code)}
+                            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-sm ${
+                              lang.isActive ? 'bg-blue-600' : 'bg-gray-300'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200 ${
+                                lang.isActive ? 'translate-x-8' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="mt-6 flex justify-between items-center">
+                <p className="text-sm text-gray-600">
+                  <strong>{languages.filter(l => l.isActive).length}</strong> of <strong>{languages.length}</strong> languages active
+                </p>
+                <button 
+                  onClick={handleSaveLanguageSelection}
+                  className="px-6 py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm hover:shadow"
+                >
+                  Save Language Selection
+                </button>
+              </div>
+            </div>
           </div>
+        )}
 
-          {/* Variable Name Header */}
-          <div className="bg-white border border-gray-300 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-4 flex-1">
-                <label className="font-semibold text-gray-700">
-                  Sr.No {currentPage} <span className="ml-2">variable_name</span>
-                </label>
+        {/* Tab 2: Language Settings */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            {/* Search Bar */}
+            <div className="bg-white border border-gray-300 p-4">
+              <div className="flex items-center gap-4">
+                <label className="font-semibold text-gray-700 whitespace-nowrap">Search in</label>
+                <select
+                  value={searchField}
+                  onChange={(e) => setSearchField(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 bg-white focus:outline-none focus:border-gray-500 min-w-[200px]"
+                >
+                  <option value="variable_name">variable_name</option>
+                </select>
                 <input
                   type="text"
-                  value={variableName}
-                  onChange={(e) => setVariableName(e.target.value)}
-                  className="flex-1 max-w-md px-4 py-2 border-2 border-red-500 focus:outline-none focus:border-red-600"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="variable_name"
+                  className="flex-1 px-4 py-2 border border-gray-300 focus:outline-none focus:border-gray-500"
                 />
+                <button
+                  onClick={handleSearch}
+                  className="px-8 py-2 bg-red-500 text-white font-semibold hover:bg-red-600 transition whitespace-nowrap"
+                >
+                  Proceed
+                </button>
+                <button
+                  onClick={handleResetSearch}
+                  className="px-8 py-2 bg-gray-800 text-white font-semibold hover:bg-gray-900 transition whitespace-nowrap"
+                >
+                  Reset
+                </button>
               </div>
-              <button
-                onClick={handleReset}
-                className="px-6 py-2 bg-red-500 text-white font-semibold hover:bg-red-600 transition"
+            </div>
+
+            {/* Sub Tabs */}
+            <div className="flex items-center gap-2">
+              <button className="px-8 py-3 font-semibold transition-all duration-300 bg-gray-700 text-white">
+                System Administration & Homepage
+              </button>
+              <button 
+                onClick={handleNewKey}
+                className="px-8 py-3 font-semibold transition-all duration-300 bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg"
               >
-                Reset
+                ➕ New Language
               </button>
             </div>
 
-            {/* Language Editors */}
-            <div className="space-y-6 mt-6">
-              {languages.map((lang) => {
-                const flagEmoji = lang.code === 'en' ? '🇬🇧' : 
-                                  lang.code === 'es' ? '🇪🇸' :
-                                  lang.code === 'fr' ? '🇫🇷' :
-                                  lang.code === 'de' ? '🇩🇪' :
-                                  lang.code === 'it' ? '🇮🇹' :
-                                  lang.code === 'pt' ? '🇵🇹' :
-                                  lang.code === 'ru' ? '🇷🇺' :
-                                  lang.code === 'zh' ? '🇨🇳' :
-                                  lang.code === 'ar' ? '🇸🇦' :
-                                  lang.code === 'hi' ? '🇮🇳' : '🌐';
+            {/* New Key Modal */}
+            {showNewKeyModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-xl shadow-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900">Add New Translation Key</h3>
+                    <button 
+                      onClick={handleCancelNewKey}
+                      className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                    >
+                      ✕
+                    </button>
+                  </div>
 
-                return (
-                  <div key={lang.code} className="border-t border-gray-200 pt-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="text-2xl">{flagEmoji}</span>
-                      <span className="font-semibold text-gray-700">
-                        {lang.name.charAt(0).toUpperCase() + lang.name.slice(1).substring(0, 2)}
-                      </span>
-                    </div>
-                    
-                    {/* Rich Text Editor */}
-                    <div className="border border-gray-300 bg-white">
-                      {/* Toolbar Row 1 - File Operations */}
-                      <div className="border-b border-gray-200 bg-gray-50 p-1 flex items-center gap-1 text-xs">
-                        <button className="p-1 hover:bg-gray-200" title="Source">📄</button>
-                        <button className="p-1 hover:bg-gray-200" title="Save">💾</button>
-                        <button className="p-1 hover:bg-gray-200" title="New">📃</button>
-                        <button className="p-1 hover:bg-gray-200" title="Preview">👁</button>
-                        <button className="p-1 hover:bg-gray-200" title="Print">🖨</button>
-                        <button className="p-1 hover:bg-gray-200" title="Templates">📋</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="p-1 hover:bg-gray-200" title="Cut">✂</button>
-                        <button className="p-1 hover:bg-gray-200" title="Copy">📄</button>
-                        <button className="p-1 hover:bg-gray-200" title="Paste">📋</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="p-1 hover:bg-gray-200" title="Undo">↶</button>
-                        <button className="p-1 hover:bg-gray-200" title="Redo">↷</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="p-1 hover:bg-gray-200" title="Find">🔍</button>
-                        <button className="p-1 hover:bg-gray-200" title="Replace">🔄</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="p-1 hover:bg-gray-200" title="Select All">☑</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="p-1 hover:bg-gray-200" title="More">⋮</button>
-                      </div>
-
-                      {/* Toolbar Row 2 - Text Formatting */}
-                      <div className="border-b border-gray-200 bg-gray-50 p-1 flex items-center gap-1 flex-wrap text-sm">
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300 font-bold" title="Bold">B</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300 italic" title="Italic">I</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300 underline" title="Underline">U</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300 line-through" title="Strike">S</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Subscript">X₂</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Superscript">X²</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Remove Format">Tx</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Numbered List">1.</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Bullet List">•</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Decrease Indent">⇤</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Increase Indent">⇥</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Blockquote">""</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Align Left">≡</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Align Center">≣</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Align Right">≡</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Justify">≡</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Link">🔗</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Unlink">🔓</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Image">🖼</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Table">⊞</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Horizontal Rule">—</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Smiley">😊</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Special Char">Ω</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="Iframe">⊡</button>
-                        <button className="px-2 py-1 hover:bg-gray-200 border border-gray-300" title="More">⋯</button>
-                      </div>
-
-                      {/* Toolbar Row 3 - Styles */}
-                      <div className="border-b border-gray-200 bg-gray-50 p-1 flex items-center gap-2 text-xs">
-                        <select className="border border-gray-300 px-2 py-1 text-xs bg-white" title="Styles">
-                          <option>Styles</option>
-                          <option>Heading 1</option>
-                          <option>Heading 2</option>
-                          <option>Paragraph</option>
-                        </select>
-                        <select className="border border-gray-300 px-2 py-1 text-xs bg-white" title="Format">
-                          <option>Format</option>
-                          <option>Normal</option>
-                          <option>Formatted</option>
-                        </select>
-                        <select className="border border-gray-300 px-2 py-1 text-xs bg-white" title="Font">
-                          <option>Font</option>
-                          <option>Arial</option>
-                          <option>Times New Roman</option>
-                          <option>Courier New</option>
-                        </select>
-                        <select className="border border-gray-300 px-2 py-1 text-xs bg-white" title="Size">
-                          <option>Size</option>
-                          <option>8</option>
-                          <option>10</option>
-                          <option>12</option>
-                          <option>14</option>
-                          <option>16</option>
-                          <option>18</option>
-                        </select>
-                        <button className="p-1 hover:bg-gray-200 border border-gray-300" title="Text Color">A</button>
-                        <button className="p-1 hover:bg-gray-200 border border-gray-300" title="Background Color">🎨</button>
-                        <span className="text-gray-300">|</span>
-                        <button className="p-1 hover:bg-gray-200 border border-gray-300" title="Maximize">⤢</button>
-                        <button className="p-1 hover:bg-gray-200 border border-gray-300" title="Show Blocks">☐</button>
-                        <span className="text-gray-300">|</span>
-                        <select className="border border-gray-300 px-2 py-1 text-xs bg-white" title="Zoom">
-                          <option>Zoom</option>
-                          <option>50%</option>
-                          <option>75%</option>
-                          <option>100%</option>
-                          <option>125%</option>
-                          <option>150%</option>
-                        </select>
-                      </div>
-                      
-                      {/* Editor Area */}
-                      <textarea
-                        value={translations[lang.code] || ''}
-                        onChange={(e) => setTranslations({ ...translations, [lang.code]: e.target.value })}
-                        rows={10}
-                        className="w-full p-4 focus:outline-none resize-y min-h-[250px] font-sans"
-                        placeholder={`Enter ${lang.name} translation here...`}
+                  <div className="space-y-6">
+                    {/* Variable Name */}
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                        Variable Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newKeyName}
+                        onChange={(e) => setNewKeyName(e.target.value)}
+                        placeholder="e.g., nav_new_item, auth_new_button"
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
                       />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Use underscores, e.g., "nav_home", "auth_login", "settings_title"
+                      </p>
+                    </div>
+
+                    {/* Category */}
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">
+                        Category <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        value={newKeyCategory}
+                        onChange={(e) => setNewKeyCategory(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white"
+                      >
+                        <option value="system">System Administration & Homepage</option>
+                        <option value="social">Social & Sport</option>
+                        <option value="management">Management</option>
+                      </select>
+                    </div>
+
+                    {/* Translations for each language */}
+                    <div className="border-t pt-4">
+                      <h4 className="font-bold text-gray-900 mb-4">Translations</h4>
+                      <div className="space-y-4">
+                        {languages.filter(l => l.isActive).map((lang) => (
+                          <div key={lang.code}>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded border-2 border-gray-200 shadow-sm overflow-hidden bg-white">
+                                  <img 
+                                    src={`/flags/${lang.code === 'pt' ? 'por' : lang.code === 'ru' ? 'rus' : lang.code === 'hi' ? 'ind' : lang.code === 'zh' ? 'chin' : lang.code === 'ar' ? 'arab' : lang.code}.png`}
+                                    alt={`${lang.name} flag`}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                {lang.name} ({lang.nativeName})
+                              </div>
+                            </label>
+                            <input
+                              type="text"
+                              value={newKeyTranslations[lang.code] || ''}
+                              onChange={(e) => setNewKeyTranslations({
+                                ...newKeyTranslations,
+                                [lang.code]: e.target.value
+                              })}
+                              placeholder={`Enter ${lang.name} translation...`}
+                              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex justify-end gap-4 pt-4 border-t">
+                      <button
+                        onClick={handleCancelNewKey}
+                        className="px-6 py-3 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveNewKey}
+                        className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-md"
+                      >
+                        💾 Create Translation Key
+                      </button>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              </div>
+            )}
+
+            {currentKey && (
+              <div className="space-y-6">
+                {/* Pagination */}
+                <div className="flex items-center justify-center gap-2 bg-gray-100 p-3 rounded">
+                  <button
+                    onClick={prevPage}
+                    disabled={currentIndex === 0}
+                    className="px-4 py-2 bg-gray-600 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                  >
+                    prev
+                  </button>
+                  {getPageNumbers().map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      className={`px-4 py-2 font-semibold transition ${
+                        page === currentPage
+                          ? 'bg-gray-800 text-white'
+                          : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={nextPage}
+                    disabled={currentIndex === filteredKeys.length - 1}
+                    className="px-4 py-2 bg-gray-600 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                  >
+                    next
+                  </button>
+                </div>
+
+                {/* Detailed Editor */}
+                <div className="bg-white border border-gray-300 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4 flex-1">
+                      <label className="font-semibold text-gray-700">
+                        Sr.No {currentPage} <span className="ml-2">variable_name</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={variableName}
+                        onChange={(e) => setVariableName(e.target.value)}
+                        className="flex-1 max-w-md px-4 py-2 border-2 border-red-500 focus:outline-none focus:border-red-600"
+                      />
+                    </div>
+                    <button
+                      onClick={handleReset}
+                      className="px-6 py-2 bg-red-500 text-white font-semibold hover:bg-red-600 transition"
+                    >
+                      Reset
+                    </button>
+                  </div>
+
+                  {/* Auto-Translation Section */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-6 mb-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-lg border-2 border-blue-300 shadow-md overflow-hidden bg-white">
+                        <img 
+                          src="/flags/en.png" 
+                          alt="English flag"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-lg">English (Source)</h4>
+                        <p className="text-sm text-gray-600">Enter your text in English - we'll translate it for you</p>
+                      </div>
+                    </div>
+                    
+                    <textarea
+                      value={englishText}
+                      onChange={(e) => {
+                        setEnglishText(e.target.value);
+                        setTranslations({ ...translations, en: e.target.value });
+                      }}
+                      rows={6}
+                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 font-sans text-lg"
+                      placeholder="Type your English text here..."
+                    />
+
+                    <div className="flex gap-3 mt-4 items-center">
+                      <button
+                        onClick={handleAutoTranslate}
+                        disabled={isTranslating || !englishText.trim()}
+                        className={`flex items-center justify-center gap-2 px-8 py-3 font-bold rounded transition-all duration-300 ${
+                          isTranslating || !englishText.trim()
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed border-2 border-gray-300'
+                            : 'bg-white text-gray-800 border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                        }`}
+                      >
+                        {isTranslating ? 'Translating...' : 'Translation'}
+                      </button>
+                      
+                      <button
+                        onClick={handleSave}
+                        className="flex items-center justify-center gap-2 px-8 py-3 bg-white text-gray-800 font-bold rounded border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all"
+                      >
+                        Save
+                      </button>
+                      
+                      <button
+                        onClick={handleManualEdit}
+                        className="flex items-center justify-center gap-2 px-8 py-3 bg-white border-2 border-gray-300 text-gray-800 font-bold rounded hover:bg-gray-50 hover:border-gray-400 transition-all"
+                      >
+                        Manual Edit
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Translated Languages (Show after translation or manual edit) */}
+                  {showAllLanguages && (
+                    <div className="space-y-6">
+                      <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                        <p className="text-sm text-green-900 font-semibold">
+                          ✅ Translations ready! Review and edit if needed.
+                        </p>
+                      </div>
+                      
+                      {languages.filter(l => l.isActive && l.code !== 'en').map((lang) => (
+                        <div key={lang.code} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-6 py-3 flex items-center gap-3 border-b">
+                            <div className="w-10 h-10 rounded border-2 border-gray-200 shadow-sm overflow-hidden bg-white">
+                              <img 
+                                src={`/flags/${lang.code === 'pt' ? 'por' : lang.code === 'ru' ? 'rus' : lang.code === 'hi' ? 'ind' : lang.code === 'zh' ? 'chin' : lang.code === 'ar' ? 'arab' : lang.code}.png`}
+                                alt={`${lang.name} flag`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div>
+                              <span className="font-bold text-gray-900 text-lg">{lang.name}</span>
+                              <span className="text-sm text-gray-600 ml-2">({lang.nativeName})</span>
+                            </div>
+                          </div>
+                          
+                          <div className="p-4 bg-white">
+                            <textarea
+                              value={translations[lang.code] || ''}
+                              onChange={(e) => setTranslations({ ...translations, [lang.code]: e.target.value })}
+                              rows={4}
+                              className="w-full p-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-sans"
+                              placeholder={`${lang.name} translation...`}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Language Long Texts */}
+        {activeTab === 'texts' && (
+          <div className="space-y-6">
+            {/* Search Bar */}
+            <div className="bg-white border border-gray-300 p-4">
+              <div className="flex items-center gap-4">
+                <label className="font-semibold text-gray-700 whitespace-nowrap">Search in</label>
+                <select
+                  value={searchField}
+                  onChange={(e) => setSearchField(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 bg-white focus:outline-none focus:border-gray-500 min-w-[200px]"
+                >
+                  <option value="variable_name">variable_name</option>
+                </select>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="variable_name"
+                  className="flex-1 px-4 py-2 border border-gray-300 focus:outline-none focus:border-gray-500"
+                />
+                <button
+                  onClick={handleSearch}
+                  className="px-8 py-2 bg-red-500 text-white font-semibold hover:bg-red-600 transition whitespace-nowrap"
+                >
+                  Proceed
+                </button>
+                <button
+                  onClick={handleResetSearch}
+                  className="px-8 py-2 bg-gray-800 text-white font-semibold hover:bg-gray-900 transition whitespace-nowrap"
+                >
+                  Reset
+                </button>
+              </div>
             </div>
 
-            {/* Save Button */}
-            <div className="mt-6 flex justify-end">
+            {/* Category Tabs - PROMINENTLY STYLED */}
+            <div className="bg-gradient-to-r from-gray-100 to-gray-200 p-2 rounded-xl shadow-inner flex items-center gap-3 border-2 border-gray-300">
+              <span className="text-sm font-bold text-gray-600 ml-2">CATEGORIES:</span>
               <button
-                onClick={handleSave}
-                className="px-8 py-3 bg-green-600 text-white font-semibold hover:bg-green-700 transition rounded"
+                onClick={() => setSelectedCategory('system')}
+                className={`px-8 py-4 font-bold text-sm transition-all duration-300 rounded-lg shadow-md hover:shadow-xl transform hover:scale-105 ${
+                  selectedCategory === 'system'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white ring-4 ring-blue-300 scale-105 shadow-xl'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
               >
-                Save Changes
+                🏠 System Administration & Homepage
+              </button>
+              <button
+                onClick={() => setSelectedCategory('social')}
+                className={`px-8 py-4 font-bold text-sm transition-all duration-300 rounded-lg shadow-md hover:shadow-xl transform hover:scale-105 ${
+                  selectedCategory === 'social'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white ring-4 ring-blue-300 scale-105 shadow-xl'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                ⚽ Social & Sport
+              </button>
+              <button
+                onClick={() => setSelectedCategory('management')}
+                className={`px-8 py-4 font-bold text-sm transition-all duration-300 rounded-lg shadow-md hover:shadow-xl transform hover:scale-105 ${
+                  selectedCategory === 'management'
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white ring-4 ring-blue-300 scale-105 shadow-xl'
+                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                📊 Management
               </button>
             </div>
-          </div>
-        </div>
-      )}
 
-      {activeTab === 'new' && (
-        <div className="bg-white border border-gray-300 p-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-6">Add New Language</h3>
-          <div className="space-y-4 max-w-2xl">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Language Code (e.g., sv, da, no)
-              </label>
-              <input
-                type="text"
-                placeholder="sv"
-                className="w-full px-4 py-3 border-2 border-gray-300 focus:outline-none focus:border-blue-500"
-              />
+            {/* Category indicator */}
+            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+              <p className="text-sm text-blue-900">
+                <strong>Currently viewing:</strong> {
+                  selectedCategory === 'system' ? 'System Administration & Homepage' :
+                  selectedCategory === 'social' ? 'Social & Sport' :
+                  'Management'
+                } translations
+                <span className="ml-2 text-gray-600">({filteredKeys.length} items)</span>
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Language Name (e.g., Svenska, Dansk)
-              </label>
-              <input
-                type="text"
-                placeholder="Svenska"
-                className="w-full px-4 py-3 border-2 border-gray-300 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <button className="px-8 py-3 bg-blue-600 text-white font-semibold hover:bg-blue-700 transition rounded">
-              Create Language
-            </button>
+
+            {currentKey && (
+              <div className="space-y-6">
+                {/* Pagination */}
+                <div className="flex items-center justify-center gap-2 bg-gray-100 p-3 rounded">
+                  <button
+                    onClick={prevPage}
+                    disabled={currentIndex === 0}
+                    className="px-4 py-2 bg-gray-600 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                  >
+                    prev
+                  </button>
+                  {getPageNumbers().map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => goToPage(page)}
+                      className={`px-4 py-2 font-semibold transition ${
+                        page === currentPage
+                          ? 'bg-gray-800 text-white'
+                          : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={nextPage}
+                    disabled={currentIndex === filteredKeys.length - 1}
+                    className="px-4 py-2 bg-gray-600 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                  >
+                    next
+                  </button>
+                </div>
+
+                {/* Translation Table */}
+                <div className="bg-white border border-gray-300 overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-100 border-b border-gray-300">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Sr.No</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Variable_name</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">En</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">It</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Fr</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">De</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Es</th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-200">
+                        <td className="px-4 py-3">{currentPage}</td>
+                        <td className="px-4 py-3">
+                          <span className="text-red-600 font-mono">{variableName}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm">{translations['en'] || ''}</td>
+                        <td className="px-4 py-3 text-sm">{translations['it'] || ''}</td>
+                        <td className="px-4 py-3 text-sm">{translations['fr'] || ''}</td>
+                        <td className="px-4 py-3 text-sm">{translations['de'] || ''}</td>
+                        <td className="px-4 py-3 text-sm">{translations['es'] || ''}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <button className="px-4 py-1 bg-gray-700 text-white text-sm font-semibold hover:bg-gray-800 transition">
+                              View
+                            </button>
+                            <button className="px-4 py-1 bg-gray-700 text-white text-sm font-semibold hover:bg-gray-800 transition">
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Detailed Editor */}
+                <div className="bg-white border border-gray-300 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4 flex-1">
+                      <label className="font-semibold text-gray-700">
+                        Sr.No {currentPage} <span className="ml-2">variable_name</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={variableName}
+                        onChange={(e) => setVariableName(e.target.value)}
+                        className="flex-1 max-w-md px-4 py-2 border-2 border-red-500 focus:outline-none focus:border-red-600"
+                      />
+                    </div>
+                    <button
+                      onClick={handleReset}
+                      className="px-6 py-2 bg-red-500 text-white font-semibold hover:bg-red-600 transition"
+                    >
+                      Reset
+                    </button>
+                  </div>
+
+                  {/* Auto-Translation Section */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-6 mb-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-12 h-12 rounded-lg border-2 border-blue-300 shadow-md overflow-hidden bg-white">
+                        <img 
+                          src="/flags/en.png" 
+                          alt="English flag"
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-lg">English (Source)</h4>
+                        <p className="text-sm text-gray-600">Enter your text in English - we'll translate it for you</p>
+                      </div>
+                    </div>
+                    
+                    <textarea
+                      value={englishText}
+                      onChange={(e) => {
+                        setEnglishText(e.target.value);
+                        setTranslations({ ...translations, en: e.target.value });
+                      }}
+                      rows={6}
+                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 font-sans text-lg"
+                      placeholder="Type your English text here..."
+                    />
+
+                    <div className="flex gap-3 mt-4 items-center">
+                      <button
+                        onClick={handleAutoTranslate}
+                        disabled={isTranslating || !englishText.trim()}
+                        className={`flex items-center justify-center gap-2 px-8 py-3 font-bold rounded transition-all duration-300 ${
+                          isTranslating || !englishText.trim()
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed border-2 border-gray-300'
+                            : 'bg-white text-gray-800 border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                        }`}
+                      >
+                        {isTranslating ? 'Translating...' : 'Translation'}
+                      </button>
+                      
+                      <button
+                        onClick={handleSave}
+                        className="flex items-center justify-center gap-2 px-8 py-3 bg-white text-gray-800 font-bold rounded border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all"
+                      >
+                        Save
+                      </button>
+                      
+                      <button
+                        onClick={handleManualEdit}
+                        className="flex items-center justify-center gap-2 px-8 py-3 bg-white border-2 border-gray-300 text-gray-800 font-bold rounded hover:bg-gray-50 hover:border-gray-400 transition-all"
+                      >
+                        Manual Edit
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Translated Languages (Show after translation or manual edit) */}
+                  {showAllLanguages && (
+                    <div className="space-y-6">
+                      <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
+                        <p className="text-sm text-green-900 font-semibold">
+                          ✅ Translations ready! Review and edit if needed.
+                        </p>
+                      </div>
+                      
+                      {languages.filter(l => l.isActive && l.code !== 'en').map((lang) => (
+                        <div key={lang.code} className="border border-gray-200 rounded-lg overflow-hidden">
+                          <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-6 py-3 flex items-center gap-3 border-b">
+                            <div className="w-10 h-10 rounded border-2 border-gray-200 shadow-sm overflow-hidden bg-white">
+                              <img 
+                                src={`/flags/${lang.code === 'pt' ? 'por' : lang.code === 'ru' ? 'rus' : lang.code === 'hi' ? 'ind' : lang.code === 'zh' ? 'chin' : lang.code === 'ar' ? 'arab' : lang.code}.png`}
+                                alt={`${lang.name} flag`}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div>
+                              <span className="font-bold text-gray-900 text-lg">{lang.name}</span>
+                              <span className="text-sm text-gray-600 ml-2">({lang.nativeName})</span>
+                            </div>
+                          </div>
+                          
+                          <div className="p-4 bg-white">
+                            <textarea
+                              value={translations[lang.code] || ''}
+                              onChange={(e) => setTranslations({ ...translations, [lang.code]: e.target.value })}
+                              rows={4}
+                              className="w-full p-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-sans"
+                              placeholder={`${lang.name} translation...`}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

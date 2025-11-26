@@ -1,8 +1,26 @@
 'use client';
 
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Globe, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
+
+// Map language codes to flag file names
+const getFlagFileName = (code: string): string => {
+  const flagMap: Record<string, string> = {
+    'en': 'en.png',
+    'fr': 'fr.png',
+    'de': 'de.png',
+    'it': 'it.png',
+    'es': 'es.png',
+    'pt': 'por.png',
+    'ru': 'rus.png',
+    'hi': 'ind.png',
+    'zh': 'chin.png',
+    'ar': 'arab.png',
+  };
+  return flagMap[code] || 'en.png';
+};
 
 export default function LanguageSwitcher() {
   const { currentLanguage, setLanguage, availableLanguages } = useLanguage();
@@ -21,7 +39,7 @@ export default function LanguageSwitcher() {
   }, []);
 
   const currentLangName = availableLanguages.find(lang => lang.code === currentLanguage)?.name || 'English';
-  const shortCode = currentLanguage.toUpperCase();
+  const currentFlagFile = getFlagFileName(currentLanguage);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -29,8 +47,14 @@ export default function LanguageSwitcher() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
       >
-        <Globe className="w-4 h-4 text-gray-600" />
-        <span className="font-medium text-gray-700">{shortCode}</span>
+        <div className="w-6 h-6 rounded border border-gray-200 overflow-hidden flex-shrink-0">
+          <img 
+            src={`/flags/${currentFlagFile}`}
+            alt={`${currentLangName} flag`}
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <span className="font-medium text-gray-700">{currentLanguage.toUpperCase()}</span>
         <span className="text-sm text-gray-500">|</span>
         <span className="text-sm text-gray-600">{currentLangName}</span>
       </button>
@@ -48,11 +72,18 @@ export default function LanguageSwitcher() {
                   setLanguage(lang.code);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2.5 rounded-md hover:bg-gray-100 transition-colors flex items-center justify-between ${
+                className={`w-full text-left px-3 py-2.5 rounded-md hover:bg-gray-100 transition-colors flex items-center gap-3 ${
                   currentLanguage === lang.code ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                 }`}
               >
-                <span className="font-medium">{lang.name}</span>
+                <div className="w-7 h-7 rounded border border-gray-200 overflow-hidden flex-shrink-0">
+                  <img 
+                    src={`/flags/${getFlagFileName(lang.code)}`}
+                    alt={`${lang.name} flag`}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <span className="font-medium flex-1">{lang.name}</span>
                 {currentLanguage === lang.code && (
                   <Check className="w-4 h-4 text-blue-700" />
                 )}

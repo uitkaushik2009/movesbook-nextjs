@@ -35,6 +35,23 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+// Map language codes to flag file names
+const getFlagFileName = (code: string): string => {
+  const flagMap: Record<string, string> = {
+    'en': 'en.png',
+    'fr': 'fr.png',
+    'de': 'de.png',
+    'it': 'it.png',
+    'es': 'es.png',
+    'pt': 'por.png',
+    'ru': 'rus.png',
+    'hi': 'ind.png',
+    'zh': 'chin.png',
+    'ar': 'arab.png',
+  };
+  return flagMap[code] || 'en.png';
+};
+
 interface ModernNavbarProps {
   onLoginClick?: () => void;
   onAdminClick?: () => void;
@@ -215,19 +232,28 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                   onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
                   className="flex items-center space-x-2 text-cyan-100 hover:text-white transition-all duration-200 px-3 py-1 rounded-lg hover:bg-white hover:bg-opacity-10"
                 >
-                  <Globe className="w-4 h-4" />
+                  <div className="w-5 h-5 rounded border border-cyan-200 overflow-hidden flex-shrink-0 bg-white">
+                    <img 
+                      src={`/flags/${getFlagFileName(currentLanguage)}`}
+                      alt={`${currentLangDisplay} flag`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <span className="font-medium">{currentLangDisplay}</span>
                 </button>
                 
                 {isLanguageDropdownOpen && (
                   <div 
-                    className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-gray-200"
+                    className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-200"
                     style={{ 
                       zIndex: 9999,
                       position: 'absolute'
                     }}
                   >
                     <div className="p-2">
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase border-b border-gray-100 mb-1">
+                        Select Language
+                      </div>
                       {availableLanguages.map((lang) => (
                         <button
                           key={lang.code}
@@ -235,11 +261,21 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                             setLanguage(lang.code);
                             setIsLanguageDropdownOpen(false);
                           }}
-                          className={`w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors duration-200 font-medium ${
+                          className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-100 transition-colors duration-200 font-medium flex items-center gap-3 ${
                             currentLanguage === lang.code ? 'bg-cyan-50 text-cyan-700' : 'text-gray-700'
                           }`}
                         >
-                          {lang.name}
+                          <div className="w-7 h-7 rounded border border-gray-200 overflow-hidden flex-shrink-0 bg-white">
+                            <img 
+                              src={`/flags/${getFlagFileName(lang.code)}`}
+                              alt={`${lang.name} flag`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <span className="flex-1">{lang.name}</span>
+                          {currentLanguage === lang.code && (
+                            <span className="text-cyan-600 font-bold">✓</span>
+                          )}
                         </button>
                       ))}
                     </div>

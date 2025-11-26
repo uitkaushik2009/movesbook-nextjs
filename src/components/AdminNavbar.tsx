@@ -151,7 +151,7 @@ export default function AdminNavbar() {
             {/* Navigation Links */}
             <nav className="flex items-center flex-wrap">
               <Link 
-                href="/admin/dashboard"
+                href="/"
                 className="flex items-center gap-2 px-3 lg:px-6 py-3 lg:py-4 hover:bg-gray-600 transition border-r border-gray-600 text-sm lg:text-base"
               >
                 <Home className="w-4 h-4 lg:w-5 lg:h-5" />
@@ -315,7 +315,7 @@ export default function AdminNavbar() {
         <div className="md:hidden bg-gray-700 text-white shadow-lg">
           <nav className="flex flex-col">
             <Link 
-              href="/admin/dashboard"
+              href="/"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-3 px-6 py-4 hover:bg-gray-600 transition border-b border-gray-600"
             >

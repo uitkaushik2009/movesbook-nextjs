@@ -15,14 +15,54 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [currentLanguage, setCurrentLanguage] = useState('en');
   const [, forceUpdate] = useState({});
+  const [activeLanguages, setActiveLanguages] = useState<string[]>([]);
 
-  // Initialize language from localStorage on mount
+  // Initialize language and active languages from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedLanguage = localStorage.getItem('language') || 'en';
       setCurrentLanguage(savedLanguage);
       i18n.setLanguage(savedLanguage);
+      
+      // Load active languages
+      const savedActiveLanguages = localStorage.getItem('activeLanguages');
+      if (savedActiveLanguages) {
+        try {
+          setActiveLanguages(JSON.parse(savedActiveLanguages));
+        } catch (e) {
+          console.error('Error parsing active languages:', e);
+          setActiveLanguages(['en', 'fr', 'de', 'it', 'es', 'hi']); // defaults
+        }
+      } else {
+        setActiveLanguages(['en', 'fr', 'de', 'it', 'es', 'hi']); // defaults
+      }
     }
+  }, []);
+  
+  // Listen for changes to active languages
+  useEffect(() => {
+    const handleStorageChange = () => {
+      if (typeof window !== 'undefined') {
+        const savedActiveLanguages = localStorage.getItem('activeLanguages');
+        if (savedActiveLanguages) {
+          try {
+            setActiveLanguages(JSON.parse(savedActiveLanguages));
+            forceUpdate({});
+          } catch (e) {
+            console.error('Error parsing active languages:', e);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Also listen for custom event for same-tab updates
+    window.addEventListener('activeLanguagesChanged', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('activeLanguagesChanged', handleStorageChange);
+    };
   }, []);
 
   const setLanguage = useCallback((code: string) => {
@@ -41,13 +81,21 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return i18n.t(key);
   }, [currentLanguage]);
 
-  // Memoize available languages
+  // Memoize available languages - filter by active status
   const availableLanguages = useMemo(() => {
-    return i18n.getLanguages().map(lang => ({
+    const allLanguages = i18n.getLanguages().map(lang => ({
       code: lang.code,
       name: lang.name
     }));
-  }, []);
+    
+    // If no active languages set yet, return all
+    if (activeLanguages.length === 0) {
+      return allLanguages;
+    }
+    
+    // Filter to only show active languages
+    return allLanguages.filter(lang => activeLanguages.includes(lang.code));
+  }, [activeLanguages]);
 
   const value = useMemo(() => ({
     currentLanguage,
