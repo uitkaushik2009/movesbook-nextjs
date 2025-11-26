@@ -186,9 +186,7 @@ export function AddActionPlannerDialog({
       setImagePreview(null);
       setErrors({});
     }
-    // This effect intentionally updates form state when dialog opens/changes mode
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, mode]);
+  }, [isOpen, mode, initialData]);
 
   if (!isOpen) return null;
 
@@ -250,8 +248,17 @@ export function AddActionPlannerDialog({
     if (formData.image) {
       formDataToSend.append('image', formData.image);
     }
+    // Preserve createFrom and origin in edit mode, use defaults for create mode
+    // if (mode === 'edit' && initialData) {
+    //   formDataToSend.append(
+    //     'createFrom',
+    //     (initialData as any).createFrom || 'SCRATCH'
+    //   );
+    //   formDataToSend.append('origin', (initialData as any).origin || 'my list');
+    // } else {
     formDataToSend.append('createFrom', 'SCRATCH');
     formDataToSend.append('origin', 'my list');
+    // }
 
     const isEdit = mode === 'edit';
     onSubmit?.(formDataToSend, isEdit, initialData?.id);
@@ -277,7 +284,7 @@ export function AddActionPlannerDialog({
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Close dialog if clicking on the backdrop (not the dialog content)
     if (e.target === e.currentTarget) {
-      onClose();
+      // onClose();
     }
   };
 

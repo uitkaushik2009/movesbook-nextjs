@@ -64,6 +64,8 @@ export default function ActionPlannersSection() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [editingActionPlanner, setEditingActionPlanner] =
+    useState<ActionPlannerTableData | null>(null);
 
   const fetchActionPlannersTableData = async (
     page: number = currentPage,
@@ -157,12 +159,70 @@ export default function ActionPlannersSection() {
   };
 
   // Action Table Handlers
-  const handleTableEdit = () => {
-    console.log('Edit action planner');
+  const handleTableEdit = async (item: ActionPlannerTableData) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/actions/action-planner/${item.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch action planner');
+      }
+
+      const actionPlannerData = await response.json();
+      setEditingActionPlanner(actionPlannerData);
+      setIsDialogOpen(true);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to fetch action planner'
+      );
+    }
   };
 
-  const handleTableDelete = () => {
-    console.log('Delete action planner');
+  const handleTableDelete = async (item: ActionPlannerTableData) => {
+    // Confirm deletion
+    if (
+      !confirm(
+        `Are you sure you want to delete "${item.fullName}"? This action cannot be undone.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/actions/action-planner/${item.id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete action planner');
+      }
+
+      // Refresh the table data after deletion
+      await fetchActionPlannersTableData(
+        currentPage,
+        itemsPerPage,
+        searchTerm,
+        currentSort
+      );
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Failed to delete action planner'
+      );
+    }
   };
 
   const handleTableSet = () => {
@@ -348,6 +408,7 @@ export default function ActionPlannersSection() {
 
       // Close dialog and refresh data
       setIsDialogOpen(false);
+      setEditingActionPlanner(null);
       await fetchActionPlannersTableData(
         currentPage,
         itemsPerPage,
@@ -463,9 +524,13 @@ export default function ActionPlannersSection() {
 
       <AddActionPlannerDialog
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        onClose={() => {
+          setIsDialogOpen(false);
+          setEditingActionPlanner(null);
+        }}
         onSubmit={handleDialogSubmit}
-        mode="create"
+        initialData={editingActionPlanner || undefined}
+        mode={editingActionPlanner ? 'edit' : 'create'}
       />
 
       <AddUserFromDBDialog
