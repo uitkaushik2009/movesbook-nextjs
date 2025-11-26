@@ -66,41 +66,121 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Helper function to split long text into sentences
+function splitIntoSentences(text: string): string[] {
+  // Split by sentence endings but preserve the punctuation
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  return sentences;
+}
+
+// Helper function to chunk text into smaller parts (max 400 chars)
+function chunkText(text: string, maxLength: number = 400): string[] {
+  if (text.length <= maxLength) return [text];
+  
+  const sentences = splitIntoSentences(text);
+  const chunks: string[] = [];
+  let currentChunk = '';
+  
+  for (const sentence of sentences) {
+    if ((currentChunk + sentence).length <= maxLength) {
+      currentChunk += sentence;
+    } else {
+      if (currentChunk) chunks.push(currentChunk.trim());
+      currentChunk = sentence;
+    }
+  }
+  
+  if (currentChunk) chunks.push(currentChunk.trim());
+  return chunks;
+}
+
 // Fallback translation using multiple free services
 async function useFallbackTranslation(text: string, targetLanguages: string[]) {
   console.log('Using fallback translation for:', text);
+  console.log('Text length:', text.length);
   console.log('Target languages:', targetLanguages);
   
   try {
     const translations: Record<string, string> = { en: text };
+
+    // If text is too long, split into chunks
+    const isLongText = text.length > 400;
+    const chunks = isLongText ? chunkText(text, 400) : [text];
+    
+    if (isLongText) {
+      console.log(`Text is long (${text.length} chars), splitting into ${chunks.length} chunks`);
+    }
 
     // Try multiple translation services in order of quality
     for (const lang of targetLanguages) {
       if (lang === 'en') continue;
 
       let translationSuccess = false;
+      let translatedChunks: string[] = [];
 
-      // Method 1: Try MyMemory Translation API (best free option, no key needed)
-      try {
-        console.log(`Attempting MyMemory API for ${lang}...`);
-        const encodedText = encodeURIComponent(text);
-        const response = await fetch(
-          `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=en|${lang}`,
-          { signal: AbortSignal.timeout(8000) }
-        );
+      // Method 1: Try MyMemory Translation API (chunk by chunk for long texts)
+      if (isLongText) {
+        try {
+          console.log(`Translating ${chunks.length} chunks to ${lang}...`);
+          let allChunksSuccess = true;
+          
+          for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+            console.log(`Chunk ${i + 1}/${chunks.length} (${chunk.length} chars)`);
+            
+            const encodedChunk = encodeURIComponent(chunk);
+            const response = await fetch(
+              `https://api.mymemory.translated.net/get?q=${encodedChunk}&langpair=en|${lang}`,
+              { signal: AbortSignal.timeout(8000) }
+            );
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data.responseData && data.responseData.translatedText) {
-            translations[lang] = data.responseData.translatedText;
-            console.log(`✅ MyMemory success for ${lang}: ${data.responseData.translatedText}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.responseData && data.responseData.translatedText) {
+                translatedChunks.push(data.responseData.translatedText);
+                await new Promise(resolve => setTimeout(resolve, 300)); // Longer delay between chunks
+              } else {
+                allChunksSuccess = false;
+                break;
+              }
+            } else {
+              allChunksSuccess = false;
+              break;
+            }
+          }
+          
+          if (allChunksSuccess && translatedChunks.length === chunks.length) {
+            translations[lang] = translatedChunks.join(' ');
+            console.log(`✅ MyMemory success for ${lang} (chunked)`);
             translationSuccess = true;
-            await new Promise(resolve => setTimeout(resolve, 100));
             continue;
           }
+        } catch (error) {
+          console.log(`MyMemory chunked translation failed for ${lang}:`, error);
         }
-      } catch (error) {
-        console.log(`MyMemory failed for ${lang}:`, error);
+      } else {
+        // For short texts, translate normally
+        try {
+          console.log(`Attempting MyMemory API for ${lang}...`);
+          const encodedText = encodeURIComponent(text);
+          const response = await fetch(
+            `https://api.mymemory.translated.net/get?q=${encodedText}&langpair=en|${lang}`,
+            { signal: AbortSignal.timeout(8000) }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.responseData && data.responseData.translatedText) {
+              translations[lang] = data.responseData.translatedText;
+              console.log(`✅ MyMemory success for ${lang}: ${data.responseData.translatedText}`);
+              translationSuccess = true;
+              await new Promise(resolve => setTimeout(resolve, 100));
+              continue;
+            }
+          }
+        } catch (error) {
+          console.log(`MyMemory failed for ${lang}:`, error);
+        }
       }
 
       // Method 2: Try LibreTranslate (if MyMemory fails)
@@ -248,7 +328,6 @@ function getSimpleTranslation(text: string, lang: string): string {
       'do': 'faire',
       'does': 'fait',
       'did': 'a fait',
-      'can': 'peut',
       'could': 'pourrait',
       'would': 'serait',
       'should': 'devrait',
@@ -267,14 +346,12 @@ function getSimpleTranslation(text: string, lang: string): string {
       'much': 'beaucoup',
       'more': 'plus',
       'most': 'le plus',
-      'other': 'autre',
       'another': 'un autre',
       'such': 'tel',
       'no': 'non',
       'not': 'pas',
       'only': 'seulement',
       'own': 'propre',
-      'same': 'même',
       'so': 'donc',
       'than': 'que',
       'too': 'aussi',
@@ -1367,3 +1444,5 @@ function getSimpleTranslation(text: string, lang: string): string {
   return result;
 }
 
+ 
+ 

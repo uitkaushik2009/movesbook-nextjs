@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Globe, Settings as SettingsIcon, FileText } from 'lucide-react';
@@ -114,16 +114,16 @@ export default function LanguageSettings() {
     }
     
     const availableLanguages: Language[] = [
-      { id: '1', code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧', isActive: activeLanguageCodes.includes('en') },
-      { id: '2', code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷', isActive: activeLanguageCodes.includes('fr') },
-      { id: '3', code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪', isActive: activeLanguageCodes.includes('de') },
-      { id: '4', code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹', isActive: activeLanguageCodes.includes('it') },
-      { id: '5', code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isActive: activeLanguageCodes.includes('es') },
-      { id: '6', code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹', isActive: activeLanguageCodes.includes('pt') },
-      { id: '7', code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺', isActive: activeLanguageCodes.includes('ru') },
-      { id: '8', code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳', isActive: activeLanguageCodes.includes('hi') },
-      { id: '9', code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳', isActive: activeLanguageCodes.includes('zh') },
-      { id: '10', code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', isActive: activeLanguageCodes.includes('ar') },
+      { id: '1', code: 'en', name: 'English', nativeName: 'English', flag: 'ðŸ‡¬ðŸ‡§', isActive: activeLanguageCodes.includes('en') },
+      { id: '2', code: 'fr', name: 'French', nativeName: 'FranÃ§ais', flag: 'ðŸ‡«ðŸ‡·', isActive: activeLanguageCodes.includes('fr') },
+      { id: '3', code: 'de', name: 'German', nativeName: 'Deutsch', flag: 'ðŸ‡©ðŸ‡ª', isActive: activeLanguageCodes.includes('de') },
+      { id: '4', code: 'it', name: 'Italian', nativeName: 'Italiano', flag: 'ðŸ‡®ðŸ‡¹', isActive: activeLanguageCodes.includes('it') },
+      { id: '5', code: 'es', name: 'Spanish', nativeName: 'EspaÃ±ol', flag: 'ðŸ‡ªðŸ‡¸', isActive: activeLanguageCodes.includes('es') },
+      { id: '6', code: 'pt', name: 'Portuguese', nativeName: 'PortuguÃªs', flag: 'ðŸ‡µðŸ‡¹', isActive: activeLanguageCodes.includes('pt') },
+      { id: '7', code: 'ru', name: 'Russian', nativeName: 'Ð ÑƒÑÑÐºÐ¸Ð¹', flag: 'ðŸ‡·ðŸ‡º', isActive: activeLanguageCodes.includes('ru') },
+      { id: '8', code: 'hi', name: 'Hindi', nativeName: 'à¤¹à¤¿à¤¨à¥à¤¦à¥€', flag: 'ðŸ‡®ðŸ‡³', isActive: activeLanguageCodes.includes('hi') },
+      { id: '9', code: 'zh', name: 'Chinese', nativeName: 'ä¸­æ–‡', flag: 'ðŸ‡¨ðŸ‡³', isActive: activeLanguageCodes.includes('zh') },
+      { id: '10', code: 'ar', name: 'Arabic', nativeName: 'Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©', flag: 'ðŸ‡¸ðŸ‡¦', isActive: activeLanguageCodes.includes('ar') },
     ];
     
     setLanguages(availableLanguages);
@@ -263,7 +263,7 @@ export default function LanguageSettings() {
           searchQuery.trim() === '' || k.key.toLowerCase().includes(searchQuery.toLowerCase())
         ));
         
-        console.log('✅ Translations saved successfully!');
+        console.log('âœ… Translations saved successfully!');
       } else {
         const errorData = await response.json();
         console.error('Save failed with error:', errorData);
@@ -272,7 +272,7 @@ export default function LanguageSettings() {
     } catch (error) {
       console.error('Error saving translations:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`❌ Failed to save translations!\n\nError: ${errorMessage}\n\nCheck browser console (F12) for details.`);
+      alert(`âŒ Failed to save translations!\n\nError: ${errorMessage}\n\nCheck browser console (F12) for details.`);
     }
   };
 
@@ -372,7 +372,7 @@ export default function LanguageSettings() {
     // Navigate to the new key
     setCurrentIndex(updatedKeys.length - 1);
     
-    alert('✅ New translation key created successfully!');
+    alert('âœ… New translation key created successfully!');
   };
 
   const handleCancelNewKey = () => {
@@ -386,7 +386,7 @@ export default function LanguageSettings() {
     console.log('English text:', englishText);
     
     if (!englishText.trim()) {
-      alert('⚠️ Please enter English text first');
+      alert('âš ï¸ Please enter English text first');
       return;
     }
 
@@ -401,7 +401,7 @@ export default function LanguageSettings() {
       console.log('Target languages:', targetLanguages);
 
       if (targetLanguages.length === 0) {
-        alert('⚠️ No target languages selected. Please activate at least one language in Tab 1.');
+        alert('âš ï¸ No target languages selected. Please activate at least one language in Tab 1.');
         setIsTranslating(false);
         return;
       }
@@ -439,7 +439,7 @@ export default function LanguageSettings() {
         };
         
         console.log('Updated translations:', updatedTranslations);
-        console.log(`✅ Translation completed for ${Object.keys(data.translations).length} languages`);
+        console.log(`âœ… Translation completed for ${Object.keys(data.translations).length} languages`);
         setTranslations(updatedTranslations);
         setShowAllLanguages(true);
         
@@ -450,7 +450,7 @@ export default function LanguageSettings() {
     } catch (error) {
       console.error('Translation error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`❌ Translation failed!\n\nError: ${errorMessage}\n\n` +
+      alert(`âŒ Translation failed!\n\nError: ${errorMessage}\n\n` +
             'Please try again or enter translations manually.\n' +
             'Check the browser console (F12) for more details.');
     } finally {
@@ -464,7 +464,7 @@ export default function LanguageSettings() {
 
   const handleSaveLanguageSelection = () => {
     const activeCount = languages.filter(l => l.isActive).length;
-    alert(`✅ Language selection saved!\n\n${activeCount} languages are now active in the navbar language selector.`);
+    alert(`âœ… Language selection saved!\n\n${activeCount} languages are now active in the navbar language selector.`);
   };
 
   const totalPages = filteredKeys.length;
@@ -761,7 +761,7 @@ export default function LanguageSettings() {
                     : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                🏠 System Administration & Homepage
+                ðŸ  System Administration & Homepage
               </button>
               <button
                 onClick={() => setSelectedCategory('social')}
@@ -771,7 +771,7 @@ export default function LanguageSettings() {
                     : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                ⚽ Social & Sport
+                âš½ Social & Sport
               </button>
               <button
                 onClick={() => setSelectedCategory('management')}
@@ -781,7 +781,7 @@ export default function LanguageSettings() {
                     : 'bg-white text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                📊 Management
+                ðŸ“Š Management
               </button>
             </div>
 
@@ -913,7 +913,7 @@ export default function LanguageSettings() {
                     <div className="space-y-6">
                       <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
                         <p className="text-sm text-green-900 font-semibold">
-                          ✅ Translations ready! Review and edit if needed.
+                          âœ… Translations ready! Review and edit if needed.
                         </p>
                       </div>
                       
@@ -955,3 +955,4 @@ export default function LanguageSettings() {
     </div>
   );
 }
+
