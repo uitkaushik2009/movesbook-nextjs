@@ -47,7 +47,7 @@ export default function LanguageSwitcher() {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
       >
-        <div className="w-6 h-6 rounded border border-gray-200 overflow-hidden flex-shrink-0">
+        <div className="w-6 h-6 rounded overflow-hidden flex-shrink-0">
           <img 
             src={`/flags/${currentFlagFile}`}
             alt={`${currentLangName} flag`}
@@ -76,7 +76,7 @@ export default function LanguageSwitcher() {
                   currentLanguage === lang.code ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                 }`}
               >
-                <div className="w-7 h-7 rounded border border-gray-200 overflow-hidden flex-shrink-0">
+                <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
                   <img 
                     src={`/flags/${getFlagFileName(lang.code)}`}
                     alt={`${lang.name} flag`}

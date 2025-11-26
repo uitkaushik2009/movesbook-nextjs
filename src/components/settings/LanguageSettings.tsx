@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Globe, Settings as SettingsIcon, FileText } from 'lucide-react';
 import { i18n } from '@/lib/i18n';
+import RichTextEditor from './RichTextEditor';
 
 interface Language {
   id: string;
@@ -64,8 +65,8 @@ export default function LanguageSettings() {
   useEffect(() => {
     let filtered = allKeys;
     
-    // Filter by category
-    if (activeTab === 'texts') {
+    // Filter by category for both Tab 2 and Tab 3
+    if (activeTab === 'settings' || activeTab === 'texts') {
       filtered = filtered.filter(key => key.category === selectedCategory);
     }
     
@@ -146,13 +147,13 @@ export default function LanguageSettings() {
     const flagFile = flagFiles[code] || 'en.png';
     
     const sizeClasses = {
-      small: 'w-8 h-8',
-      medium: 'w-10 h-10',
-      large: 'w-16 h-16'
+      small: 'w-6 h-6',
+      medium: 'w-8 h-8',
+      large: 'w-12 h-12'
     };
     
     return (
-      <div className={`flex items-center justify-center ${sizeClasses[size]} rounded border border-gray-300 shadow-sm overflow-hidden bg-white`}>
+      <div className={`flex items-center justify-center ${sizeClasses[size]} rounded overflow-hidden`}>
         <img 
           src={`/flags/${flagFile}`} 
           alt={`${code} flag`}
@@ -229,7 +230,13 @@ export default function LanguageSettings() {
   };
 
   const handleSave = async () => {
-    if (!currentKey) return;
+    if (!currentKey) {
+      console.error('No current key selected');
+      return;
+    }
+
+    console.log('Saving translations for key:', variableName);
+    console.log('Translation data:', translations);
 
     try {
       const response = await fetch('/api/admin/translations/update', {
@@ -241,9 +248,13 @@ export default function LanguageSettings() {
         }),
       });
 
+      console.log('Save response status:', response.status);
+
       if (response.ok) {
-        alert('✅ Translations saved successfully!\n\nNote: To apply these changes to the live site, you need to export translations and rebuild the application.');
+        const result = await response.json();
+        console.log('Save successful:', result);
         
+        // Update local state
         const updatedKeys = allKeys.map(k => 
           k.key === currentKey.key ? { ...k, key: variableName, values: translations } : k
         );
@@ -251,12 +262,17 @@ export default function LanguageSettings() {
         setFilteredKeys(updatedKeys.filter(k => 
           searchQuery.trim() === '' || k.key.toLowerCase().includes(searchQuery.toLowerCase())
         ));
+        
+        console.log('✅ Translations saved successfully!');
       } else {
-        throw new Error('Save failed');
+        const errorData = await response.json();
+        console.error('Save failed with error:', errorData);
+        throw new Error(errorData.error || 'Save failed');
       }
     } catch (error) {
       console.error('Error saving translations:', error);
-      alert('❌ Failed to save translations. Please check the console for details.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`❌ Failed to save translations!\n\nError: ${errorMessage}\n\nCheck browser console (F12) for details.`);
     }
   };
 
@@ -366,8 +382,11 @@ export default function LanguageSettings() {
   };
 
   const handleAutoTranslate = async () => {
+    console.log('Translation button clicked!');
+    console.log('English text:', englishText);
+    
     if (!englishText.trim()) {
-      alert('Please enter English text first');
+      alert('⚠️ Please enter English text first');
       return;
     }
 
@@ -379,7 +398,16 @@ export default function LanguageSettings() {
         .filter(l => l.isActive && l.code !== 'en')
         .map(l => l.code);
 
+      console.log('Target languages:', targetLanguages);
+
+      if (targetLanguages.length === 0) {
+        alert('⚠️ No target languages selected. Please activate at least one language in Tab 1.');
+        setIsTranslating(false);
+        return;
+      }
+
       // Call translation API
+      console.log('Calling translation API...');
       const response = await fetch('/api/translate', {
         method: 'POST',
         headers: {
@@ -391,22 +419,40 @@ export default function LanguageSettings() {
         }),
       });
 
+      console.log('API Response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Translation API request failed');
+        const errorText = await response.text();
+        console.error('API Error response:', errorText);
+        throw new Error(`Translation API request failed: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('Translation data received:', data);
 
       if (data.translations) {
-        setTranslations(data.translations);
+        // Update translations state with new translations
+        const updatedTranslations = {
+          ...translations,
+          en: englishText,  // Keep English
+          ...data.translations  // Add all translated languages
+        };
+        
+        console.log('Updated translations:', updatedTranslations);
+        console.log(`✅ Translation completed for ${Object.keys(data.translations).length} languages`);
+        setTranslations(updatedTranslations);
         setShowAllLanguages(true);
-        alert('✅ Translation completed! Review and edit as needed, then save.');
+        
+        // No alert - just show the translations
       } else {
-        throw new Error('Invalid translation response');
+        throw new Error('Invalid translation response - no translations field');
       }
     } catch (error) {
       console.error('Translation error:', error);
-      alert('❌ Translation failed. Please try again or enter translations manually.\n\nNote: Make sure you have configured a translation API or check your internet connection.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`❌ Translation failed!\n\nError: ${errorMessage}\n\n` +
+            'Please try again or enter translations manually.\n' +
+            'Check the browser console (F12) for more details.');
     } finally {
       setIsTranslating(false);
     }
@@ -562,305 +608,109 @@ export default function LanguageSettings() {
         {/* Tab 2: Language Settings */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
-            {/* Search Bar */}
-            <div className="bg-white border border-gray-300 p-4">
+            {/* Header Section */}
+            <div className="flex items-center justify-between bg-white border border-gray-300 p-4 rounded">
               <div className="flex items-center gap-4">
-                <label className="font-semibold text-gray-700 whitespace-nowrap">Search in</label>
-                <select
-                  value={searchField}
-                  onChange={(e) => setSearchField(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 bg-white focus:outline-none focus:border-gray-500 min-w-[200px]"
+                <h3 className="text-lg font-bold text-gray-900">Languages</h3>
+                <button 
+                  onClick={handleNewKey}
+                  className="px-6 py-2 bg-gray-700 text-white font-semibold hover:bg-gray-800 transition"
                 >
-                  <option value="variable_name">variable_name</option>
-                </select>
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="variable_name"
-                  className="flex-1 px-4 py-2 border border-gray-300 focus:outline-none focus:border-gray-500"
-                />
-                <button
-                  onClick={handleSearch}
-                  className="px-8 py-2 bg-red-500 text-white font-semibold hover:bg-red-600 transition whitespace-nowrap"
-                >
-                  Proceed
+                  New Language
                 </button>
-                <button
-                  onClick={handleResetSearch}
-                  className="px-8 py-2 bg-gray-800 text-white font-semibold hover:bg-gray-900 transition whitespace-nowrap"
-                >
-                  Reset
-                </button>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-gray-700">Language Page</span>
+                <button className="px-4 py-2 bg-gray-700 text-white font-semibold">1</button>
+                <button className="px-4 py-2 bg-gray-300 text-gray-700 font-semibold hover:bg-gray-400 transition">2</button>
+                <button className="px-4 py-2 bg-gray-300 text-gray-700 font-semibold hover:bg-gray-400 transition">3</button>
               </div>
             </div>
 
-            {/* Sub Tabs */}
+            {/* Category Tabs */}
             <div className="flex items-center gap-2">
-              <button className="px-8 py-3 font-semibold transition-all duration-300 bg-gray-700 text-white">
+              <button
+                onClick={() => setSelectedCategory('system')}
+                className={`px-6 py-3 font-semibold transition ${
+                  selectedCategory === 'system'
+                    ? 'bg-gray-700 text-white'
+                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                }`}
+              >
                 System Administration & Homepage
               </button>
-              <button 
-                onClick={handleNewKey}
-                className="px-8 py-3 font-semibold transition-all duration-300 bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg"
+              <button
+                onClick={() => setSelectedCategory('social')}
+                className={`px-6 py-3 font-semibold transition ${
+                  selectedCategory === 'social'
+                    ? 'bg-gray-700 text-white'
+                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                }`}
               >
-                ➕ New Language
+                Social & Sport
+              </button>
+              <button
+                onClick={() => setSelectedCategory('management')}
+                className={`px-6 py-3 font-semibold transition ${
+                  selectedCategory === 'management'
+                    ? 'bg-gray-700 text-white'
+                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                }`}
+              >
+                Management
               </button>
             </div>
 
-            {/* New Key Modal */}
-            {showNewKeyModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-xl shadow-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-2xl font-bold text-gray-900">Add New Translation Key</h3>
-                    <button 
-                      onClick={handleCancelNewKey}
-                      className="text-gray-500 hover:text-gray-700 text-2xl font-bold"
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  <div className="space-y-6">
-                    {/* Variable Name */}
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Variable Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={newKeyName}
-                        onChange={(e) => setNewKeyName(e.target.value)}
-                        placeholder="e.g., nav_new_item, auth_new_button"
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Use underscores, e.g., "nav_home", "auth_login", "settings_title"
-                      </p>
-                    </div>
-
-                    {/* Category */}
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Category <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={newKeyCategory}
-                        onChange={(e) => setNewKeyCategory(e.target.value)}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 bg-white"
-                      >
-                        <option value="system">System Administration & Homepage</option>
-                        <option value="social">Social & Sport</option>
-                        <option value="management">Management</option>
-                      </select>
-                    </div>
-
-                    {/* Translations for each language */}
-                    <div className="border-t pt-4">
-                      <h4 className="font-bold text-gray-900 mb-4">Translations</h4>
-                      <div className="space-y-4">
-                        {languages.filter(l => l.isActive).map((lang) => (
-                          <div key={lang.code}>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded border-2 border-gray-200 shadow-sm overflow-hidden bg-white">
-                                  <img 
-                                    src={`/flags/${lang.code === 'pt' ? 'por' : lang.code === 'ru' ? 'rus' : lang.code === 'hi' ? 'ind' : lang.code === 'zh' ? 'chin' : lang.code === 'ar' ? 'arab' : lang.code}.png`}
-                                    alt={`${lang.name} flag`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                                {lang.name} ({lang.nativeName})
-                              </div>
-                            </label>
-                            <input
-                              type="text"
-                              value={newKeyTranslations[lang.code] || ''}
-                              onChange={(e) => setNewKeyTranslations({
-                                ...newKeyTranslations,
-                                [lang.code]: e.target.value
-                              })}
-                              placeholder={`Enter ${lang.name} translation...`}
-                              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex justify-end gap-4 pt-4 border-t">
-                      <button
-                        onClick={handleCancelNewKey}
-                        className="px-6 py-3 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSaveNewKey}
-                        className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-md"
-                      >
-                        💾 Create Translation Key
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {currentKey && (
-              <div className="space-y-6">
-                {/* Pagination */}
-                <div className="flex items-center justify-center gap-2 bg-gray-100 p-3 rounded">
-                  <button
-                    onClick={prevPage}
-                    disabled={currentIndex === 0}
-                    className="px-4 py-2 bg-gray-600 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
-                  >
-                    prev
-                  </button>
-                  {getPageNumbers().map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => goToPage(page)}
-                      className={`px-4 py-2 font-semibold transition ${
-                        page === currentPage
-                          ? 'bg-gray-800 text-white'
-                          : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                  <button
-                    onClick={nextPage}
-                    disabled={currentIndex === filteredKeys.length - 1}
-                    className="px-4 py-2 bg-gray-600 text-white font-semibold disabled:bg-gray-400 disabled:cursor-not-allowed hover:bg-gray-700 transition"
-                  >
-                    next
-                  </button>
-                </div>
-
-                {/* Detailed Editor */}
-                <div className="bg-white border border-gray-300 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-4 flex-1">
-                      <label className="font-semibold text-gray-700">
-                        Sr.No {currentPage} <span className="ml-2">variable_name</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={variableName}
-                        onChange={(e) => setVariableName(e.target.value)}
-                        className="flex-1 max-w-md px-4 py-2 border-2 border-red-500 focus:outline-none focus:border-red-600"
-                      />
-                    </div>
-                    <button
-                      onClick={handleReset}
-                      className="px-6 py-2 bg-red-500 text-white font-semibold hover:bg-red-600 transition"
-                    >
-                      Reset
-                    </button>
-                  </div>
-
-                  {/* Auto-Translation Section */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-6 mb-6">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-lg border-2 border-blue-300 shadow-md overflow-hidden bg-white">
-                        <img 
-                          src="/flags/en.png" 
-                          alt="English flag"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-gray-900 text-lg">English (Source)</h4>
-                        <p className="text-sm text-gray-600">Enter your text in English - we'll translate it for you</p>
-                      </div>
-                    </div>
-                    
-                    <textarea
-                      value={englishText}
-                      onChange={(e) => {
-                        setEnglishText(e.target.value);
-                        setTranslations({ ...translations, en: e.target.value });
-                      }}
-                      rows={6}
-                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 font-sans text-lg"
-                      placeholder="Type your English text here..."
-                    />
-
-                    <div className="flex gap-3 mt-4 items-center">
-                      <button
-                        onClick={handleAutoTranslate}
-                        disabled={isTranslating || !englishText.trim()}
-                        className={`flex items-center justify-center gap-2 px-8 py-3 font-bold rounded transition-all duration-300 ${
-                          isTranslating || !englishText.trim()
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed border-2 border-gray-300'
-                            : 'bg-white text-gray-800 border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
-                        }`}
-                      >
-                        {isTranslating ? 'Translating...' : 'Translation'}
-                      </button>
-                      
-                      <button
-                        onClick={handleSave}
-                        className="flex items-center justify-center gap-2 px-8 py-3 bg-white text-gray-800 font-bold rounded border-2 border-gray-300 hover:bg-gray-50 hover:border-gray-400 transition-all"
-                      >
-                        Save
-                      </button>
-                      
-                      <button
-                        onClick={handleManualEdit}
-                        className="flex items-center justify-center gap-2 px-8 py-3 bg-white border-2 border-gray-300 text-gray-800 font-bold rounded hover:bg-gray-50 hover:border-gray-400 transition-all"
-                      >
-                        Manual Edit
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Translated Languages (Show after translation or manual edit) */}
-                  {showAllLanguages && (
-                    <div className="space-y-6">
-                      <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded">
-                        <p className="text-sm text-green-900 font-semibold">
-                          ✅ Translations ready! Review and edit if needed.
-                        </p>
-                      </div>
-                      
-                      {languages.filter(l => l.isActive && l.code !== 'en').map((lang) => (
-                        <div key={lang.code} className="border border-gray-200 rounded-lg overflow-hidden">
-                          <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-6 py-3 flex items-center gap-3 border-b">
-                            <div className="w-10 h-10 rounded border-2 border-gray-200 shadow-sm overflow-hidden bg-white">
-                              <img 
-                                src={`/flags/${lang.code === 'pt' ? 'por' : lang.code === 'ru' ? 'rus' : lang.code === 'hi' ? 'ind' : lang.code === 'zh' ? 'chin' : lang.code === 'ar' ? 'arab' : lang.code}.png`}
-                                alt={`${lang.name} flag`}
-                                className="w-full h-full object-cover"
-                              />
-                            </div>
-                            <div>
-                              <span className="font-bold text-gray-900 text-lg">{lang.name}</span>
-                              <span className="text-sm text-gray-600 ml-2">({lang.nativeName})</span>
-                            </div>
-                          </div>
-                          
-                          <div className="p-4 bg-white">
-                            <textarea
-                              value={translations[lang.code] || ''}
-                              onChange={(e) => setTranslations({ ...translations, [lang.code]: e.target.value })}
-                              rows={4}
-                              className="w-full p-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-sans"
-                              placeholder={`${lang.name} translation...`}
-                            />
-                          </div>
+            {/* Table View */}
+            <div className="bg-white border border-gray-300 overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-100 border-b border-gray-300">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">Sr.No</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">Variable_name</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">En</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">It</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">Fr</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">De</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">Es</th>
+                    <th className="px-4 py-3 text-center text-sm font-bold text-gray-900">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredKeys.slice(0, 10).map((key, index) => (
+                    <tr key={key.key} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{index + 1}</td>
+                      <td className="px-4 py-3 text-sm text-red-700 font-semibold">{key.key}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{key.values.en || ''}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{key.values.it || ''}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{key.values.fr || ''}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{key.values.de || ''}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{key.values.es || ''}</td>
+                      <td className="px-4 py-3 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => {
+                              setCurrentIndex(filteredKeys.indexOf(key));
+                              setCurrentKey(key);
+                              setVariableName(key.key);
+                              setTranslations(key.values);
+                              setEnglishText(key.values.en || '');
+                            }}
+                            className="px-4 py-1 bg-gray-700 text-white font-semibold text-sm hover:bg-gray-800 transition"
+                          >
+                            View
+                          </button>
+                          <button className="px-4 py-1 bg-gray-700 text-white font-semibold text-sm hover:bg-gray-800 transition">
+                            Delete
+                          </button>
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
           </div>
         )}
 
@@ -980,47 +830,6 @@ export default function LanguageSettings() {
                   </button>
                 </div>
 
-                {/* Translation Table */}
-                <div className="bg-white border border-gray-300 overflow-hidden">
-                  <table className="w-full">
-                    <thead className="bg-gray-100 border-b border-gray-300">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Sr.No</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Variable_name</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">En</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">It</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Fr</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">De</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Es</th>
-                        <th className="px-4 py-3 text-left font-semibold text-gray-700">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-gray-200">
-                        <td className="px-4 py-3">{currentPage}</td>
-                        <td className="px-4 py-3">
-                          <span className="text-red-600 font-mono">{variableName}</span>
-                        </td>
-                        <td className="px-4 py-3 text-sm">{translations['en'] || ''}</td>
-                        <td className="px-4 py-3 text-sm">{translations['it'] || ''}</td>
-                        <td className="px-4 py-3 text-sm">{translations['fr'] || ''}</td>
-                        <td className="px-4 py-3 text-sm">{translations['de'] || ''}</td>
-                        <td className="px-4 py-3 text-sm">{translations['es'] || ''}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <button className="px-4 py-1 bg-gray-700 text-white text-sm font-semibold hover:bg-gray-800 transition">
-                              View
-                            </button>
-                            <button className="px-4 py-1 bg-gray-700 text-white text-sm font-semibold hover:bg-gray-800 transition">
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
                 {/* Detailed Editor */}
                 <div className="bg-white border border-gray-300 p-6">
                   <div className="flex items-center justify-between mb-6">
@@ -1046,7 +855,7 @@ export default function LanguageSettings() {
                   {/* Auto-Translation Section */}
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-6 mb-6">
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-lg border-2 border-blue-300 shadow-md overflow-hidden bg-white">
+                      <div className="w-8 h-8 rounded-lg overflow-hidden">
                         <img 
                           src="/flags/en.png" 
                           alt="English flag"
@@ -1059,15 +868,15 @@ export default function LanguageSettings() {
                       </div>
                     </div>
                     
-                    <textarea
+                    <RichTextEditor
                       value={englishText}
-                      onChange={(e) => {
-                        setEnglishText(e.target.value);
-                        setTranslations({ ...translations, en: e.target.value });
+                      onChange={(newValue) => {
+                        setEnglishText(newValue);
+                        setTranslations({ ...translations, en: newValue });
                       }}
-                      rows={6}
-                      className="w-full p-4 border-2 border-blue-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 font-sans text-lg"
                       placeholder="Type your English text here..."
+                      minHeight="200px"
+                      language="English"
                     />
 
                     <div className="flex gap-3 mt-4 items-center">
@@ -1111,7 +920,7 @@ export default function LanguageSettings() {
                       {languages.filter(l => l.isActive && l.code !== 'en').map((lang) => (
                         <div key={lang.code} className="border border-gray-200 rounded-lg overflow-hidden">
                           <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-6 py-3 flex items-center gap-3 border-b">
-                            <div className="w-10 h-10 rounded border-2 border-gray-200 shadow-sm overflow-hidden bg-white">
+                            <div className="w-6 h-6 rounded overflow-hidden">
                               <img 
                                 src={`/flags/${lang.code === 'pt' ? 'por' : lang.code === 'ru' ? 'rus' : lang.code === 'hi' ? 'ind' : lang.code === 'zh' ? 'chin' : lang.code === 'ar' ? 'arab' : lang.code}.png`}
                                 alt={`${lang.name} flag`}
@@ -1125,12 +934,12 @@ export default function LanguageSettings() {
                           </div>
                           
                           <div className="p-4 bg-white">
-                            <textarea
+                            <RichTextEditor
                               value={translations[lang.code] || ''}
-                              onChange={(e) => setTranslations({ ...translations, [lang.code]: e.target.value })}
-                              rows={4}
-                              className="w-full p-4 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 font-sans"
+                              onChange={(newValue) => setTranslations({ ...translations, [lang.code]: newValue })}
                               placeholder={`${lang.name} translation...`}
+                              minHeight="150px"
+                              language={lang.name}
                             />
                           </div>
                         </div>

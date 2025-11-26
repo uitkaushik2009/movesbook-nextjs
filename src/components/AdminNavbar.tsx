@@ -92,8 +92,12 @@ export default function AdminNavbar() {
           <div className="flex items-center justify-between flex-wrap gap-2">
             {/* Logo Section */}
             <div className="flex items-center gap-2 sm:gap-4">
-              <div className="bg-white px-2 sm:px-3 py-1 sm:py-2 rounded">
-                <span className="text-red-800 font-bold text-xs sm:text-sm">Logo</span>
+              <div className="bg-white p-1 sm:p-1.5 rounded overflow-hidden">
+                <img 
+                  src="/admin.png" 
+                  alt="Admin Logo"
+                  className="h-8 sm:h-10 w-auto object-contain"
+                />
               </div>
               <div>
                 <h1 className="text-xl sm:text-3xl font-bold">

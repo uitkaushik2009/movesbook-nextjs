@@ -295,7 +295,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                   onClick={() => setIsLanguageDropdownOpen(!isLanguageDropdownOpen)}
                   className="flex items-center space-x-2 text-cyan-100 hover:text-white transition-all duration-200 px-3 py-1 rounded-lg hover:bg-white hover:bg-opacity-10"
                 >
-                  <div className="w-5 h-5 rounded border border-cyan-200 overflow-hidden flex-shrink-0 bg-white">
+                  <div className="w-5 h-5 rounded overflow-hidden flex-shrink-0">
                     <img 
                       src={`/flags/${getFlagFileName(currentLanguage)}`}
                       alt={`${currentLangDisplay} flag`}
@@ -328,7 +328,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                             currentLanguage === lang.code ? 'bg-cyan-50 text-cyan-700' : 'text-gray-700'
                           }`}
                         >
-                          <div className="w-7 h-7 rounded border border-gray-200 overflow-hidden flex-shrink-0 bg-white">
+                          <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
                             <img 
                               src={`/flags/${getFlagFileName(lang.code)}`}
                               alt={`${lang.name} flag`}
