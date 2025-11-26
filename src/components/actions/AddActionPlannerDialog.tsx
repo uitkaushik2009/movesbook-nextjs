@@ -283,7 +283,7 @@ export function AddActionPlannerDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="mb-6 text-2xl font-semibold text-slate-900">
-          Action planned
+          {mode === 'edit' ? 'Edit Action Planner' : 'Add Action Planner'}
         </h2>
         <div className="mb-6 border-b border-slate-200"></div>
         <form onSubmit={handleSubmit} className="space-y-4">
