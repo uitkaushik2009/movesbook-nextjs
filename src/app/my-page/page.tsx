@@ -18,11 +18,12 @@ import DisplayOptionsToolbar from './components/DisplayOptionsToolbar';
 import PersonalBanner from './components/PersonalBanner';
 import RightSidebar from './components/RightSidebar';
 import ActionPlannersSection from './components/ActionPlannersSection';
+import ActionSettingsSection from './components/ActionSettingsSection';
 
 export default function MyPage() {
   const [activeSection, setActiveSection] = useState<
-    'workouts' | 'progress' | 'settings' | 'actionPlanners'
-  >('actionPlanners');
+    'workouts' | 'progress' | 'settings' | 'actionPlanners' | 'actionSettings'
+  >('actionSettings');
   const [showAdBanner, setShowAdBanner] = useState(true);
   const [showPersonalBanner, setShowPersonalBanner] = useState(true);
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
@@ -168,6 +169,7 @@ export default function MyPage() {
             {activeSection === 'progress' && <ProgressSection />}
             {activeSection === 'settings' && <SettingsSection />}
             {activeSection === 'actionPlanners' && <ActionPlannersSection />}
+            {activeSection === 'actionSettings' && <ActionSettingsSection />}
           </div>
 
           {/* Right Sidebar */}
