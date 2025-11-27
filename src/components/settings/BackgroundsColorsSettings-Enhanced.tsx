@@ -11,6 +11,8 @@ interface ColorSettings {
   dayHeaderText: string;
   moveframeHeader: string;
   moveframeHeaderText: string;
+  workoutHeader: string;
+  workoutHeaderText: string;
   movelapHeader: string;
   movelapHeaderText: string;
   microlapBackground: string;
@@ -22,6 +24,7 @@ interface ColorSettings {
   buttonAdd: string;
   buttonAddHover: string;
   buttonAddText: string;
+  buttonAddHeaderText: string;
   buttonEdit: string;
   buttonEditHover: string;
   buttonEditText: string;
@@ -31,6 +34,10 @@ interface ColorSettings {
   buttonPrint: string;
   buttonPrintHover: string;
   buttonPrintText: string;
+  buttonEditHeaderText: string;
+  buttonDeleteHeaderText: string;
+  alternateRowMovelap: string;
+  alternateRowTextMovelap: string;
 }
 
 const defaultColors: ColorSettings = {
@@ -38,6 +45,8 @@ const defaultColors: ColorSettings = {
   pageBackgroundOpacity: 100,
   dayHeader: '#f8fafc',
   dayHeaderText: '#1e293b',
+  workoutHeader: '#c6f8e2',
+  workoutHeaderText: '#0c4a6e',
   moveframeHeader: '#e0f2fe',
   moveframeHeaderText: '#0c4a6e',
   movelapHeader: '#dbeafe',
@@ -51,6 +60,7 @@ const defaultColors: ColorSettings = {
   buttonAdd: '#10b981',
   buttonAddHover: '#059669',
   buttonAddText: '#ffffff',
+  buttonAddHeaderText: '#bfbbbb',
   buttonEdit: '#f59e0b',
   buttonEditHover: '#d97706',
   buttonEditText: '#ffffff',
@@ -60,6 +70,10 @@ const defaultColors: ColorSettings = {
   buttonPrint: '#6b7280',
   buttonPrintHover: '#4b5563',
   buttonPrintText: '#ffffff',
+  buttonEditHeaderText: '#bfbbbb',
+  buttonDeleteHeaderText: '#bfbbbb',
+  alternateRowMovelap: '#f1f5f9',
+  alternateRowTextMovelap: '#1e293b',
 };
 
 interface ColorScheme {
@@ -423,6 +437,18 @@ export default function BackgroundsColorsSettings() {
               bgColor={colors.dayHeader}
             />
             <ColorPicker
+              label="Workout Header Background"
+              value={colors.workoutHeader}
+              onChange={(v) => handleColorChange('workoutHeader', v)}
+            />
+            <ColorPicker
+              label="Workout Header Text"
+              value={colors.workoutHeaderText}
+              onChange={(v) => handleColorChange('workoutHeaderText', v)}
+              showContrast
+              bgColor={colors.moveframeHeader}
+            />
+            <ColorPicker
               label="Moveframe Header Background"
               value={colors.moveframeHeader}
               onChange={(v) => handleColorChange('moveframeHeader', v)}
@@ -466,6 +492,11 @@ export default function BackgroundsColorsSettings() {
                 value={colors.buttonAddHover}
                 onChange={(v) => handleColorChange('buttonAddHover', v)}
               />
+              <ColorPicker
+                label="Add Button Header Text"
+                value={colors.buttonAddHeaderText}
+                onChange={(v) => handleColorChange('buttonAddHeaderText', v)}
+              />
             </div>
 
             {/* Edit Button */}
@@ -480,6 +511,11 @@ export default function BackgroundsColorsSettings() {
                 value={colors.buttonEditHover}
                 onChange={(v) => handleColorChange('buttonEditHover', v)}
               />
+              <ColorPicker
+                label="Edit Button Header Text"
+                value={colors.buttonEditHeaderText}
+                onChange={(v) => handleColorChange('buttonEditHeaderText', v)}
+              />
             </div>
 
             {/* Delete Button */}
@@ -493,6 +529,11 @@ export default function BackgroundsColorsSettings() {
                 label="Delete Button Hover"
                 value={colors.buttonDeleteHover}
                 onChange={(v) => handleColorChange('buttonDeleteHover', v)}
+              />
+              <ColorPicker
+                label="Delete Button Header Text"
+                value={colors.buttonDeleteHeaderText}
+                onChange={(v) => handleColorChange('buttonDeleteHeaderText', v)}
               />
             </div>
 
@@ -518,6 +559,26 @@ export default function BackgroundsColorsSettings() {
             onToggle={() => toggleSection('rows')}
           >
             <ColorPicker
+              label="Alternate Row Background of the Moveframe"
+              value={colors.alternateRow}
+              onChange={(v) => handleColorChange('alternateRow', v)}
+            />
+            <ColorPicker
+              label="Alternate Row Text of the Moveframe"
+              value={colors.alternateRowText}
+              onChange={(v) => handleColorChange('alternateRowText', v)}
+            />
+            <ColorPicker
+              label="Alternate Row Background of the Movelap"
+              value={colors.alternateRowMovelap}
+              onChange={(v) => handleColorChange('alternateRowMovelap', v)}
+            />
+            <ColorPicker
+              label="Alternate Row Text of the Movelap"
+              value={colors.alternateRowTextMovelap}
+              onChange={(v) => handleColorChange('alternateRowTextMovelap', v)}
+            />
+            <ColorPicker
               label="Selected Row Background"
               value={colors.selectedRow}
               onChange={(v) => handleColorChange('selectedRow', v)}
@@ -529,11 +590,7 @@ export default function BackgroundsColorsSettings() {
               showContrast
               bgColor={colors.selectedRow}
             />
-            <ColorPicker
-              label="Alternate Row Background"
-              value={colors.alternateRow}
-              onChange={(v) => handleColorChange('alternateRow', v)}
-            />
+            
             <ColorPicker
               label="Microlap Background"
               value={colors.microlapBackground}
@@ -572,12 +629,12 @@ export default function BackgroundsColorsSettings() {
               <div 
                 className="p-4 rounded-lg"
                 style={{ 
-                  backgroundColor: colors.moveframeHeader,
-                  color: colors.moveframeHeaderText
+                  backgroundColor: colors.workoutHeader,
+                  color: colors.workoutHeaderText
                 }}
               >
                 <div className="flex justify-between items-center mb-3">
-                  <span className="font-semibold">Moveframe A - Swimming</span>
+                  <span className="font-semibold">Workout 1 of Monday</span>
                   <div className="flex gap-2">
                     <button 
                       className="px-4 py-2 rounded-lg text-white font-semibold text-sm transition"
@@ -630,7 +687,7 @@ export default function BackgroundsColorsSettings() {
                     color: colors.movelapHeaderText
                   }}
                 >
-                  Movelap 1 - Warm Up
+                  Moveframe A - Warm up
                 </div>
               </div>
 
@@ -642,11 +699,11 @@ export default function BackgroundsColorsSettings() {
                     className="p-3 rounded-lg"
                     style={{ 
                       backgroundColor: row % 2 === 0 ? colors.alternateRow : 'white',
-                      color: row % 2 === 0 ? colors.alternateRowText : colors.dayHeaderText
+                      color: row % 2 === 0 ? colors.movelapHeaderText : colors.movelapHeaderText
                     }}
                   >
                     <div className="flex justify-between">
-                      <span>Exercise {row}</span>
+                      <span>Lap # {row}</span>
                       <span>100m • A2 • 1:30</span>
                     </div>
                   </div>

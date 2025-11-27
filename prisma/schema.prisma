@@ -74,6 +74,7 @@ model Translation {
   value         String   @default("") // The translated text
   category      String   @default("general") // 'button', 'alert', 'long_text', etc.
   descriptionEn String   @default("") // Description for translators
+  isDeleted     Boolean  @default(false) // Soft delete - shows variable name in app instead
   lastUpdated   DateTime @updatedAt
   createdAt     DateTime @default(now())
   
@@ -305,8 +306,45 @@ enum SportType {
 model UserSettings {
   id            String @id @default(cuid())
   userId        String @unique
+  
+  // Color & Background Settings
   colorSettings String // Store as JSON string for SQLite
+  
+  // Display Settings
+  gridSize      String @default("comfortable") // "compact", "comfortable", "spacious"
+  columnCount   Int @default(3)
+  rowHeight     String @default("medium") // "small", "medium", "large"
+  defaultView   String @default("grid") // "list", "grid", "table"
+  
+  // Sidebar Settings
+  leftSidebarVisible  Boolean @default(true)
+  rightSidebarVisible Boolean @default(true)
+  leftSidebarWidth    Int @default(20)
+  rightSidebarWidth   Int @default(25)
+  sidebarPosition     String @default("fixed") // "fixed", "floating"
+  
+  // Theme & Display
+  theme         String @default("light") // "light", "dark", "auto", "time-based"
+  fontSize      Int @default(16)
+  iconSize      String @default("medium") // "small", "medium", "large"
+  
+  // Accessibility
+  enableAnimations Boolean @default(true)
+  reducedMotion    Boolean @default(false)
+  highContrast     Boolean @default(false)
+  
+  // Performance
+  performanceMode Boolean @default(false)
+  imageQuality    String @default("high") // "low", "medium", "high"
+  lazyLoading     Boolean @default(true)
+  
+  // Dashboard
+  dashboardLayout String @default("default") // "default", "compact", "expanded"
+  widgetArrangement String @default("[]") // JSON array of widget IDs
+  
+  // Language
   language      String @default("en")
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

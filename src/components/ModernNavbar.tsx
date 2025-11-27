@@ -307,14 +307,14 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                 
                 {isLanguageDropdownOpen && (
                   <div 
-                    className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-200"
+                    className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 transition-colors"
                     style={{ 
                       zIndex: 9999,
                       position: 'absolute'
                     }}
                   >
                     <div className="p-2">
-                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase border-b border-gray-100 mb-1">
+                      <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase border-b border-gray-100 dark:border-gray-700 mb-1">
                         Select Language
                       </div>
                       {availableLanguages.map((lang) => (
@@ -324,8 +324,8 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                             setLanguage(lang.code);
                             setIsLanguageDropdownOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-100 transition-colors duration-200 font-medium flex items-center gap-3 ${
-                            currentLanguage === lang.code ? 'bg-cyan-50 text-cyan-700' : 'text-gray-700'
+                          className={`w-full text-left px-3 py-2.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 font-medium flex items-center gap-3 ${
+                            currentLanguage === lang.code ? 'bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300' : 'text-gray-700 dark:text-gray-200'
                           }`}
                         >
                           <div className="w-7 h-7 rounded overflow-hidden flex-shrink-0">
@@ -466,22 +466,22 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
 
                   {isUserDropdownOpen && (
                     <div 
-                      className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-2xl border border-gray-200"
+                      className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 transition-colors"
                       style={{ 
                         zIndex: 9999,
                         position: 'absolute',
                         overflow: 'visible'
                       }}
                     >
-                      <div className="p-4 border-b border-gray-100">
-                        <p className="font-semibold text-gray-900">{user?.name}</p>
-                        <p className="text-sm text-gray-500">{user?.email}</p>
+                      <div className="p-4 border-b border-gray-100 dark:border-gray-700">
+                        <p className="font-semibold text-gray-900 dark:text-white">{user?.name}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</p>
                       </div>
                       
                       <div className="p-2">
                         <button
                           onClick={handleDashboardClick}
-                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         >
                           <Home className="w-4 h-4 mr-3" />
                           Dashboard
@@ -492,7 +492,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                             router.push('/profile');
                             setIsUserDropdownOpen(false);
                           }}
-                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                          className="w-full flex items-center px-4 py-3 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         >
                           <User className="w-4 h-4 mr-3" />
                           Profile

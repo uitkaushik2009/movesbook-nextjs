@@ -81,7 +81,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return i18n.t(key);
   }, [currentLanguage]);
 
-  // Memoize available languages - filter by active status
+  // Memoize available languages - filter by active status AND preserve custom order
   const availableLanguages = useMemo(() => {
     const allLanguages = i18n.getLanguages().map(lang => ({
       code: lang.code,
@@ -93,8 +93,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       return allLanguages;
     }
     
-    // Filter to only show active languages
-    return allLanguages.filter(lang => activeLanguages.includes(lang.code));
+    // Preserve the custom order from activeLanguages array
+    // This ensures the navbar displays languages in the priority order set by admin
+    return activeLanguages
+      .map(code => allLanguages.find(lang => lang.code === code))
+      .filter(lang => lang !== undefined) as Array<{ code: string; name: string }>;
   }, [activeLanguages]);
 
   const value = useMemo(() => ({

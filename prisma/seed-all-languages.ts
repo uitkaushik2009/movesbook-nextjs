@@ -13,10 +13,12 @@ const LANGUAGES = [
   { code: 'hi', name: 'Hindi', isActive: true },
   { code: 'zh', name: 'Chinese', isActive: true },
   { code: 'ar', name: 'Arabic', isActive: true },
+  { code: 'ja', name: 'Japanese', isActive: true },
+  { code: 'id', name: 'Indonesian', isActive: true },
 ];
 
 async function main() {
-  console.log('Seeding all 10 languages...');
+  console.log('Seeding all 12 languages...');
 
   // Create or update each language
   for (const lang of LANGUAGES) {
@@ -36,7 +38,7 @@ async function main() {
     console.log(`✅ ${language.name} (${language.code}) - ${language.isActive ? 'Active' : 'Inactive'}`);
   }
 
-  console.log('\n✅ All 10 languages seeded successfully!');
+  console.log('\n✅ All 12 languages seeded successfully!');
   
   // Count translations
   const translationCount = await prisma.translation.count();

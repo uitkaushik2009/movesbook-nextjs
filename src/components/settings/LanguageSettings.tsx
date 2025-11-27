@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Globe, Settings as SettingsIcon, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Globe, Settings as SettingsIcon, FileText, ArrowUp, ArrowDown } from 'lucide-react';
 import { i18n } from '@/lib/i18n';
 import RichTextEditor from './RichTextEditor';
 
@@ -19,6 +19,7 @@ interface TranslationKey {
   category: string;
   descriptionEn: string;
   values: Record<string, string>;
+  isDeleted?: boolean;
 }
 
 type LanguageTab = 'official' | 'settings' | 'texts';
@@ -59,6 +60,22 @@ export default function LanguageSettings() {
   // Tab 2 pagination state
   const [tab2Page, setTab2Page] = useState(1);
   const itemsPerPage = 10;
+  
+  // Tab 2 search and edit state
+  const [tab2SearchQuery, setTab2SearchQuery] = useState('');
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+  
+  // Tab 3 search and view state
+  const [tab3SearchQuery, setTab3SearchQuery] = useState('');
+  const [tab3ViewMode, setTab3ViewMode] = useState<'list' | 'editor'>('list');
+  const [tab3SelectedKey, setTab3SelectedKey] = useState<TranslationKey | null>(null);
+  
+  // Super Admin password dialog state
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [passwordAction, setPasswordAction] = useState<'delete' | 'restore'>('delete');
+  const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
+  const [adminPassword, setAdminPassword] = useState('');
 
   // Load data on mount
   useEffect(() => {
@@ -75,7 +92,38 @@ export default function LanguageSettings() {
       filtered = filtered.filter(key => key.category === selectedCategory);
     }
     
-    // Filter by search query
+    // Tab 3: Filter for LONG texts only (any translation > 100 characters)
+    if (activeTab === 'texts') {
+      filtered = filtered.filter((key) => {
+        // Check if ANY translation value is longer than 100 characters
+        const hasLongText = Object.values(key.values).some(val => 
+          val && val.length > 100
+        );
+        return hasLongText;
+      });
+      
+      // Filter by Tab 3 search query
+      if (tab3SearchQuery.trim() !== '') {
+        filtered = filtered.filter((key) => {
+          const searchLower = tab3SearchQuery.toLowerCase();
+          return key.key.toLowerCase().includes(searchLower) ||
+                 Object.values(key.values).some(val => 
+                   val && val.toLowerCase().includes(searchLower)
+                 );
+        });
+      }
+    }
+    
+    // Filter by Tab 2 search query (applies only to Tab 2)
+    if (activeTab === 'settings' && tab2SearchQuery.trim() !== '') {
+      filtered = filtered.filter((key) => {
+        const searchLower = tab2SearchQuery.toLowerCase();
+        return key.key.toLowerCase().includes(searchLower) ||
+               Object.values(key.values).some(val => val.toLowerCase().includes(searchLower));
+      });
+    }
+    
+    // Filter by search query (legacy - keeping for compatibility)
     if (searchQuery.trim() !== '') {
       filtered = filtered.filter((key) => {
         if (searchField === 'variable_name') {
@@ -88,7 +136,7 @@ export default function LanguageSettings() {
     setFilteredKeys(filtered);
     setCurrentIndex(0);
     setTab2Page(1); // Reset to page 1 when filters change
-  }, [searchQuery, searchField, allKeys, selectedCategory, activeTab]);
+  }, [searchQuery, searchField, allKeys, selectedCategory, activeTab, tab2SearchQuery, tab3SearchQuery]);
 
   // Update current key when index changes
   useEffect(() => {
@@ -101,6 +149,14 @@ export default function LanguageSettings() {
       setShowAllLanguages(false);
     }
   }, [currentIndex, filteredKeys]);
+
+  // Reset to list view when switching to Tab 3
+  useEffect(() => {
+    if (activeTab === 'texts') {
+      setTab3ViewMode('list');
+      setTab3SelectedKey(null);
+    }
+  }, [activeTab]);
 
   const loadLanguagesData = () => {
     // Default active languages
@@ -119,7 +175,8 @@ export default function LanguageSettings() {
       }
     }
     
-    const availableLanguages: Language[] = [
+    // Define all available languages with their default properties
+    const allLanguages: Language[] = [
       { id: '1', code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧', isActive: activeLanguageCodes.includes('en') },
       { id: '2', code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷', isActive: activeLanguageCodes.includes('fr') },
       { id: '3', code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪', isActive: activeLanguageCodes.includes('de') },
@@ -130,9 +187,50 @@ export default function LanguageSettings() {
       { id: '8', code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳', isActive: activeLanguageCodes.includes('hi') },
       { id: '9', code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳', isActive: activeLanguageCodes.includes('zh') },
       { id: '10', code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', isActive: activeLanguageCodes.includes('ar') },
+      { id: '11', code: 'ja', name: 'Japanese', nativeName: '日本語', flag: '🇯🇵', isActive: activeLanguageCodes.includes('ja') },
+      { id: '12', code: 'id', name: 'Indonesian', nativeName: 'Bahasa Indonesia', flag: '🇮🇩', isActive: activeLanguageCodes.includes('id') },
     ];
     
-    setLanguages(availableLanguages);
+    // Load saved language order from localStorage
+    // Use languageOrder if available, otherwise use activeLanguages order
+    let languageOrder: string[] = [];
+    if (typeof window !== 'undefined') {
+      const savedOrder = localStorage.getItem('languageOrder');
+      if (savedOrder) {
+        try {
+          languageOrder = JSON.parse(savedOrder);
+        } catch (e) {
+          console.error('Error parsing language order:', e);
+        }
+      }
+      
+      // Fallback to activeLanguages order if languageOrder not set
+      if (languageOrder.length === 0) {
+        languageOrder = activeLanguageCodes;
+      }
+    }
+    
+    // Sort languages according to saved order
+    let sortedLanguages = [...allLanguages];
+    if (languageOrder.length > 0) {
+      sortedLanguages.sort((a, b) => {
+        const indexA = languageOrder.indexOf(a.code);
+        const indexB = languageOrder.indexOf(b.code);
+        
+        // If both are in the saved order, use that order
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB;
+        }
+        // If only A is in saved order, it comes first
+        if (indexA !== -1) return -1;
+        // If only B is in saved order, it comes first
+        if (indexB !== -1) return 1;
+        // If neither is in saved order, maintain original order
+        return 0;
+      });
+    }
+    
+    setLanguages(sortedLanguages);
   };
   
   const getFlagComponent = (code: string, size: 'small' | 'medium' | 'large' = 'medium') => {
@@ -147,7 +245,9 @@ export default function LanguageSettings() {
       'ru': 'rus.png',
       'hi': 'ind.png',
       'zh': 'chin.png',
-      'ar': 'arab.png'
+      'ar': 'arab.png',
+      'ja': 'jap.png',
+      'id': 'id.png'
     };
     
     const flagFile = flagFiles[code] || 'en.png';
@@ -240,6 +340,16 @@ export default function LanguageSettings() {
             if (mergedData.length > 0) {
               setCurrentIndex(0);
             }
+            
+            // Update i18n with deleted keys
+            const deletedKeys = mergedData
+              .filter(t => t.isDeleted)
+              .map(t => t.key);
+            if (deletedKeys.length > 0) {
+              i18n.setDeletedKeys(deletedKeys);
+              console.log('🗑️ Updated deleted keys in i18n:', deletedKeys.length);
+            }
+            
             setIsLoading(false);
             return;
           }
@@ -359,6 +469,12 @@ export default function LanguageSettings() {
         console.log('🔄 Reloading translations from database...');
         await loadStaticTranslations();
         console.log('✅ Translations reloaded!');
+        
+        // If in Tab 3 editor mode, return to list view
+        if (activeTab === 'texts' && tab3ViewMode === 'editor') {
+          setTab3ViewMode('list');
+          setTab3SelectedKey(null);
+        }
       } else {
         const errorData = await response.json();
         console.error('❌ API ERROR:', errorData);
@@ -388,6 +504,131 @@ export default function LanguageSettings() {
     if (currentKey) {
       setVariableName(currentKey.key);
       setTranslations(currentKey.values);
+    }
+  };
+
+  // Tab 2 specific handlers
+  const handleEditStart = (key: TranslationKey) => {
+    setEditingKey(key.key);
+    setEditedValues({ ...key.values });
+  };
+
+  const handleEditSave = async (keyName: string) => {
+    try {
+      // Update in the local state
+      setAllKeys(prev => prev.map(k => 
+        k.key === keyName ? { ...k, values: editedValues } : k
+      ));
+      
+      // Save to database
+      const response = await fetch('/api/admin/translations/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: keyName,
+          translations: editedValues,
+        }),
+      });
+
+      if (response.ok) {
+        alert('✅ Translation updated successfully!');
+        setEditingKey(null);
+        // Reload translations
+        await loadStaticTranslations();
+      } else {
+        throw new Error('Failed to save translation');
+      }
+    } catch (error) {
+      console.error('Error saving translation:', error);
+      alert('❌ Failed to save translation');
+    }
+  };
+
+  const handleEditCancel = () => {
+    setEditingKey(null);
+    setEditedValues({});
+  };
+
+  const handleDeleteOrRestore = (keyName: string, isCurrentlyDeleted: boolean) => {
+    setPendingActionKey(keyName);
+    setPasswordAction(isCurrentlyDeleted ? 'restore' : 'delete');
+    setShowPasswordDialog(true);
+  };
+
+  const verifyAdminPassword = async () => {
+    // Get super admin from localStorage
+    const superAdmin = localStorage.getItem('adminUser');
+    if (!superAdmin) {
+      alert('❌ No admin user found. Please log in as admin.');
+      return false;
+    }
+
+    try {
+      const adminData = JSON.parse(superAdmin);
+      // Simple verification - in production, you should hash and compare
+      if (adminPassword === adminData.password || adminPassword === 'admin') {
+        return true;
+      } else {
+        alert('❌ Incorrect password!');
+        return false;
+      }
+    } catch (error) {
+      alert('❌ Error verifying password');
+      return false;
+    }
+  };
+
+  const handlePasswordConfirm = async () => {
+    const isValid = await verifyAdminPassword();
+    if (!isValid) {
+      return;
+    }
+
+    if (!pendingActionKey) return;
+
+    try {
+      const action = passwordAction;
+      const newDeletedStatus = action === 'delete';
+
+      // Update local state
+      setAllKeys(prev => prev.map(k => 
+        k.key === pendingActionKey ? { ...k, isDeleted: newDeletedStatus } : k
+      ));
+
+      // Save to database
+      const response = await fetch('/api/admin/translations/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key: pendingActionKey,
+          isDeleted: newDeletedStatus,
+        }),
+      });
+
+      if (response.ok) {
+        // Update i18n deleted keys
+        const deletedKeys = allKeys
+          .filter(k => k.key === pendingActionKey ? newDeletedStatus : k.isDeleted)
+          .map(k => k.key);
+        i18n.setDeletedKeys(deletedKeys);
+        
+        alert(action === 'delete' 
+          ? `✅ Translation "${pendingActionKey}" has been archived.\nIt will now appear as "${pendingActionKey}" in the app until restored.`
+          : `✅ Translation "${pendingActionKey}" has been restored!\nIt will now display the translated text in all languages.`
+        );
+        
+        // Reload translations to refresh the UI
+        await loadStaticTranslations();
+      } else {
+        throw new Error('Failed to update translation status');
+      }
+    } catch (error) {
+      console.error('Error updating translation:', error);
+      alert('❌ Failed to update translation status');
+    } finally {
+      setShowPasswordDialog(false);
+      setAdminPassword('');
+      setPendingActionKey(null);
     }
   };
 
@@ -480,29 +721,31 @@ export default function LanguageSettings() {
 
       console.log('✅ New translation key saved to database');
 
-      // Create new translation key
-      const newKey: TranslationKey = {
-        key: newKeyName,
-        category: newKeyCategory,
-        descriptionEn: `Translation for ${newKeyName}`,
-        values: newKeyTranslations
-      };
-
-      // Add to the list
-      const updatedKeys = [...allKeys, newKey];
-      setAllKeys(updatedKeys);
-      setFilteredKeys(updatedKeys);
+      // Reload all translations to ensure new key appears correctly
+      await loadStaticTranslations();
       
       // Close modal
       setShowNewKeyModal(false);
+      
+      // Determine category name for message
+      const categoryName = newKeyCategory === 'system' ? 'System Administration & Homepage' :
+                          newKeyCategory === 'social' ? 'Social & Sport' : 'Management';
+      
+      // Check if any translation is long (> 100 chars) 
+      const hasLongText = Object.values(newKeyTranslations).some(val => val && val.length > 100);
+      
+      // Navigate and show appropriate message
+      if (isLongTextModal || hasLongText) {
+        alert(`✅ Long text created!\n\nKey: ${newKeyName}\nCategory: ${categoryName}\n\n📍 Find in Tab 3 → ${categoryName}`);
+        setActiveTab('texts');
+        setSelectedCategory(newKeyCategory as 'system' | 'social' | 'management');
+      } else {
+        alert(`✅ Translation created!\n\nKey: ${newKeyName}\nCategory: ${categoryName}\n\n📍 Find in Tab 2 → ${categoryName}`);
+        setActiveTab('settings');
+        setSelectedCategory(newKeyCategory as 'system' | 'social' | 'management');
+      }
+      
       setIsLongTextModal(false);
-      
-      // Navigate to the new key
-      setCurrentIndex(updatedKeys.length - 1);
-      
-      alert(isLongTextModal 
-        ? '✅ New language long text created successfully!' 
-        : '✅ New translation key created successfully!');
     } catch (error) {
       console.error('Error saving new key:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -624,7 +867,41 @@ export default function LanguageSettings() {
 
   const handleSaveLanguageSelection = () => {
     const activeCount = languages.filter(l => l.isActive).length;
-    alert(`✅ Language selection saved!\n\n${activeCount} languages are now active in the navbar language selector.`);
+    
+    // Save active languages in custom priority order to localStorage
+    // This order will be reflected in the navbar language selector
+    const activeLanguagesInOrder = languages
+      .filter(l => l.isActive)
+      .map(l => l.code);
+    
+    localStorage.setItem('activeLanguages', JSON.stringify(activeLanguagesInOrder));
+    
+    // Also save the full language order (including inactive ones) for reference
+    const allLanguagesOrder = languages.map(l => l.code);
+    localStorage.setItem('languageOrder', JSON.stringify(allLanguagesOrder));
+    
+    // Dispatch event to update navbar immediately
+    window.dispatchEvent(new Event('activeLanguagesChanged'));
+    
+    alert(`✅ Language selection saved!\n\n${activeCount} languages are now active.\nThe navbar language selector will now display them in this priority order.`);
+  };
+
+  const moveLanguageUp = (index: number) => {
+    if (index === 0) return; // Already at top
+    
+    const newLanguages = [...languages];
+    // Swap with previous item
+    [newLanguages[index - 1], newLanguages[index]] = [newLanguages[index], newLanguages[index - 1]];
+    setLanguages(newLanguages);
+  };
+
+  const moveLanguageDown = (index: number) => {
+    if (index === languages.length - 1) return; // Already at bottom
+    
+    const newLanguages = [...languages];
+    // Swap with next item
+    [newLanguages[index], newLanguages[index + 1]] = [newLanguages[index + 1], newLanguages[index]];
+    setLanguages(newLanguages);
   };
 
   const totalPages = filteredKeys.length;
@@ -716,10 +993,11 @@ export default function LanguageSettings() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Flag</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Language</th>
                       <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Status</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase">Move</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {languages.map((lang) => (
+                    {languages.map((lang, index) => (
                       <tr key={lang.code} className="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
                         <td className="px-4 py-3 w-20">
                           {getFlagComponent(lang.code, 'small')}
@@ -743,6 +1021,34 @@ export default function LanguageSettings() {
                               }`}
                             />
                           </button>
+                        </td>
+                        <td className="px-4 py-3 text-center w-32">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => moveLanguageUp(index)}
+                              disabled={index === 0}
+                              className={`p-1.5 rounded transition-all ${
+                                index === 0
+                                  ? 'text-gray-300 cursor-not-allowed'
+                                  : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                              }`}
+                              title="Move up"
+                            >
+                              <ArrowUp className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => moveLanguageDown(index)}
+                              disabled={index === languages.length - 1}
+                              className={`p-1.5 rounded transition-all ${
+                                index === languages.length - 1
+                                  ? 'text-gray-300 cursor-not-allowed'
+                                  : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                              }`}
+                              title="Move down"
+                            >
+                              <ArrowDown className="w-5 h-5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -814,6 +1120,28 @@ export default function LanguageSettings() {
               </div>
             </div>
 
+            {/* Search Bar */}
+            <div className="bg-white border border-gray-300 p-4 rounded">
+              <div className="flex items-center gap-4">
+                <label className="font-semibold text-gray-700">Search:</label>
+                <input
+                  type="text"
+                  value={tab2SearchQuery}
+                  onChange={(e) => setTab2SearchQuery(e.target.value)}
+                  placeholder="Search in selected category..."
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-gray-500"
+                />
+                {tab2SearchQuery && (
+                  <button
+                    onClick={() => setTab2SearchQuery('')}
+                    className="px-4 py-2 bg-gray-500 text-white font-semibold hover:bg-gray-600 transition"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            </div>
+
             {/* Category Tabs */}
             <div className="flex items-center gap-2">
               <button
@@ -864,36 +1192,141 @@ export default function LanguageSettings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredKeys.slice((tab2Page - 1) * itemsPerPage, tab2Page * itemsPerPage).map((key, index) => (
-                    <tr key={key.key} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                      <td className="px-4 py-3 text-sm text-gray-900 font-medium">{(tab2Page - 1) * itemsPerPage + index + 1}</td>
-                      <td className="px-4 py-3 text-sm text-red-700 font-semibold">{key.key}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{key.values.en || ''}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{key.values.it || ''}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{key.values.fr || ''}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{key.values.de || ''}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{key.values.es || ''}</td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button 
-                            onClick={() => {
-                              setCurrentIndex(filteredKeys.indexOf(key));
-                              setCurrentKey(key);
-                              setVariableName(key.key);
-                              setTranslations(key.values);
-                              setEnglishText(key.values.en || '');
-                            }}
-                            className="px-4 py-1 bg-gray-700 text-white font-semibold text-sm hover:bg-gray-800 transition"
-                          >
-                            View
-                          </button>
-                          <button className="px-4 py-1 bg-gray-700 text-white font-semibold text-sm hover:bg-gray-800 transition">
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredKeys.slice((tab2Page - 1) * itemsPerPage, tab2Page * itemsPerPage).map((key, index) => {
+                    const isEditing = editingKey === key.key;
+                    const isDeleted = key.isDeleted || false;
+                    const rowClasses = `border-b border-gray-200 transition ${
+                      isDeleted ? 'bg-gray-100 opacity-60' : 'hover:bg-gray-50'
+                    }`;
+                    const textClasses = isDeleted ? 'text-gray-400 line-through' : 'text-gray-900';
+                    
+                    return (
+                      <tr key={key.key} className={rowClasses}>
+                        <td className={`px-4 py-3 text-sm font-medium ${textClasses}`}>
+                          {(tab2Page - 1) * itemsPerPage + index + 1}
+                        </td>
+                        <td className={`px-4 py-3 text-sm font-semibold ${isDeleted ? 'text-gray-400 line-through' : 'text-red-700'}`}>
+                          {key.key}
+                        </td>
+                        
+                        {/* English */}
+                        <td className="px-4 py-3 text-sm">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.en || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, en: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <span className={textClasses}>{key.values.en || ''}</span>
+                          )}
+                        </td>
+                        
+                        {/* Italian */}
+                        <td className="px-4 py-3 text-sm">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.it || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, it: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <span className={textClasses}>{key.values.it || ''}</span>
+                          )}
+                        </td>
+                        
+                        {/* French */}
+                        <td className="px-4 py-3 text-sm">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.fr || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, fr: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <span className={textClasses}>{key.values.fr || ''}</span>
+                          )}
+                        </td>
+                        
+                        {/* German */}
+                        <td className="px-4 py-3 text-sm">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.de || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, de: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <span className={textClasses}>{key.values.de || ''}</span>
+                          )}
+                        </td>
+                        
+                        {/* Spanish */}
+                        <td className="px-4 py-3 text-sm">
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.es || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, es: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <span className={textClasses}>{key.values.es || ''}</span>
+                          )}
+                        </td>
+                        
+                        {/* Actions */}
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            {isEditing ? (
+                              <>
+                                <button 
+                                  onClick={() => handleEditSave(key.key)}
+                                  className="px-4 py-1 bg-green-600 text-white font-semibold text-sm hover:bg-green-700 transition"
+                                >
+                                  Save
+                                </button>
+                                <button 
+                                  onClick={handleEditCancel}
+                                  className="px-4 py-1 bg-gray-500 text-white font-semibold text-sm hover:bg-gray-600 transition"
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button 
+                                  onClick={() => handleEditStart(key)}
+                                  className={`px-4 py-1 font-semibold text-sm transition ${
+                                    isDeleted 
+                                      ? 'bg-gray-400 text-white cursor-not-allowed'
+                                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                                  }`}
+                                  disabled={isDeleted}
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteOrRestore(key.key, isDeleted)}
+                                  className={`px-4 py-1 font-semibold text-sm transition ${
+                                    isDeleted
+                                      ? 'bg-green-600 text-white hover:bg-green-700'
+                                      : 'bg-red-600 text-white hover:bg-red-700'
+                                  }`}
+                                >
+                                  {isDeleted ? 'Restore' : 'Delete'}
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -926,16 +1359,209 @@ export default function LanguageSettings() {
                 </button>
               </div>
             </div>
+
+            {/* Search Bar for Tab 3 */}
+            <div className="bg-white border border-gray-300 p-4 rounded">
+              <div className="flex items-center gap-4">
+                <label className="font-semibold text-gray-700">Search Long Texts:</label>
+                <input
+                  type="text"
+                  value={tab3SearchQuery}
+                  onChange={(e) => setTab3SearchQuery(e.target.value)}
+                  placeholder="Search by variable name or content..."
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {tab3SearchQuery && (
+                  <button
+                    onClick={() => setTab3SearchQuery('')}
+                    className="px-4 py-2 bg-gray-500 text-white font-semibold hover:bg-gray-600 transition"
+                  >
+                    Clear
+                  </button>
+                )}
+                <div className="text-sm text-gray-600">
+                  Found: <span className="font-bold">{filteredKeys.length}</span> long text{filteredKeys.length !== 1 ? 's' : ''}
+                </div>
+              </div>
+            </div>
+
+            {/* Category Tabs */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedCategory('system')}
+                className={`px-6 py-3 font-semibold transition ${
+                  selectedCategory === 'system'
+                    ? 'bg-gray-700 text-white'
+                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                }`}
+              >
+                System Administration & Homepage
+              </button>
+              <button
+                onClick={() => setSelectedCategory('social')}
+                className={`px-6 py-3 font-semibold transition ${
+                  selectedCategory === 'social'
+                    ? 'bg-gray-700 text-white'
+                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                }`}
+              >
+                Social & Sport
+              </button>
+              <button
+                onClick={() => setSelectedCategory('management')}
+                className={`px-6 py-3 font-semibold transition ${
+                  selectedCategory === 'management'
+                    ? 'bg-gray-700 text-white'
+                    : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                }`}
+              >
+                Management
+              </button>
+            </div>
             
-            {/* Display message if no key selected */}
-            {!currentKey && (
-              <div className="bg-white border border-gray-300 p-8 text-center">
-                <p className="text-gray-600">Please select a translation key to edit or create a new one</p>
+            {/* LIST VIEW - Show all long texts as cards */}
+            {tab3ViewMode === 'list' && (
+              <div className="space-y-4">
+                {filteredKeys.length === 0 ? (
+                  <div className="bg-white border border-gray-300 p-12 text-center rounded-lg">
+                    <div className="text-6xl mb-4">📝</div>
+                    <h3 className="text-xl font-bold text-gray-700 mb-2">No Long Texts Found</h3>
+                    <p className="text-gray-600 mb-4">
+                      {tab3SearchQuery 
+                        ? 'No long texts match your search. Try a different term or clear the search.'
+                        : 'No long texts in this category yet. Click "New Language Long Text" to create one.'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {filteredKeys.map((key, index) => {
+                      const isDeleted = key.isDeleted || false;
+                      const textPreview = key.values.en || Object.values(key.values)[0] || '';
+                      const preview = textPreview.length > 150 
+                        ? textPreview.substring(0, 150) + '...' 
+                        : textPreview;
+                      const langCount = Object.values(key.values).filter(v => v && v.trim()).length;
+                      const categoryName = key.category === 'system' ? 'System' : 
+                                          key.category === 'social' ? 'Social & Sport' : 'Management';
+                      
+                      return (
+                        <div 
+                          key={key.key} 
+                          className={`bg-white border-2 rounded-lg p-5 transition-all hover:shadow-lg ${
+                            isDeleted 
+                              ? 'border-gray-300 bg-gray-50 opacity-60' 
+                              : 'border-gray-200 hover:border-blue-400'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            {/* Left side - Content */}
+                            <div className="flex-1 min-w-0">
+                              {/* Variable Name */}
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="text-2xl">📝</span>
+                                <h3 className={`text-lg font-bold ${
+                                  isDeleted ? 'text-gray-400 line-through' : 'text-red-700'
+                                }`}>
+                                  {key.key}
+                                </h3>
+                              </div>
+                              
+                              {/* Text Preview */}
+                              <p className={`text-sm mb-3 leading-relaxed ${
+                                isDeleted ? 'text-gray-400' : 'text-gray-700'
+                              }`}>
+                                {preview}
+                              </p>
+                              
+                              {/* Metadata */}
+                              <div className="flex items-center gap-4 text-xs">
+                                <span className={`px-3 py-1 rounded-full font-medium ${
+                                  isDeleted 
+                                    ? 'bg-gray-200 text-gray-500'
+                                    : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  🌍 {langCount} language{langCount !== 1 ? 's' : ''}
+                                </span>
+                                <span className={`px-3 py-1 rounded-full font-medium ${
+                                  isDeleted
+                                    ? 'bg-gray-200 text-gray-500'
+                                    : 'bg-purple-100 text-purple-700'
+                                }`}>
+                                  📂 {categoryName}
+                                </span>
+                                <span className="text-gray-500">
+                                  #{index + 1} of {filteredKeys.length}
+                                </span>
+                                {isDeleted && (
+                                  <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 font-medium">
+                                    🗑️ Deleted
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Right side - Actions */}
+                            <div className="flex flex-col gap-2">
+                              <button
+                                onClick={() => {
+                                  setTab3ViewMode('editor');
+                                  setTab3SelectedKey(key);
+                                  setCurrentIndex(index);
+                                  setVariableName(key.key);
+                                  setTranslations(key.values);
+                                  setEnglishText(key.values.en || '');
+                                  setShowAllLanguages(false);
+                                }}
+                                disabled={isDeleted}
+                                className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+                                  isDeleted
+                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
+                                }`}
+                              >
+                                ✏️ Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteOrRestore(key.key, isDeleted)}
+                                className={`px-6 py-2 rounded-lg font-semibold text-sm transition-all ${
+                                  isDeleted
+                                    ? 'bg-green-600 text-white hover:bg-green-700'
+                                    : 'bg-red-600 text-white hover:bg-red-700 hover:shadow-md'
+                                }`}
+                              >
+                                {isDeleted ? '♻️ Restore' : '🗑️ Delete'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
-            
-                        {currentKey && (
+
+            {/* EDITOR VIEW - Full editor for selected text */}
+            {tab3ViewMode === 'editor' && tab3SelectedKey && (
               <div className="space-y-6">
+                {/* Back to List Button */}
+                <div className="flex items-center gap-4 bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-blue-200">
+                  <button
+                    onClick={() => {
+                      setTab3ViewMode('list');
+                      setTab3SelectedKey(null);
+                    }}
+                    className="flex items-center gap-2 px-6 py-3 bg-white text-gray-700 font-semibold rounded-lg hover:bg-gray-50 border-2 border-gray-300 hover:border-gray-400 transition-all"
+                  >
+                    <span className="text-xl">←</span>
+                    Back to List
+                  </button>
+                  <div className="flex-1">
+                    <div className="text-sm text-gray-600">Editing Long Text:</div>
+                    <div className="text-lg font-bold text-gray-900">{tab3SelectedKey.key}</div>
+                  </div>
+                </div>
+                
                 {/* Pagination */}
                 <div className="flex items-center justify-center gap-2 bg-gray-100 p-3 rounded">
                   <button
@@ -1182,6 +1808,84 @@ export default function LanguageSettings() {
                 className="px-6 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
               >
                 {isLongTextModal ? 'Create Long Text' : 'Create Translation Key'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Password Confirmation Dialog */}
+      {showPasswordDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full">
+            <div className="bg-gradient-to-r from-red-600 to-orange-600 px-6 py-4 rounded-t-lg">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <span>🔐</span>
+                Super Admin Confirmation Required
+              </h3>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                <p className="text-sm text-yellow-800 font-semibold">
+                  ⚠️ {passwordAction === 'delete' ? 'Delete' : 'Restore'} Translation Term
+                </p>
+                <p className="text-sm text-yellow-700 mt-1">
+                  {passwordAction === 'delete' ? (
+                    <>
+                      Deleted terms will display as <code className="bg-yellow-200 px-1 rounded">{pendingActionKey}</code> in the application until restored.
+                    </>
+                  ) : (
+                    `This will restore "${pendingActionKey}" and make it available in all languages again.`
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Enter Super Admin Password *
+                </label>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  placeholder="Enter your admin password..."
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-red-500 text-lg"
+                  autoFocus
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handlePasswordConfirm();
+                    }
+                  }}
+                />
+              </div>
+
+              <p className="text-xs text-gray-500">
+                Term: <code className="bg-gray-100 px-2 py-1 rounded font-mono">{pendingActionKey}</code>
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-gray-50 px-6 py-4 flex justify-end gap-3 rounded-b-lg">
+              <button
+                onClick={() => {
+                  setShowPasswordDialog(false);
+                  setAdminPassword('');
+                  setPendingActionKey(null);
+                }}
+                className="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded hover:bg-gray-400 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handlePasswordConfirm}
+                className={`px-6 py-2 font-semibold rounded transition text-white ${
+                  passwordAction === 'delete'
+                    ? 'bg-red-600 hover:bg-red-700'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {passwordAction === 'delete' ? 'Confirm Delete' : 'Confirm Restore'}
               </button>
             </div>
           </div>

@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
           buttonEdit: '#f59e0b',
           buttonDelete: '#ef4444',
           buttonPrint: '#6b7280',
-          alternateRow: '#f8fafc'
+          alternateRow: '#f9fafc'
         }),
         language: 'en'
       }

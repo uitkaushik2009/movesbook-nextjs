@@ -8,6 +8,8 @@ import {
   getRussianStrings,
   getFrenchStrings,
   getGermanStrings,
+  getJapaneseStrings,
+  getIndonesianStrings,
 } from './translations';
 
 export interface LanguageStrings {
@@ -126,7 +128,7 @@ export interface LanguageStrings {
         'settings_favourites': 'Favourites',
         'settings_my_best': 'My Best',
         'settings_languages': 'Languages',
-        'settings_grid': 'Grid & Display',
+        'settings_display_mode': 'Display Mode',
         'settings_account': 'Account Settings',
         'settings_privacy': 'Privacy Settings',
         'settings_notifications': 'Notifications',
@@ -448,10 +450,34 @@ export interface LanguageStrings {
     private currentLanguage = 'en';
     private languages: Language[] = [];
     private longTexts: LongText[] = [];
+    private deletedKeys: Set<string> = new Set();
     
     // Initialize with default English strings
     constructor() {
       this.initializeDefaultLanguages();
+      this.loadDeletedKeys();
+    }
+    
+    // Load deleted keys from localStorage
+    private loadDeletedKeys() {
+      if (typeof window !== 'undefined') {
+        try {
+          const deleted = localStorage.getItem('deletedTranslationKeys');
+          if (deleted) {
+            this.deletedKeys = new Set(JSON.parse(deleted));
+          }
+        } catch (error) {
+          console.error('Error loading deleted keys:', error);
+        }
+      }
+    }
+    
+    // Update deleted keys
+    setDeletedKeys(keys: string[]) {
+      this.deletedKeys = new Set(keys);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('deletedTranslationKeys', JSON.stringify(Array.from(this.deletedKeys)));
+      }
     }
     
     private initializeDefaultLanguages() {
@@ -471,6 +497,7 @@ export interface LanguageStrings {
           name: '中文 (Chinese)',
           strings: getChineseStrings()
         },
+               
         {
           code: 'hi',
           name: 'हिन्दी (Hindi)',
@@ -505,6 +532,16 @@ export interface LanguageStrings {
           code: 'de',
           name: 'Deutsch (German)',
           strings: getGermanStrings()
+        },
+        {
+          code: 'ja',
+          name: '日本語 (Japanese)',
+          strings: getJapaneseStrings()
+        },
+        {
+          code: 'id',
+          name: '印尼語 (Indonesian)',
+          strings: getIndonesianStrings()
         }
       ];
     }
@@ -713,7 +750,7 @@ export interface LanguageStrings {
         'settings_favourites': 'Favoritos',
         'settings_my_best': 'Mis Mejores',
         'settings_languages': 'Idiomas',
-        'settings_grid': 'Cuadrícula y Visualización',
+        'settings_display_mode': 'Mode de Exibição',
         'settings_account': 'Configuración de Cuenta',
         'settings_privacy': 'Configuración de Privacidad',
         'settings_notifications': 'Notificaciones',
@@ -886,6 +923,11 @@ export interface LanguageStrings {
     
     // Get string by key
     t(key: string): string {
+      // If key is marked as deleted, return the variable name itself
+      if (this.deletedKeys.has(key)) {
+        return key;
+      }
+      
       const currentLang = this.languages.find(lang => lang.code === this.currentLanguage);
       return currentLang?.strings[key] || this.languages[0]?.strings[key] || key;
     }

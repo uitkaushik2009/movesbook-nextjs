@@ -29,10 +29,15 @@ export async function GET(request: NextRequest) {
           key: trans.key,
           category: trans.category,
           descriptionEn: trans.descriptionEn,
+          isDeleted: trans.isDeleted || false,
           values: {},
         };
       }
       translationsMap[trans.key].values[trans.language.code] = trans.value;
+      // Update isDeleted if ANY translation for this key is deleted
+      if (trans.isDeleted) {
+        translationsMap[trans.key].isDeleted = true;
+      }
       categoriesSet.add(trans.category);
     }
 

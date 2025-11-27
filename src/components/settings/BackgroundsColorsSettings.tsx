@@ -9,6 +9,8 @@ interface ColorSettings {
   pageBackgroundOpacity: number;
   dayHeader: string;
   dayHeaderText: string;
+  workoutHeader: string;
+  workoutHeaderText: string;
   moveframeHeader: string;
   moveframeHeaderText: string;
   movelapHeader: string;
@@ -19,9 +21,12 @@ interface ColorSettings {
   selectedRowText: string;
   alternateRow: string;
   alternateRowText: string;
+  alternateRowMovelap: string;
+  alternateRowTextMovelap: string;  
   buttonAdd: string;
   buttonAddHover: string;
   buttonAddText: string;
+  buttonAddHeaderText: string;
   buttonEdit: string;
   buttonEditHover: string;
   buttonEditText: string;
@@ -31,17 +36,28 @@ interface ColorSettings {
   buttonPrint: string;
   buttonPrintHover: string;
   buttonPrintText: string;
+  buttonEditHeaderText: string;
+  buttonDeleteHeaderText: string;
+  buttonPrintHeaderText: string;
+  selectedRowMovelap: string;
+  selectedRowTextMovelap: string;
+  selectedRowMoveframe: string;
+  selectedRowTextMoveframe: string;
+  alternateRowMoveframe: string;
+  alternateRowTextMoveframe: string;
 }
 
 const defaultColors: ColorSettings = {
-  pageBackground: '#ffffff',
-  pageBackgroundOpacity: 100,
-  dayHeader: '#f8fafc',
-  dayHeaderText: '#1e293b',
-  moveframeHeader: '#e0f2fe',
-  moveframeHeaderText: '#0c4a6e',
-  movelapHeader: '#dbeafe',
-  movelapHeaderText: '#1e3a8a',
+  pageBackground: '#eeefe6',
+  pageBackgroundOpacity: 89,
+  dayHeader: '#5168c2',
+  dayHeaderText: '#e6e6ad',
+  workoutHeader: '#c6f8e2',
+  workoutHeaderText: '#0c4a6e',
+  moveframeHeader: '#f7f2bb',
+  moveframeHeaderText: '#f61909',
+  movelapHeader: '#f7f2bb',
+  movelapHeaderText: '#f61909',
   microlapBackground: '#f8fafc',
   microlapText: '#334155',
   selectedRow: '#3b82f6',
@@ -51,6 +67,7 @@ const defaultColors: ColorSettings = {
   buttonAdd: '#10b981',
   buttonAddHover: '#059669',
   buttonAddText: '#ffffff',
+  buttonAddHeaderText: '#bfbbbb',
   buttonEdit: '#f59e0b',
   buttonEditHover: '#d97706',
   buttonEditText: '#ffffff',
@@ -60,6 +77,17 @@ const defaultColors: ColorSettings = {
   buttonPrint: '#6b7280',
   buttonPrintHover: '#4b5563',
   buttonPrintText: '#ffffff',
+  buttonPrintHeaderText: '#bfbbbb',
+  buttonEditHeaderText: '#bfbbbb',
+  buttonDeleteHeaderText: '#bfbbbb',
+  alternateRowMovelap: '#f1f5f9',
+  alternateRowTextMovelap: '#1e293b',
+  selectedRowMovelap: '#3b82f6',
+  selectedRowTextMovelap: '#ffffff',
+  alternateRowMoveframe: '#f1f5f9',
+  alternateRowTextMoveframe: '#1e293b',
+  selectedRowMoveframe: '#3b82f6',
+  selectedRowTextMoveframe: '#ffffff',
 };
 
 interface ColorScheme {
@@ -73,6 +101,8 @@ export default function BackgroundsColorsSettings() {
   const [savedSchemes, setSavedSchemes] = useState<ColorScheme[]>([]);
   const [schemeName, setSchemeName] = useState('');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
+  const [exportName, setExportName] = useState('');
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     headers: true,
@@ -132,13 +162,26 @@ export default function BackgroundsColorsSettings() {
   };
 
   const exportSettings = () => {
+    // Show dialog to ask for export name
+    setShowExportDialog(true);
+  };
+
+  const handleExport = () => {
+    if (!exportName.trim()) {
+      alert('Please enter a name for the export file');
+      return;
+    }
     const dataStr = JSON.stringify(colors, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `movesbook-colors-${Date.now()}.json`;
+    // Use custom name instead of timestamp
+    link.download = `${exportName}.json`;
     link.click();
+    setExportName('');
+    setShowExportDialog(false);
+    alert(`✅ Color scheme exported as "${exportName}.json"!`);
   };
 
   const importSettings = () => {
@@ -351,30 +394,62 @@ export default function BackgroundsColorsSettings() {
         </div>
       )}
 
+      {/* Export Dialog */}
+      {showExportDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 className="text-2xl font-bold mb-4">Export Color Scheme</h3>
+            <p className="text-gray-600 mb-4">Give your exported color scheme a name</p>
+            <input
+              type="text"
+              value={exportName}
+              onChange={(e) => setExportName(e.target.value)}
+              placeholder="e.g., ocean-theme, dark-mode..."
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleExport}
+                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                Export
+              </button>
+              <button
+                onClick={() => setShowExportDialog(false)}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Saved Schemes */}
       {savedSchemes.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 p-6">
           <h3 className="text-xl font-semibold mb-4">Saved Color Schemes</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-3">
             {savedSchemes.map((scheme, index) => (
-              <div key={index} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold">{scheme.name}</span>
+              <div key={index} className="w-32 h-32 p-3 bg-white rounded-lg border border-gray-300 shadow-sm flex flex-col">
+                <div className="flex items-start justify-between mb-2 min-h-[20px]">
+                  <span className="font-medium text-xs truncate flex-1 leading-tight">{scheme.name}</span>
                   <button
                     onClick={() => deleteColorScheme(index)}
-                    className="text-red-600 hover:text-red-700"
+                    className="text-gray-400 hover:text-red-600 text-base leading-none ml-1 flex-shrink-0 -mt-0.5"
                   >
                     ×
                   </button>
                 </div>
-                <div className="flex gap-2 mb-3">
+                <div className="flex gap-1.5 mb-2 flex-1 items-center">
                   {[scheme.colors.buttonAdd, scheme.colors.buttonEdit, scheme.colors.buttonDelete].map((color, i) => (
-                    <div key={i} className="w-8 h-8 rounded" style={{ backgroundColor: color }} />
+                    <div key={i} className="flex-1 h-6 rounded" style={{ backgroundColor: color }} />
                   ))}
                 </div>
                 <button
                   onClick={() => loadColorScheme(scheme)}
-                  className="w-full px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                  className="w-full px-2 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium"
                 >
                   Load
                 </button>
@@ -423,6 +498,18 @@ export default function BackgroundsColorsSettings() {
               bgColor={colors.dayHeader}
             />
             <ColorPicker
+              label="Workout Header Background"
+              value={colors.workoutHeader}
+              onChange={(v) => handleColorChange('workoutHeader', v)}
+            />
+            <ColorPicker
+              label="Workout Header Text"
+              value={colors.workoutHeaderText}
+              onChange={(v) => handleColorChange('workoutHeaderText', v)}
+              showContrast
+              bgColor={colors.moveframeHeader}
+            />
+            <ColorPicker
               label="Moveframe Header Background"
               value={colors.moveframeHeader}
               onChange={(v) => handleColorChange('moveframeHeader', v)}
@@ -461,11 +548,16 @@ export default function BackgroundsColorsSettings() {
                 value={colors.buttonAdd}
                 onChange={(v) => handleColorChange('buttonAdd', v)}
               />
-              <ColorPicker
-                label="Add Button Hover"
-                value={colors.buttonAddHover}
-                onChange={(v) => handleColorChange('buttonAddHover', v)}
-              />
+                <ColorPicker
+                  label="Add Button Hover"
+                  value={colors.buttonAddHover}
+                  onChange={(v) => handleColorChange('buttonAddHover', v)}
+                />
+                  <ColorPicker
+                  label="Add Button Header Text"
+                  value={colors.buttonAddHeaderText}
+                  onChange={(v) => handleColorChange('buttonAddHeaderText', v)}
+                />
             </div>
 
             {/* Edit Button */}
@@ -479,6 +571,11 @@ export default function BackgroundsColorsSettings() {
                 label="Edit Button Hover"
                 value={colors.buttonEditHover}
                 onChange={(v) => handleColorChange('buttonEditHover', v)}
+              />
+              <ColorPicker
+                label="Edit Button Header Text"
+                value={colors.buttonEditHeaderText}
+                onChange={(v) => handleColorChange('buttonEditHeaderText', v)}
               />
             </div>
 
@@ -494,6 +591,11 @@ export default function BackgroundsColorsSettings() {
                 value={colors.buttonDeleteHover}
                 onChange={(v) => handleColorChange('buttonDeleteHover', v)}
               />
+              <ColorPicker
+                label="Delete Button Header Text"
+                value={colors.buttonDeleteHeaderText}
+                onChange={(v) => handleColorChange('buttonDeleteHeaderText', v)}
+              />
             </div>
 
             {/* Print Button */}
@@ -508,6 +610,11 @@ export default function BackgroundsColorsSettings() {
                 value={colors.buttonPrintHover}
                 onChange={(v) => handleColorChange('buttonPrintHover', v)}
               />
+              <ColorPicker
+                label="Print Button Header Text"
+                value={colors.buttonPrintHeaderText}
+                onChange={(v) => handleColorChange('buttonPrintHeaderText', v)}
+              />
             </div>
           </CollapsibleSection>
 
@@ -517,6 +624,26 @@ export default function BackgroundsColorsSettings() {
             expanded={expandedSections.rows}
             onToggle={() => toggleSection('rows')}
           >
+            <ColorPicker
+              label="Alternate Row Background of the Moveframes"
+              value={colors.alternateRow}
+              onChange={(v) => handleColorChange('alternateRow', v)}
+            />
+            <ColorPicker
+              label="Alternate Row Text of the Moveframes"
+              value={colors.alternateRowText}
+              onChange={(v) => handleColorChange('alternateRowText', v)}
+            />
+            <ColorPicker
+              label="Alternate Row Background of the Movelaps"
+              value={colors.alternateRowMovelap}
+              onChange={(v) => handleColorChange('alternateRowMovelap', v)}
+            />
+            <ColorPicker
+              label="Microlap Background"
+              value={colors.microlapBackground}
+              onChange={(v) => handleColorChange('microlapBackground', v)}
+            />
             <ColorPicker
               label="Selected Row Background"
               value={colors.selectedRow}
@@ -528,16 +655,6 @@ export default function BackgroundsColorsSettings() {
               onChange={(v) => handleColorChange('selectedRowText', v)}
               showContrast
               bgColor={colors.selectedRow}
-            />
-            <ColorPicker
-              label="Alternate Row Background"
-              value={colors.alternateRow}
-              onChange={(v) => handleColorChange('alternateRow', v)}
-            />
-            <ColorPicker
-              label="Microlap Background"
-              value={colors.microlapBackground}
-              onChange={(v) => handleColorChange('microlapBackground', v)}
             />
           </CollapsibleSection>
         </div>
@@ -572,8 +689,8 @@ export default function BackgroundsColorsSettings() {
               <div 
                 className="p-4 rounded-lg"
                 style={{ 
-                  backgroundColor: colors.moveframeHeader,
-                  color: colors.moveframeHeaderText
+                  backgroundColor: colors.workoutHeader,
+                  color: colors.workoutHeaderText
                 }}
               >
                 <div className="flex justify-between items-center mb-3">
@@ -626,8 +743,8 @@ export default function BackgroundsColorsSettings() {
                 <div 
                   className="p-3 rounded-lg font-semibold"
                   style={{ 
-                    backgroundColor: colors.movelapHeader,
-                    color: colors.movelapHeaderText
+                    backgroundColor: colors.moveframeHeader,
+                    color: colors.moveframeHeaderText
                   }}
                 >
                   Movelap 1 - Warm Up
@@ -642,11 +759,11 @@ export default function BackgroundsColorsSettings() {
                     className="p-3 rounded-lg"
                     style={{ 
                       backgroundColor: row % 2 === 0 ? colors.alternateRow : 'white',
-                      color: row % 2 === 0 ? colors.alternateRowText : colors.dayHeaderText
+                      color: row % 2 === 0 ? colors.movelapHeaderText : colors.movelapHeaderText
                     }}
                   >
                     <div className="flex justify-between">
-                      <span>Exercise {row}</span>
+                      <span>Lap # {row}</span>
                       <span>100m • A2 • 1:30</span>
                     </div>
                   </div>

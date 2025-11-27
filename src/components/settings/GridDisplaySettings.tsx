@@ -1,8 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Grid, Layout, Eye, Palette, Zap, Monitor, Smartphone, Tablet, Sun, Moon, Type, Image, Play, Pause } from 'lucide-react';
+import { Grid, Layout, Eye, Palette, Zap, Monitor, Smartphone, Tablet, Sun, Moon, Type, Image, Play, Pause, Clock, Save, CheckCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 interface DisplaySettings {
   // Layout Configuration
@@ -19,7 +22,7 @@ interface DisplaySettings {
   sidebarPosition: 'fixed' | 'floating';
   
   // Display Options
-  theme: 'light' | 'dark' | 'auto';
+  theme: 'light' | 'dark' | 'auto' | 'time-based';
   fontSize: number; // base font size in px
   iconSize: 'small' | 'medium' | 'large';
   enableAnimations: boolean;
@@ -38,10 +41,16 @@ interface DisplaySettings {
 
 export default function GridDisplaySettings() {
   const { t } = useLanguage();
+  const { theme, setTheme, resolvedTheme, currentTimeInfo } = useTheme();
+  const { user } = useAuth();
+  const { settings: dbSettings, updateSetting: updateDbSetting, loading } = useUserSettings(user?.id);
+  
   const [activeTab, setActiveTab] = useState<'layout' | 'view' | 'display' | 'performance'>('layout');
   const [showPreview, setShowPreview] = useState(true);
+  const [previewPage, setPreviewPage] = useState<'dashboard' | 'workouts' | 'analytics'>('dashboard');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
-  // Settings State
+  // Settings State (synced with database)
   const [settings, setSettings] = useState<DisplaySettings>({
     gridSize: 'comfortable',
     columnCount: 3,
@@ -65,51 +74,101 @@ export default function GridDisplaySettings() {
     widgetArrangement: ['stats', 'calendar', 'workouts', 'activity']
   });
 
-  // Load settings from localStorage
+  // Load settings from database or localStorage
   useEffect(() => {
-    const savedSettings = localStorage.getItem('displaySettings');
-    if (savedSettings) {
-      try {
-        setSettings(JSON.parse(savedSettings));
-      } catch (e) {
-        console.error('Failed to load display settings');
-      }
+    if (dbSettings && !loading) {
+      setSettings({
+        gridSize: dbSettings.gridSize,
+        columnCount: dbSettings.columnCount,
+        rowHeight: dbSettings.rowHeight,
+        defaultView: dbSettings.defaultView,
+        leftSidebarVisible: dbSettings.leftSidebarVisible,
+        rightSidebarVisible: dbSettings.rightSidebarVisible,
+        leftSidebarWidth: dbSettings.leftSidebarWidth,
+        rightSidebarWidth: dbSettings.rightSidebarWidth,
+        sidebarPosition: dbSettings.sidebarPosition,
+        theme: dbSettings.theme as any,
+        fontSize: dbSettings.fontSize,
+        iconSize: dbSettings.iconSize,
+        enableAnimations: dbSettings.enableAnimations,
+        reducedMotion: dbSettings.reducedMotion,
+        highContrast: dbSettings.highContrast,
+        performanceMode: dbSettings.performanceMode,
+        imageQuality: dbSettings.imageQuality,
+        lazyLoading: dbSettings.lazyLoading,
+        dashboardLayout: dbSettings.dashboardLayout,
+        widgetArrangement: dbSettings.widgetArrangement
+      });
     }
-  }, []);
+  }, [dbSettings, loading]);
 
-  // Save settings to localStorage
-  useEffect(() => {
-    localStorage.setItem('displaySettings', JSON.stringify(settings));
-  }, [settings]);
-
-  const updateSetting = <K extends keyof DisplaySettings>(key: K, value: DisplaySettings[K]) => {
+  const updateSetting = async <K extends keyof DisplaySettings>(key: K, value: DisplaySettings[K]) => {
+    // Handle theme separately with ThemeContext
+    if (key === 'theme') {
+      setTheme(value as 'light' | 'dark' | 'auto' | 'time-based');
+    }
+    
+    // Update local state immediately for responsive UI
     setSettings(prev => ({ ...prev, [key]: value }));
+    
+    // Save to database (and localStorage as fallback)
+    try {
+      setSaveStatus('saving');
+      await updateDbSetting(key as any, value);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Error saving setting:', error);
+      // Still update localStorage as fallback
+      localStorage.setItem('displaySettings', JSON.stringify({ ...settings, [key]: value }));
+    }
   };
 
-  const resetToDefaults = () => {
-    if (confirm('Reset all display settings to defaults?')) {
-      setSettings({
-        gridSize: 'comfortable',
+  const resetToDefaults = async () => {
+    if (confirm('Reset all display settings to defaults? This will reset all your customizations.')) {
+      // Reset theme via context
+      setTheme('light');
+      
+      const defaults = {
+        gridSize: 'comfortable' as const,
         columnCount: 3,
-        rowHeight: 'medium',
-        defaultView: 'grid',
+        rowHeight: 'medium' as const,
+        defaultView: 'grid' as const,
         leftSidebarVisible: true,
         rightSidebarVisible: true,
         leftSidebarWidth: 20,
         rightSidebarWidth: 25,
-        sidebarPosition: 'fixed',
-        theme: 'light',
+        sidebarPosition: 'fixed' as const,
+        theme: 'light' as const,
         fontSize: 16,
-        iconSize: 'medium',
+        iconSize: 'medium' as const,
         enableAnimations: true,
         reducedMotion: false,
         highContrast: false,
         performanceMode: false,
-        imageQuality: 'high',
+        imageQuality: 'high' as const,
         lazyLoading: true,
-        dashboardLayout: 'default',
+        dashboardLayout: 'default' as const,
         widgetArrangement: ['stats', 'calendar', 'workouts', 'activity']
-      });
+      };
+      
+      // Reset local settings
+      setSettings(defaults);
+      
+      // Save to database
+      try {
+        setSaveStatus('saving');
+        if (user?.id && updateDbSetting) {
+          for (const [key, value] of Object.entries(defaults)) {
+            await updateDbSetting(key as any, value);
+          }
+        }
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch (error) {
+        console.error('Error resetting settings:', error);
+        localStorage.setItem('displaySettings', JSON.stringify(defaults));
+      }
     }
   };
 
@@ -144,6 +203,24 @@ export default function GridDisplaySettings() {
         <div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">Grid & Display</h2>
           <p className="text-gray-600">Customize your workspace layout and visual preferences</p>
+          
+          {/* Save Status Indicator */}
+          {saveStatus !== 'idle' && (
+            <div className="flex items-center gap-2 mt-2">
+              {saveStatus === 'saving' && (
+                <>
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm text-blue-600 font-medium">Saving to database...</span>
+                </>
+              )}
+              {saveStatus === 'saved' && (
+                <>
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-sm text-green-600 font-medium">✓ Settings saved to database!</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex gap-3">
           <button
@@ -433,26 +510,75 @@ export default function GridDisplaySettings() {
                 </div>
               </div>
 
-              {/* Sidebar Position */}
+              {/* Sidebar Position with Visual Preview */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Sidebar Position</h3>
-                <div className="grid grid-cols-2 gap-3">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Sidebar Position: Visual Preview</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  See how sidebars interact with your content
+                </p>
+                
+                <div className="grid grid-cols-2 gap-4">
                   {(['fixed', 'floating'] as const).map((position) => (
                     <button
                       key={position}
                       onClick={() => updateSetting('sidebarPosition', position)}
-                      className={`p-4 rounded-lg border-2 transition ${
+                      className={`p-4 rounded-lg border-2 transition-all ${
                         settings.sidebarPosition === position
-                          ? 'border-blue-600 bg-blue-50'
+                          ? 'border-blue-600 bg-blue-50 shadow-lg'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className="font-semibold text-gray-900 capitalize">{position}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {position === 'fixed' ? 'Stays in place' : 'Overlays content'}
+                      {/* Visual Example */}
+                      <div className="mb-3 h-20 bg-gray-100 rounded-lg relative overflow-hidden">
+                        {position === 'fixed' ? (
+                          // Fixed layout
+                          <div className="h-full flex gap-1 p-1">
+                            <div className="w-1/4 bg-gray-700 rounded"></div>
+                            <div className="flex-1 bg-white rounded border border-gray-300"></div>
+                            <div className="w-1/4 bg-gray-300 rounded"></div>
+                          </div>
+                        ) : (
+                          // Floating layout
+                          <div className="h-full p-1 bg-white relative">
+                            <div className="absolute top-2 left-2 w-1/4 h-3/4 bg-gray-700 rounded shadow-lg z-10 opacity-90"></div>
+                            <div className="absolute top-2 right-2 w-1/4 h-3/4 bg-gray-300 rounded shadow-lg z-10 opacity-90"></div>
+                            <div className="w-full h-full bg-blue-50 rounded border-2 border-gray-300"></div>
+                          </div>
+                        )}
+                        
+                        {settings.sidebarPosition === position && (
+                          <div className="absolute bottom-1 right-1 bg-blue-500 text-white px-1.5 py-0.5 rounded text-xs font-bold">
+                            ✓
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Description */}
+                      <div className="text-center">
+                        <div className="font-semibold text-gray-900 capitalize mb-1">{position}</div>
+                        <div className="text-xs text-gray-600 leading-tight">
+                          {position === 'fixed' 
+                            ? 'Sidebars are always visible, content adjusts to fit' 
+                            : 'Sidebars overlay content, can be hidden/shown'}
+                        </div>
                       </div>
                     </button>
                   ))}
+                </div>
+                
+                <div className={`mt-4 p-3 rounded-lg border ${
+                  settings.sidebarPosition === 'fixed' 
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-purple-50 border-purple-200'
+                }`}>
+                  <div className="text-xs font-semibold mb-1">
+                    {settings.sidebarPosition === 'fixed' ? '✓ Fixed Position' : '✓ Floating Position'}
+                  </div>
+                  <div className="text-xs text-gray-700">
+                    {settings.sidebarPosition === 'fixed' 
+                      ? 'Good for: Desktop users, wide screens, constant sidebar access'
+                      : 'Good for: Mobile users, narrow screens, more content space'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -464,29 +590,54 @@ export default function GridDisplaySettings() {
               {/* Theme */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4">Theme</h3>
-                <div className="grid grid-cols-3 gap-3">
-                  {(['light', 'dark', 'auto'] as const).map((theme) => (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {(['light', 'dark', 'auto', 'time-based'] as const).map((themeOption) => (
                     <button
-                      key={theme}
-                      onClick={() => updateSetting('theme', theme)}
+                      key={themeOption}
+                      onClick={() => updateSetting('theme', themeOption)}
                       className={`p-4 rounded-lg border-2 transition ${
-                        settings.theme === theme
-                          ? 'border-blue-600 bg-blue-50'
+                        theme === themeOption
+                          ? 'border-blue-600 bg-blue-50 shadow-lg'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className="text-center">
-                        {theme === 'light' && <Sun className="w-8 h-8 mx-auto mb-2 text-yellow-500" />}
-                        {theme === 'dark' && <Moon className="w-8 h-8 mx-auto mb-2 text-indigo-500" />}
-                        {theme === 'auto' && <Monitor className="w-8 h-8 mx-auto mb-2 text-blue-500" />}
-                        <div className="font-semibold text-gray-900 capitalize">{theme}</div>
+                        {themeOption === 'light' && <Sun className="w-8 h-8 mx-auto mb-2 text-yellow-500" />}
+                        {themeOption === 'dark' && <Moon className="w-8 h-8 mx-auto mb-2 text-indigo-500" />}
+                        {themeOption === 'auto' && <Monitor className="w-8 h-8 mx-auto mb-2 text-blue-500" />}
+                        {themeOption === 'time-based' && <Clock className="w-8 h-8 mx-auto mb-2 text-purple-500" />}
+                        <div className="font-semibold text-gray-900 capitalize">
+                          {themeOption === 'time-based' ? 'Time Based' : themeOption}
+                        </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {theme === 'auto' ? 'System preference' : `${theme} mode`}
+                          {themeOption === 'auto' && 'System preference'}
+                          {themeOption === 'light' && 'Always light'}
+                          {themeOption === 'dark' && 'Always dark'}
+                          {themeOption === 'time-based' && '6 AM - 6 PM'}
                         </div>
                       </div>
                     </button>
                   ))}
                 </div>
+                
+                {/* Time-Based Info */}
+                {theme === 'time-based' && (
+                  <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Clock className="w-4 h-4 text-purple-600" />
+                      <span className="font-semibold text-purple-900 text-sm">Time-Based Mode Active</span>
+                    </div>
+                    <div className="text-xs text-purple-800 space-y-1">
+                      <p>☀️ <strong>Light Mode:</strong> 6:00 AM - 6:00 PM</p>
+                      <p>🌙 <strong>Dark Mode:</strong> 6:00 PM - 6:00 AM</p>
+                      {currentTimeInfo && (
+                        <p className="mt-2 pt-2 border-t border-purple-200">
+                          ⏰ Current Time: <strong>{currentTimeInfo}</strong> → Currently showing <strong>{resolvedTheme}</strong> mode
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Font Size */}
@@ -622,29 +773,98 @@ export default function GridDisplaySettings() {
                 )}
               </div>
 
-              {/* Image Quality */}
+              {/* Image Quality - Visual Comparison with REAL IMAGE */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-lg font-bold text-gray-900 mb-4">Image Quality</h3>
-                <div className="grid grid-cols-3 gap-3">
+                <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Image className="w-5 h-5" />
+                  Image Quality: Real Example Comparison
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Compare quality levels with a real swimming photo. See the difference before choosing!
+                </p>
+                
+                <div className="grid grid-cols-3 gap-4 mb-4">
                   {(['low', 'medium', 'high'] as const).map((quality) => (
                     <button
                       key={quality}
                       onClick={() => updateSetting('imageQuality', quality)}
-                      className={`p-4 rounded-lg border-2 transition ${
+                      className={`group relative rounded-lg border-3 transition-all overflow-hidden ${
                         settings.imageQuality === quality
-                          ? 'border-blue-600 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-green-500 bg-green-50 shadow-lg ring-2 ring-green-300'
+                          : 'border-gray-300 hover:border-gray-400 hover:shadow-md'
                       }`}
                     >
-                      <div className="text-center">
-                        <Image className="w-8 h-8 mx-auto mb-2 text-gray-600" />
-                        <div className="font-semibold text-gray-900 capitalize">{quality}</div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {quality === 'low' ? 'Faster' : quality === 'medium' ? 'Balanced' : 'Best quality'}
+                      {/* REAL Image at different qualities */}
+                      <div className="aspect-video bg-gray-100 relative overflow-hidden">
+                        <img
+                          src="/images/swimming.png"
+                          alt="Swimming example"
+                          className={`w-full h-full object-cover transition-all ${
+                            quality === 'low' ? 'blur-sm scale-110 opacity-70' : 
+                            quality === 'medium' ? 'blur-[1px] scale-105 opacity-90' : 
+                            'blur-none scale-100 opacity-100'
+                          }`}
+                          style={{
+                            imageRendering: quality === 'low' ? 'pixelated' : 'auto',
+                            filter: quality === 'low' ? 'brightness(0.9) contrast(0.8)' : 
+                                   quality === 'medium' ? 'brightness(0.95) contrast(0.9)' : 
+                                   'brightness(1) contrast(1)'
+                          }}
+                        />
+                        {settings.imageQuality === quality && (
+                          <div className="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                            ✓ Active
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Quality Info */}
+                      <div className="p-3 text-center bg-white">
+                        <div className="font-bold text-gray-900 capitalize mb-1">{quality}</div>
+                        <div className="text-xs text-gray-600 mb-2">
+                          {quality === 'low' && '📦 ~50 KB'}
+                          {quality === 'medium' && '📦 ~150 KB'}
+                          {quality === 'high' && '📦 ~400 KB'}
+                        </div>
+                        <div className="flex items-center justify-center gap-1 text-xs">
+                          <Zap className="w-3 h-3" />
+                          <span className={`font-semibold ${quality === 'low' ? 'text-green-600' : quality === 'medium' ? 'text-yellow-600' : 'text-orange-600'}`}>
+                            {quality === 'low' && 'Fastest'}
+                            {quality === 'medium' && 'Balanced'}
+                            {quality === 'high' && 'Best Quality'}
+                          </span>
                         </div>
                       </div>
                     </button>
                   ))}
+                </div>
+
+                {/* Quality Explanation */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-900 text-sm mb-2">💡 Current Selection</h4>
+                  <div className="text-xs text-blue-800 space-y-1">
+                    {settings.imageQuality === 'low' && (
+                      <>
+                        <p>⚡ <strong>Low Quality</strong> - Faster loading, uses less data</p>
+                        <p>✓ Best for: Mobile data, slow connections, limited bandwidth</p>
+                        <p>⚠ Trade-off: Images appear less sharp and detailed</p>
+                      </>
+                    )}
+                    {settings.imageQuality === 'medium' && (
+                      <>
+                        <p>✅ <strong>Medium Quality</strong> - Recommended for most users</p>
+                        <p>✓ Best for: Normal WiFi, balanced performance and quality</p>
+                        <p>✓ Good balance of clarity and file size</p>
+                      </>
+                    )}
+                    {settings.imageQuality === 'high' && (
+                      <>
+                        <p>🌟 <strong>High Quality</strong> - Maximum detail and clarity</p>
+                        <p>✓ Best for: Fast internet, professional use, photo analysis</p>
+                        <p>⚠ Trade-off: Larger files, slower loading on slow connections</p>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -697,84 +917,371 @@ export default function GridDisplaySettings() {
           )}
         </div>
 
-        {/* Live Preview Panel */}
+        {/* Enhanced Live Preview Panel - Shows REAL Pages */}
         {showPreview && (
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl border-2 border-gray-200 p-6 sticky top-6">
-              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Eye className="w-5 h-5" />
-                Live Preview
-              </h3>
+            <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden sticky top-6">
+              {/* Preview Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Eye className="w-5 h-5" />
+                  Live Preview
+                </h3>
+                <p className="text-xs text-blue-100 mt-1">Real page preview - See your actual current page!</p>
+              </div>
+
+              {/* Preview Page Tabs */}
+              <div className="bg-gray-50 border-b-2 border-gray-200 px-2 py-2 flex gap-1">
+                <button
+                  onClick={() => setPreviewPage('dashboard')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    previewPage === 'dashboard'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:bg-white/50'
+                  }`}
+                >
+                  📊 Dashboard
+                </button>
+                <button
+                  onClick={() => setPreviewPage('workouts')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    previewPage === 'workouts'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:bg-white/50'
+                  }`}
+                >
+                  🏋️ Workouts
+                </button>
+                <button
+                  onClick={() => setPreviewPage('analytics')}
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                    previewPage === 'analytics'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:bg-white/50'
+                  }`}
+                >
+                  📈 Current
+                </button>
+              </div>
               
-              <div className="space-y-4">
-                {/* Mini Dashboard Preview */}
-                <div className="border-2 border-gray-200 rounded-lg p-3" style={{ fontSize: `${settings.fontSize * 0.75}px` }}>
-                  <div className="flex gap-2 mb-2">
-                    {settings.leftSidebarVisible && (
-                      <div 
-                        className="bg-gray-800 rounded h-32"
-                        style={{ width: `${settings.leftSidebarWidth * 2}%` }}
-                      ></div>
-                    )}
-                    <div className="flex-1 space-y-2">
-                      <div className="bg-blue-100 h-6 rounded"></div>
-                      <div className={`grid grid-cols-${Math.min(settings.columnCount, 3)} ${getGridSizeClass()}`}>
-                        {[...Array(Math.min(settings.columnCount * 2, 6))].map((_, i) => (
-                          <div key={i} className={`bg-gray-200 rounded ${getRowHeightClass()}`}></div>
-                        ))}
-                      </div>
+              <div className="p-6 space-y-4">
+                {/* REAL PAGE PREVIEW - Shows actual application content */}
+                <div className={`border-2 border-dashed rounded-lg overflow-hidden transition-all ${
+                  resolvedTheme === 'dark' ? 'border-gray-600 bg-gray-900' : 'border-blue-300 bg-white'
+                }`}>
+                  {/* Preview Label */}
+                  <div className={`px-3 py-2 text-xs font-semibold ${
+                    resolvedTheme === 'dark' ? 'bg-gray-800 text-gray-300' : 'bg-blue-50 text-blue-900'
+                  }`}>
+                    {previewPage === 'dashboard' && '📊 Your Dashboard Preview'}
+                    {previewPage === 'workouts' && '🏋️ Workouts Page Preview'}
+                    {previewPage === 'analytics' && '📄 Current Settings Page Preview'}
+                  </div>
+
+                  {/* Scaled Preview Frame - Shows current page miniature */}
+                  <div className="relative" style={{ 
+                    height: '400px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      transform: 'scale(0.33)',
+                      transformOrigin: 'top left',
+                      width: '300%',
+                      height: '300%'
+                    }}>
+                      {/* DASHBOARD PREVIEW - Real miniature */}
+                      {previewPage === 'dashboard' && (
+                        <div className={`p-6 min-h-screen ${
+                          resolvedTheme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
+                        }`} style={{ fontSize: `${settings.fontSize}px` }}>
+                          <div className="flex gap-4">
+                            {/* Left Sidebar */}
+                            {settings.leftSidebarVisible && (
+                              <div className={`rounded-lg p-4 ${
+                                resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                              } shadow-lg ${
+                                settings.sidebarPosition === 'floating' ? 'absolute z-50' : 'relative'
+                              }`} style={{ width: `${settings.leftSidebarWidth}%` }}>
+                                <div className={`text-sm font-bold mb-4 ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                  Navigation
+                                </div>
+                                <div className="space-y-2">
+                                  {['🏠 Dashboard', '🏋️ Workouts', '📊 Analytics', '⚙️ Settings'].map((item, i) => (
+                                    <div key={i} className={`px-3 py-2 rounded ${
+                                      i === 0 
+                                        ? resolvedTheme === 'dark' ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                                        : resolvedTheme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
+                                    }`} style={{ fontSize: `${settings.fontSize * 0.9}px` }}>
+                                      {item}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Main Content */}
+                            <div className="flex-1 space-y-4">
+                              {/* Dashboard Header */}
+                              <div className={`p-6 rounded-lg shadow-md ${
+                                resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                              }`}>
+                                <h2 className={`text-2xl font-bold mb-2 ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                  My Dashboard
+                                </h2>
+                                <p className={`text-sm ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  Welcome back! Here's your training overview
+                                </p>
+                              </div>
+                              
+                              {/* Widgets based on layout */}
+                              {settings.dashboardLayout === 'default' && (
+                                <>
+                                  <div className="grid grid-cols-3 gap-3">
+                                    {[
+                                      { icon: '📊', label: 'Total Workouts', value: '48', color: resolvedTheme === 'dark' ? 'bg-blue-900' : 'bg-blue-50' },
+                                      { icon: '⏱️', label: 'This Week', value: '5', color: resolvedTheme === 'dark' ? 'bg-green-900' : 'bg-green-50' },
+                                      { icon: '🔥', label: 'Streak', value: '12 days', color: resolvedTheme === 'dark' ? 'bg-orange-900' : 'bg-orange-50' }
+                                    ].map((stat, i) => (
+                                      <div key={i} className={`p-4 rounded-lg ${stat.color} ${resolvedTheme === 'dark' ? '' : 'border'}`}>
+                                        <div className="text-2xl mb-1">{stat.icon}</div>
+                                        <div className={`text-xs ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{stat.label}</div>
+                                        <div className={`text-xl font-bold ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{stat.value}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  
+                                  <div className={`p-6 rounded-lg shadow-md ${resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
+                                    <h3 className={`font-bold mb-3 ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>Upcoming Workouts</h3>
+                                    <div className="space-y-2">
+                                      {[
+                                        { sport: '🏊', name: 'Swimming Practice', time: '6:00 AM' },
+                                        { sport: '🏃', name: 'Morning Run', time: '7:30 AM' },
+                                      ].map((workout, i) => (
+                                        <div key={i} className={`flex items-center gap-3 p-3 rounded ${
+                                          resolvedTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-50'
+                                        }`}>
+                                          <div className="text-xl">{workout.sport}</div>
+                                          <div className="flex-1">
+                                            <div className={`font-semibold ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{workout.name}</div>
+                                            <div className={`text-xs ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>{workout.time}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+                              
+                              {settings.dashboardLayout === 'compact' && (
+                                <div className="grid grid-cols-2 gap-3">
+                                  {['📊 Stats', '📅 Calendar', '🏋️ Workouts', '📈 Progress'].map((widget, i) => (
+                                    <div key={i} className={`p-6 rounded-lg ${resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow-md`}>
+                                      <div className={`font-bold ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{widget}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {settings.dashboardLayout === 'expanded' && (
+                                <div className="space-y-3">
+                                  {['📊 Statistics Overview', '📅 Weekly Calendar', '🏋️ Training Plan'].map((widget, i) => (
+                                    <div key={i} className={`p-6 rounded-lg ${resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'} shadow-md h-24`}>
+                                      <div className={`font-bold ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{widget}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Right Sidebar */}
+                            {settings.rightSidebarVisible && (
+                              <div className={`rounded-lg p-4 ${
+                                resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                              } shadow-lg ${
+                                settings.sidebarPosition === 'floating' ? 'absolute right-0 z-50' : 'relative'
+                              }`} style={{ width: `${settings.rightSidebarWidth}%` }}>
+                                <div className={`text-sm font-bold mb-4 ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                                  Quick Actions
+                                </div>
+                                <div className="space-y-2">
+                                  <button className="w-full px-3 py-2 bg-blue-500 text-white rounded text-sm font-semibold">
+                                    + New Workout
+                                  </button>
+                                  <button className={`w-full px-3 py-2 rounded text-sm ${
+                                    resolvedTheme === 'dark' ? 'bg-gray-700 text-white' : 'bg-gray-100 text-gray-700'
+                                  }`}>
+                                    📊 View Stats
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* WORKOUTS PREVIEW - Real workout cards */}
+                      {previewPage === 'workouts' && (
+                        <div className={`p-4 min-h-screen ${
+                          resolvedTheme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
+                        }`} style={{ fontSize: `${settings.fontSize}px` }}>
+                          <h2 className={`text-2xl font-bold mb-4 px-2 ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                            My Workouts
+                          </h2>
+                          
+                          {settings.defaultView === 'grid' && (
+                            <div className={`grid grid-cols-${Math.min(settings.columnCount, 3)} ${getGridSizeClass()}`}>
+                              {['Swimming', 'Running', 'Cycling', 'Gym', 'Yoga', 'Recovery'].slice(0, settings.columnCount * 2).map((sport, i) => (
+                                <div key={i} className={`rounded-lg overflow-hidden shadow-md ${
+                                  resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                                } ${getRowHeightClass()}`}>
+                                  <img 
+                                    src="/images/swimming.png" 
+                                    alt={sport}
+                                    className={`w-full h-2/3 object-cover ${
+                                      settings.imageQuality === 'low' ? 'blur-sm opacity-70' :
+                                      settings.imageQuality === 'medium' ? 'blur-[0.5px] opacity-90' :
+                                      'blur-none opacity-100'
+                                    }`}
+                                  />
+                                  <div className="p-2">
+                                    <div className={`font-semibold text-xs ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{sport}</div>
+                                    <div className={`text-xs ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>45 min</div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {settings.defaultView === 'list' && (
+                            <div className="space-y-2">
+                              {['Swimming', 'Running', 'Cycling', 'Gym'].map((sport, i) => (
+                                <div key={i} className={`flex items-center gap-4 p-4 rounded-lg shadow-sm ${
+                                  resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                                }`}>
+                                  <img 
+                                    src="/images/swimming.png" 
+                                    alt={sport}
+                                    className={`w-16 h-16 rounded-lg object-cover ${
+                                      settings.imageQuality === 'low' ? 'blur-sm' :
+                                      settings.imageQuality === 'medium' ? 'blur-[0.5px]' :
+                                      'blur-none'
+                                    }`}
+                                  />
+                                  <div className="flex-1">
+                                    <div className={`font-semibold ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{sport} Training</div>
+                                    <div className={`text-sm ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>Today at 6:00 AM</div>
+                                  </div>
+                                  <div className={`px-3 py-1 rounded text-sm font-semibold ${
+                                    resolvedTheme === 'dark' ? 'bg-blue-900 text-blue-200' : 'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    45 min
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          
+                          {settings.defaultView === 'table' && (
+                            <div className={`rounded-lg overflow-hidden shadow-md ${
+                              resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                            }`}>
+                              <table className="w-full">
+                                <thead className={resolvedTheme === 'dark' ? 'bg-gray-700' : 'bg-gray-100'}>
+                                  <tr>
+                                    <th className={`px-4 py-3 text-left text-xs font-bold ${resolvedTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Sport</th>
+                                    <th className={`px-4 py-3 text-left text-xs font-bold ${resolvedTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Time</th>
+                                    <th className={`px-4 py-3 text-left text-xs font-bold ${resolvedTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>Duration</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {['🏊 Swimming', '🏃 Running', '🚴 Cycling'].map((sport, i) => (
+                                    <tr key={i} className={`border-t ${resolvedTheme === 'dark' ? 'border-gray-700' : 'border-gray-200'}`}>
+                                      <td className={`px-4 py-3 text-sm ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{sport}</td>
+                                      <td className={`px-4 py-3 text-sm ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>6:00 AM</td>
+                                      <td className={`px-4 py-3 text-sm ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>45 min</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* ANALYTICS/CURRENT PAGE - Shows this settings page! */}
+                      {previewPage === 'analytics' && (
+                        <div className={`p-6 min-h-screen ${
+                          resolvedTheme === 'dark' ? 'bg-gray-900' : 'bg-gray-50'
+                        }`} style={{ fontSize: `${settings.fontSize}px` }}>
+                          <div className={`p-6 rounded-lg shadow-md mb-4 ${
+                            resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                          }`}>
+                            <h2 className={`text-2xl font-bold ${resolvedTheme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+                              Grid & Display Settings
+                            </h2>
+                            <p className={`text-sm mt-2 ${resolvedTheme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                              This is how the current page looks with your settings!
+                            </p>
+                          </div>
+                          
+                          <div className="grid grid-cols-4 gap-3 mb-4">
+                            {['Layout', 'View', 'Display', 'Performance'].map((tab, i) => (
+                              <div key={i} className={`p-3 rounded-lg text-center ${
+                                i === 0
+                                  ? resolvedTheme === 'dark' ? 'bg-blue-900 text-white' : 'bg-blue-100 text-blue-700'
+                                  : resolvedTheme === 'dark' ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-700'
+                              }`}>
+                                <div className="text-xs font-semibold">{tab}</div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <div className={`p-6 rounded-lg shadow-md ${
+                            resolvedTheme === 'dark' ? 'bg-gray-800' : 'bg-white'
+                          }`}>
+                            <div className="space-y-3">
+                              {['Theme', 'Font Size', 'Grid Density'].map((setting, i) => (
+                                <div key={i} className="flex items-center justify-between">
+                                  <span className={`text-sm ${resolvedTheme === 'dark' ? 'text-gray-300' : 'text-gray-700'}`}>{setting}</span>
+                                  <span className={`text-sm font-semibold ${resolvedTheme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                                    {i === 0 && theme}
+                                    {i === 1 && `${settings.fontSize}px`}
+                                    {i === 2 && settings.gridSize}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {settings.rightSidebarVisible && (
-                      <div 
-                        className="bg-gray-100 rounded h-32"
-                        style={{ width: `${settings.rightSidebarWidth * 1.5}%` }}
-                      ></div>
-                    )}
                   </div>
                 </div>
 
                 {/* Current Settings Summary */}
-                <div className="space-y-2 text-xs">
+                <div className="pt-4 border-t space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Theme:</span>
+                    <span className="font-semibold text-gray-900 capitalize">{theme}</span>
+                  </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Grid Size:</span>
                     <span className="font-semibold text-gray-900 capitalize">{settings.gridSize}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Columns:</span>
-                    <span className="font-semibold text-gray-900">{settings.columnCount}</span>
+                    <span className="text-gray-600">Layout:</span>
+                    <span className="font-semibold text-gray-900 capitalize">{settings.dashboardLayout}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Theme:</span>
-                    <span className="font-semibold text-gray-900 capitalize">{settings.theme}</span>
+                    <span className="text-gray-600">Image Quality:</span>
+                    <span className="font-semibold text-gray-900 capitalize">{settings.imageQuality}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Font Size:</span>
-                    <span className="font-semibold text-gray-900">{settings.fontSize}px</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Icon Size:</span>
-                    <span className="font-semibold text-gray-900 capitalize">{settings.iconSize}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Animations:</span>
-                    <span className="font-semibold text-gray-900">{settings.enableAnimations ? 'On' : 'Off'}</span>
-                  </div>
-                </div>
-
-                {/* Device Preview Selector */}
-                <div className="pt-4 border-t">
-                  <div className="text-xs font-semibold text-gray-700 mb-2">Preview Device</div>
-                  <div className="flex gap-2">
-                    <button className="flex-1 p-2 border border-gray-300 rounded hover:bg-gray-50">
-                      <Monitor className="w-4 h-4 mx-auto" />
-                    </button>
-                    <button className="flex-1 p-2 border border-gray-300 rounded hover:bg-gray-50">
-                      <Tablet className="w-4 h-4 mx-auto" />
-                    </button>
-                    <button className="flex-1 p-2 border border-gray-300 rounded hover:bg-gray-50">
-                      <Smartphone className="w-4 h-4 mx-auto" />
-                    </button>
-                  </div>
+                  {settings.performanceMode && (
+                    <div className="flex items-center gap-1 text-yellow-600 font-semibold">
+                      <Zap className="w-3 h-3" />
+                      Performance Mode Active
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

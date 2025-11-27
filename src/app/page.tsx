@@ -332,31 +332,31 @@ export default function HomePage() {
       </div>
 
       {/* Image Cards Sections */}
-      <div className="bg-gray-50">
+      <div className="bg-gray-50 dark:bg-gray-900 transition-colors">
         {/* Sports Categories */}
-        <section className="py-16 bg-white">
+        <section className="py-16 bg-white dark:bg-gray-800 transition-colors">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('home_sports_categories')}</h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              <h2 className="text-4xl font-bold text-gray-900 dark:text-white dark:text-white mb-4">{t('home_sports_categories')}</h2>
+              <p className="text-xl text-gray-600 dark:text-gray-300 dark:text-gray-300 max-w-2xl mx-auto">
                 {t('home_sports_subtitle')}
               </p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {sportsCategories.map((sport) => (
-                <div key={sport.id} className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden group">
+                <div key={sport.id} className="bg-white dark:bg-gray-700 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden group">
                   <div className="h-48 bg-gradient-to-br from-blue-400 to-purple-500 relative overflow-hidden">
                     <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-opacity"></div>
                     <div className="absolute bottom-4 left-4">
-                      <span className="bg-white bg-opacity-90 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
+                      <span className="bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full text-sm font-medium">
                         {sport.count}
                       </span>
                     </div>
                   </div>
                   <div className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">{sport.title}</h3>
-                    <p className="text-gray-600 mb-4 text-center">{sport.description}</p>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 text-center">{sport.title}</h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4 text-center">{sport.description}</p>
                     <button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all duration-200 text-center">
                       {t('home_explore_programs')}
                     </button>
@@ -368,20 +368,20 @@ export default function HomePage() {
         </section>
 
         {/* Latest News */}
-        <section className="py-16 bg-gray-50">
+        <section className="py-16 bg-gray-50 dark:bg-gray-900">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('home_latest_news')}</h2>
-              <p className="text-xl text-gray-600 text-center">{t('home_news_subtitle')}</p>
+              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">{t('home_latest_news')}</h2>
+              <p className="text-xl text-gray-600 dark:text-gray-300 text-center">{t('home_news_subtitle')}</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {newsArticles.map((article) => (
-                <div key={article.id} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
+                <div key={article.id} className="bg-white dark:bg-gray-700 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group">
                   <div className="h-48 bg-gradient-to-br from-green-400 to-blue-500 relative overflow-hidden">
                     <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-opacity"></div>
                     <div className="absolute top-4 left-4">
-                      <span className="bg-white bg-opacity-90 text-gray-800 px-3 py-1 rounded-full text-sm font-medium">
+                      <span className="bg-white dark:bg-gray-800 bg-opacity-90 dark:bg-opacity-90 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-full text-sm font-medium">
                         {article.category}
                       </span>
                     </div>
@@ -390,10 +390,10 @@ export default function HomePage() {
                     <div className="flex items-center text-sm text-gray-500 mb-3 justify-center">
                       <span>{article.date}</span>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-blue-600 transition-colors text-center">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-blue-600 transition-colors text-center">
                       {article.title}
                     </h3>
-                    <p className="text-gray-600 mb-4 text-center">{article.excerpt}</p>
+                    <p className="text-gray-600 dark:text-gray-300 mb-4 text-center">{article.excerpt}</p>
                     <div className="flex justify-center">
                       <button className="text-blue-600 font-semibold hover:text-blue-700 transition-colors flex items-center">
                         {t('home_read_more')}
@@ -408,16 +408,16 @@ export default function HomePage() {
         </section>
 
         {/* Shopping Items */}
-        <section className="py-16 bg-white">
+        <section className="py-16 bg-white dark:bg-gray-800">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">{t('home_featured_products')}</h2>
-              <p className="text-xl text-gray-600 text-center">{t('home_products_subtitle')}</p>
+              <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">{t('home_featured_products')}</h2>
+              <p className="text-xl text-gray-600 dark:text-gray-300 text-center">{t('home_products_subtitle')}</p>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {shoppingItems.map((product) => (
-                <div key={product.id} className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden group">
+                <div key={product.id} className="bg-white dark:bg-gray-700 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden group">
                   <div className="h-48 bg-gradient-to-br from-orange-400 to-red-500 relative overflow-hidden">
                     <div className="absolute inset-0 bg-black bg-opacity-20 group-hover:bg-opacity-10 transition-opacity"></div>
                     <div className="absolute top-4 right-4">
@@ -427,7 +427,7 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="p-6">
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 text-center">{product.name}</h3>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 text-center">{product.name}</h3>
                     <div className="flex items-center mb-3 justify-center">
                       <div className="flex text-yellow-400 mr-2">
                         {'★'.repeat(Math.floor(product.rating))}
@@ -438,7 +438,7 @@ export default function HomePage() {
                       <span className="text-sm text-gray-500">({product.reviews})</span>
                     </div>
                     <div className="flex items-center space-x-2 mb-4 justify-center">
-                      <span className="text-2xl font-bold text-gray-900">{product.price}</span>
+                      <span className="text-2xl font-bold text-gray-900 dark:text-white">{product.price}</span>
                       <span className="text-lg text-gray-500 line-through">{product.originalPrice}</span>
                     </div>
                     <button className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-3 rounded-xl font-semibold hover:from-orange-600 hover:to-red-600 transition-all duration-200 transform hover:scale-105 text-center">

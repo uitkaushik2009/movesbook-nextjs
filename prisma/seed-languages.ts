@@ -34,7 +34,7 @@ const DEFAULT_TRANSLATIONS = {
   'favourites': 'Favourites',
   'my_best': 'My Best',
   'languages': 'Languages',
-  'grid_display': 'Grid & Display',
+  'display_mode': 'Display Mode',
   'select_language': 'Select Language',
   'search_variables': 'Search variables...',
   'buttons_short_texts': 'Buttons & Short Texts',

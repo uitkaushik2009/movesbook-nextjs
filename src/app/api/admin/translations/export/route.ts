@@ -146,6 +146,8 @@ function getLangName(code: string): string {
     'ru': 'russian',
     'fr': 'french',
     'de': 'german',
+    'ja': 'japanese',
+    'id': 'indonesian',
   };
   return names[code] || code;
 }

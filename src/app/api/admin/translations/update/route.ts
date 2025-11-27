@@ -8,6 +8,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     console.log('Received translation update request:', body);
 
+    // Check if this is a delete/restore operation (only isDeleted field)
+    if (body.isDeleted !== undefined && body.key && !body.translations) {
+      const { key, isDeleted } = body;
+      
+      console.log(`Updating isDeleted status for key: ${key} to ${isDeleted}`);
+      
+      // Update all translations for this key to set isDeleted
+      const updateResult = await prisma.translation.updateMany({
+        where: { key },
+        data: { isDeleted },
+      });
+      
+      return NextResponse.json({
+        success: true,
+        message: `Updated ${updateResult.count} translation(s) delete status`,
+        count: updateResult.count,
+      });
+    }
+
     // Check if this is bulk update (new format: { key, translations, category })
     // or single update (old format: { key, languageCode, value })
     if (body.translations && typeof body.translations === 'object') {
