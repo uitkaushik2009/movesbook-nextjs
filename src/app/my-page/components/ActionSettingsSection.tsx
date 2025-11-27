@@ -1,3 +1,5 @@
+'use client';
+
 export default function ActionSettingsSection() {
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex flex-col">
