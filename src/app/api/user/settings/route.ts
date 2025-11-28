@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
         data: {
           userId,
           colorSettings: '{}',
+          toolsSettings: '{}',
           gridSize: 'comfortable',
           columnCount: 3,
           rowHeight: 'medium',
@@ -42,7 +43,8 @@ export async function GET(request: NextRequest) {
           lazyLoading: true,
           dashboardLayout: 'default',
           widgetArrangement: '[]',
-          language: 'en'
+          language: 'en',
+          sportIconType: 'emoji'
         }
       });
     }
@@ -51,7 +53,8 @@ export async function GET(request: NextRequest) {
     const response = {
       ...settings,
       colorSettings: JSON.parse(settings.colorSettings),
-      widgetArrangement: JSON.parse(settings.widgetArrangement)
+      widgetArrangement: JSON.parse(settings.widgetArrangement),
+      toolsSettings: settings.toolsSettings ? JSON.parse(settings.toolsSettings) : {}
     };
 
     return NextResponse.json(response);
@@ -72,7 +75,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
-    // Convert objects to JSON strings for SQLite
+    // Convert objects to JSON strings for database
     const settingsData: any = {
       ...body,
       colorSettings: typeof body.colorSettings === 'object' 
@@ -80,7 +83,10 @@ export async function POST(request: NextRequest) {
         : body.colorSettings,
       widgetArrangement: typeof body.widgetArrangement === 'object'
         ? JSON.stringify(body.widgetArrangement)
-        : body.widgetArrangement
+        : body.widgetArrangement,
+      toolsSettings: typeof body.toolsSettings === 'object'
+        ? JSON.stringify(body.toolsSettings)
+        : body.toolsSettings
     };
 
     // Remove fields that shouldn't be updated
@@ -103,7 +109,8 @@ export async function POST(request: NextRequest) {
     const response = {
       ...settings,
       colorSettings: JSON.parse(settings.colorSettings),
-      widgetArrangement: JSON.parse(settings.widgetArrangement)
+      widgetArrangement: JSON.parse(settings.widgetArrangement),
+      toolsSettings: settings.toolsSettings ? JSON.parse(settings.toolsSettings) : {}
     };
 
     return NextResponse.json(response);
@@ -124,11 +131,11 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
     
-    // Convert objects to JSON strings for SQLite
+    // Convert objects to JSON strings for database
     const updateData: any = {};
     
     Object.keys(body).forEach(key => {
-      if (key === 'colorSettings' || key === 'widgetArrangement') {
+      if (key === 'colorSettings' || key === 'widgetArrangement' || key === 'toolsSettings') {
         updateData[key] = typeof body[key] === 'object' 
           ? JSON.stringify(body[key]) 
           : body[key];
@@ -144,6 +151,7 @@ export async function PATCH(request: NextRequest) {
         userId,
         colorSettings: '{}',
         widgetArrangement: '[]',
+        toolsSettings: '{}',
         ...updateData
       }
     });
@@ -152,7 +160,8 @@ export async function PATCH(request: NextRequest) {
     const response = {
       ...settings,
       colorSettings: JSON.parse(settings.colorSettings),
-      widgetArrangement: JSON.parse(settings.widgetArrangement)
+      widgetArrangement: JSON.parse(settings.widgetArrangement),
+      toolsSettings: settings.toolsSettings ? JSON.parse(settings.toolsSettings) : {}
     };
 
     return NextResponse.json(response);

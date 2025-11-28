@@ -302,6 +302,9 @@ model UserSettings {
   // Color & Background Settings
   colorSettings String @db.Text // Store as JSON string, use TEXT for larger data
   
+  // Tools Settings (periods, sections, sports, equipment, exercises, devices)
+  toolsSettings String @default("{}") @db.Text
+  
   // Display Settings
   gridSize      String @default("comfortable") // "compact", "comfortable", "spacious"
   columnCount   Int @default(3)
@@ -336,6 +339,9 @@ model UserSettings {
   
   // Language
   language      String @default("en")
+  
+  // Sport Icons
+  sportIconType String @default("emoji") // "emoji", "bw_icons"
   
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

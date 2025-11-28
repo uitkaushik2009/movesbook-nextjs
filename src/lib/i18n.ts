@@ -111,6 +111,18 @@ export interface LanguageStrings {
         'workout_plan': 'Workout Plan',
         'workout_history': 'Workout History',
         'workout_schedule': 'Workout Schedule',
+        'workout_main_sports_settings': 'Main Sports Settings',
+        'workout_main_sports_desc': 'Select and order your main sports',
+        'workout_selected_sports': 'Selected Sports',
+        'workout_available_sports': 'Available Sports',
+        'workout_remove': 'Remove',
+        'workout_cancel': 'Cancel',
+        'workout_save_order': 'Save Order',
+        'workout_icon_type_preference': 'Icon Type Preference',
+        'workout_colored_icons': 'Colored Icons (Emoji)',
+        'workout_bw_icons': 'Black & White Icons',
+        'workout_icon_type_emoji_desc': 'System emoji icons - colorful and consistent across devices',
+        'workout_icon_type_bw_desc': 'Custom black & white sport icons from image library',
         
         // Moveframe Terms
         'moveframe_add': 'Add Moveframe',
@@ -443,6 +455,20 @@ export interface LanguageStrings {
         'view_all': 'View All',
         'show_more': 'Show More',
         'show_less': 'Show Less',
+        
+        // Sport Names
+        'sport_swim': 'Swimming',
+        'sport_bike': 'Cycling',
+        'sport_run': 'Running',
+        'sport_body_building': 'Body Building',
+        'sport_rowing': 'Rowing',
+        'sport_skate': 'Skating',
+        'sport_gymnastic': 'Gymnastics',
+        'sport_stretching': 'Stretching',
+        'sport_pilates': 'Pilates',
+        'sport_ski': 'Skiing',
+        'sport_technical_moves': 'Technical Moves',
+        'sport_free_moves': 'Free Moves',
       };
   }
   

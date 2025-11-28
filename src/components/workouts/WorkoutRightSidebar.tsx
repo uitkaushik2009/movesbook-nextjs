@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Plus,
   Copy,
@@ -45,6 +45,8 @@ interface WorkoutRightSidebarProps {
   onPrint?: () => void;
 }
 
+type IconType = 'emoji' | 'bw_icons';
+
 export default function WorkoutRightSidebar({
   selectedDay,
   selectedWorkout,
@@ -66,9 +68,49 @@ export default function WorkoutRightSidebar({
   onPrint
 }: WorkoutRightSidebarProps) {
   const { t } = useLanguage();
+  const [iconType, setIconType] = useState<IconType>('emoji');
 
-  // Get sport icon/emoji
-  const getSportIcon = (sport: SportType): string => {
+  // Load icon type preference from settings
+  useEffect(() => {
+    const loadIconTypePreference = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/user/settings', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const settings = await response.json();
+          setIconType(settings.sportIconType || 'emoji');
+        }
+      } catch (error) {
+        console.error('Error loading icon type preference:', error);
+      }
+    };
+    
+    loadIconTypePreference();
+  }, []);
+
+  // Map sport types to icon filenames in public/icons
+  const getSportIconFilename = (sport: SportType): string => {
+    const iconMap: Record<SportType, string> = {
+      SWIM: 'swimming.jpg',
+      BIKE: 'cycling.jpg',
+      RUN: 'running.jpg',
+      BODY_BUILDING: 'weights.jpg',
+      ROWING: 'rowing.jpg',
+      SKATE: 'skating.jpg',
+      GYMNASTIC: 'gymnastics.jpg',
+      STRETCHING: 'stretching.jpg',
+      PILATES: 'pilaters.jpg',
+      SKI: 'skiing.jpg',
+      TECHNICAL_MOVES: 'Technical/technical.jpg',
+      FREE_MOVES: 'freestyle_wrestling.jpg'
+    };
+    return iconMap[sport] || 'running.jpg';
+  };
+
+  const getSportEmoji = (sport: SportType): string => {
     switch (sport) {
       case 'SWIM': return '🏊';
       case 'BIKE': return '🚴';
@@ -83,6 +125,20 @@ export default function WorkoutRightSidebar({
       case 'TECHNICAL_MOVES': return '🎯';
       case 'FREE_MOVES': return '🎪';
       default: return '🏃';
+    }
+  };
+
+  const renderSportIcon = (sport: SportType) => {
+    if (iconType === 'emoji') {
+      return <span className="text-2xl mb-1">{getSportEmoji(sport)}</span>;
+    } else {
+      return (
+        <img 
+          src={`/icons/${getSportIconFilename(sport)}`} 
+          alt={sport}
+          className="w-10 h-10 object-cover rounded mb-1"
+        />
+      );
     }
   };
 
@@ -180,7 +236,7 @@ export default function WorkoutRightSidebar({
               className="flex flex-col items-center justify-center p-3 bg-gray-100 hover:bg-blue-100 rounded-lg cursor-move transition-all hover:shadow-md active:opacity-50"
               title={t(`sport_${sport.toLowerCase()}`)}
             >
-              <span className="text-2xl mb-1">{getSportIcon(sport)}</span>
+              {renderSportIcon(sport)}
               <span className="text-xs text-gray-600 text-center">
                 {t(`sport_${sport.toLowerCase()}`)}
               </span>
