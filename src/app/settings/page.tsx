@@ -11,6 +11,7 @@ import FavouritesSettings from '@/components/settings/FavouritesSettings';
 import MyBestSettings from '@/components/settings/MyBestSettings';
 import LanguageSettings from '@/components/settings/LanguageSettings';
 import GridDisplaySettings from '@/components/settings/GridDisplaySettings';
+import AdminManagement from '@/components/settings/AdminManagement';
 import { useAuth } from '@/hooks/useAuth';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { 
@@ -20,10 +21,11 @@ import {
   Trophy,
   Globe,
   Grid,
-  Save
+  Save,
+  User
 } from 'lucide-react';
 
-type SettingsSection = 'backgrounds' | 'tools' | 'favourites' | 'mybest' | 'languages' | 'grid';
+type SettingsSection = 'backgrounds' | 'tools' | 'favourites' | 'mybest' | 'languages' | 'grid' | 'admin';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -60,6 +62,7 @@ export default function SettingsPage() {
     { id: 'mybest' as SettingsSection, label: t('settings_my_best'), icon: Trophy },
     { id: 'languages' as SettingsSection, label: t('settings_languages'), icon: Globe },
     { id: 'grid' as SettingsSection, label: t('settings_display_mode'), icon: Grid },
+    { id: 'admin' as SettingsSection, label: 'Admin Management', icon: User },
   ];
 
   const handleSaveAll = () => {
@@ -171,6 +174,7 @@ export default function SettingsPage() {
               {activeSection === 'mybest' && <MyBestSettings />}
               {activeSection === 'languages' && <LanguageSettings />}
               {activeSection === 'grid' && <GridDisplaySettings />}
+              {activeSection === 'admin' && <AdminManagement />}
             </div>
           </div>
         </div>

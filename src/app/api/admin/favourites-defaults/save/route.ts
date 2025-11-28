@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import fs from 'fs/promises';
-import path from 'path';
 
 const prisma = new PrismaClient();
-
-// Super Admin password (in production, store this securely)
-const SUPER_ADMIN_PASSWORD = 'admin123'; // TODO: Move to environment variable
 
 export async function POST(request: NextRequest) {
   try {
     const { language, favouritesData, password } = await request.json();
 
-    // Validate password
-    if (password !== SUPER_ADMIN_PASSWORD) {
+    // Verify password against database
+    const verifyResponse = await fetch(`${request.nextUrl.origin}/api/admin/super-admin/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+
+    const verifyData = await verifyResponse.json();
+    
+    if (!verifyData.valid) {
       return NextResponse.json(
         { success: false, error: 'Invalid Super Admin password' },
         { status: 401 }
@@ -28,19 +31,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Save to file system
-    const defaultsDir = path.join(process.cwd(), 'config', 'favourites-defaults');
-    
-    try {
-      await fs.mkdir(defaultsDir, { recursive: true });
-    } catch (error) {
-      // Directory might already exist, ignore error
-    }
+    // Save to Prisma database using upsert (create or update)
+    await prisma.favouritesDefaults.upsert({
+      where: { language },
+      update: {
+        data: favouritesData,
+        updatedAt: new Date()
+      },
+      create: {
+        language,
+        data: favouritesData
+      }
+    });
 
-    const filePath = path.join(defaultsDir, `${language}.json`);
-    await fs.writeFile(filePath, JSON.stringify(favouritesData, null, 2));
-
-    console.log(`✅ Saved favourites defaults for language: ${language}`);
+    console.log(`✅ Saved favourites defaults to database for language: ${language}`);
 
     return NextResponse.json({
       success: true,
@@ -57,4 +61,3 @@ export async function POST(request: NextRequest) {
     await prisma.$disconnect();
   }
 }
-

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient, UserType } from '@prisma/client';
+import { UserType } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyPassword, generateToken, hashPassword } from '@/lib/auth';
-
-const prisma = new PrismaClient();
 
 // Fallback admin credentials (used if no admin in database)
 // Note: Password is hashed for security. Original password: Set via ADMIN_PASSWORD env var or default hashed value
@@ -58,13 +57,59 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Try to find user in NEW database first
+    // First, check if Super Admin exists in super_admins table
+    const superAdmin = await prisma.superAdmin.findFirst({
+      where: {
+        OR: [
+          { email: loginIdentifier },
+          { username: loginIdentifier }
+        ],
+        isActive: true
+      }
+    });
+
+    if (superAdmin) {
+      // Verify Super Admin password
+      const isPasswordValid = await verifyPassword(password, superAdmin.password);
+      
+      if (isPasswordValid) {
+        // Update last login
+        await prisma.superAdmin.update({
+          where: { id: superAdmin.id },
+          data: { lastLogin: new Date() }
+        });
+
+        // Generate admin token
+        const token = generateToken(
+          superAdmin.id,
+          superAdmin.email,
+          superAdmin.username,
+          'ADMIN'
+        );
+
+        return NextResponse.json({
+          success: true,
+          token,
+          user: {
+            id: superAdmin.id,
+            name: superAdmin.name || superAdmin.username,
+            username: superAdmin.username,
+            email: superAdmin.email,
+            userType: 'ADMIN',
+            isSuperAdmin: true
+          }
+        });
+      }
+    }
+
+    // Try to find user in NEW database (regular admin users)
     let user = await prisma.user.findFirst({
       where: {
         OR: [
           { email: loginIdentifier },
           { username: loginIdentifier }
-        ]
+        ],
+        userType: 'ADMIN'
       },
       select: {
         id: true,

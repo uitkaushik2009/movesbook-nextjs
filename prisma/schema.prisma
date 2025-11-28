@@ -519,3 +519,62 @@ model GroupMember {
   @@unique([groupId, userId])
   @@map("group_members")
 }
+
+// Super Admin User - Full super admin account
+model SuperAdmin {
+  id        String   @id @default(cuid())
+  username  String   @unique @db.VarChar(50)
+  email     String   @unique
+  password  String   // Hashed password using bcrypt
+  name      String?  // Full name
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("super_admins")
+}
+
+// Legacy: Super Admin Settings (kept for backward compatibility)
+model SuperAdminSettings {
+  id        String   @id @default(cuid())
+  password  String   // Hashed password using bcrypt
+  email     String?  // Optional: Super Admin email for recovery
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("super_admin_settings")
+}
+
+// Language-Specific Color Defaults
+model ColorDefaults {
+  id        String   @id @default(cuid())
+  language  String   @unique @db.VarChar(10)
+  data      Json     // Color settings as JSON
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("color_defaults")
+}
+
+// Language-Specific Tools Defaults
+model ToolsDefaults {
+  id        String   @id @default(cuid())
+  language  String   @unique @db.VarChar(10)
+  data      Json     // Tools data (periods, sections, sports, equipment, exercises)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tools_defaults")
+}
+
+// Language-Specific Favourites Defaults
+model FavouritesDefaults {
+  id        String   @id @default(cuid())
+  language  String   @unique @db.VarChar(10)
+  data      Json     // Favourites data (weeklyPlans, workouts, moveframes)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("favourites_defaults")
+}

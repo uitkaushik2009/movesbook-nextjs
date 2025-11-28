@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import fs from 'fs/promises';
-import path from 'path';
 
 const prisma = new PrismaClient();
 
@@ -17,24 +15,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Try to load from file system
-    const defaultsDir = path.join(process.cwd(), 'config', 'tools-defaults');
-    const filePath = path.join(defaultsDir, `${language}.json`);
+    // Load from Prisma database
+    const defaults = await prisma.toolsDefaults.findUnique({
+      where: { language }
+    });
 
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf-8');
-      const toolsData = JSON.parse(fileContent);
-
-      console.log(`✅ Loaded tools defaults for language: ${language}`);
+    if (defaults) {
+      console.log(`✅ Loaded tools defaults from database for language: ${language}`);
 
       return NextResponse.json({
         success: true,
-        toolsData,
+        toolsData: defaults.data,
         language
       });
-    } catch (error) {
-      // File doesn't exist - return empty
-      console.log(`ℹ️ No custom defaults found for language: ${language}`);
+    } else {
+      console.log(`ℹ️ No defaults found in database for language: ${language}`);
       
       return NextResponse.json({
         success: false,
@@ -53,4 +48,3 @@ export async function GET(request: NextRequest) {
     await prisma.$disconnect();
   }
 }
-
