@@ -32,7 +32,6 @@ interface ActionPlanner {
   surname: string;
   fullName: string;
   dateOfBirth: string;
-  description: string;
   imageUrl: string;
   category: string;
   annotation: string;
@@ -88,7 +87,15 @@ export default function ActionPlannersSection() {
         params.append('sortOrder', sort.direction);
       }
 
-      const response = await fetch(`/api/action-planners?${params.toString()}`);
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `/api/actions/action-planner?${params.toString()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       if (!response.ok) {
         throw new Error('Failed to fetch action planners');
       }
@@ -273,8 +280,12 @@ export default function ActionPlannersSection() {
           );
           formDataToSend.append('dateOfBirth', '');
 
-          const response = await fetch('/api/action-planners', {
+          const token = localStorage.getItem('token');
+          const response = await fetch('/api/actions/action-planner', {
             method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
             body: formDataToSend,
           });
 
@@ -309,33 +320,25 @@ export default function ActionPlannersSection() {
   };
 
   const handleDialogSubmit = async (
-    formData: AddActionPlannerFormData,
+    formData: FormData,
     isEdit: boolean,
     id?: string
   ) => {
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('username', formData.username);
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('surname', formData.surname);
-      formDataToSend.append('fullName', formData.fullName);
-      formDataToSend.append('dateOfBirth', formData.dateOfBirth);
-      formDataToSend.append('category', formData.category);
-      formDataToSend.append('annotation', formData.annotation);
-      formDataToSend.append('startDate', formData.startDate);
-      formDataToSend.append('email', formData.email);
-      if (formData.image) {
-        formDataToSend.append('image', formData.image);
-      }
-
+      const token = localStorage.getItem('token');
       const url =
-        isEdit && id ? `/api/action-planners/${id}` : '/api/action-planners';
+        isEdit && id
+          ? `/api/actions/action-planner/${id}`
+          : '/api/actions/action-planner';
 
       const method = isEdit ? 'PUT' : 'POST';
 
       const response = await fetch(url, {
         method,
-        body: formDataToSend,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
       });
 
       if (!response.ok) {
@@ -385,15 +388,6 @@ export default function ActionPlannersSection() {
     { key: 'createFrom', label: 'Create From', sortable: true },
     { key: 'origin', label: 'Origin', sortable: true },
   ];
-
-  // const data = actionPlannersTableData.map((actionPlannerTableData) => ({
-  //   id: actionPlannerTableData.id,
-  //   username: actionPlannerTableData.username,
-  //   fullName: actionPlannerTableData.fullName,
-  //   category: actionPlannerTableData.category,
-  //   startDate: actionPlannerTableData.startDate,
-  //   createFrom: actionPlannerTableData.createFrom as 'scratch' | 'movesbook',
-  // }));
 
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex flex-col">

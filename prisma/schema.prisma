@@ -588,7 +588,7 @@ enum ActionPlannerCreateFrom {
 }
 
 model ActionPlanner {
-  id          String          @id @default(cuid())
+  id          String        @id @default(cuid())
   userId      String
   username    String        @unique
   name        String

@@ -5,11 +5,7 @@ import { useState, FormEvent, useEffect, useRef } from 'react';
 interface AddActionPlannerDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit?: (
-    data: AddActionPlannerFormData,
-    isEdit: boolean,
-    id?: string
-  ) => void;
+  onSubmit?: (formData: FormData, isEdit: boolean, id?: string) => void;
   initialData?: Partial<AddActionPlannerFormData> & {
     id?: string;
     imageUrl?: string | null;
@@ -238,14 +234,27 @@ export function AddActionPlannerDialog({
       return;
     }
 
-    // Ensure fullName is computed before submit
-    const finalFormData = {
-      ...formData,
-      fullName: `${formData.name} ${formData.surname}`.trim(),
-    };
+    const formDataToSend = new FormData();
+    formDataToSend.append('username', formData.username);
+    formDataToSend.append('name', formData.name);
+    formDataToSend.append('surname', formData.surname);
+    formDataToSend.append(
+      'fullName',
+      `${formData.name} ${formData.surname}`.trim()
+    );
+    formDataToSend.append('dateOfBirth', formData.dateOfBirth);
+    formDataToSend.append('category', formData.category);
+    formDataToSend.append('annotation', formData.annotation);
+    formDataToSend.append('startDate', formData.startDate);
+    formDataToSend.append('email', formData.email);
+    if (formData.image) {
+      formDataToSend.append('image', formData.image);
+    }
+    formDataToSend.append('createFrom', 'SCRATCH');
+    formDataToSend.append('origin', 'my list');
 
     const isEdit = mode === 'edit';
-    onSubmit?.(finalFormData, isEdit, initialData?.id);
+    onSubmit?.(formDataToSend, isEdit, initialData?.id);
   };
 
   const handleCancel = () => {
