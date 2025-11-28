@@ -1,362 +1,292 @@
-# MovesBook.com - Workout Management System
+# Movesbook Next.js - Production Ready
 
-Modern workout tracking and management platform for athletes, coaches, teams, and clubs.
+## 🚀 Workout Management System
 
-**Status**: ✅ Production Ready  
-**Users**: 946 migrated from movesbook.net  
-**Authentication**: JWT with RSA signing + bcrypt hashing
+A comprehensive fitness and sports management platform built with Next.js, Prisma, and MySQL.
 
-## 🚀 Quick Start
+---
+
+## ✨ Features
+
+### Core Features
+- 🏋️ **Workout Management** - Create, track, and manage workout plans
+- 📊 **Analytics & Progress Tracking** - Visualize your fitness journey
+- 👥 **Multi-User Support** - Athletes, Coaches, Admins, Teams, Clubs
+- 🌐 **12 Languages** - Full internationalization support
+- 🎨 **Customizable Themes** - Light, Dark, Auto, Time-based modes
+- 📱 **Responsive Design** - Works on all devices
+
+### Admin Features
+- 🔧 **Language Management** - Manage translations for all supported languages
+- 🎨 **Color Schemes** - Customize application colors
+- ⚙️ **Display Settings** - Configure grid layouts, themes, fonts
+- 👤 **User Management** - Manage 1,600+ users
+- 🏢 **Organization Management** - Clubs, Teams, Groups, Coaching
+
+---
+
+## 🛠️ Tech Stack
+
+- **Framework:** Next.js 14
+- **Database:** MySQL (via Prisma ORM)
+- **Styling:** Tailwind CSS
+- **Authentication:** JWT + bcrypt
+- **State Management:** React Context API
+- **TypeScript:** Full type safety
+
+---
+
+## 📦 Installation
 
 ### Prerequisites
 - Node.js 18+ 
+- MySQL 8.0+
 - npm or yarn
 
-### Installation
+### Setup
 
 ```bash
-# Install dependencies
+# 1. Clone the repository
+git clone <repository-url>
+cd movesbook-nextjs
+
+# 2. Install dependencies
 npm install
 
-# Setup database
-npx prisma generate
-npx prisma db push
+# 3. Configure environment variables
+cp env.example .env
+# Edit .env with your database credentials
 
-# Start development server
+# 4. Run Prisma migrations
+npx prisma db push
+npx prisma generate
+
+# 5. Start development server
 npm run dev
 ```
 
-Visit: http://localhost:3000
+---
 
-### Production Build
+## 🗄️ Database
 
-```bash
-npm run build
-npm start
-```
+### Schema
+The application uses Prisma ORM with MySQL:
+- **24 Prisma models** for core functionality
+- **1,606 users** migrated and active
+- **5,424 translations** across 12 languages
+- **75 clubs** and organizations
 
-## 📦 Database Migration
+### Key Tables
+- `users_new` - User accounts
+- `translations` - All language translations
+- `user_settings` - Admin configurations
+- `clubs_new`, `teams_new`, `groups_new` - Organizations
+- `workout_*` - Workout data (7 tables)
 
-### Migrating from Old movesbook.net
+---
 
-If you're migrating data from the old movesbook.net (MySQL) database:
+## 🌐 Supported Languages
 
-```bash
-# Option 1: Migrate Everything (Users + Profiles + Clubs)
-node scripts/migrate-all.js
+- 🇬🇧 English
+- 🇫🇷 French
+- 🇩🇪 German
+- 🇮🇹 Italian
+- 🇪🇸 Spanish
+- 🇵🇹 Portuguese
+- 🇷🇺 Russian
+- 🇮🇳 Hindi
+- 🇨🇳 Chinese
+- 🇸🇦 Arabic
+- 🇯🇵 Japanese
+- 🇮🇩 Indonesian
 
-# Option 2: Migrate Only Users (Quick Start)
-node scripts/migrate-database.js
-
-# Option 3: Custom Migration
-node scripts/migrate-database.js          # Users
-node scripts/migrate-athlete-profiles.js  # Athlete data
-node scripts/migrate-relationships.js     # Clubs & relationships
-```
-
-**What Gets Migrated**:
-- ✅ **User accounts** - Email, username, password (SHA1→bcrypt on login)
-- ✅ **Athlete profiles** - Personal data, sports, measurements, bio
-- ✅ **Clubs & teams** - Organizations, memberships, relationships
-- ✅ **Coach-athlete links** - Training relationships preserved
-- ❌ **Workout data** - Cannot migrate (different architecture)
-
-**Features**:
-- ✅ Automatic duplicate detection
-- ✅ Creates default settings for each user
-- ✅ Real-time progress tracking
-- ✅ Comprehensive error logging
-- ✅ Automatic database backup
-- ✅ Batch processing for large datasets
-
-**Documentation**:
-- 🎯 **Start Here**: [`docs/HOW-TO-USE-OLD-DATABASE.md`](docs/HOW-TO-USE-OLD-DATABASE.md) ← **READ THIS FIRST**
-- 🖥️ **Display Data**: [`docs/HOW-TO-DISPLAY-MIGRATED-DATA.md`](docs/HOW-TO-DISPLAY-MIGRATED-DATA.md) ← **Using Migrated Data**
-- 📖 **Quick Reference**: [`docs/MIGRATION-SUMMARY.md`](docs/MIGRATION-SUMMARY.md)
-- 📚 **Detailed Guide**: [`docs/DATABASE-MIGRATION-GUIDE.md`](docs/DATABASE-MIGRATION-GUIDE.md)
-- 🔧 **Complete Process**: [`docs/FULL-DATABASE-MIGRATION.md`](docs/FULL-DATABASE-MIGRATION.md)
-
-**After Migration**:
-- View user profiles at: `/profile`
-- Admin users list at: `/admin/users` (admin only)
-- All migrated data accessible via Prisma Client
-
-### Password Compatibility
-
-Old users can login immediately with existing credentials:
-- **Old passwords** (SHA1) are preserved during migration
-- **Auto-upgrade** to bcrypt happens transparently on first login
-- **No password reset** required for users
+---
 
 ## 🔐 Authentication
 
-### User Login
-- Login with **email** or **username**
-- Supports athletes, coaches, team managers, and club trainers
-- JWT-based authentication with RSA signing
+### User Types
+- **Athlete** - Track personal workouts
+- **Coach** - Manage athlete programs
+- **Team Manager** - Oversee team activities
+- **Club Trainer** - Club-level management
+- **Group Admin** - Group administration
+- **Admin** - Full system access
 
-### Admin Login
-- Access via Admin button in navbar
-- Secure bcrypt password hashing
-- Environment variable configuration
+### Login
+- Email/Username + Password
+- JWT token-based sessions
+- Hybrid authentication (supports legacy users)
 
-## 🛠️ Technology Stack
-
-### Frontend
-- **Framework**: Next.js 14.2.33
-- **Language**: TypeScript 5.0
-- **UI**: React 18
-- **Styling**: Tailwind CSS
-- **Animations**: Framer Motion
-
-### Backend
-- **API**: Next.js API Routes
-- **Database**: SQLite (dev) / PostgreSQL (production)
-- **ORM**: Prisma 6.19.0
-- **Authentication**: JWT (jsonwebtoken)
-- **Password Hashing**: bcrypt
+---
 
 ## 📁 Project Structure
 
 ```
-movesbook/
+movesbook-nextjs/
 ├── src/
-│   ├── app/                 # Next.js app directory
-│   │   ├── api/            # API routes (backend)
-│   │   ├── admin/          # Admin pages
-│   │   └── ...             # Other pages
-│   ├── components/          # React components
-│   ├── lib/                # Utilities & auth
-│   ├── hooks/              # Custom React hooks
-│   └── types/              # TypeScript types
+│   ├── app/              # Next.js app router pages
+│   ├── components/       # React components
+│   ├── contexts/         # React contexts
+│   ├── hooks/            # Custom hooks
+│   ├── lib/              # Utility libraries
+│   └── types/            # TypeScript types
 ├── prisma/
-│   ├── schema.prisma       # Database schema
-│   └── dev.db             # SQLite database
-├── public/                 # Static assets
-└── package.json
+│   ├── schema.prisma     # Database schema
+│   └── migrations/       # Database migrations
+├── public/               # Static assets
+└── package.json          # Dependencies
+
 ```
-
-## 🔑 Environment Variables
-
-Create a `.env` file:
-
-```env
-DATABASE_URL="file:./prisma/dev.db"
-ADMIN_USERNAME="admin"
-ADMIN_EMAIL="admin@movesbook.com"
-ADMIN_PASSWORD_HASH="your_bcrypt_hash_here"
-```
-
-Generate admin password hash:
-```bash
-node hash-admin-password.js
-```
-
-## 🗄️ Database
-
-### Setup
-```bash
-# Generate Prisma client
-npx prisma generate
-
-# Push schema to database
-npx prisma db push
-
-# View database
-npx prisma studio
-```
-
-### User Migration
-To migrate users from movesbook.net:
-```bash
-node migrate-users.js
-```
-
-## 🔐 Security Features
-
-- ✅ **bcrypt password hashing** (12 rounds)
-- ✅ **JWT tokens** with RSA-256 signing
-- ✅ **No plain text passwords**
-- ✅ **Environment variable configuration**
-- ✅ **Auto password upgrade** (SHA1 → bcrypt)
-- ✅ **Secure authentication flow**
-
-## 🎨 Features
-
-### Authentication & User Management
-- ✅ **Transparent login modals** with glass morphism
-- ✅ **Email or username login**
-- ✅ **Admin panel** with dedicated authentication
-- ✅ **User type management** (Athlete, Coach, Team, Club)
-
-### 🆕 Comprehensive Workout Management System ✅ **PHASES 1-3 COMPLETE - 99% Compliant!**
-- ✅ **Hierarchical Structure**: Year → Week → Day → Session → Moveframe → Movelap
-- ✅ **Four Sections**:
-  - Section A: Current Microcycle (3 weeks)
-  - Section B: Yearly Workout Plan (52 weeks)
-  - Section C: Workouts Done (Sport Diary)
-  - Section D: Archive/Templates Library **✨ NEW - PHASE 2**
-- ✅ **Complete Sport-Specific Forms**: All 12 sports fully implemented
-  - Swimming (distance, speed, style, pace/100m)
-  - Cycling (cadence, power, gear, terrain)
-  - Running (incline, terrain, HR zones)
-  - Strength (sets, reps, weight, tempo)
-  - Rowing (stroke rate, pace/500m, power)
-  - Generic (duration, intensity for 7 other sports)
-- ✅ **Visual Status Tracking**: 7 status states with color-coded symbols (Circle, Square, Triangle)
-- ✅ **Customizable Settings**:
-  - Training Periods (with colors)
-  - Workout Sections (with colors)
-  - Main Sports ordering (drag-to-reorder)
-- ✅ **Auto-Generation**: Movelaps generated from reps (e.g., "400m x 6" creates 6 movelaps)
-- ✅ **Multi-User Support**: Athletes, Coaches, Team Managers, Club Trainers
-- ✅ **Three-Column Layout**: Left sidebar (navigation), Central grid (workouts), Right sidebar (tools)
-- ✅ **Expand/Collapse Hierarchy**: Day → Workout → Moveframe → Movelap
-- ✅ **Translation Support**: 100+ translatable keys
-- ✅ **Integrated Workout Page**: Accessible from navigation at `/workouts`
-- ✅ **Add Workout Flow**: Create workouts with auto-status calculation and validation
-- ✅ **Template System** **✨ PHASE 2**:
-  - Save favorite workouts/days as templates
-  - Search and filter templates (by sport, difficulty, tags)
-  - Apply templates instantly with 1-click
-  - Track template usage and popularity
-  - Rich metadata (distance, duration, difficulty)
-- ✅ **Drag & Drop** **✨ PHASE 2**:
-  - Drag sport icons to workouts
-  - Reorder workouts within day
-  - Reorder moveframes within workout
-  - Visual feedback and drop zones
-  - Faster workout creation
-- ✅ **Copy/Move/Paste** **✨ PHASE 2**:
-  - Copy workouts between days
-  - Move workouts with cut/paste
-  - Copy/move moveframes between workouts
-  - Clipboard system with visual feedback
-  - Preserves complete data structure
-- ✅ **Coach-Athlete Management** **✨ PHASE 3**:
-  - Athlete selector for coaches
-  - Add athletes by email
-  - View athlete workout plans
-  - Assign workouts to athletes
-  - Coach notes for each athlete
-- ✅ **Import from Coach** **✨ PHASE 3**:
-  - Browse coach's shared templates
-  - Search and filter workouts
-  - 1-click import to any day
-  - Template sharing system
-- ✅ **Section C - Workouts Done** **✨ PHASE 3**:
-  - Mark workouts as done with details
-  - Completion percentage tracking
-  - Actual performance data (HR, calories, feeling)
-  - Filter view for completed workouts
-  - Real-time statistics dashboard
-- ✅ **Keyboard Shortcuts** **✨ PHASE 3**:
-  - Ctrl+C/Cmd+C to copy
-  - Ctrl+X/Cmd+X to cut
-  - Ctrl+V/Cmd+V to paste
-  - Escape to close modals
-  - Delete key support
-- ✅ **Print & Export** **✨ PHASE 3**:
-  - Print workouts (day/week/all)
-  - Export to JSON (complete structure)
-  - Export to CSV (Excel-compatible)
-  - Customizable export options
-
-### UI/UX
-- ✅ **Mobile responsive design**
-- ✅ **Modern UI/UX** with Tailwind CSS
-- ✅ **Translation system** (multi-language support)
-
-📖 **Workout System Documentation**:
-- [Phase 3 Complete](docs/PHASE3-COMPLETE.md) ✅ **NEW - 100% Done! 99% Compliant!** 🎉
-- [Phase 2 Complete](docs/PHASE2-COMPLETE.md) ✅
-- [Phase 1 Complete](docs/PHASE1-IMPLEMENTATION-COMPLETE.md) ✅
-- [Validation Report](docs/WORKOUT-VALIDATION-REPORT.md)
-- [Gap Analysis](docs/WORKOUT-GAPS-SUMMARY.md)
-- [Next Steps (Phase 3-4)](docs/WORKOUT-NEXT-STEPS.md)
-- [Quick Start Guide](docs/WORKOUT-QUICKSTART.md)
-- [Complete System Documentation](docs/WORKOUT-SYSTEM-COMPLETE.md)
-- [Implementation Summary](docs/WORKOUT-IMPLEMENTATION-SUMMARY.md)
-
-## 📦 Scripts
-
-```bash
-npm run dev          # Development server
-npm run build        # Production build
-npm run start        # Start production server
-npm run lint         # Run ESLint
-npm run db:push      # Push schema to database
-npm run db:studio    # Open Prisma Studio
-```
-
-## 🛠️ Utilities
-
-### Admin Tools
-```bash
-node hash-admin-password.js    # Generate admin password hash
-node reset-user-password.js    # Reset user password
-```
-
-### Migration Tools
-```bash
-node migrate-users.js          # Migrate users from movesbook.net
-node generate-keys.js          # Generate RSA key pair
-```
-
-## 🚀 Deployment
-
-### Environment Setup
-
-1. **Generate RSA Keys** (if not already done):
-```bash
-node generate-keys.js
-```
-
-2. **Set Environment Variables**:
-```env
-NODE_ENV=production
-DATABASE_URL=your_production_database_url
-ADMIN_PASSWORD_HASH=your_secure_hash
-```
-
-3. **Build & Deploy**:
-```bash
-npm run build
-npm start
-```
-
-### Recommended Hosting
-- Vercel (recommended for Next.js)
-- AWS (EC2, ECS, Lambda)
-- Google Cloud Platform
-- Azure
-- Railway
-- Digital Ocean
-
-### Database for Production
-- PostgreSQL (recommended)
-- MySQL
-- MongoDB (with Prisma)
-
-Update `prisma/schema.prisma`:
-```prisma
-datasource db {
-  provider = "postgresql"  // Change from sqlite
-  url      = env("DATABASE_URL")
-}
-```
-
-## 📄 License
-
-Copyright © 2025 MovesBook
-
-## 🤝 Support
-
-For issues or questions, contact the development team.
 
 ---
 
-**Version**: 1.0.0  
-**Status**: Production Ready ✅  
-**Last Updated**: November 2025
+## 🚀 Deployment
+
+### Production Build
+
+```bash
+# 1. Build the application
+npm run build
+
+# 2. Start production server
+npm start
+```
+
+### Docker Deployment
+
+```bash
+# Build Docker image
+docker build -t movesbook-nextjs .
+
+# Run container
+docker run -p 3000:3000 -e DATABASE_URL="mysql://..." movesbook-nextjs
+```
+
+### Environment Variables
+
+Required for production:
+
+```env
+DATABASE_URL="mysql://user:password@host:3306/database"
+JWT_SECRET="your-secure-secret-key"
+NEXTAUTH_SECRET="your-nextauth-secret"
+NEXTAUTH_URL="https://yourdomain.com"
+```
+
+---
+
+## 📊 Admin Panel
+
+Access at: `/admin`
+
+### Features
+- Dashboard with system overview
+- User management (1,600+ users)
+- Language & translation management
+- Color scheme customization
+- Display mode configuration
+- System settings
+
+---
+
+## 🎨 Customization
+
+### Themes
+- **Light Mode** - Clean, bright interface
+- **Dark Mode** - Easy on the eyes
+- **Auto Mode** - Follows system preference
+- **Time-Based** - Auto-switch at 6 AM/PM
+
+### Colors
+- Customizable color schemes
+- Save/export color configurations
+- Pre-defined schemes available
+
+### Display
+- Grid size: Compact, Comfortable, Spacious
+- Font sizes: 14px - 20px
+- Sidebar positioning: Fixed, Floating
+- Image quality settings
+
+---
+
+## 📝 API Routes
+
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/admin/login` - Admin login
+
+### Translations
+- `GET /api/admin/translations` - Fetch all translations
+- `POST /api/admin/translations/update` - Update translations
+- `POST /api/admin/translations/sync` - Sync from static files
+
+### User Settings
+- `GET /api/user/settings` - Get user settings
+- `POST /api/user/settings` - Save user settings
+- `PATCH /api/user/settings` - Update specific settings
+
+---
+
+## 🔧 Development
+
+### Commands
+
+```bash
+# Development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+
+# Run linting
+npm run lint
+
+# Prisma Studio (database GUI)
+npx prisma studio
+
+# Generate Prisma client
+npx prisma generate
+```
+
+---
+
+## 📚 Documentation
+
+Comprehensive documentation available:
+- `DATA-PERSISTENCE-GUIDE.md` - Database and persistence details
+
+---
+
+## 🤝 Support
+
+For issues or questions:
+- Create an issue in the repository
+- Contact system administrator
+
+---
+
+## 📄 License
+
+Proprietary - All rights reserved
+
+---
+
+## 🎉 Version
+
+**v2.0.0** - Production Ready (Prisma Edition)
+
+- ✅ Full Prisma ORM integration
+- ✅ 1,606 users migrated
+- ✅ 5,424 translations active
+- ✅ 12 languages supported
+- ✅ Production optimized
+
+---
+
+**Built with ❤️ using Next.js and Prisma**
 

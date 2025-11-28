@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Palette, Eye, RefreshCw, Download, Upload, Save, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Palette, Eye, RefreshCw, Download, Upload, Save, AlertCircle, ChevronDown, ChevronUp, CheckCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 interface ColorSettings {
   pageBackground: string;
@@ -97,6 +99,9 @@ interface ColorScheme {
 
 export default function BackgroundsColorsSettings() {
   const { t } = useLanguage();
+  const { user } = useAuth();
+  const { settings: dbSettings, updateSetting: updateDbSetting, loading } = useUserSettings(user?.id);
+  
   const [colors, setColors] = useState<ColorSettings>(defaultColors);
   const [savedSchemes, setSavedSchemes] = useState<ColorScheme[]>([]);
   const [schemeName, setSchemeName] = useState('');
@@ -109,6 +114,20 @@ export default function BackgroundsColorsSettings() {
     buttons: true,
     rows: false,
   });
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Load color settings from database
+  useEffect(() => {
+    if (dbSettings && !loading && dbSettings.colorSettings) {
+      const loadedColors = typeof dbSettings.colorSettings === 'string' 
+        ? JSON.parse(dbSettings.colorSettings)
+        : dbSettings.colorSettings;
+      
+      if (loadedColors && Object.keys(loadedColors).length > 0) {
+        setColors({ ...defaultColors, ...loadedColors });
+      }
+    }
+  }, [dbSettings, loading]);
 
   // Load saved schemes from localStorage
   useEffect(() => {
@@ -122,13 +141,37 @@ export default function BackgroundsColorsSettings() {
     }
   }, []);
 
-  const handleColorChange = (key: keyof ColorSettings, value: string | number) => {
-    setColors(prev => ({ ...prev, [key]: value }));
+  const handleColorChange = async (key: keyof ColorSettings, value: string | number) => {
+    const newColors = { ...colors, [key]: value };
+    setColors(newColors);
+    
+    // Save to database
+    try {
+      setSaveStatus('saving');
+      await updateDbSetting('colorSettings', newColors);
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error('Error saving color settings:', error);
+      // Fallback to localStorage
+      localStorage.setItem('colorSettings', JSON.stringify(newColors));
+    }
   };
 
-  const resetToDefaults = () => {
+  const resetToDefaults = async () => {
     if (confirm('Reset all colors to defaults?')) {
       setColors(defaultColors);
+      
+      // Save to database
+      try {
+        setSaveStatus('saving');
+        await updateDbSetting('colorSettings', defaultColors);
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch (error) {
+        console.error('Error resetting colors:', error);
+        localStorage.setItem('colorSettings', JSON.stringify(defaultColors));
+      }
     }
   };
 
@@ -330,6 +373,24 @@ export default function BackgroundsColorsSettings() {
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Backgrounds & Colors</h2>
           <p className="text-gray-600 mt-1">Customize your workout interface colors and appearance</p>
+          
+          {/* Save Status Indicator */}
+          {saveStatus !== 'idle' && (
+            <div className="flex items-center gap-2 mt-2">
+              {saveStatus === 'saving' && (
+                <>
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm text-blue-600 font-medium">Saving colors to database...</span>
+                </>
+              )}
+              {saveStatus === 'saved' && (
+                <>
+                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <span className="text-sm text-green-600 font-medium">✓ Colors saved to database!</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex gap-3">
           <button

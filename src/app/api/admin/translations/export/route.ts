@@ -7,23 +7,21 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    // Fetch all languages and translations
-    const languages = await prisma.language.findMany({
-      where: { isActive: true },
-      include: {
-        translations: true,
-      },
-      orderBy: { code: 'asc' },
+    // Fetch all translations from database
+    const allTranslations = await prisma.translation.findMany({
+      orderBy: { key: 'asc' },
     });
 
-    // Build translations structure
+    // Build translations structure grouped by language
     const translationsData: Record<string, Record<string, string>> = {};
+    const languageCodes = new Set<string>();
     
-    for (const lang of languages) {
-      translationsData[lang.code] = {};
-      for (const trans of lang.translations) {
-        translationsData[lang.code][trans.key] = trans.value;
+    for (const trans of allTranslations) {
+      if (!translationsData[trans.language]) {
+        translationsData[trans.language] = {};
       }
+      translationsData[trans.language][trans.key] = trans.value;
+      languageCodes.add(trans.language);
     }
 
     // Generate i18n.ts content for English (default language)
@@ -97,11 +95,11 @@ export async function POST(request: NextRequest) {
     translationsContent += `// Last exported: ${new Date().toISOString()}\n\n`;
     translationsContent += `import { LanguageStrings } from './i18n';\n\n`;
 
-    const otherLanguages = languages.filter(l => l.code !== 'en');
+    const otherLanguageCodes = Array.from(languageCodes).filter(code => code !== 'en');
     
-    for (const lang of otherLanguages) {
-      const langData = translationsData[lang.code] || {};
-      translationsContent += `export function get${capitalize(getLangName(lang.code))}Strings(): LanguageStrings {\n`;
+    for (const langCode of otherLanguageCodes) {
+      const langData = translationsData[langCode] || {};
+      translationsContent += `export function get${capitalize(getLangName(langCode))}Strings(): LanguageStrings {\n`;
       translationsContent += `  return {\n`;
       
       for (const key of englishKeys) {

@@ -58,8 +58,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Try to find user in database
-    const user = await prisma.user.findFirst({
+    // Try to find user in NEW database first
+    let user = await prisma.user.findFirst({
       where: {
         OR: [
           { email: loginIdentifier },
@@ -76,6 +76,35 @@ export async function POST(request: NextRequest) {
         createdAt: true,
       }
     });
+
+    // If not found in new table, check LEGACY table
+    if (!user) {
+      const legacyUser = await prisma.$queryRaw<any[]>`
+        SELECT id, username, email, password, role_id,
+               COALESCE(firstname, '') as firstname,
+               COALESCE(lastname, '') as lastname
+        FROM users
+        WHERE (email = ${loginIdentifier} OR username = ${loginIdentifier})
+        AND delete_status = 'N'
+        AND role_id IN (5, 6)
+        LIMIT 1
+      `;
+
+      if (legacyUser.length > 0) {
+        const legacy = legacyUser[0];
+        const name = `${legacy.firstname || ''} ${legacy.lastname || ''}`.trim() || legacy.username;
+        
+        user = {
+          id: `legacy_${legacy.id}`,
+          name: name,
+          username: legacy.username,
+          email: legacy.email,
+          password: legacy.password,
+          userType: legacy.role_id === 6 ? 'ADMIN' : 'GROUP_ADMIN',
+          createdAt: new Date(),
+        };
+      }
+    }
 
     if (user) {
       // User found in database - verify password

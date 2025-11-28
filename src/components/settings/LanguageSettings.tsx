@@ -66,10 +66,11 @@ export default function LanguageSettings() {
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
   
-  // Tab 3 search and view state
+  // Tab 3 search, view, and pagination state
   const [tab3SearchQuery, setTab3SearchQuery] = useState('');
   const [tab3ViewMode, setTab3ViewMode] = useState<'list' | 'editor'>('list');
   const [tab3SelectedKey, setTab3SelectedKey] = useState<TranslationKey | null>(null);
+  const [tab3Page, setTab3Page] = useState(1);
   
   // Super Admin password dialog state
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -89,7 +90,14 @@ export default function LanguageSettings() {
     
     // Filter by category for both Tab 2 and Tab 3
     if (activeTab === 'settings' || activeTab === 'texts') {
-      filtered = filtered.filter(key => key.category === selectedCategory);
+      // For Tab 3 'system' category, include both 'system' and 'general' categories
+      if (activeTab === 'texts' && selectedCategory === 'system') {
+        filtered = filtered.filter(key => 
+          key.category === 'system' || key.category === 'general'
+        );
+      } else {
+        filtered = filtered.filter(key => key.category === selectedCategory);
+      }
     }
     
     // Tab 3: Filter for LONG texts only (any translation > 100 characters)
@@ -136,6 +144,7 @@ export default function LanguageSettings() {
     setFilteredKeys(filtered);
     setCurrentIndex(0);
     setTab2Page(1); // Reset to page 1 when filters change
+    setTab3Page(1); // Reset Tab 3 to page 1 when filters change
   }, [searchQuery, searchField, allKeys, selectedCategory, activeTab, tab2SearchQuery, tab3SearchQuery]);
 
   // Update current key when index changes
@@ -1433,8 +1442,59 @@ export default function LanguageSettings() {
                     </p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {filteredKeys.map((key, index) => {
+                  <>
+                    {/* Tab 3 Pagination Controls - TOP */}
+                    {filteredKeys.length > itemsPerPage && (
+                      <div className="flex items-center justify-between bg-white border border-gray-300 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600">
+                          Showing {((tab3Page - 1) * itemsPerPage) + 1} to {Math.min(tab3Page * itemsPerPage, filteredKeys.length)} of {filteredKeys.length} long texts
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setTab3Page(tab3Page - 1)}
+                            disabled={tab3Page === 1}
+                            className="px-4 py-2 bg-gray-600 text-white font-semibold rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                          >
+                            ← Previous
+                          </button>
+                          
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.ceil(filteredKeys.length / itemsPerPage) }, (_, i) => i + 1).map((page) => (
+                              <button
+                                key={page}
+                                onClick={() => setTab3Page(page)}
+                                className={`w-10 h-10 rounded font-semibold transition ${
+                                  page === tab3Page
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          <button
+                            onClick={() => setTab3Page(tab3Page + 1)}
+                            disabled={tab3Page >= Math.ceil(filteredKeys.length / itemsPerPage)}
+                            className="px-4 py-2 bg-gray-600 text-white font-semibold rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                          >
+                            Next →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-1 gap-4">
+                      {(() => {
+                        // Calculate pagination
+                        const startIndex = (tab3Page - 1) * itemsPerPage;
+                        const endIndex = startIndex + itemsPerPage;
+                        const paginatedKeys = filteredKeys.slice(startIndex, endIndex);
+                        
+                        return paginatedKeys.map((key, paginatedIndex) => {
+                          const index = startIndex + paginatedIndex; // Actual index in full list
                       const isDeleted = key.isDeleted || false;
                       const textPreview = key.values.en || Object.values(key.values)[0] || '';
                       const preview = textPreview.length > 150 
@@ -1535,8 +1595,53 @@ export default function LanguageSettings() {
                           </div>
                         </div>
                       );
-                    })}
-                  </div>
+                        });
+                      })()}
+                    </div>
+                    
+                    {/* Tab 3 Pagination Controls */}
+                    {filteredKeys.length > itemsPerPage && (
+                      <div className="flex items-center justify-between bg-white border border-gray-300 p-4 rounded-lg">
+                        <div className="text-sm text-gray-600">
+                          Showing {((tab3Page - 1) * itemsPerPage) + 1} to {Math.min(tab3Page * itemsPerPage, filteredKeys.length)} of {filteredKeys.length} long texts
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setTab3Page(tab3Page - 1)}
+                            disabled={tab3Page === 1}
+                            className="px-4 py-2 bg-gray-600 text-white font-semibold rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                          >
+                            ← Previous
+                          </button>
+                          
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.ceil(filteredKeys.length / itemsPerPage) }, (_, i) => i + 1).map((page) => (
+                              <button
+                                key={page}
+                                onClick={() => setTab3Page(page)}
+                                className={`w-10 h-10 rounded font-semibold transition ${
+                                  page === tab3Page
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                }`}
+                              >
+                                {page}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          <button
+                            onClick={() => setTab3Page(tab3Page + 1)}
+                            disabled={tab3Page >= Math.ceil(filteredKeys.length / itemsPerPage)}
+                            className="px-4 py-2 bg-gray-600 text-white font-semibold rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-gray-700 transition"
+                          >
+                            Next →
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}

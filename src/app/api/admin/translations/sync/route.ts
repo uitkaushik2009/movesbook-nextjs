@@ -25,27 +25,7 @@ export async function POST(request: NextRequest) {
     const allLanguages = i18n.getLanguages();
     console.log(`   Found ${allLanguages.length} languages in static files`);
 
-    // 2. Create/update languages in database
-    const languageRecords: Record<string, string> = {};
-    
-    for (const lang of allLanguages) {
-      const language = await prisma.language.upsert({
-        where: { code: lang.code },
-        update: {
-          name: LANGUAGE_MAP[lang.code] || lang.name,
-          isActive: true,
-        },
-        create: {
-          code: lang.code,
-          name: LANGUAGE_MAP[lang.code] || lang.name,
-          isDefault: lang.code === 'en',
-          isActive: true,
-        },
-      });
-      languageRecords[lang.code] = language.id;
-    }
-
-    // 3. Get all keys from English (the complete set)
+    // 2. Get all keys from English (the complete set)
     const englishLang = allLanguages.find(l => l.code === 'en');
     if (!englishLang) {
       throw new Error('English language not found in static files');
@@ -85,14 +65,13 @@ export async function POST(request: NextRequest) {
       const descriptionEn = `Translation for: ${key}`;
 
       for (const lang of allLanguages) {
-        const languageId = languageRecords[lang.code];
         const value = lang.strings[key] || '';
 
         const result = await prisma.translation.upsert({
           where: {
-            key_languageId: {
+            key_language: {
               key,
-              languageId,
+              language: lang.code,
             },
           },
           update: {
@@ -101,17 +80,17 @@ export async function POST(request: NextRequest) {
           },
           create: {
             key,
-            languageId,
+            language: lang.code,
             value,
             category,
-            descriptionEn,
+            isDeleted: false,
           },
         });
 
         syncedCount++;
         
-        // Track if it was an update or create based on the lastUpdated timestamp
-        const wasJustCreated = new Date(result.createdAt).getTime() === new Date(result.lastUpdated).getTime();
+        // Track if it was an update or create based on the updatedAt timestamp
+        const wasJustCreated = new Date(result.createdAt).getTime() === new Date(result.updatedAt).getTime();
         if (wasJustCreated) {
           createdCount++;
         } else {

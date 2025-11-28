@@ -6,6 +6,13 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  
+  /* Settings CSS Variables */
+  --grid-size: comfortable;
+  --column-count: 3;
+  --sidebar-left-width: 20%;
+  --sidebar-right-width: 25%;
+  --transition-duration: 200ms;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -24,6 +31,36 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+}
+
+/* High Contrast Mode */
+.high-contrast {
+  --contrast-boost: 1.5;
+}
+
+.high-contrast * {
+  filter: contrast(var(--contrast-boost));
+}
+
+/* No Animations Mode */
+.no-animations *,
+.no-animations *::before,
+.no-animations *::after {
+  animation-duration: 0ms !important;
+  animation-delay: 0ms !important;
+  transition-duration: 0ms !important;
+  transition-delay: 0ms !important;
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @layer utilities {

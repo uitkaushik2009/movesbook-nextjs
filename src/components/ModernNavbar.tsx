@@ -48,6 +48,8 @@ const getFlagFileName = (code: string): string => {
     'hi': 'ind.png',
     'zh': 'chin.png',
     'ar': 'arab.png',
+    'ja': 'jap.png',      // Japanese flag
+    'id': 'id.png',       // Indonesian flag
   };
   return flagMap[code] || 'en.png';
 };

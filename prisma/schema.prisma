@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -40,7 +40,7 @@ model User {
   clubMemberships          ClubMember[]
   groupMemberships         GroupMember[]
 
-  @@map("users")
+  @@map("users_new")
 }
 
 enum UserType {
@@ -52,7 +52,7 @@ enum UserType {
   ADMIN
 }
 
-// Translation System Models
+// Translation System Models - New structure (legacy uses wide table format)
 model Language {
   id           String        @id @default(cuid())
   code         String        @unique // ISO code: 'en', 'es', 'zh', etc.
@@ -62,28 +62,20 @@ model Language {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   
-  translations Translation[]
-  
-  @@map("languages")
+  @@map("languages_new")
 }
 
 model Translation {
-  id            String   @id @default(cuid())
-  key           String   // Unique key like 'auth_login_button'
-  languageId    String
-  value         String   @default("") // The translated text
-  category      String   @default("general") // 'button', 'alert', 'long_text', etc.
-  descriptionEn String   @default("") // Description for translators
-  isDeleted     Boolean  @default(false) // Soft delete - shows variable name in app instead
-  lastUpdated   DateTime @updatedAt
-  createdAt     DateTime @default(now())
-  
-  language      Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
-  
-  @@unique([key, languageId])
-  @@index([key])
-  @@index([languageId])
-  @@index([category])
+  id        String   @id @default(cuid())
+  key       String
+  language  String   @db.VarChar(10)
+  value     String   @db.Text
+  category  String   @default("general") @db.VarChar(50)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([key, language])
   @@map("translations")
 }
 
@@ -446,7 +438,7 @@ model Team {
   admin   User         @relation("TeamOwner", fields: [adminId], references: [id], onDelete: Cascade)
   members TeamMember[]
 
-  @@map("teams")
+  @@map("teams_new")
 }
 
 // Junction table: Athletes in teams
@@ -462,7 +454,7 @@ model TeamMember {
   athlete User @relation(fields: [athleteId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, athleteId])
-  @@map("team_members")
+  @@map("team_members_new")
 }
 
 // Club: A club admin can manage multiple clubs
@@ -478,7 +470,7 @@ model Club {
   admin   User         @relation("ClubOwner", fields: [adminId], references: [id], onDelete: Cascade)
   members ClubMember[]
 
-  @@map("clubs")
+  @@map("clubs_new")
 }
 
 // Junction table: Members in clubs
@@ -494,7 +486,7 @@ model ClubMember {
   member User @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@unique([clubId, memberId])
-  @@map("club_members")
+  @@map("club_members_new")
 }
 
 // Group: A group admin can manage multiple groups
@@ -510,7 +502,7 @@ model Group {
   admin   User          @relation("GroupOwner", fields: [adminId], references: [id], onDelete: Cascade)
   members GroupMember[]
 
-  @@map("groups")
+  @@map("groups_new")
 }
 
 // Junction table: Users in groups

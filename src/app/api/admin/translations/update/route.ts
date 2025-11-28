@@ -47,22 +47,12 @@ export async function POST(request: NextRequest) {
       // Update each language
       for (const [languageCode, value] of Object.entries(translations)) {
         try {
-          // Find the language
-          const language = await prisma.language.findUnique({
-            where: { code: languageCode },
-          });
-
-          if (!language) {
-            console.warn(`Language ${languageCode} not found in database`);
-            continue;
-          }
-
-          // Update the translation
+          // Update the translation directly (no Language model lookup)
           const translation = await prisma.translation.upsert({
             where: {
-              key_languageId: {
+              key_language: {
                 key,
-                languageId: language.id,
+                language: languageCode,
               },
             },
             update: {
@@ -71,10 +61,10 @@ export async function POST(request: NextRequest) {
             },
             create: {
               key,
-              languageId: language.id,
+              language: languageCode,
               value: value as string || '',
               category: translationCategory,
-              descriptionEn: `Translation for ${key}`,
+              isDeleted: false,
             },
           });
 
@@ -103,35 +93,24 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Find the language
-      const language = await prisma.language.findUnique({
-        where: { code: languageCode },
-      });
-
-      if (!language) {
-        return NextResponse.json(
-          { success: false, error: 'Language not found' },
-          { status: 404 }
-        );
-      }
-
-      // Update the translation
+      // Update the translation directly (no Language model)
       const translation = await prisma.translation.upsert({
         where: {
-          key_languageId: {
+          key_language: {
             key,
-            languageId: language.id,
+            language: languageCode,
           },
         },
         update: {
           value: value || '',
+          category: 'general',
         },
         create: {
           key,
-          languageId: language.id,
+          language: languageCode,
           value: value || '',
           category: 'general',
-          descriptionEn: `Translation for ${key}`,
+          isDeleted: false,
         },
       });
 

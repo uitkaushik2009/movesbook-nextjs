@@ -5,19 +5,12 @@ const prisma = new PrismaClient();
 
 export async function GET(request: NextRequest) {
   try {
-    // Fetch all languages
-    const languages = await prisma.language.findMany({
-      where: { isActive: true },
-      orderBy: { code: 'asc' },
-    });
-
-    // Fetch all translations
+    // Fetch all translations (no language relationship in current schema)
     const dbTranslations = await prisma.translation.findMany({
-      include: {
-        language: true,
-      },
       orderBy: { key: 'asc' },
     });
+
+    console.log(`📊 Fetched ${dbTranslations.length} translations from database`);
 
     // Group translations by key
     const translationsMap: Record<string, any> = {};
@@ -27,22 +20,30 @@ export async function GET(request: NextRequest) {
       if (!translationsMap[trans.key]) {
         translationsMap[trans.key] = {
           key: trans.key,
-          category: trans.category,
-          descriptionEn: trans.descriptionEn,
+          category: trans.category || 'general',
           isDeleted: trans.isDeleted || false,
           values: {},
         };
       }
-      translationsMap[trans.key].values[trans.language.code] = trans.value;
+      
+      // Use language string directly (not language.code)
+      translationsMap[trans.key].values[trans.language] = trans.value;
+      
       // Update isDeleted if ANY translation for this key is deleted
       if (trans.isDeleted) {
         translationsMap[trans.key].isDeleted = true;
       }
-      categoriesSet.add(trans.category);
+      
+      // Add category to set
+      if (trans.category) {
+        categoriesSet.add(trans.category);
+      }
     }
 
     const translations = Object.values(translationsMap);
     const categories = Array.from(categoriesSet).sort();
+
+    console.log(`✅ Returning ${translations.length} translation keys in ${categories.length} categories`);
 
     return NextResponse.json({
       success: true,
