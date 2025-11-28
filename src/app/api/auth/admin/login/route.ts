@@ -9,7 +9,9 @@ const FALLBACK_ADMIN = {
   username: process.env.ADMIN_USERNAME || 'admin',
   email: process.env.ADMIN_EMAIL || 'admin@movesbook.com',
   // Bcrypt hashed admin password - for production, set ADMIN_PASSWORD_HASH in environment
-  passwordHash: process.env.ADMIN_PASSWORD_HASH || '$2a$12$XabKUB4Yas3AafvzbTWcWO2/oXZfsNb7VJvvi.LxJJxZlXRnkZNGW'
+  passwordHash:
+    process.env.ADMIN_PASSWORD_HASH ||
+    '$2a$12$XabKUB4Yas3AafvzbTWcWO2/oXZfsNb7VJvvi.LxJJxZlXRnkZNGW',
 };
 
 export async function POST(request: NextRequest) {
@@ -18,7 +20,6 @@ export async function POST(request: NextRequest) {
 
     // Support both email/username separately or combined in identifier field
     const loginIdentifier = identifier || email || username;
-
     // Validate input
     if (!loginIdentifier || !password) {
       return NextResponse.json(
@@ -28,18 +29,22 @@ export async function POST(request: NextRequest) {
     }
 
     // First, check fallback admin credentials (for quick access)
-    if (loginIdentifier === FALLBACK_ADMIN.username || 
-        loginIdentifier === FALLBACK_ADMIN.email) {
-      
+    if (
+      loginIdentifier === FALLBACK_ADMIN.username ||
+      loginIdentifier === FALLBACK_ADMIN.email
+    ) {
       // Verify password against hashed value
-      const isPasswordValid = await verifyPassword(password, FALLBACK_ADMIN.passwordHash);
-      
+      const isPasswordValid = await verifyPassword(
+        password,
+        FALLBACK_ADMIN.passwordHash
+      );
+
       if (isPasswordValid) {
         // Generate admin token
         const token = generateToken(
-          'admin', 
-          FALLBACK_ADMIN.email, 
-          FALLBACK_ADMIN.username, 
+          'admin',
+          FALLBACK_ADMIN.email,
+          FALLBACK_ADMIN.username,
           'ADMIN'
         );
 
@@ -51,8 +56,8 @@ export async function POST(request: NextRequest) {
             name: 'Admin',
             username: FALLBACK_ADMIN.username,
             email: FALLBACK_ADMIN.email,
-            userType: 'ADMIN'
-          }
+            userType: 'ADMIN',
+          },
         });
       }
     }
@@ -60,23 +65,23 @@ export async function POST(request: NextRequest) {
     // First, check if Super Admin exists in super_admins table
     const superAdmin = await prisma.superAdmin.findFirst({
       where: {
-        OR: [
-          { email: loginIdentifier },
-          { username: loginIdentifier }
-        ],
-        isActive: true
-      }
+        OR: [{ email: loginIdentifier }, { username: loginIdentifier }],
+        isActive: true,
+      },
     });
 
     if (superAdmin) {
       // Verify Super Admin password
-      const isPasswordValid = await verifyPassword(password, superAdmin.password);
-      
+      const isPasswordValid = await verifyPassword(
+        password,
+        superAdmin.password
+      );
+
       if (isPasswordValid) {
         // Update last login
         await prisma.superAdmin.update({
           where: { id: superAdmin.id },
-          data: { lastLogin: new Date() }
+          data: { lastLogin: new Date() },
         });
 
         // Generate admin token
@@ -96,8 +101,8 @@ export async function POST(request: NextRequest) {
             username: superAdmin.username,
             email: superAdmin.email,
             userType: 'ADMIN',
-            isSuperAdmin: true
-          }
+            isSuperAdmin: true,
+          },
         });
       }
     }
@@ -105,11 +110,8 @@ export async function POST(request: NextRequest) {
     // Try to find user in NEW database (regular admin users)
     let user = await prisma.user.findFirst({
       where: {
-        OR: [
-          { email: loginIdentifier },
-          { username: loginIdentifier }
-        ],
-        userType: 'ADMIN'
+        OR: [{ email: loginIdentifier }, { username: loginIdentifier }],
+        userType: 'ADMIN',
       },
       select: {
         id: true,
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
         password: true,
         userType: true,
         createdAt: true,
-      }
+      },
     });
 
     // If not found in new table, check LEGACY table
@@ -137,8 +139,10 @@ export async function POST(request: NextRequest) {
 
       if (legacyUser.length > 0) {
         const legacy = legacyUser[0];
-        const name = `${legacy.firstname || ''} ${legacy.lastname || ''}`.trim() || legacy.username;
-        
+        const name =
+          `${legacy.firstname || ''} ${legacy.lastname || ''}`.trim() ||
+          legacy.username;
+
         user = {
           id: `legacy_${legacy.id}`,
           name: name,
@@ -154,7 +158,7 @@ export async function POST(request: NextRequest) {
     if (user) {
       // User found in database - verify password
       const isPasswordValid = await verifyPassword(password, user.password);
-      
+
       if (!isPasswordValid) {
         return NextResponse.json(
           { error: 'Invalid email/username or password' },
@@ -168,9 +172,11 @@ export async function POST(request: NextRequest) {
           const newHashedPassword = await hashPassword(password);
           await prisma.user.update({
             where: { id: user.id },
-            data: { password: newHashedPassword }
+            data: { password: newHashedPassword },
           });
-          console.log(`Upgraded admin password for ${user.email} from SHA1 to bcrypt`);
+          console.log(
+            `Upgraded admin password for ${user.email} from SHA1 to bcrypt`
+          );
         } catch (err) {
           console.error('Password upgrade failed:', err);
           // Continue anyway - password was verified
@@ -191,7 +197,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         token,
-        user: userWithoutPassword
+        user: userWithoutPassword,
       });
     }
 
@@ -200,7 +206,6 @@ export async function POST(request: NextRequest) {
       { error: 'Invalid email/username or password' },
       { status: 401 }
     );
-
   } catch (error: any) {
     console.error('Admin login error:', error);
     console.error('Error stack:', error.stack);

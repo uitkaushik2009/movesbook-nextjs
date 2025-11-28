@@ -9,14 +9,15 @@ let PRIVATE_KEY: string | null = null;
 
 const getPrivateKey = (): string => {
   if (PRIVATE_KEY) return PRIVATE_KEY;
-  
+
   try {
     const privateKeyPath = path.join(process.cwd(), 'private.pem');
     PRIVATE_KEY = fs.readFileSync(privateKeyPath, 'utf8');
     return PRIVATE_KEY;
   } catch (error) {
     console.warn('Private key not found, using fallback secret');
-    PRIVATE_KEY = process.env.JWT_SECRET || 'your-fallback-secret-change-in-production';
+    PRIVATE_KEY =
+      process.env.JWT_SECRET || 'your-fallback-secret-change-in-production';
     return PRIVATE_KEY;
   }
 };
@@ -32,13 +33,16 @@ export const hashPasswordSHA1 = (password: string): string => {
 };
 
 // Verify password - supports both SHA1 (old) and bcrypt (new)
-export const verifyPassword = async (password: string, hashedPassword: string): Promise<boolean> => {
+export const verifyPassword = async (
+  password: string,
+  hashedPassword: string
+): Promise<boolean> => {
   // Check if it's a SHA1 hash (40 characters hex)
   if (hashedPassword.length === 40 && /^[a-f0-9]+$/i.test(hashedPassword)) {
     const sha1Hash = hashPasswordSHA1(password);
     return sha1Hash === hashedPassword;
   }
-  
+
   // Otherwise, verify as bcrypt
   try {
     return await bcrypt.compare(password, hashedPassword);
@@ -48,21 +52,26 @@ export const verifyPassword = async (password: string, hashedPassword: string): 
 };
 
 // Generate JWT token with RSA private key
-export const generateToken = (userId: string, email: string, username: string, userType: string): string => {
-  const payload = { 
-    userId, 
-    email, 
-    username, 
+export const generateToken = (
+  userId: string,
+  email: string,
+  username: string,
+  userType: string
+): string => {
+  const payload = {
+    userId,
+    email,
+    username,
     userType,
-    iat: Math.floor(Date.now() / 1000)
+    iat: Math.floor(Date.now() / 1000),
   };
-  
+
   const key = getPrivateKey();
-  
+
   try {
     return jwt.sign(payload, key, {
       algorithm: 'RS256',
-      expiresIn: '7d'
+      expiresIn: '7d',
     });
   } catch (error) {
     // Fallback to HS256 if RSA fails
@@ -73,10 +82,10 @@ export const generateToken = (userId: string, email: string, username: string, u
 // Verify JWT token
 export const verifyToken = (token: string): any => {
   const key = getPrivateKey();
-  
+
   try {
     return jwt.verify(token, key, {
-      algorithms: ['RS256', 'HS256']
+      algorithms: ['RS256', 'HS256'],
     });
   } catch (error) {
     return null;
@@ -89,5 +98,5 @@ export default {
   hashPasswordSHA1,
   verifyPassword,
   generateToken,
-  verifyToken
+  verifyToken,
 };
