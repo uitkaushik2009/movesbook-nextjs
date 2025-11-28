@@ -38,6 +38,13 @@ interface ColorSettings {
   buttonDeleteHeaderText: string;
   alternateRowMovelap: string;
   alternateRowTextMovelap: string;
+  alternateRowMoveframe: string;
+  alternateRowTextMoveframe: string;
+  selectedRowMovelap: string;
+  selectedRowTextMovelap: string;
+  selectedRowMoveframe: string;
+  selectedRowTextMoveframe: string;
+  buttonPrintHeaderText: string;
 }
 
 const defaultColors: ColorSettings = {
@@ -51,16 +58,16 @@ const defaultColors: ColorSettings = {
   moveframeHeaderText: '#0c4a6e',
   movelapHeader: '#dbeafe',
   movelapHeaderText: '#1e3a8a',
-  microlapBackground: '#f8fafc',
+  microlapBackground: '#f1f5f9',
   microlapText: '#334155',
-  selectedRow: '#3b82f6',
-  selectedRowText: '#ffffff',
+  selectedRow: '#fef08a',
+  selectedRowText: '#ef4444',
   alternateRow: '#f1f5f9',
   alternateRowText: '#1e293b',
   buttonAdd: '#10b981',
   buttonAddHover: '#059669',
   buttonAddText: '#ffffff',
-  buttonAddHeaderText: '#bfbbbb',
+  buttonAddHeaderText: '#ffffff',
   buttonEdit: '#f59e0b',
   buttonEditHover: '#d97706',
   buttonEditText: '#ffffff',
@@ -70,10 +77,17 @@ const defaultColors: ColorSettings = {
   buttonPrint: '#6b7280',
   buttonPrintHover: '#4b5563',
   buttonPrintText: '#ffffff',
-  buttonEditHeaderText: '#bfbbbb',
-  buttonDeleteHeaderText: '#bfbbbb',
-  alternateRowMovelap: '#f1f5f9',
+  buttonEditHeaderText: '#ffffff',
+  buttonDeleteHeaderText: '#ffffff',
+  alternateRowMovelap: '#dbeafe',
   alternateRowTextMovelap: '#1e293b',
+  alternateRowMoveframe: '#fef3c7',
+  alternateRowTextMoveframe: '#ef4444',
+  selectedRowMovelap: '#fef08a',
+  selectedRowTextMovelap: '#ef4444',
+  selectedRowMoveframe: '#fef08a',
+  selectedRowTextMoveframe: '#ef4444',
+  buttonPrintHeaderText: '#bfbbbb',
 };
 
 interface ColorScheme {
