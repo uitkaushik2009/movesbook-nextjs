@@ -88,18 +88,6 @@ export default function LanguageSettings() {
   useEffect(() => {
     let filtered = allKeys;
     
-    // Filter by category for both Tab 2 and Tab 3
-    if (activeTab === 'settings' || activeTab === 'texts') {
-      // For Tab 3 'system' category, include both 'system' and 'general' categories
-      if (activeTab === 'texts' && selectedCategory === 'system') {
-        filtered = filtered.filter(key => 
-          key.category === 'system' || key.category === 'general'
-        );
-      } else {
-        filtered = filtered.filter(key => key.category === selectedCategory);
-      }
-    }
-    
     // Tab 3: Filter for LONG texts only (any translation > 100 characters)
     if (activeTab === 'texts') {
       filtered = filtered.filter((key) => {
@@ -110,7 +98,7 @@ export default function LanguageSettings() {
         return hasLongText;
       });
       
-      // Filter by Tab 3 search query
+      // Filter by Tab 3 search query - searches across ALL categories
       if (tab3SearchQuery.trim() !== '') {
         filtered = filtered.filter((key) => {
           const searchLower = tab3SearchQuery.toLowerCase();
@@ -119,7 +107,22 @@ export default function LanguageSettings() {
                    val && val.toLowerCase().includes(searchLower)
                  );
         });
+      } else {
+        // Only apply category filter when there's NO search query
+        // For Tab 3 'system' category, include both 'system' and 'general' categories
+        if (selectedCategory === 'system') {
+          filtered = filtered.filter(key => 
+            key.category === 'system' || key.category === 'general'
+          );
+        } else {
+          filtered = filtered.filter(key => key.category === selectedCategory);
+        }
       }
+    }
+    
+    // Filter by category for Tab 2 (not affected by Tab 3 search)
+    if (activeTab === 'settings') {
+      filtered = filtered.filter(key => key.category === selectedCategory);
     }
     
     // Filter by Tab 2 search query (applies only to Tab 2)

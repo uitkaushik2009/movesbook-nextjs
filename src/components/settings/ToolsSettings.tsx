@@ -47,7 +47,7 @@ interface Exercise {
 }
 
 export default function ToolsSettings() {
-  const { t } = useLanguage();
+  const { t, currentLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState<'periods' | 'sections' | 'sports' | 'equipment' | 'exercises'>('periods');
   const [periods, setPeriods] = useState<Period[]>([]);
   const [sections, setSections] = useState<WorkoutSection[]>([]);
@@ -67,10 +67,17 @@ export default function ToolsSettings() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   
   // Language-specific defaults state
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage || 'en');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [superAdminPassword, setSuperAdminPassword] = useState('');
   const [showLoadDialog, setShowLoadDialog] = useState(false);
+  
+  // Auto-update selected language when user's language changes
+  useEffect(() => {
+    if (currentLanguage) {
+      setSelectedLanguage(currentLanguage);
+    }
+  }, [currentLanguage]);
   
   const supportedLanguages = [
     { code: 'en', name: 'English' },

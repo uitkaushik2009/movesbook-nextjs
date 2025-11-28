@@ -44,7 +44,7 @@ interface Moveframe {
 }
 
 export default function FavouritesSettings() {
-  const { t } = useLanguage();
+  const { t, currentLanguage } = useLanguage();
   const [activeTab, setActiveTab] = useState<'plans' | 'workouts' | 'moveframes'>('plans');
   
   // Weekly Plans State
@@ -68,10 +68,17 @@ export default function FavouritesSettings() {
   const [sortBy, setSortBy] = useState<'name' | 'lastUsed' | 'popular'>('lastUsed');
   
   // Language-specific defaults state
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage || 'en');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [superAdminPassword, setSuperAdminPassword] = useState('');
   const [showLoadDialog, setShowLoadDialog] = useState(false);
+  
+  // Auto-update selected language when user's language changes
+  useEffect(() => {
+    if (currentLanguage) {
+      setSelectedLanguage(currentLanguage);
+    }
+  }, [currentLanguage]);
   
   const supportedLanguages = [
     { code: 'en', name: 'English' },

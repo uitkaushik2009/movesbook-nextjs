@@ -56,7 +56,6 @@ export async function GET(
         email: true,
         name: true,
         userType: true,
-        isActive: true,
         createdAt: true,
         updatedAt: true
       }
@@ -87,7 +86,7 @@ export async function PUT(
   try {
     const { id } = params;
     const body = await request.json();
-    const { username, email, name, isActive } = body;
+    const { username, email, name } = body;
 
     // Check if admin exists
     const existingAdmin = await prisma.user.findUnique({
@@ -132,8 +131,7 @@ export async function PUT(
       data: {
         ...(username && { username }),
         ...(email && { email }),
-        ...(name !== undefined && { name }),
-        ...(isActive !== undefined && { isActive })
+        ...(name !== undefined && { name })
       },
       select: {
         id: true,
@@ -141,7 +139,6 @@ export async function PUT(
         email: true,
         name: true,
         userType: true,
-        isActive: true,
         updatedAt: true
       }
     });

@@ -121,11 +121,19 @@ export default function BackgroundsColorsSettings() {
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
   // Language-specific defaults state
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const { currentLanguage } = useLanguage();
+  const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage || 'en');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
   const [superAdminPassword, setSuperAdminPassword] = useState('');
   const [passwordAction, setPasswordAction] = useState<'save' | 'load'>('save');
   const [showLoadDialog, setShowLoadDialog] = useState(false);
+  
+  // Auto-update selected language when user's language changes
+  useEffect(() => {
+    if (currentLanguage) {
+      setSelectedLanguage(currentLanguage);
+    }
+  }, [currentLanguage]);
   
   const supportedLanguages = [
     { code: 'en', name: 'English' },
@@ -464,93 +472,60 @@ export default function BackgroundsColorsSettings() {
   return (
     <div className="space-y-6">
       {/* Header with Actions */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900">Backgrounds & Colors</h2>
-          <p className="text-gray-600 mt-1">Customize your workout interface colors and appearance</p>
+      <div>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900">Backgrounds & Colors</h2>
+            <p className="text-gray-600 mt-1">Customize your workout interface colors and appearance</p>
 
-          {/* Save Status Indicator */}
-          {saveStatus !== 'idle' && (
-            <div className="flex items-center gap-2 mt-2">
-              {saveStatus === 'saving' && (
-                <>
-                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-sm text-blue-600 font-medium">Saving colors to database...</span>
-                </>
-              )}
-              {saveStatus === 'saved' && (
-                <>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span className="text-sm text-green-600 font-medium">✓ Colors saved to database!</span>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Language-Specific Defaults - Compact Single Line */}
-        <div className="mt-6 flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-          <div className="flex items-center gap-3">
-            <Globe className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Language Defaults:</span>
-            <select
-              value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {supportedLanguages.map(lang => (
-                <option key={lang.code} value={lang.code}>{lang.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={loadLanguageDefaults}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-              title="Load language-specific default colors (merges with current)"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Load
-            </button>
-            <button
-              onClick={saveLanguageDefaults}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition"
-              title="Save current colors as defaults for this language (requires password)"
-            >
-              <Save className="w-3.5 h-3.5" />
-              Save
-            </button>
+            {/* Save Status Indicator */}
+            {saveStatus !== 'idle' && (
+              <div className="flex items-center gap-2 mt-2">
+                {saveStatus === 'saving' && (
+                  <>
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm text-blue-600 font-medium">Saving colors to database...</span>
+                  </>
+                )}
+                {saveStatus === 'saved' && (
+                  <>
+                    <CheckCircle className="w-4 h-4 text-green-600" />
+                    <span className="text-sm text-green-600 font-medium">✓ Colors saved to database!</span>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <button
-            onClick={() => setShowSaveDialog(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+        {/* Language Defaults - Single Line */}
+        <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <Globe className="w-4 h-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">Language Defaults:</span>
+          <select
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            className="px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <Save className="w-4 h-4" />
-            Save Scheme
+            {supportedLanguages.map(lang => (
+              <option key={lang.code} value={lang.code}>{lang.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={loadLanguageDefaults}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+            title="Load language-specific default colors (merges with current)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Load
           </button>
           <button
-            onClick={exportSettings}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+            onClick={saveLanguageDefaults}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition"
+            title="Save current colors as defaults for this language (requires password)"
           >
-            <Download className="w-4 h-4" />
-            Export
-          </button>
-          <button
-            onClick={importSettings}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-          >
-            <Upload className="w-4 h-4" />
-            Import
-          </button>
-          <button
-            onClick={resetToDefaults}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Reset
+            <Save className="w-3.5 h-3.5" />
+            Save Defaults
           </button>
         </div>
       </div>
@@ -693,10 +668,42 @@ export default function BackgroundsColorsSettings() {
         </div>
       )}
 
-      {/* Saved Schemes */}
-      {savedSchemes.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
-          <h3 className="text-xl font-semibold mb-4">Saved Color Schemes</h3>
+      {/* Saved Color Schemes Section */}
+      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-semibold">Saved Color Schemes</h3>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowSaveDialog(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              <Save className="w-4 h-4" />
+              Save Scheme
+            </button>
+            <button
+              onClick={exportSettings}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+            >
+              <Download className="w-4 h-4" />
+              Export
+            </button>
+            <button
+              onClick={importSettings}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            >
+              <Upload className="w-4 h-4" />
+              Import
+            </button>
+            <button
+              onClick={resetToDefaults}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Reset
+            </button>
+          </div>
+        </div>
+        {savedSchemes.length > 0 ? (
           <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-3">
             {savedSchemes.map((scheme, index) => (
               <div key={index} className="w-32 h-32 p-3 bg-white rounded-lg border border-gray-300 shadow-sm flex flex-col">
@@ -723,8 +730,10 @@ export default function BackgroundsColorsSettings() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-gray-500 text-center py-8">No saved color schemes yet. Click "Save Scheme" to save your current colors.</p>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Panel - Color Settings */}
@@ -1033,19 +1042,8 @@ export default function BackgroundsColorsSettings() {
                 </div>
               </div>
 
-              {/* Movelap Header */}
-              <div
-                className="p-3 rounded-lg font-semibold"
-                style={{
-                  backgroundColor: colors.movelapHeader,
-                  color: colors.movelapHeaderText
-                }}
-              >
-                Movelaps (Laps)
-              </div>
-
               {/* Lap Rows with Alternating Colors */}
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {[1, 2, 3, 4].map((row) => (
                   <div
                     key={row}

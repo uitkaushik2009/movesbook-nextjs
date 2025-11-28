@@ -80,8 +80,7 @@ export async function POST(request: NextRequest) {
         email,
         password: hashedPassword,
         name: name || null,
-        userType: 'ADMIN',
-        isActive: true
+        userType: 'ADMIN'
       },
       select: {
         id: true,
