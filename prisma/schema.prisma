@@ -300,7 +300,7 @@ model UserSettings {
   userId        String @unique
   
   // Color & Background Settings
-  colorSettings String // Store as JSON string for SQLite
+  colorSettings String @db.Text // Store as JSON string, use TEXT for larger data
   
   // Display Settings
   gridSize      String @default("comfortable") // "compact", "comfortable", "spacious"
