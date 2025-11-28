@@ -39,6 +39,9 @@ model User {
   teamMemberships          TeamMember[]
   clubMemberships          ClubMember[]
   groupMemberships         GroupMember[]
+  
+  // Action Planners
+  actionPlanners          ActionPlanner[]
 
   @@map("users_new")
 }
@@ -577,4 +580,32 @@ model FavouritesDefaults {
   updatedAt DateTime @updatedAt
 
   @@map("favourites_defaults")
+}
+
+enum ActionPlannerCreateFrom {
+  SCRATCH
+  IMPORTED
+}
+
+model ActionPlanner {
+  id          String          @id @default(cuid())
+  userId      String
+  username    String        @unique
+  name        String
+  surname     String
+  fullName    String
+  dateOfBirth DateTime
+  email       String        @unique
+  imageUrl    String?
+  category    String?
+  annotation  String?
+  startDate   DateTime
+  createFrom  ActionPlannerCreateFrom
+  origin      String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("action_planners")
 }

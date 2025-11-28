@@ -12,6 +12,7 @@ import {
   AddUserFromDBDialog,
   User,
 } from '@/components/actions/AddUserFromDBDialog';
+import { ActionPlannerCreateFrom } from '@/types';
 
 interface ActionPlannerTableData extends Record<string, unknown> {
   id: string;
@@ -20,7 +21,7 @@ interface ActionPlannerTableData extends Record<string, unknown> {
   imageUrl: string;
   category: string;
   startDate: string;
-  createFrom: 'scratch' | 'movesbook';
+  createFrom: ActionPlannerCreateFrom;
   origin: string;
 }
 
@@ -37,7 +38,7 @@ interface ActionPlanner {
   annotation: string;
   startDate: string;
   email: string;
-  createFrom: 'scratch' | 'movesbook';
+  createFrom: ActionPlannerCreateFrom;
   origin: string;
 }
 
