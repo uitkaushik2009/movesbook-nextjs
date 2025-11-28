@@ -17,34 +17,34 @@ import SettingsSection from './components/SettingsSection';
 import DisplayOptionsToolbar from './components/DisplayOptionsToolbar';
 import PersonalBanner from './components/PersonalBanner';
 import RightSidebar from './components/RightSidebar';
+import ActionPlannersSection from './components/ActionPlannersSection';
 
 export default function MyPage() {
-  const [activeSection, setActiveSection] = useState<'workouts' | 'progress' | 'settings'>('workouts');
+  const [activeSection, setActiveSection] = useState<
+    'workouts' | 'progress' | 'settings' | 'actionPlanners'
+  >('actionPlanners');
   const [showAdBanner, setShowAdBanner] = useState(true);
   const [showPersonalBanner, setShowPersonalBanner] = useState(true);
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
   const [showToolbar, setShowToolbar] = useState(true);
-  const [activeTab, setActiveTab] = useState<'my-page' | 'my-entity'>('my-page');
+  const [activeTab, setActiveTab] = useState<'my-page' | 'my-entity'>(
+    'my-page'
+  );
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
 
   const { user, loading } = useAuth();
   const router = useRouter();
 
   // All hooks must be called before any conditional returns
-  const {
-    clubs,
-    groups,
-    teams,
-    coachingGroups
-  } = useMyPageData(user);
+  const { clubs, groups, teams, coachingGroups } = useMyPageData(user);
 
   const {
     selectedClub,
     handleClubSelect,
     handleGroupSelect,
     handleTeamSelect,
-    handleCoachingGroupSelect
+    handleCoachingGroupSelect,
   } = useMyPageHandlers();
 
   // Redirect to home if not authenticated
@@ -87,9 +87,7 @@ export default function MyPage() {
         )}
 
         {/* Personal Banner - Horizontal Navigation Bar */}
-        {showPersonalBanner ? (
-          <PersonalBanner user={user} />
-        ) : null}
+        {showPersonalBanner ? <PersonalBanner user={user} /> : null}
 
         {/* Main Content Area - Fills remaining space */}
         <div className="flex-1 flex gap-0">
@@ -99,16 +97,26 @@ export default function MyPage() {
               <DarkSidebar
                 userType={user?.userType || ''}
                 entities={
-                  user?.userType === 'CLUB_TRAINER' ? clubs :
-                  user?.userType === 'TEAM_MANAGER' ? teams :
-                  user?.userType === 'GROUP_ADMIN' ? groups :
-                  user?.userType === 'COACH' ? coachingGroups : []
+                  user?.userType === 'CLUB_TRAINER'
+                    ? clubs
+                    : user?.userType === 'TEAM_MANAGER'
+                    ? teams
+                    : user?.userType === 'GROUP_ADMIN'
+                    ? groups
+                    : user?.userType === 'COACH'
+                    ? coachingGroups
+                    : []
                 }
                 selectedEntityId={
-                  user?.userType === 'CLUB_TRAINER' ? selectedClub :
-                  user?.userType === 'TEAM_MANAGER' ? null :
-                  user?.userType === 'GROUP_ADMIN' ? null :
-                  user?.userType === 'COACH' ? null : null
+                  user?.userType === 'CLUB_TRAINER'
+                    ? selectedClub
+                    : user?.userType === 'TEAM_MANAGER'
+                    ? null
+                    : user?.userType === 'GROUP_ADMIN'
+                    ? null
+                    : user?.userType === 'COACH'
+                    ? null
+                    : null
                 }
                 onEntitySelect={(id) => {
                   if (user?.userType === 'CLUB_TRAINER') {
@@ -159,6 +167,7 @@ export default function MyPage() {
             {activeSection === 'workouts' && <WorkoutsSection />}
             {activeSection === 'progress' && <ProgressSection />}
             {activeSection === 'settings' && <SettingsSection />}
+            {activeSection === 'actionPlanners' && <ActionPlannersSection />}
           </div>
 
           {/* Right Sidebar */}
