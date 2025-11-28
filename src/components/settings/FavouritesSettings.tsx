@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Star, Plus, Edit2, Trash2, Calendar, Dumbbell, Target, Clock, Search, Filter, Copy, Eye } from 'lucide-react';
+import { Star, Plus, Edit2, Trash2, Calendar, Dumbbell, Target, Clock, Search, Filter, Copy, Eye, Download, Globe, Save } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import Image from 'next/image';
 
 interface WeeklyPlan {
   id: string;
@@ -23,6 +24,7 @@ interface Workout {
   intensity: 'Low' | 'Medium' | 'High';
   moveframesCount: number;
   sport: string;
+  sportIcon?: string; // Icon path from public/icons
   lastUsed: string;
   tags: string[];
 }
@@ -64,6 +66,27 @@ export default function FavouritesSettings() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTag, setFilterTag] = useState('all');
   const [sortBy, setSortBy] = useState<'name' | 'lastUsed' | 'popular'>('lastUsed');
+  
+  // Language-specific defaults state
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [superAdminPassword, setSuperAdminPassword] = useState('');
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
+  
+  const supportedLanguages = [
+    { code: 'en', name: 'English' },
+    { code: 'fr', name: 'Français' },
+    { code: 'it', name: 'Italiano' },
+    { code: 'de', name: 'Deutsch' },
+    { code: 'es', name: 'Español' },
+    { code: 'pt', name: 'Português' },
+    { code: 'ru', name: 'Русский' },
+    { code: 'hi', name: 'हिन्दी' },
+    { code: 'ja', name: '日本語' },
+    { code: 'id', name: 'Indonesia' },
+    { code: 'zh', name: '中文' },
+    { code: 'ar', name: 'العربية' },
+  ];
 
   // Load data from localStorage
   useEffect(() => {
@@ -197,6 +220,88 @@ export default function FavouritesSettings() {
     }
   }, [moveframes]);
 
+  // Language-specific defaults handlers
+  const saveLanguageDefaults = async () => {
+    setShowPasswordDialog(true);
+  };
+
+  const loadLanguageDefaults = async () => {
+    setShowLoadDialog(true);
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!superAdminPassword.trim()) {
+      alert('❌ Please enter Super Admin password');
+      return;
+    }
+
+    try {
+      const favouritesData = {
+        weeklyPlans,
+        workouts,
+        moveframes
+      };
+
+      const response = await fetch('/api/admin/favourites-defaults/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: selectedLanguage,
+          favouritesData,
+          password: superAdminPassword
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert(`✅ Default favourites saved for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}!`);
+        setShowPasswordDialog(false);
+        setSuperAdminPassword('');
+      } else {
+        alert(`❌ ${data.error || 'Failed to save defaults'}`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('❌ Error saving defaults');
+    }
+  };
+
+  const handleLoadConfirm = async () => {
+    try {
+      const response = await fetch(`/api/admin/favourites-defaults/load?language=${selectedLanguage}`);
+      const data = await response.json();
+
+      if (response.ok && data.favouritesData) {
+        // Merge loaded settings with current settings
+        if (data.favouritesData.weeklyPlans) {
+          setWeeklyPlans(prev => [...prev, ...data.favouritesData.weeklyPlans.filter((p: WeeklyPlan) => 
+            !prev.some(existing => existing.id === p.id)
+          )]);
+        }
+        if (data.favouritesData.workouts) {
+          setWorkouts(prev => [...prev, ...data.favouritesData.workouts.filter((w: Workout) => 
+            !prev.some(existing => existing.id === w.id)
+          )]);
+        }
+        if (data.favouritesData.moveframes) {
+          setMoveframes(prev => [...prev, ...data.favouritesData.moveframes.filter((m: Moveframe) => 
+            !prev.some(existing => existing.id === m.id)
+          )]);
+        }
+        
+        alert(`✅ Default favourites for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name} loaded!\n\nNote: Your existing items have been preserved.`);
+        setShowLoadDialog(false);
+      } else {
+        alert(`ℹ️ No default favourites found for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}.`);
+        setShowLoadDialog(false);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('❌ Error loading defaults');
+    }
+  };
+
   // Helper functions
   const getAllTags = () => {
     if (activeTab === 'plans') {
@@ -263,6 +368,41 @@ export default function FavouritesSettings() {
           <Target className="w-4 h-4 inline mr-2" />
           Moveframes ({moveframes.length})
         </button>
+      </div>
+
+      {/* Language-Specific Defaults - Compact Single Line */}
+      <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+        <div className="flex items-center gap-3">
+          <Globe className="w-4 h-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">Language Defaults:</span>
+          <select
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {supportedLanguages.map(lang => (
+              <option key={lang.code} value={lang.code}>{lang.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadLanguageDefaults}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+            title="Load language-specific default favourites (merges with current)"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Load
+          </button>
+          <button
+            onClick={saveLanguageDefaults}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition"
+            title="Save current favourites as defaults for this language (requires password)"
+          >
+            <Save className="w-3.5 h-3.5" />
+            Save
+          </button>
+        </div>
       </div>
 
       {/* Action Bar */}
@@ -1035,6 +1175,81 @@ export default function FavouritesSettings() {
                   setEditingMoveframe(null);
                 }}
                 className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Password Dialog */}
+      {showPasswordDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 className="text-xl font-semibold mb-4">🔐 Super Admin Authentication</h3>
+            <p className="text-gray-600 mb-4">
+              You are about to save default favourites for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>.
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              These favourites will be automatically loaded when users select this language for the first time.
+            </p>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Super Admin Password:
+              </label>
+              <input
+                type="password"
+                value={superAdminPassword}
+                onChange={(e) => setSuperAdminPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+                placeholder="Enter password"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handlePasswordSubmit}
+                className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-semibold"
+              >
+                Save Defaults
+              </button>
+              <button
+                onClick={() => {
+                  setShowPasswordDialog(false);
+                  setSuperAdminPassword('');
+                }}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Load Language Defaults Dialog */}
+      {showLoadDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 className="text-xl font-semibold mb-4">📥 Load Language Defaults</h3>
+            <p className="text-gray-600 mb-4">
+              Load default favourites for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>?
+            </p>
+            <p className="text-sm text-yellow-700 bg-yellow-50 p-3 rounded-lg mb-4">
+              ⚠️ <strong>Note:</strong> This will add default favourite items for this language. Your existing items will be preserved.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleLoadConfirm}
+                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
+              >
+                Load Defaults
+              </button>
+              <button
+                onClick={() => setShowLoadDialog(false)}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
               >
                 Cancel
               </button>

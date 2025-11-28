@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { SportType, WorkoutStatus } from '@/types';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 interface WorkoutGridProps {
   workoutPlan: any;
@@ -58,6 +59,7 @@ export default function WorkoutGrid({
   onMoveframeReorder
 }: WorkoutGridProps) {
   const { t } = useLanguage();
+  const { settings } = useUserSettings();
   const [dragOverWorkout, setDragOverWorkout] = useState<string | null>(null);
   const [draggedWorkoutData, setDraggedWorkoutData] = useState<any>(null);
   const [draggedMoveframeData, setDraggedMoveframeData] = useState<any>(null);
@@ -410,7 +412,7 @@ export default function WorkoutGrid({
                                           <tr 
                                             key={moveframe.id}
                                             draggable
-                                            className={`border-b hover:bg-gray-50 cursor-move ${
+                                            className={`border-b hover:opacity-90 cursor-move ${
                                               draggedMoveframeData?.id === moveframe.id 
                                                 ? 'opacity-50' 
                                                 : ''
@@ -419,6 +421,14 @@ export default function WorkoutGrid({
                                                 ? 'border-t-4 border-t-purple-500' 
                                                 : ''
                                             }`}
+                                            style={{
+                                              backgroundColor: mfIndex % 2 === 1 
+                                                ? settings?.colorSettings?.alternateRowMoveframe || '#fef3c7'
+                                                : 'white',
+                                              color: mfIndex % 2 === 1
+                                                ? settings?.colorSettings?.alternateRowTextMoveframe || '#ef4444'
+                                                : 'inherit'
+                                            }}
                                             onClick={(e) => {
                                               if (!draggedMoveframeData) {
                                                 e.stopPropagation();
@@ -520,10 +530,18 @@ export default function WorkoutGrid({
                                                       </tr>
                                                     </thead>
                                                     <tbody>
-                                                      {moveframe.movelaps.map((lap: any) => (
+                                                      {moveframe.movelaps.map((lap: any, lapIndex: number) => (
                                                         <tr 
                                                           key={lap.id}
                                                           className={`border-b ${lap.isDisabled ? 'opacity-50 line-through' : ''}`}
+                                                          style={{
+                                                            backgroundColor: lapIndex % 2 === 1
+                                                              ? settings?.colorSettings?.alternateRowMovelap || '#dbeafe'
+                                                              : 'white',
+                                                            color: lapIndex % 2 === 1
+                                                              ? settings?.colorSettings?.alternateRowTextMovelap || '#1e293b'
+                                                              : 'inherit'
+                                                          }}
                                                         >
                                                           <td className="px-2 py-1">{lap.repetitionNumber}</td>
                                                           <td className="px-2 py-1">{lap.distance}m</td>

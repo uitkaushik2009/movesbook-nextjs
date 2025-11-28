@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Palette, Eye, RefreshCw, Download, Upload, Save, AlertCircle, ChevronDown, ChevronUp, CheckCircle } from 'lucide-react';
+import { Palette, Eye, RefreshCw, Download, Upload, Save, AlertCircle, ChevronDown, ChevronUp, CheckCircle, Globe } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -24,7 +24,7 @@ interface ColorSettings {
   alternateRow: string;
   alternateRowText: string;
   alternateRowMovelap: string;
-  alternateRowTextMovelap: string;  
+  alternateRowTextMovelap: string;
   buttonAdd: string;
   buttonAddHover: string;
   buttonAddText: string;
@@ -47,6 +47,8 @@ interface ColorSettings {
   selectedRowTextMoveframe: string;
   alternateRowMoveframe: string;
   alternateRowTextMoveframe: string;
+  alternateRowmoveframe: string;
+  alternateRowTextmoveframe: string;
 }
 
 const defaultColors: ColorSettings = {
@@ -55,11 +57,11 @@ const defaultColors: ColorSettings = {
   dayHeader: '#5168c2',
   dayHeaderText: '#e6e6ad',
   workoutHeader: '#c6f8e2',
-  workoutHeaderText: '#0c4a6e',
+  workoutHeaderText: '#2386d1',
   moveframeHeader: '#f7f2bb',
   moveframeHeaderText: '#f61909',
-  movelapHeader: '#f7f2bb',
-  movelapHeaderText: '#f61909',
+  movelapHeader: '#f7f7f7',
+  movelapHeaderText: '#f50a2d',
   microlapBackground: '#f1f5f9',
   microlapText: '#334155',
   selectedRow: '#fef08a',
@@ -90,6 +92,8 @@ const defaultColors: ColorSettings = {
   alternateRowTextMoveframe: '#ef4444',
   selectedRowMoveframe: '#fef08a',
   selectedRowTextMoveframe: '#ef4444',
+  alternateRowmoveframe: '#dbeafe',
+  alternateRowTextmoveframe: '#1e293b',
 };
 
 interface ColorScheme {
@@ -101,7 +105,7 @@ export default function BackgroundsColorsSettings() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { settings: dbSettings, updateSetting: updateDbSetting, loading } = useUserSettings(user?.id);
-  
+
   const [colors, setColors] = useState<ColorSettings>(defaultColors);
   const [savedSchemes, setSavedSchemes] = useState<ColorScheme[]>([]);
   const [schemeName, setSchemeName] = useState('');
@@ -115,14 +119,36 @@ export default function BackgroundsColorsSettings() {
     rows: false,
   });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  
+  // Language-specific defaults state
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [superAdminPassword, setSuperAdminPassword] = useState('');
+  const [passwordAction, setPasswordAction] = useState<'save' | 'load'>('save');
+  const [showLoadDialog, setShowLoadDialog] = useState(false);
+  
+  const supportedLanguages = [
+    { code: 'en', name: 'English' },
+    { code: 'fr', name: 'Français' },
+    { code: 'it', name: 'Italiano' },
+    { code: 'de', name: 'Deutsch' },
+    { code: 'es', name: 'Español' },
+    { code: 'pt', name: 'Português' },
+    { code: 'ru', name: 'Русский' },
+    { code: 'hi', name: 'हिन्दी' },
+    { code: 'ja', name: '日本語' },
+    { code: 'id', name: 'Indonesia' },
+    { code: 'zh', name: '中文' },
+    { code: 'ar', name: 'العربية' },
+  ];
 
   // Load color settings from database
   useEffect(() => {
     if (dbSettings && !loading && dbSettings.colorSettings) {
-      const loadedColors = typeof dbSettings.colorSettings === 'string' 
+      const loadedColors = typeof dbSettings.colorSettings === 'string'
         ? JSON.parse(dbSettings.colorSettings)
         : dbSettings.colorSettings;
-      
+
       if (loadedColors && Object.keys(loadedColors).length > 0) {
         setColors({ ...defaultColors, ...loadedColors });
       }
@@ -144,7 +170,7 @@ export default function BackgroundsColorsSettings() {
   const handleColorChange = async (key: keyof ColorSettings, value: string | number) => {
     const newColors = { ...colors, [key]: value };
     setColors(newColors);
-    
+
     // Save to database
     try {
       setSaveStatus('saving');
@@ -161,7 +187,7 @@ export default function BackgroundsColorsSettings() {
   const resetToDefaults = async () => {
     if (confirm('Reset all colors to defaults?')) {
       setColors(defaultColors);
-      
+
       // Save to database
       try {
         setSaveStatus('saving');
@@ -172,6 +198,75 @@ export default function BackgroundsColorsSettings() {
         console.error('Error resetting colors:', error);
         localStorage.setItem('colorSettings', JSON.stringify(defaultColors));
       }
+    }
+  };
+
+  // Save language-specific defaults
+  const saveLanguageDefaults = async () => {
+    setPasswordAction('save');
+    setShowPasswordDialog(true);
+  };
+
+  // Load language-specific defaults
+  const loadLanguageDefaults = async () => {
+    setShowLoadDialog(true);
+  };
+
+  // Handle password submission
+  const handlePasswordSubmit = async () => {
+    if (!superAdminPassword.trim()) {
+      alert('❌ Please enter Super Admin password');
+      return;
+    }
+
+    try {
+      // Save current settings as defaults for selected language
+      const response = await fetch('/api/admin/color-defaults/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          language: selectedLanguage,
+          colors: colors,
+          password: superAdminPassword
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert(`✅ Default settings saved for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}!`);
+        setShowPasswordDialog(false);
+        setSuperAdminPassword('');
+      } else {
+        alert(`❌ ${data.error || 'Failed to save defaults'}`);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('❌ Error saving defaults');
+    }
+  };
+
+  // Handle load confirmation
+  const handleLoadConfirm = async () => {
+    try {
+      const response = await fetch(`/api/admin/color-defaults/load?language=${selectedLanguage}`);
+      const data = await response.json();
+
+      if (response.ok && data.colors) {
+        // Merge loaded settings with current settings
+        setColors(prevColors => ({
+          ...prevColors,
+          ...data.colors
+        }));
+        alert(`✅ Default settings for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name} loaded!\n\nNote: Your existing customizations have been preserved.`);
+        setShowLoadDialog(false);
+      } else {
+        alert(`ℹ️ No default settings found for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}.\n\nUsing application defaults.`);
+        setShowLoadDialog(false);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('❌ Error loading defaults');
     }
   };
 
@@ -298,7 +393,7 @@ export default function BackgroundsColorsSettings() {
           )}
         </div>
         <div className="flex items-center space-x-3">
-          <div 
+          <div
             className="w-10 h-10 rounded-lg border-2 border-gray-300 cursor-pointer shadow-sm hover:shadow-md transition"
             style={{ backgroundColor: value }}
             onClick={() => {
@@ -373,7 +468,7 @@ export default function BackgroundsColorsSettings() {
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Backgrounds & Colors</h2>
           <p className="text-gray-600 mt-1">Customize your workout interface colors and appearance</p>
-          
+
           {/* Save Status Indicator */}
           {saveStatus !== 'idle' && (
             <div className="flex items-center gap-2 mt-2">
@@ -392,6 +487,42 @@ export default function BackgroundsColorsSettings() {
             </div>
           )}
         </div>
+
+        {/* Language-Specific Defaults - Compact Single Line */}
+        <div className="mt-6 flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="flex items-center gap-3">
+            <Globe className="w-4 h-4 text-gray-500" />
+            <span className="text-sm font-medium text-gray-700">Language Defaults:</span>
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {supportedLanguages.map(lang => (
+                <option key={lang.code} value={lang.code}>{lang.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={loadLanguageDefaults}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+              title="Load language-specific default colors (merges with current)"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Load
+            </button>
+            <button
+              onClick={saveLanguageDefaults}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition"
+              title="Save current colors as defaults for this language (requires password)"
+            >
+              <Save className="w-3.5 h-3.5" />
+              Save
+            </button>
+          </div>
+        </div>
+
         <div className="flex gap-3">
           <button
             onClick={() => setShowSaveDialog(true)}
@@ -478,6 +609,81 @@ export default function BackgroundsColorsSettings() {
               </button>
               <button
                 onClick={() => setShowExportDialog(false)}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Password Dialog */}
+      {showPasswordDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 className="text-xl font-semibold mb-4">🔐 Super Admin Authentication</h3>
+            <p className="text-gray-600 mb-4">
+              You are about to save default color settings for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>.
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              These settings will be automatically loaded when users select this language for the first time.
+            </p>
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Super Admin Password:
+              </label>
+              <input
+                type="password"
+                value={superAdminPassword}
+                onChange={(e) => setSuperAdminPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+                placeholder="Enter password"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                autoFocus
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handlePasswordSubmit}
+                className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-semibold"
+              >
+                Save Defaults
+              </button>
+              <button
+                onClick={() => {
+                  setShowPasswordDialog(false);
+                  setSuperAdminPassword('');
+                }}
+                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Load Language Defaults Dialog */}
+      {showLoadDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 className="text-xl font-semibold mb-4">📥 Load Language Defaults</h3>
+            <p className="text-gray-600 mb-4">
+              Load default color settings for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>?
+            </p>
+            <p className="text-sm text-yellow-700 bg-yellow-50 p-3 rounded-lg mb-4">
+              ⚠️ <strong>Note:</strong> This will merge the default settings with your current customizations. Your existing settings will be preserved unless overridden by the defaults.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleLoadConfirm}
+                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
+              >
+                Load Defaults
+              </button>
+              <button
+                onClick={() => setShowLoadDialog(false)}
                 className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
               >
                 Cancel
@@ -609,16 +815,16 @@ export default function BackgroundsColorsSettings() {
                 value={colors.buttonAdd}
                 onChange={(v) => handleColorChange('buttonAdd', v)}
               />
-                <ColorPicker
-                  label="Add Button Hover"
-                  value={colors.buttonAddHover}
-                  onChange={(v) => handleColorChange('buttonAddHover', v)}
-                />
-                  <ColorPicker
-                  label="Add Button Header Text"
-                  value={colors.buttonAddHeaderText}
-                  onChange={(v) => handleColorChange('buttonAddHeaderText', v)}
-                />
+              <ColorPicker
+                label="Add Button Hover"
+                value={colors.buttonAddHover}
+                onChange={(v) => handleColorChange('buttonAddHover', v)}
+              />
+              <ColorPicker
+                label="Add Button Header Text"
+                value={colors.buttonAddHeaderText}
+                onChange={(v) => handleColorChange('buttonAddHeaderText', v)}
+              />
             </div>
 
             {/* Edit Button */}
@@ -687,13 +893,13 @@ export default function BackgroundsColorsSettings() {
           >
             <ColorPicker
               label="Alternate Row Background of the Moveframes"
-              value={colors.alternateRow}
-              onChange={(v) => handleColorChange('alternateRow', v)}
+              value={colors.alternateRowMoveframe}
+              onChange={(v) => handleColorChange('alternateRowMoveframe', v)}
             />
             <ColorPicker
               label="Alternate Row Text of the Moveframes"
-              value={colors.alternateRowText}
-              onChange={(v) => handleColorChange('alternateRowText', v)}
+              value={colors.alternateRowTextMoveframe}
+              onChange={(v) => handleColorChange('alternateRowTextMoveframe', v)}
             />
             <ColorPicker
               label="Alternate Row Background of the Movelaps"
@@ -727,18 +933,18 @@ export default function BackgroundsColorsSettings() {
               <Eye className="w-5 h-5 mr-2" />
               Live Preview
             </h3>
-            
-            <div 
+
+            <div
               className="rounded-xl border-2 border-dashed border-gray-300 p-6 space-y-4"
-              style={{ 
+              style={{
                 backgroundColor: colors.pageBackground,
                 opacity: colors.pageBackgroundOpacity / 100
               }}
             >
               {/* Day Header */}
-              <div 
+              <div
                 className="p-4 rounded-lg font-bold text-lg"
-                style={{ 
+                style={{
                   backgroundColor: colors.dayHeader,
                   color: colors.dayHeaderText
                 }}
@@ -746,51 +952,55 @@ export default function BackgroundsColorsSettings() {
                 Monday - Week 1
               </div>
 
-              {/* Moveframe Header with Buttons */}
-              <div 
+              {/* Workout Header with Buttons */}
+              <div
                 className="p-4 rounded-lg"
-                style={{ 
+                style={{
                   backgroundColor: colors.workoutHeader,
                   color: colors.workoutHeaderText
                 }}
               >
                 <div className="flex justify-between items-center mb-3">
-                  <span className="font-semibold">Moveframe A - Swimming</span>
+                  <span className="font-semibold">Workout 1 of Monday</span>
                   <div className="flex gap-2">
-                    <button 
-                      className="px-4 py-2 rounded-lg text-white font-semibold text-sm transition"
-                      style={{ 
-                        backgroundColor: hoveredButton === 'add' ? colors.buttonAddHover : colors.buttonAdd
+                    <button
+                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition"
+                      style={{
+                        backgroundColor: hoveredButton === 'add' ? colors.buttonAddHover : colors.buttonAdd,
+                        color: colors.buttonAddHeaderText
                       }}
                       onMouseEnter={() => setHoveredButton('add')}
                       onMouseLeave={() => setHoveredButton(null)}
                     >
                       Add
                     </button>
-                    <button 
-                      className="px-4 py-2 rounded-lg text-white font-semibold text-sm transition"
-                      style={{ 
-                        backgroundColor: hoveredButton === 'edit' ? colors.buttonEditHover : colors.buttonEdit
+                    <button
+                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition"
+                      style={{
+                        backgroundColor: hoveredButton === 'edit' ? colors.buttonEditHover : colors.buttonEdit,
+                        color: colors.buttonEditHeaderText
                       }}
                       onMouseEnter={() => setHoveredButton('edit')}
                       onMouseLeave={() => setHoveredButton(null)}
                     >
                       Edit
                     </button>
-                    <button 
-                      className="px-4 py-2 rounded-lg text-white font-semibold text-sm transition"
-                      style={{ 
-                        backgroundColor: hoveredButton === 'delete' ? colors.buttonDeleteHover : colors.buttonDelete
+                    <button
+                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition"
+                      style={{
+                        backgroundColor: hoveredButton === 'delete' ? colors.buttonDeleteHover : colors.buttonDelete,
+                        color: colors.buttonDeleteHeaderText
                       }}
                       onMouseEnter={() => setHoveredButton('delete')}
                       onMouseLeave={() => setHoveredButton(null)}
                     >
                       Delete
                     </button>
-                    <button 
-                      className="px-4 py-2 rounded-lg text-white font-semibold text-sm transition"
-                      style={{ 
-                        backgroundColor: hoveredButton === 'print' ? colors.buttonPrintHover : colors.buttonPrint
+                    <button
+                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition"
+                      style={{
+                        backgroundColor: hoveredButton === 'print' ? colors.buttonPrintHover : colors.buttonPrint,
+                        color: colors.buttonPrintHeaderText
                       }}
                       onMouseEnter={() => setHoveredButton('print')}
                       onMouseLeave={() => setHoveredButton(null)}
@@ -800,41 +1010,63 @@ export default function BackgroundsColorsSettings() {
                   </div>
                 </div>
 
-                {/* Movelap Header */}
-                <div 
-                  className="p-3 rounded-lg font-semibold"
-                  style={{ 
-                    backgroundColor: colors.moveframeHeader,
-                    color: colors.moveframeHeaderText
-                  }}
-                >
-                  Movelap 1 - Warm Up
+                {/* Moveframes */}
+                <div className="space-y-2">
+                  <div
+                    className="p-3 rounded-lg font-semibold"
+                    style={{
+                      backgroundColor: colors.moveframeHeader,
+                      color: colors.moveframeHeaderText
+                    }}
+                  >
+                    Moveframe A - Warm up
+                  </div>
+                  <div
+                    className="p-3 rounded-lg font-semibold"
+                    style={{
+                      backgroundColor: colors.alternateRowMoveframe,
+                      color: colors.alternateRowTextMoveframe
+                    }}
+                  >
+                    Moveframe B - 100m • 4 A2 Break 1:30
+                  </div>
                 </div>
               </div>
 
-              {/* Row Examples with Zebra Striping */}
-              <div className="space-y-2">
+              {/* Movelap Header */}
+              <div
+                className="p-3 rounded-lg font-semibold"
+                style={{
+                  backgroundColor: colors.movelapHeader,
+                  color: colors.movelapHeaderText
+                }}
+              >
+                Movelaps (Laps)
+              </div>
+
+              {/* Lap Rows with Alternating Colors */}
+              <div className="space-y-1">
                 {[1, 2, 3, 4].map((row) => (
                   <div
                     key={row}
-                    className="p-3 rounded-lg"
-                    style={{ 
-                      backgroundColor: row % 2 === 0 ? colors.alternateRow : 'white',
-                      color: row % 2 === 0 ? colors.movelapHeaderText : colors.movelapHeaderText
+                    className="p-2.5 rounded-lg text-sm"
+                    style={{
+                      backgroundColor: row % 2 === 0 ? colors.alternateRowMovelap : 'white',
+                      color: row % 2 === 0 ? colors.alternateRowTextMovelap : colors.movelapHeaderText
                     }}
                   >
-                    <div className="flex justify-between">
-                      <span>Lap # {row}</span>
-                      <span>100m • A2 • 1:30</span>
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Lap # {row}</span>
+                      <span className="text-xs">100m • A2 • 1:30</span>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Selected Row */}
-              <div 
+              <div
                 className="p-4 rounded-lg font-semibold"
-                style={{ 
+                style={{
                   backgroundColor: colors.selectedRow,
                   color: colors.selectedRowText
                 }}
@@ -843,9 +1075,9 @@ export default function BackgroundsColorsSettings() {
               </div>
 
               {/* Microlap Preview */}
-              <div 
+              <div
                 className="p-4 rounded-lg"
-                style={{ 
+                style={{
                   backgroundColor: colors.microlapBackground,
                   color: colors.microlapText
                 }}

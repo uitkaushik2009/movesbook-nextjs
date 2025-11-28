@@ -37,6 +37,11 @@ next-env.d.ts
 
 /docs/
 /scripts/
+
+# Language-specific defaults (user-generated)
+/config/color-defaults/
+/config/tools-defaults/
+/config/favourites-defaults/
 # IDE
 .vscode/
 .idea/
