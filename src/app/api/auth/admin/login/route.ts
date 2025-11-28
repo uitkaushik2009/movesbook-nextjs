@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
 
     // Support both email/username separately or combined in identifier field
     const loginIdentifier = identifier || email || username;
+
     // Validate input
     if (!loginIdentifier || !password) {
       return NextResponse.json(
