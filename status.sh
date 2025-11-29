@@ -16,7 +16,8 @@ echo ""
 echo "🔹 MySQL Status:"
 if systemctl is-active --quiet mysql; then
     echo "✅ MySQL is running"
-    mysql -u movesbook_user -pSecurePassword2024! -e "SELECT COUNT(*) as translations FROM movesbook_nextjs.translations;" 2>/dev/null || echo "⚠️  Database connection issue"
+    # Check database connection (reads password from .env or my.cnf)
+    mysql movesbook_nextjs -e "SELECT COUNT(*) as translations FROM translations;" 2>/dev/null || echo "⚠️  Database connection issue"
 else
     echo "❌ MySQL is not running"
 fi

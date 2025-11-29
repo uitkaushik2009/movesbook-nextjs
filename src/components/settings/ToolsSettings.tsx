@@ -108,15 +108,14 @@ export default function ToolsSettings() {
   useEffect(() => {
     const loadIconTypePreference = async () => {
       try {
-        const userStr = localStorage.getItem('user');
-        if (!userStr) {
+        const token = localStorage.getItem('token');
+        if (!token) {
           setIsLoadingIconPreference(false);
           return;
         }
         
-        const user = JSON.parse(userStr);
         const response = await fetch('/api/user/settings', {
-          headers: { 'x-user-id': user.id }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         
         if (response.ok) {
@@ -467,32 +466,14 @@ export default function ToolsSettings() {
 
   // Save all tools settings to database
   const saveToolsSettingsToDatabase = async (showAlert = false) => {
-    console.log('💾 saveToolsSettingsToDatabase called, showAlert:', showAlert);
-    
     try {
       setIsSavingToDatabase(true);
-      console.log('🔄 Setting isSavingToDatabase to true');
       
-      // Get user ID from localStorage (set during login)
-      const userStr = localStorage.getItem('user');
-      console.log('👤 User string from localStorage:', userStr ? 'Found' : 'NOT FOUND');
-      
-      if (!userStr) {
-        console.error('❌ No user found in localStorage - user might not be logged in');
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('No token found - user not logged in');
         if (showAlert) {
           alert('❌ Please login first to save settings');
-        }
-        return;
-      }
-      
-      const user = JSON.parse(userStr);
-      const userId = user?.id;
-      console.log('🆔 Parsed user ID:', userId);
-      
-      if (!userId) {
-        console.error('❌ User ID not found in user object');
-        if (showAlert) {
-          alert('❌ User ID not found. Please logout and login again.');
         }
         return;
       }
@@ -509,7 +490,7 @@ export default function ToolsSettings() {
       const response = await fetch('/api/user/settings', {
         method: 'PATCH',
         headers: {
-          'x-user-id': userId,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ toolsSettings })
@@ -540,26 +521,6 @@ export default function ToolsSettings() {
 
   // Manual save handler (triggered by button click)
   const handleManualSave = () => {
-    console.log('🔘 Manual save button clicked');
-    console.log('📊 Data to save:', { 
-      periods: periods.length, 
-      sections: sections.length, 
-      sports: sports.length 
-    });
-    
-    // Check if user exists
-    const userStr = localStorage.getItem('user');
-    console.log('👤 User in localStorage:', userStr ? 'Found' : 'NOT FOUND');
-    
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        console.log('User ID:', user?.id);
-      } catch (e) {
-        console.error('Error parsing user:', e);
-      }
-    }
-    
     saveToolsSettingsToDatabase(true);
   };
 
@@ -839,14 +800,13 @@ export default function ToolsSettings() {
     
     // Save to user settings
     try {
-      const userStr = localStorage.getItem('user');
-      if (!userStr) return;
+      const token = localStorage.getItem('token');
+      if (!token) return;
       
-      const user = JSON.parse(userStr);
       await fetch('/api/user/settings', {
         method: 'PATCH',
         headers: {
-          'x-user-id': user.id,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ sportIconType: newType })
@@ -987,14 +947,9 @@ export default function ToolsSettings() {
           </div>
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('Button clicked!');
-              handleManualSave();
-            }}
+            onClick={handleManualSave}
             disabled={isSavingToDatabase}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm cursor-pointer"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm"
             title="Save all tools settings to database (auto-saves on changes)"
           >
             {isSavingToDatabase ? (

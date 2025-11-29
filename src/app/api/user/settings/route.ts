@@ -1,16 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { verifyToken } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
 // GET - Fetch user settings
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
+    // Get token from Authorization header (consistent with other APIs)
+    const authHeader = request.headers.get('authorization');
     
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 401 });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
     }
+    
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = verifyToken(token);
+    
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+    
+    const userId = decoded.userId;
 
     let settings = await prisma.userSettings.findUnique({
       where: { userId }
@@ -87,11 +98,20 @@ export async function GET(request: NextRequest) {
 // POST/PUT - Save user settings
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const authHeader = request.headers.get('authorization');
     
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 401 });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
     }
+    
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = verifyToken(token);
+    
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+    
+    const userId = decoded.userId;
 
     const body = await request.json();
     
@@ -158,11 +178,20 @@ export async function POST(request: NextRequest) {
 // PATCH - Partial update of settings
 export async function PATCH(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const authHeader = request.headers.get('authorization');
     
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID required' }, { status: 401 });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Authorization required' }, { status: 401 });
     }
+    
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = verifyToken(token);
+    
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+    
+    const userId = decoded.userId;
 
     const body = await request.json();
     
