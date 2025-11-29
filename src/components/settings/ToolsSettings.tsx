@@ -108,9 +108,15 @@ export default function ToolsSettings() {
   useEffect(() => {
     const loadIconTypePreference = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const userStr = localStorage.getItem('user');
+        if (!userStr) {
+          setIsLoadingIconPreference(false);
+          return;
+        }
+        
+        const user = JSON.parse(userStr);
         const response = await fetch('/api/user/settings', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'x-user-id': user.id }
         });
         
         if (response.ok) {
@@ -461,9 +467,36 @@ export default function ToolsSettings() {
 
   // Save all tools settings to database
   const saveToolsSettingsToDatabase = async (showAlert = false) => {
+    console.log('💾 saveToolsSettingsToDatabase called, showAlert:', showAlert);
+    
     try {
       setIsSavingToDatabase(true);
-      const token = localStorage.getItem('token');
+      console.log('🔄 Setting isSavingToDatabase to true');
+      
+      // Get user ID from localStorage (set during login)
+      const userStr = localStorage.getItem('user');
+      console.log('👤 User string from localStorage:', userStr ? 'Found' : 'NOT FOUND');
+      
+      if (!userStr) {
+        console.error('❌ No user found in localStorage - user might not be logged in');
+        if (showAlert) {
+          alert('❌ Please login first to save settings');
+        }
+        return;
+      }
+      
+      const user = JSON.parse(userStr);
+      const userId = user?.id;
+      console.log('🆔 Parsed user ID:', userId);
+      
+      if (!userId) {
+        console.error('❌ User ID not found in user object');
+        if (showAlert) {
+          alert('❌ User ID not found. Please logout and login again.');
+        }
+        return;
+      }
+      
       const toolsSettings = {
         periods,
         sections,
@@ -476,7 +509,7 @@ export default function ToolsSettings() {
       const response = await fetch('/api/user/settings', {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'x-user-id': userId,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ toolsSettings })
@@ -489,15 +522,16 @@ export default function ToolsSettings() {
           alert('✅ All tools settings saved to database successfully!');
         }
       } else {
-        console.error('Failed to save tools settings');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Failed to save tools settings:', response.status, errorData);
         if (showAlert) {
-          alert('❌ Failed to save settings to database');
+          alert(`❌ Failed to save settings: ${errorData.error || response.statusText}`);
         }
       }
     } catch (error) {
       console.error('Error saving tools settings to database:', error);
       if (showAlert) {
-        alert('❌ Error saving settings to database');
+        alert('❌ Error saving settings to database: ' + (error as Error).message);
       }
     } finally {
       setIsSavingToDatabase(false);
@@ -506,51 +540,51 @@ export default function ToolsSettings() {
 
   // Manual save handler (triggered by button click)
   const handleManualSave = () => {
+    console.log('🔘 Manual save button clicked');
+    console.log('📊 Data to save:', { 
+      periods: periods.length, 
+      sections: sections.length, 
+      sports: sports.length 
+    });
+    
+    // Check if user exists
+    const userStr = localStorage.getItem('user');
+    console.log('👤 User in localStorage:', userStr ? 'Found' : 'NOT FOUND');
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        console.log('User ID:', user?.id);
+      } catch (e) {
+        console.error('Error parsing user:', e);
+      }
+    }
+    
     saveToolsSettingsToDatabase(true);
   };
 
-  // Save to both localStorage (backup) and database whenever data changes
+  // Debounced auto-save to database (prevent spam)
   useEffect(() => {
-    if (periods.length > 0) {
-      localStorage.setItem('workoutPeriods', JSON.stringify(periods));
-      saveToolsSettingsToDatabase();
+    // Don't auto-save if data is being loaded initially
+    if (periods.length === 0 && sections.length === 0 && sports.length === 0) {
+      return;
     }
-  }, [periods]);
-
-  useEffect(() => {
-    if (sections.length > 0) {
-      localStorage.setItem('workoutSections', JSON.stringify(sections));
-      saveToolsSettingsToDatabase();
-    }
-  }, [sections]);
-
-  useEffect(() => {
-    if (sports.length > 0) {
-      localStorage.setItem('mainSports', JSON.stringify(sports));
-      saveToolsSettingsToDatabase();
-    }
-  }, [sports]);
-
-  useEffect(() => {
-    if (equipment.length > 0) {
-      localStorage.setItem('equipment', JSON.stringify(equipment));
-      saveToolsSettingsToDatabase();
-    }
-  }, [equipment]);
-
-  useEffect(() => {
-    if (exercises.length > 0) {
-      localStorage.setItem('exercises', JSON.stringify(exercises));
-      saveToolsSettingsToDatabase();
-    }
-  }, [exercises]);
-
-  useEffect(() => {
-    if (devices.length > 0) {
-      localStorage.setItem('compatibleDevices', JSON.stringify(devices));
-      saveToolsSettingsToDatabase();
-    }
-  }, [devices]);
+    
+    // Save to localStorage immediately (backup)
+    if (periods.length > 0) localStorage.setItem('workoutPeriods', JSON.stringify(periods));
+    if (sections.length > 0) localStorage.setItem('workoutSections', JSON.stringify(sections));
+    if (sports.length > 0) localStorage.setItem('mainSports', JSON.stringify(sports));
+    if (equipment.length > 0) localStorage.setItem('equipment', JSON.stringify(equipment));
+    if (exercises.length > 0) localStorage.setItem('exercises', JSON.stringify(exercises));
+    if (devices.length > 0) localStorage.setItem('compatibleDevices', JSON.stringify(devices));
+    
+    // Debounce database save (wait 1 second after last change)
+    const timeoutId = setTimeout(() => {
+      saveToolsSettingsToDatabase(false);
+    }, 1000);
+    
+    return () => clearTimeout(timeoutId);
+  }, [periods, sections, sports, equipment, exercises, devices]);
 
   const getActiveItems = () => {
     return activeTab === 'periods' ? periods : sections;
@@ -805,11 +839,14 @@ export default function ToolsSettings() {
     
     // Save to user settings
     try {
-      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return;
+      
+      const user = JSON.parse(userStr);
       await fetch('/api/user/settings', {
         method: 'PATCH',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'x-user-id': user.id,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ sportIconType: newType })
@@ -949,9 +986,15 @@ export default function ToolsSettings() {
             </div>
           </div>
           <button
-            onClick={handleManualSave}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Button clicked!');
+              handleManualSave();
+            }}
             disabled={isSavingToDatabase}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm cursor-pointer"
             title="Save all tools settings to database (auto-saves on changes)"
           >
             {isSavingToDatabase ? (

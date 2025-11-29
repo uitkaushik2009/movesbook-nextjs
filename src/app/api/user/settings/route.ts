@@ -21,40 +21,60 @@ export async function GET(request: NextRequest) {
       settings = await prisma.userSettings.create({
         data: {
           userId,
+          // JSON Settings (all default to empty objects/arrays)
           colorSettings: '{}',
           toolsSettings: '{}',
+          favouritesSettings: '{}',
+          myBestSettings: '{}',
+          adminSettings: '{}',
+          workoutPreferences: '{}',
+          socialSettings: '{}',
+          notificationSettings: '{}',
+          widgetArrangement: '[]',
+          // Display Settings
           gridSize: 'comfortable',
           columnCount: 3,
           rowHeight: 'medium',
           defaultView: 'grid',
+          // Sidebar Settings
           leftSidebarVisible: true,
           rightSidebarVisible: true,
           leftSidebarWidth: 20,
           rightSidebarWidth: 25,
           sidebarPosition: 'fixed',
+          // Theme & Display
           theme: 'light',
           fontSize: 16,
           iconSize: 'medium',
+          sportIconType: 'emoji',
+          // Accessibility
           enableAnimations: true,
           reducedMotion: false,
           highContrast: false,
+          // Performance
           performanceMode: false,
           imageQuality: 'high',
           lazyLoading: true,
+          // Dashboard
           dashboardLayout: 'default',
-          widgetArrangement: '[]',
-          language: 'en',
-          sportIconType: 'emoji'
+          // Language
+          language: 'en'
         }
       });
     }
 
-    // Parse JSON fields
+    // Parse all JSON fields
     const response = {
       ...settings,
-      colorSettings: JSON.parse(settings.colorSettings),
-      widgetArrangement: JSON.parse(settings.widgetArrangement),
-      toolsSettings: settings.toolsSettings ? JSON.parse(settings.toolsSettings) : {}
+      colorSettings: JSON.parse(settings.colorSettings || '{}'),
+      widgetArrangement: JSON.parse(settings.widgetArrangement || '[]'),
+      toolsSettings: JSON.parse(settings.toolsSettings || '{}'),
+      favouritesSettings: JSON.parse(settings.favouritesSettings || '{}'),
+      myBestSettings: JSON.parse(settings.myBestSettings || '{}'),
+      adminSettings: JSON.parse(settings.adminSettings || '{}'),
+      workoutPreferences: JSON.parse(settings.workoutPreferences || '{}'),
+      socialSettings: JSON.parse(settings.socialSettings || '{}'),
+      notificationSettings: JSON.parse(settings.notificationSettings || '{}')
     };
 
     return NextResponse.json(response);
@@ -75,19 +95,28 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
-    // Convert objects to JSON strings for database
-    const settingsData: any = {
-      ...body,
-      colorSettings: typeof body.colorSettings === 'object' 
-        ? JSON.stringify(body.colorSettings) 
-        : body.colorSettings,
-      widgetArrangement: typeof body.widgetArrangement === 'object'
-        ? JSON.stringify(body.widgetArrangement)
-        : body.widgetArrangement,
-      toolsSettings: typeof body.toolsSettings === 'object'
-        ? JSON.stringify(body.toolsSettings)
-        : body.toolsSettings
-    };
+    // Convert all JSON objects to strings for database storage
+    const jsonFields = [
+      'colorSettings', 
+      'widgetArrangement', 
+      'toolsSettings',
+      'favouritesSettings',
+      'myBestSettings',
+      'adminSettings',
+      'workoutPreferences',
+      'socialSettings',
+      'notificationSettings'
+    ];
+    
+    const settingsData: any = { ...body };
+    
+    jsonFields.forEach(field => {
+      if (body[field] !== undefined) {
+        settingsData[field] = typeof body[field] === 'object' 
+          ? JSON.stringify(body[field])
+          : body[field];
+      }
+    });
 
     // Remove fields that shouldn't be updated
     delete settingsData.id;
@@ -105,12 +134,18 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Parse JSON fields for response
+    // Parse all JSON fields for response
     const response = {
       ...settings,
-      colorSettings: JSON.parse(settings.colorSettings),
-      widgetArrangement: JSON.parse(settings.widgetArrangement),
-      toolsSettings: settings.toolsSettings ? JSON.parse(settings.toolsSettings) : {}
+      colorSettings: JSON.parse(settings.colorSettings || '{}'),
+      widgetArrangement: JSON.parse(settings.widgetArrangement || '[]'),
+      toolsSettings: JSON.parse(settings.toolsSettings || '{}'),
+      favouritesSettings: JSON.parse(settings.favouritesSettings || '{}'),
+      myBestSettings: JSON.parse(settings.myBestSettings || '{}'),
+      adminSettings: JSON.parse(settings.adminSettings || '{}'),
+      workoutPreferences: JSON.parse(settings.workoutPreferences || '{}'),
+      socialSettings: JSON.parse(settings.socialSettings || '{}'),
+      notificationSettings: JSON.parse(settings.notificationSettings || '{}')
     };
 
     return NextResponse.json(response);
@@ -132,10 +167,22 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json();
     
     // Convert objects to JSON strings for database
+    const jsonFields = [
+      'colorSettings',
+      'widgetArrangement',
+      'toolsSettings',
+      'favouritesSettings',
+      'myBestSettings',
+      'adminSettings',
+      'workoutPreferences',
+      'socialSettings',
+      'notificationSettings'
+    ];
+    
     const updateData: any = {};
     
     Object.keys(body).forEach(key => {
-      if (key === 'colorSettings' || key === 'widgetArrangement' || key === 'toolsSettings') {
+      if (jsonFields.includes(key)) {
         updateData[key] = typeof body[key] === 'object' 
           ? JSON.stringify(body[key]) 
           : body[key];
@@ -152,16 +199,28 @@ export async function PATCH(request: NextRequest) {
         colorSettings: '{}',
         widgetArrangement: '[]',
         toolsSettings: '{}',
+        favouritesSettings: '{}',
+        myBestSettings: '{}',
+        adminSettings: '{}',
+        workoutPreferences: '{}',
+        socialSettings: '{}',
+        notificationSettings: '{}',
         ...updateData
       }
     });
 
-    // Parse JSON fields for response
+    // Parse all JSON fields for response
     const response = {
       ...settings,
-      colorSettings: JSON.parse(settings.colorSettings),
-      widgetArrangement: JSON.parse(settings.widgetArrangement),
-      toolsSettings: settings.toolsSettings ? JSON.parse(settings.toolsSettings) : {}
+      colorSettings: JSON.parse(settings.colorSettings || '{}'),
+      widgetArrangement: JSON.parse(settings.widgetArrangement || '[]'),
+      toolsSettings: JSON.parse(settings.toolsSettings || '{}'),
+      favouritesSettings: JSON.parse(settings.favouritesSettings || '{}'),
+      myBestSettings: JSON.parse(settings.myBestSettings || '{}'),
+      adminSettings: JSON.parse(settings.adminSettings || '{}'),
+      workoutPreferences: JSON.parse(settings.workoutPreferences || '{}'),
+      socialSettings: JSON.parse(settings.socialSettings || '{}'),
+      notificationSettings: JSON.parse(settings.notificationSettings || '{}')
     };
 
     return NextResponse.json(response);

@@ -13,6 +13,15 @@
   --sidebar-left-width: 20%;
   --sidebar-right-width: 25%;
   --transition-duration: 200ms;
+  
+  /* Border Settings (from Backgrounds & Colors) */
+  --workout-border-width: 0px;
+  --workout-border-color: transparent;
+  --workout-border-style: none;
+  
+  /* Page Background Settings */
+  --page-background: #eeefe6;
+  --page-background-opacity: 0.89;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -112,4 +121,21 @@ nav > * {
   position: absolute !important;
   z-index: 9999 !important;
   overflow: visible !important;
+}
+
+/* Workout Elements with Custom Borders */
+.workout-day,
+.workout-session,
+.workout-moveframe,
+.workout-movelap,
+.workout-microlap {
+  border-width: var(--workout-border-width);
+  border-color: var(--workout-border-color);
+  border-style: var(--workout-border-style);
+}
+
+/* Apply page background to workout container */
+.workout-container {
+  background-color: var(--page-background);
+  opacity: var(--page-background-opacity);
 }

@@ -49,6 +49,10 @@ interface ColorSettings {
   alternateRowTextMoveframe: string;
   alternateRowmoveframe: string;
   alternateRowTextmoveframe: string;
+  // Border settings
+  borderEnabled?: boolean;
+  borderColor?: string;
+  borderWidth?: string;
 }
 
 const defaultColors: ColorSettings = {
@@ -94,6 +98,10 @@ const defaultColors: ColorSettings = {
   selectedRowTextMoveframe: '#ef4444',
   alternateRowmoveframe: '#dbeafe',
   alternateRowTextmoveframe: '#1e293b',
+  // Border settings
+  borderEnabled: false,
+  borderColor: '#000000',
+  borderWidth: 'normal'
 };
 
 interface ColorScheme {
@@ -175,7 +183,7 @@ export default function BackgroundsColorsSettings() {
     }
   }, []);
 
-  const handleColorChange = async (key: keyof ColorSettings, value: string | number) => {
+  const handleColorChange = async (key: keyof ColorSettings, value: string | number | boolean) => {
     const newColors = { ...colors, [key]: value };
     setColors(newColors);
 
@@ -402,9 +410,10 @@ export default function BackgroundsColorsSettings() {
         </div>
         <div className="flex items-center space-x-3">
           <div
-            className="w-10 h-10 rounded-lg border-2 border-gray-300 cursor-pointer shadow-sm hover:shadow-md transition"
+            className="w-10 h-10 rounded-lg border-2 border-gray-300 cursor-pointer shadow-sm hover:shadow-md transition-shadow"
             style={{ backgroundColor: value }}
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               const input = document.createElement('input');
               input.type = 'color';
               input.value = value;
@@ -450,19 +459,26 @@ export default function BackgroundsColorsSettings() {
     onToggle: () => void;
     children: React.ReactNode;
   }) => (
-    <div className="bg-gradient-to-r from-cyan-50 to-purple-50 rounded-2xl border border-cyan-200 overflow-hidden">
+    <div className="bg-gradient-to-r from-cyan-50 to-purple-50 rounded-2xl border border-cyan-200 overflow-hidden will-change-auto">
       <button
-        onClick={onToggle}
-        className="w-full flex items-center justify-between p-6 hover:bg-white/50 transition"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggle();
+        }}
+        className="w-full flex items-center justify-between p-6 hover:bg-white/50 transition-colors select-none"
+        type="button"
       >
-        <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+        <h3 className="text-xl font-semibold text-gray-900 flex items-center pointer-events-none">
           <Palette className="w-6 h-6 mr-3 text-cyan-600" />
           {title}
         </h3>
-        {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        <span className="pointer-events-none">
+          {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        </span>
       </button>
       {expanded && (
-        <div className="p-6 pt-0 space-y-4">
+        <div className="p-6 pt-0 space-y-4 will-change-auto">
           {children}
         </div>
       )}
@@ -513,7 +529,7 @@ export default function BackgroundsColorsSettings() {
           </select>
           <button
             onClick={loadLanguageDefaults}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
             title="Load language-specific default colors (merges with current)"
           >
             <Download className="w-3.5 h-3.5" />
@@ -521,7 +537,7 @@ export default function BackgroundsColorsSettings() {
           </button>
           <button
             onClick={saveLanguageDefaults}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
             title="Save current colors as defaults for this language (requires password)"
           >
             <Save className="w-3.5 h-3.5" />
@@ -675,28 +691,28 @@ export default function BackgroundsColorsSettings() {
           <div className="flex gap-3">
             <button
               onClick={() => setShowSaveDialog(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Save className="w-4 h-4" />
               Save Scheme
             </button>
             <button
               onClick={exportSettings}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <Download className="w-4 h-4" />
               Export
             </button>
             <button
               onClick={importSettings}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
               <Upload className="w-4 h-4" />
               Import
             </button>
             <button
               onClick={resetToDefaults}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               Reset
@@ -752,6 +768,100 @@ export default function BackgroundsColorsSettings() {
                 value={colors.pageBackgroundOpacity}
                 onChange={(v) => handleColorChange('pageBackgroundOpacity', v)}
               />
+              
+              {/* Border Settings */}
+              <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-gray-700">Border Settings</span>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={colors.borderEnabled || false}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleColorChange('borderEnabled', e.target.checked);
+                      }}
+                      className="w-4 h-4 text-blue-600 rounded flex-shrink-0"
+                    />
+                    <span className="text-sm text-gray-600">Enable Border</span>
+                  </label>
+                </div>
+                
+                {colors.borderEnabled && (
+                  <>
+                    {/* Border Color */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-600">Border Color</span>
+                      <div className="flex gap-2">
+                        {[
+                          { name: 'Black', value: '#000000' },
+                          { name: 'Red', value: '#ef4444' },
+                          { name: 'Blue', value: '#3b82f6' }
+                        ].map((color) => (
+                          <button
+                            key={color.value}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleColorChange('borderColor', color.value);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg border-2 transition-colors text-sm font-medium ${
+                              colors.borderColor === color.value
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                            }`}
+                            style={{ borderLeftColor: color.value, borderLeftWidth: '4px' }}
+                          >
+                            {color.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Border Width */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-600">Border Thickness</span>
+                      <div className="flex gap-2">
+                        {[
+                          { name: 'Very Thin', value: 'very-thin' },
+                          { name: 'Thin', value: 'thin' },
+                          { name: 'Normal', value: 'normal' },
+                          { name: 'Thick', value: 'thick' }
+                        ].map((width) => (
+                          <button
+                            key={width.value}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleColorChange('borderWidth', width.value);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg border-2 transition-colors text-sm font-medium ${
+                              colors.borderWidth === width.value
+                                ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                            }`}
+                          >
+                            {width.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    {/* Border Preview */}
+                    <div className="mt-4 p-4 rounded-lg" style={{
+                      backgroundColor: colors.pageBackground,
+                      opacity: colors.pageBackgroundOpacity / 100,
+                      border: `${
+                        colors.borderWidth === 'very-thin' ? '1px' :
+                        colors.borderWidth === 'thin' ? '2px' :
+                        colors.borderWidth === 'thick' ? '4px' : '3px'
+                      } solid ${colors.borderColor || '#000000'}`
+                    }}>
+                      <div className="text-center text-sm font-medium text-gray-700">
+                        Border Preview
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           </div>
 
@@ -947,7 +1057,15 @@ export default function BackgroundsColorsSettings() {
               className="rounded-xl border-2 border-dashed border-gray-300 p-6 space-y-4"
               style={{
                 backgroundColor: colors.pageBackground,
-                opacity: colors.pageBackgroundOpacity / 100
+                opacity: colors.pageBackgroundOpacity / 100,
+                ...(colors.borderEnabled && {
+                  border: `${
+                    colors.borderWidth === 'very-thin' ? '1px' :
+                    colors.borderWidth === 'thin' ? '2px' :
+                    colors.borderWidth === 'thick' ? '4px' : '3px'
+                  } solid ${colors.borderColor || '#000000'}`,
+                  borderStyle: 'solid'
+                })
               }}
             >
               {/* Day Header */}
@@ -973,7 +1091,7 @@ export default function BackgroundsColorsSettings() {
                   <span className="font-semibold">Workout 1 of Monday</span>
                   <div className="flex gap-2">
                     <button
-                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition"
+                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors"
                       style={{
                         backgroundColor: hoveredButton === 'add' ? colors.buttonAddHover : colors.buttonAdd,
                         color: colors.buttonAddHeaderText
@@ -984,7 +1102,7 @@ export default function BackgroundsColorsSettings() {
                       Add
                     </button>
                     <button
-                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition"
+                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors"
                       style={{
                         backgroundColor: hoveredButton === 'edit' ? colors.buttonEditHover : colors.buttonEdit,
                         color: colors.buttonEditHeaderText
@@ -995,7 +1113,7 @@ export default function BackgroundsColorsSettings() {
                       Edit
                     </button>
                     <button
-                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition"
+                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors"
                       style={{
                         backgroundColor: hoveredButton === 'delete' ? colors.buttonDeleteHover : colors.buttonDelete,
                         color: colors.buttonDeleteHeaderText
@@ -1006,7 +1124,7 @@ export default function BackgroundsColorsSettings() {
                       Delete
                     </button>
                     <button
-                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition"
+                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors"
                       style={{
                         backgroundColor: hoveredButton === 'print' ? colors.buttonPrintHover : colors.buttonPrint,
                         color: colors.buttonPrintHeaderText

@@ -900,8 +900,8 @@ export default function WorkoutsPage() {
           userType={userType}
         />
         
-        {/* Central Grid */}
-        <div className="flex-1 overflow-auto">
+        {/* Central Grid with Workout Container class for backgrounds */}
+        <div className="flex-1 overflow-auto workout-container">
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">

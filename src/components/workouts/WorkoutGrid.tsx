@@ -217,7 +217,7 @@ export default function WorkoutGrid({
               const period = periods.find(p => p.id === day.periodId);
 
               return (
-                <div key={day.id} className="border-b hover:bg-gray-50">
+                <div key={day.id} className="border-b hover:bg-gray-50 workout-day">
                   {/* Day Row */}
                   <div 
                     className="grid grid-cols-12 gap-2 px-4 py-3 items-center cursor-pointer"
@@ -279,7 +279,7 @@ export default function WorkoutGrid({
                         const workoutSportTotals = getWorkoutSportTotals(workout);
 
                         return (
-                          <div key={workout.id} className="border-t border-gray-200">
+                          <div key={workout.id} className="border-t border-gray-200 workout-session">
                             {/* Workout Row */}
                             <div 
                               draggable={!draggedSport}
@@ -412,7 +412,7 @@ export default function WorkoutGrid({
                                           <tr 
                                             key={moveframe.id}
                                             draggable
-                                            className={`border-b hover:opacity-90 cursor-move ${
+                                            className={`workout-moveframe border-b hover:opacity-90 cursor-move ${
                                               draggedMoveframeData?.id === moveframe.id 
                                                 ? 'opacity-50' 
                                                 : ''
@@ -533,7 +533,7 @@ export default function WorkoutGrid({
                                                       {moveframe.movelaps.map((lap: any, lapIndex: number) => (
                                                         <tr 
                                                           key={lap.id}
-                                                          className={`border-b ${lap.isDisabled ? 'opacity-50 line-through' : ''}`}
+                                                          className={`workout-movelap border-b ${lap.isDisabled ? 'opacity-50 line-through' : ''}`}
                                                           style={{
                                                             backgroundColor: lapIndex % 2 === 1
                                                               ? settings?.colorSettings?.alternateRowMovelap || '#dbeafe'

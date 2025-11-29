@@ -55,14 +55,67 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }
 
     // Store settings in CSS variables for easy access
-    document.documentElement.style.setProperty('--grid-size', settings.gridSize);
-    document.documentElement.style.setProperty('--column-count', settings.columnCount.toString());
-    document.documentElement.style.setProperty('--sidebar-left-width', `${settings.leftSidebarWidth}%`);
-    document.documentElement.style.setProperty('--sidebar-right-width', `${settings.rightSidebarWidth}%`);
+    if (settings.gridSize) {
+      document.documentElement.style.setProperty('--grid-size', settings.gridSize);
+    }
+    if (settings.columnCount) {
+      document.documentElement.style.setProperty('--column-count', settings.columnCount.toString());
+    }
+    if (settings.leftSidebarWidth) {
+      document.documentElement.style.setProperty('--sidebar-left-width', `${settings.leftSidebarWidth}%`);
+    }
+    if (settings.rightSidebarWidth) {
+      document.documentElement.style.setProperty('--sidebar-right-width', `${settings.rightSidebarWidth}%`);
+    }
 
     // Apply image quality as data attribute for conditional rendering
     document.documentElement.setAttribute('data-image-quality', settings.imageQuality);
     document.documentElement.setAttribute('data-performance-mode', settings.performanceMode ? 'true' : 'false');
+
+    // Apply color settings including border settings
+    if (settings.colorSettings) {
+      try {
+        const colorSettings = typeof settings.colorSettings === 'string' 
+          ? JSON.parse(settings.colorSettings)
+          : settings.colorSettings;
+        
+        // Apply page background
+        if (colorSettings.pageBackground) {
+          document.documentElement.style.setProperty('--page-background', colorSettings.pageBackground);
+        }
+        if (colorSettings.pageBackgroundOpacity) {
+          document.documentElement.style.setProperty('--page-background-opacity', (colorSettings.pageBackgroundOpacity / 100).toString());
+        }
+        
+        // Apply border settings
+        if (colorSettings.borderEnabled) {
+          const borderWidth = 
+            colorSettings.borderWidth === 'very-thin' ? '1px' :
+            colorSettings.borderWidth === 'thin' ? '2px' :
+            colorSettings.borderWidth === 'thick' ? '4px' : '3px';
+          
+          const borderColor = colorSettings.borderColor || '#000000';
+          
+          document.documentElement.style.setProperty('--workout-border-width', borderWidth);
+          document.documentElement.style.setProperty('--workout-border-color', borderColor);
+          document.documentElement.style.setProperty('--workout-border-style', 'solid');
+        } else {
+          document.documentElement.style.setProperty('--workout-border-width', '0px');
+          document.documentElement.style.setProperty('--workout-border-color', 'transparent');
+          document.documentElement.style.setProperty('--workout-border-style', 'none');
+        }
+        
+        // Apply all other color settings as CSS variables
+        Object.keys(colorSettings).forEach(key => {
+          if (!['borderEnabled', 'borderColor', 'borderWidth'].includes(key)) {
+            const cssVarName = `--color-${key.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+            document.documentElement.style.setProperty(cssVarName, colorSettings[key]);
+          }
+        });
+      } catch (error) {
+        console.error('Error applying color settings:', error);
+      }
+    }
 
   }, [settings, loading, setTheme]);
 
