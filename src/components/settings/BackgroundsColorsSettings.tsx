@@ -474,7 +474,7 @@ export default function BackgroundsColorsSettings() {
           {title}
         </h3>
         <span className="pointer-events-none">
-          {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </span>
       </button>
       {expanded && (

@@ -41,6 +41,15 @@ export default function TeamDashboard() {
     }
   }, [activeTab]);
 
+  // Auto-hide left sidebar when workout section opens
+  useEffect(() => {
+    if (showWorkoutSection) {
+      setShowLeftSidebar(false);
+    } else {
+      setShowLeftSidebar(true);
+    }
+  }, [showWorkoutSection]);
+
   // Don't render if not authenticated
   if (loading || !user) {
     return null;

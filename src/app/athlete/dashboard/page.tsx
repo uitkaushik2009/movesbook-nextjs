@@ -96,6 +96,16 @@ export default function AthleteDashboard() {
     }
   }, [activeTab]);
 
+  // Keep left sidebar visible when workout section opens
+  // Only hide the right sidebar (QuickActions)
+  // useEffect(() => {
+  //   if (showWorkoutSection) {
+  //     setShowLeftSidebar(false);
+  //   } else {
+  //     setShowLeftSidebar(true);
+  //   }
+  // }, [showWorkoutSection]);
+
   // Don't render if not authenticated (after all hooks are called)
   if (loading || !user) {
     return null;

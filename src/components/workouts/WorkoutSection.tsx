@@ -1,116 +1,48 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { SportType } from '@/types';
-import WorkoutGrid from './WorkoutGrid';
-import WorkoutLeftSidebar from './WorkoutLeftSidebar';
-import WorkoutRightSidebar from './WorkoutRightSidebar';
-import MoveframeFormModal from './MoveframeFormModal';
-import ArchiveModal from './ArchiveModal';
-import SaveTemplateModal from './SaveTemplateModal';
-import ImportFromCoachModal from './ImportFromCoachModal';
-import MarkAsDoneModal from './MarkAsDoneModal';
-import PrintWorkoutModal from './PrintWorkoutModal';
-import AthleteSelector from './AthleteSelector';
-import { X } from 'lucide-react';
+import WorkoutGrid from '@/components/workouts/WorkoutGrid';
+import WorkoutTableView from '@/components/workouts/WorkoutTableView';
+import WorkoutCalendarView from '@/components/workouts/WorkoutCalendarView';
+import AddWorkoutModal from '@/components/workouts/AddWorkoutModal';
+import AddMoveframeModal from '@/components/workouts/AddMoveframeModal';
+import ImportWorkoutsModal from '@/components/workouts/ImportWorkoutsModal';
+import AddDayModal from '@/components/workouts/AddDayModal';
+import { X, Download, Plus, List, Table, Calendar } from 'lucide-react';
 
 interface WorkoutSectionProps {
   onClose: () => void;
 }
 
 export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
-  const { t } = useLanguage();
-  
-  // Core state
+  const [activeSection, setActiveSection] = useState<'A' | 'B' | 'C' | 'D'>('A');
   const [workoutPlan, setWorkoutPlan] = useState<any>(null);
   const [periods, setPeriods] = useState<any[]>([]);
-  const [workoutSections, setWorkoutSections] = useState<any[]>([]);
-  const [mainSports, setMainSports] = useState<SportType[]>([]);
-  const [userType, setUserType] = useState<string>('ATHLETE');
-  const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<'A' | 'B' | 'C' | 'D'>('B');
-  
-  // Selection state
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedWorkout, setSelectedWorkout] = useState<string | null>(null);
-  const [selectedMoveframe, setSelectedMoveframe] = useState<string | null>(null);
+  const [showAddWorkoutModal, setShowAddWorkoutModal] = useState(false);
+  const [addWorkoutDay, setAddWorkoutDay] = useState<any>(null);
+  const [editingWorkout, setEditingWorkout] = useState<any>(null);
+  const [workoutModalMode, setWorkoutModalMode] = useState<'add' | 'edit'>('add');
+  const [showAddMoveframeModal, setShowAddMoveframeModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [showAddDayModal, setShowAddDayModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'tree' | 'table' | 'calendar'>('tree');
+  const [selectedWeekForTable, setSelectedWeekForTable] = useState<number | null>(null);
   
-  // Expansion state
+  // Preserve expansion states across reloads
+  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
-  const [expandedMoveframes, setExpandedMoveframes] = useState<Set<string>>(new Set());
-  
-  // Modal state
-  const [showMoveframeModal, setShowMoveframeModal] = useState(false);
-  const [editingMoveframe, setEditingMoveframe] = useState<any>(null);
-  const [showArchiveModal, setShowArchiveModal] = useState(false);
-  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
-  const [saveTemplateData, setSaveTemplateData] = useState<any>(null);
-  const [saveTemplateType, setSaveTemplateType] = useState<'workout' | 'day'>('workout');
-  const [showImportFromCoachModal, setShowImportFromCoachModal] = useState(false);
-  const [showMarkAsDoneModal, setShowMarkAsDoneModal] = useState(false);
-  const [workoutToMarkDone, setWorkoutToMarkDone] = useState<any>(null);
-  const [statistics, setStatistics] = useState<any>(null);
-  const [showPrintModal, setShowPrintModal] = useState(false);
-  
-  // Drag & drop state
-  const [draggedSport, setDraggedSport] = useState<SportType | null>(null);
-  
-  // Clipboard state
-  const [clipboard, setClipboard] = useState<{
-    type: 'day' | 'workout' | 'moveframe' | null;
-    data: any;
-    isCut: boolean;
-  }>({ type: null, data: null, isCut: false });
-  
-  const [isLoading, setIsLoading] = useState(true);
 
-  // Load initial data
   useEffect(() => {
-    loadUserType();
-    loadAllData();
-  }, []);
+    loadWorkoutData();
+    loadPeriods();
+  }, [activeSection]);
 
-  // Reload when athlete changes
-  useEffect(() => {
-    if (!isLoading) {
-      loadWorkoutPlan();
-      loadStatistics();
-    }
-  }, [selectedAthleteId]);
-
-  const loadAllData = async () => {
+  const loadWorkoutData = async () => {
     setIsLoading(true);
-    await Promise.all([
-      loadPeriods(),
-      loadWorkoutSections(),
-      loadMainSports(),
-      loadWorkoutPlan(),
-      loadStatistics()
-    ]);
-    setIsLoading(false);
-  };
-
-  const loadUserType = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch('/api/auth/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUserType(data.user.userType);
-      }
-    } catch (error) {
-      console.error('Error loading user type:', error);
-    }
-  };
-
-  const loadWorkoutPlan = async () => {
     try {
       const token = localStorage.getItem('token');
       const planTypeMap = {
@@ -120,24 +52,41 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         'D': 'YEARLY_PLAN'
       };
       
-      let url = `/api/workouts/plan?type=${planTypeMap[activeSection]}`;
+      console.log('🔄 Loading workout data for section:', activeSection, 'type:', planTypeMap[activeSection]);
       
-      // If coach viewing athlete
-      if (selectedAthleteId) {
-        url = `/api/coach/athletes/${selectedAthleteId}/workouts`;
-      }
-      
-      const response = await fetch(url, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await fetch(
+        `/api/workouts/plan?type=${planTypeMap[activeSection]}`,
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
       
       if (response.ok) {
         const data = await response.json();
-        setWorkoutPlan(selectedAthleteId ? data.workoutPlan : data.plan);
+        console.log('✅ Plan loaded:', data.plan?.id);
+        console.log('📊 Number of weeks:', data.plan?.weeks?.length);
+        
+        // Debug: Check moveframes
+        if (data.plan?.weeks) {
+          data.plan.weeks.forEach((week: any) => {
+            week.days?.forEach((day: any) => {
+              day.workouts?.forEach((workout: any) => {
+                if (workout.moveframes && workout.moveframes.length > 0) {
+                  console.log(`💪 Workout ${workout.id} has ${workout.moveframes.length} moveframes:`, 
+                    workout.moveframes.map((mf: any) => `${mf.letter}-${mf.sport}`).join(', ')
+                  );
+                }
+              });
+            });
+          });
+        }
+        
+        setWorkoutPlan(data.plan);
+      } else {
+        console.error('❌ Failed to load plan:', response.status);
       }
     } catch (error) {
-      console.error('Error loading workout plan:', error);
+      console.error('💥 Error loading workout data:', error);
     }
+    setIsLoading(false);
   };
 
   const loadPeriods = async () => {
@@ -156,455 +105,472 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     }
   };
 
-  const loadWorkoutSections = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/workouts/sections', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setWorkoutSections(data.sections || []);
-      }
-    } catch (error) {
-      console.error('Error loading workout sections:', error);
-    }
-  };
-
-  const loadMainSports = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/workouts/main-sports', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setMainSports(data.sports || []);
-      }
-    } catch (error) {
-      console.error('Error loading main sports:', error);
-      setMainSports(['SWIM', 'BIKE', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE'] as SportType[]);
-    }
-  };
-
-  const loadStatistics = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/workouts/statistics', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStatistics(data.statistics);
-      }
-    } catch (error) {
-      console.error('Error loading statistics:', error);
-    }
-  };
-
-  // All handlers from the original workout page
-  const handleSectionChange = (section: 'A' | 'B' | 'C' | 'D') => {
-    setActiveSection(section);
-    setSelectedDay(null);
-    setSelectedWorkout(null);
-    setSelectedMoveframe(null);
-    setExpandedDays(new Set());
-    setExpandedWorkouts(new Set());
-    setExpandedMoveframes(new Set());
-    loadWorkoutPlan();
-  };
-
-  const handleToggleDay = (dayId: string) => {
-    const newExpanded = new Set(expandedDays);
-    if (newExpanded.has(dayId)) {
-      newExpanded.delete(dayId);
-    } else {
-      newExpanded.add(dayId);
-    }
-    setExpandedDays(newExpanded);
-  };
-
-  const handleToggleWorkout = (workoutId: string) => {
-    const newExpanded = new Set(expandedWorkouts);
-    if (newExpanded.has(workoutId)) {
-      newExpanded.delete(workoutId);
-    } else {
-      newExpanded.add(workoutId);
-    }
-    setExpandedWorkouts(newExpanded);
-  };
-
-  const handleToggleMoveframe = (moveframeId: string) => {
-    const newExpanded = new Set(expandedMoveframes);
-    if (newExpanded.has(moveframeId)) {
-      newExpanded.delete(moveframeId);
-    } else {
-      newExpanded.add(moveframeId);
-    }
-    setExpandedMoveframes(newExpanded);
-  };
-
-  const handleExpandAll = () => {
-    const allDays = new Set<string>();
-    workoutPlan?.weeks?.forEach((week: any) => {
-      week.days?.forEach((day: any) => {
-        allDays.add(day.id);
-      });
-    });
-    setExpandedDays(allDays);
-  };
-
-  const handleCollapseAll = () => {
-    setExpandedDays(new Set());
-    setExpandedWorkouts(new Set());
-    setExpandedMoveframes(new Set());
-  };
-
-  const handleSelectDay = (dayId: string) => {
-    setSelectedDay(dayId);
-    setSelectedWorkout(null);
-    setSelectedMoveframe(null);
-  };
-
-  const handleSelectWorkout = (workoutId: string) => {
-    setSelectedWorkout(workoutId);
-    setSelectedMoveframe(null);
-  };
-
-  const handleSelectMoveframe = (moveframeId: string) => {
-    setSelectedMoveframe(moveframeId);
-  };
-
-  const handleAddWorkout = () => {
-    if (!selectedDay) {
-      alert('Please select a day first');
-      return;
-    }
-    // Add workout logic here
-    alert('Add workout functionality - to be implemented');
-  };
-
-  const handleAddMoveframe = () => {
-    if (!selectedWorkout) {
-      alert('Please select a workout first');
-      return;
-    }
-    setShowMoveframeModal(true);
-  };
-
-  const handleRefresh = async () => {
-    await loadWorkoutPlan();
-    await loadStatistics();
-  };
-
-  const handleMoveframeSave = async () => {
-    setShowMoveframeModal(false);
-    setEditingMoveframe(null);
-    await loadWorkoutPlan();
-  };
-
-  const handleOpenArchive = () => {
-    setShowArchiveModal(true);
-  };
-
-  const handleApplyTemplate = async () => {
-    await loadWorkoutPlan();
-  };
-
-  const handleSaveAsTemplate = async (type: 'workout' | 'day') => {
-    let data: any = null;
-
-    if (type === 'day' && selectedDay) {
-      workoutPlan?.weeks?.forEach((week: any) => {
-        week.days?.forEach((day: any) => {
-          if (day.id === selectedDay) data = day;
-        });
-      });
-    } else if (type === 'workout' && selectedWorkout) {
-      workoutPlan?.weeks?.forEach((week: any) => {
-        week.days?.forEach((day: any) => {
-          day.workouts?.forEach((workout: any) => {
-            if (workout.id === selectedWorkout) data = workout;
-          });
-        });
-      });
-    }
-
-    if (data) {
-      setSaveTemplateType(type);
-      setSaveTemplateData(data);
-      setShowSaveTemplateModal(true);
-    } else {
-      alert(`Please select a ${type} first`);
-    }
-  };
-
-  const handleTemplateSaved = async () => {
-    console.log('Template saved successfully');
-  };
-
-  const handleImportFromCoach = () => {
-    setShowImportFromCoachModal(true);
-  };
-
-  const handleImportComplete = async () => {
-    await loadWorkoutPlan();
-  };
-
-  const handleMarkAsDone = () => {
-    if (!selectedWorkout) {
-      alert('Please select a workout first');
-      return;
-    }
-
-    let workoutData: any = null;
-    workoutPlan?.weeks?.forEach((week: any) => {
-      week.days?.forEach((day: any) => {
-        day.workouts?.forEach((workout: any) => {
-          if (workout.id === selectedWorkout) {
-            workoutData = workout;
-          }
-        });
-      });
-    });
-
-    if (workoutData) {
-      setWorkoutToMarkDone(workoutData);
-      setShowMarkAsDoneModal(true);
-    }
-  };
-
-  const handleSaveMarkAsDone = async (data: any) => {
-    if (!workoutToMarkDone) return;
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/workouts/sessions/${workoutToMarkDone.id}/mark-done`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-      });
-
-      if (response.ok) {
-        alert('Workout marked as done!');
-        setShowMarkAsDoneModal(false);
-        setWorkoutToMarkDone(null);
-        await loadWorkoutPlan();
-        await loadStatistics();
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to mark workout as done');
-      }
-    } catch (error) {
-      console.error('Error marking workout as done:', error);
-      alert('Failed to mark workout as done');
-    }
-  };
-
-  const handleSportDragStart = (sport: SportType) => {
-    setDraggedSport(sport);
-  };
-
-  const handleSportDragEnd = () => {
-    setDraggedSport(null);
-  };
-
-  const handleWorkoutDrop = async (workoutId: string) => {
-    if (!draggedSport) return;
-    setSelectedWorkout(workoutId);
-    setShowMoveframeModal(true);
-    setTimeout(() => setDraggedSport(null), 100);
-  };
-
-  const handleWorkoutReorder = async (dayId: string, workouts: any[]) => {
-    // Reorder logic here
-    console.log('Reorder workouts:', dayId, workouts);
-  };
-
-  const handleMoveframeReorder = async (workoutId: string, moveframes: any[]) => {
-    // Reorder logic here
-    console.log('Reorder moveframes:', workoutId, moveframes);
-  };
-
-  const handleCopy = (type: 'day' | 'workout' | 'moveframe') => {
-    // Copy logic here
-    console.log('Copy:', type);
-  };
-
-  const handleCut = (type: 'day' | 'workout' | 'moveframe') => {
-    handleCopy(type);
-    setClipboard(prev => ({ ...prev, isCut: true }));
-  };
-
-  const handlePaste = async () => {
-    // Paste logic here
-    console.log('Paste');
-  };
-
-  const handleSettingsChange = async () => {
-    await loadPeriods();
-    await loadWorkoutSections();
-    await loadMainSports();
-  };
-
   return (
-    <div className="flex-1 flex flex-col bg-white rounded-lg shadow-sm border overflow-hidden">
-      {/* Athlete Selector for Coaches */}
-      {['COACH', 'TEAM_MANAGER', 'CLUB_TRAINER'].includes(userType) && (
-        <div className="bg-white border-b shadow-sm">
-          <AthleteSelector
-            selectedAthleteId={selectedAthleteId}
-            onSelectAthlete={setSelectedAthleteId}
-          />
-        </div>
-      )}
+    <div className="flex flex-col h-full bg-white">
+      {/* Small header bar with close button */}
+      <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between border-b">
+        <h3 className="text-lg font-semibold">Workout Planning</h3>
+        <button onClick={onClose} className="p-1.5 hover:bg-blue-700 rounded-full transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
 
-      {/* Main Workout Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Compact */}
-        <div className="w-64 border-r bg-gray-50">
-          <WorkoutLeftSidebar
-            activeSection={activeSection}
-            onSectionChange={handleSectionChange}
-            periods={periods}
-            workoutSections={workoutSections}
-            mainSports={mainSports}
-            onSettingsChange={handleSettingsChange}
-            onImportFromCoach={handleImportFromCoach}
-            userType={userType}
-          />
-        </div>
-        
-        {/* Central Grid */}
-        <div className="flex-1 overflow-auto bg-white">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading workout plan...</p>
-              </div>
-            </div>
-          ) : (
-            <WorkoutGrid
-              workoutPlan={workoutPlan}
-              activeSection={activeSection}
-              expandedDays={expandedDays}
-              expandedWorkouts={expandedWorkouts}
-              expandedMoveframes={expandedMoveframes}
-              onToggleDay={handleToggleDay}
-              onToggleWorkout={handleToggleWorkout}
-              onToggleMoveframe={handleToggleMoveframe}
-              onExpandAll={handleExpandAll}
-              onCollapseAll={handleCollapseAll}
-              onSelectDay={handleSelectDay}
-              onSelectWorkout={handleSelectWorkout}
-              onSelectMoveframe={handleSelectMoveframe}
-              periods={periods}
-              mainSports={mainSports}
-              draggedSport={draggedSport}
-              onWorkoutDrop={handleWorkoutDrop}
-              onWorkoutReorder={handleWorkoutReorder}
-              onMoveframeReorder={handleMoveframeReorder}
-            />
+      {/* Internal Navbar - Section Tabs */}
+      <div className="bg-white border-b border-gray-300 px-4 py-2">
+        <div className="flex items-center gap-2">
+          {/* Section Tabs */}
+          {['A', 'B', 'C', 'D'].map((section) => (
+            <button
+              key={section}
+              onClick={() => setActiveSection(section as 'A' | 'B' | 'C' | 'D')}
+              className={`px-4 py-2 rounded-t font-semibold text-sm transition-colors ${
+                activeSection === section 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              Sec {section}: {section === 'A' ? '2-3 Weeks' : section === 'B' ? 'Year' : section === 'C' ? 'Done' : 'Archive'}
+            </button>
+          ))}
+          
+          {/* Import Button - Only for sections A & B */}
+          {(activeSection === 'A' || activeSection === 'B') && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="ml-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Import from Coach/Team/Club
+            </button>
           )}
-        </div>
-        
-        {/* Right Sidebar - Compact */}
-        <div className="w-64 border-l bg-gray-50">
-          <WorkoutRightSidebar
-            selectedDay={selectedDay}
-            selectedWorkout={selectedWorkout}
-            selectedMoveframe={selectedMoveframe}
-            mainSports={mainSports}
-            onAddWorkout={handleAddWorkout}
-            onAddMoveframe={handleAddMoveframe}
-            onRefresh={handleRefresh}
-            onOpenArchive={handleOpenArchive}
-            onSaveAsTemplate={handleSaveAsTemplate}
-            onSportDragStart={handleSportDragStart}
-            onSportDragEnd={handleSportDragEnd}
-            onCopy={handleCopy}
-            onCut={handleCut}
-            onPaste={handlePaste}
-            clipboard={clipboard}
-            onMarkAsDone={handleMarkAsDone}
-            statistics={statistics}
-            onPrint={() => setShowPrintModal(true)}
-          />
         </div>
       </div>
 
-      {/* Modals */}
-      {showMoveframeModal && selectedWorkout && (
-        <MoveframeFormModal
-          workoutId={selectedWorkout}
-          dayId={selectedDay || ''}
-          existingMoveframe={editingMoveframe}
-          mainSports={mainSports}
-          workoutSections={workoutSections}
-          periods={periods}
+      {/* Workout area - full width */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Center - main workout area (full width, no sidebars) */}
+        <main className="flex-1 bg-white overflow-auto w-full">
+          <div className="p-4">
+            {/* View Toggle & Quick Actions */}
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {activeSection === 'A' && 'Current 2-3 Weeks'}
+                {activeSection === 'B' && 'Yearly Plan'}
+                {activeSection === 'C' && 'Workouts Done'}
+                {activeSection === 'D' && 'Archive & Templates'}
+              </h2>
+              
+              <div className="flex gap-2 items-center">
+                {/* Quick Action Buttons */}
+                <button 
+                  onClick={() => setShowAddDayModal(true)}
+                  className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Day
+                </button>
+                
+                <button 
+                  onClick={() => selectedDay && setShowAddWorkoutModal(true)}
+                  disabled={!selectedDay}
+                  className={`px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors ${
+                    selectedDay ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  title={!selectedDay ? 'Select a day first' : 'Add workout to selected day'}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Workout
+                </button>
+                
+                <button 
+                  onClick={() => selectedWorkout && setShowAddMoveframeModal(true)}
+                  disabled={!selectedWorkout}
+                  className={`px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors ${
+                    selectedWorkout ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  title={!selectedWorkout ? 'Select a workout first' : 'Add moveframe to selected workout'}
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Moveframe
+                </button>
+                
+                <div className="w-px h-8 bg-gray-300 mx-2"></div>
+                
+                {/* View Toggle */}
+                <button
+                  onClick={() => setViewMode('tree')}
+                  className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                    viewMode === 'tree' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                  Tree
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                    viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <Table className="w-4 h-4" />
+                  Table
+                </button>
+                {activeSection === 'B' && (
+                  <button
+                    onClick={() => {
+                      setViewMode('calendar');
+                      setSelectedWeekForTable(null);
+                    }}
+                    className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                      viewMode === 'calendar' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Calendar
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Week Context Header - Show when viewing filtered weeks */}
+            {selectedWeekForTable && viewMode === 'table' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                  <span className="font-semibold text-blue-900">
+                    Viewing: Week {selectedWeekForTable - 1} - Week {selectedWeekForTable} - Week {selectedWeekForTable + 1}
+                  </span>
+                  <span className="text-sm text-blue-700">(3 weeks context)</span>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedWeekForTable(null);
+                    setViewMode('calendar');
+                  }}
+                  className="px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded hover:bg-blue-100 transition-colors text-sm font-medium"
+                >
+                  ← Back to Calendar
+                </button>
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="flex items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            ) : viewMode === 'calendar' ? (
+              <WorkoutCalendarView
+                workoutPlan={workoutPlan}
+                periods={periods}
+                onDayClick={(day) => {
+                  setSelectedDay(day.id);
+                  setAddWorkoutDay(day);
+                  setSelectedWeekForTable(day.weekNumber);
+                  setViewMode('table'); // Switch to table view
+                }}
+              />
+            ) : viewMode === 'tree' ? (
+               <WorkoutGrid 
+                 workoutPlan={workoutPlan}
+                 activeSection={activeSection}
+                 periods={periods}
+                 onDaySelect={(day) => setSelectedDay(day.id)}
+                 onWorkoutSelect={(workoutId) => setSelectedWorkout(workoutId)}
+                 onAddWorkoutToDay={(day) => {
+                   setAddWorkoutDay(day);
+                   setWorkoutModalMode('add');
+                   setEditingWorkout(null);
+                   setShowAddWorkoutModal(true);
+                 }}
+                 onEditWorkout={(workout, day) => {
+                   setEditingWorkout(workout);
+                   setAddWorkoutDay(day);
+                   setWorkoutModalMode('edit');
+                   setShowAddWorkoutModal(true);
+                 }}
+                 expandedWeeks={expandedWeeks}
+                 setExpandedWeeks={setExpandedWeeks}
+                 expandedDays={expandedDays}
+                 setExpandedDays={setExpandedDays}
+                 expandedWorkouts={expandedWorkouts}
+                 setExpandedWorkouts={setExpandedWorkouts}
+                 onCreatePlan={async () => {
+                   try {
+                     const token = localStorage.getItem('token');
+                     const planTypeMap = {
+                       'A': 'CURRENT_WEEKS',
+                       'B': 'YEARLY_PLAN',
+                       'C': 'WORKOUTS_DONE',
+                       'D': 'YEARLY_PLAN'
+                     };
+                     
+                     // Get next Monday as start date
+                     const today = new Date();
+                     const nextMonday = new Date(today);
+                     const daysUntilMonday = (8 - today.getDay()) % 7 || 7;
+                     nextMonday.setDate(today.getDate() + daysUntilMonday);
+                     nextMonday.setHours(0, 0, 0, 0);
+                     
+                     // Calculate number of weeks based on section
+                     const numberOfWeeks = activeSection === 'A' ? 3 : 52; // 3 weeks or full year
+                     
+                     console.log('Creating plan:', {
+                       type: planTypeMap[activeSection],
+                       startDate: nextMonday.toISOString(),
+                       numberOfWeeks
+                     });
+                     
+                     // Create workout plan
+                     const response = await fetch('/api/workouts/plan', {
+                       method: 'POST',
+                       headers: {
+                         'Authorization': `Bearer ${token}`,
+                         'Content-Type': 'application/json'
+                       },
+                       body: JSON.stringify({
+                         type: planTypeMap[activeSection],
+                         name: `${activeSection === 'A' ? 'Current Weeks' : activeSection === 'B' ? 'Yearly Plan' : activeSection === 'C' ? 'Workouts Done' : 'Archive'} Plan`,
+                         startDate: nextMonday.toISOString(),
+                         numberOfWeeks
+                       })
+                     });
+                     
+                     if (response.ok) {
+                       const result = await response.json();
+                       console.log('Plan created:', result);
+                       await loadWorkoutData(); // Reload to show new plan
+                     } else {
+                       const error = await response.json();
+                       console.error('Failed to create plan:', error);
+                       alert('Error creating workout plan. Check console for details.');
+                     }
+                   } catch (error) {
+                     console.error('Error creating plan:', error);
+                     alert('Error creating workout plan: ' + (error as Error).message);
+                   }
+                 }}
+               />
+            ) : (
+               <WorkoutTableView
+                 workoutPlan={
+                   selectedWeekForTable 
+                     ? {
+                         ...workoutPlan,
+                         weeks: workoutPlan.weeks?.filter((week: any) => {
+                           const weekNum = week.weekNumber;
+                           return weekNum >= selectedWeekForTable - 1 && weekNum <= selectedWeekForTable + 1;
+                         }) || []
+                       }
+                     : workoutPlan
+                 }
+                 periods={periods}
+                 onEditWorkout={(workout, day) => {
+                   setEditingWorkout(workout);
+                   setAddWorkoutDay(day);
+                   setWorkoutModalMode('edit');
+                   setShowAddWorkoutModal(true);
+                 }}
+                 onEditDay={(day) => {
+                   console.log('Edit day:', day);
+                 }}
+                 onAddWorkout={(day) => {
+                   setAddWorkoutDay(day);
+                   setWorkoutModalMode('add');
+                   setEditingWorkout(null);
+                   setShowAddWorkoutModal(true);
+                 }}
+                 onAddMoveframe={(workout) => {
+                   setSelectedWorkout(workout.id);
+                   setShowAddMoveframeModal(true);
+                 }}
+                 onDataChanged={loadWorkoutData}
+               />
+            )}
+          </div>
+        </main>
+      </div>
+      
+      {showAddWorkoutModal && addWorkoutDay && (
+        <AddWorkoutModal
+          dayId={addWorkoutDay.id}
+          sessionNumber={editingWorkout?.sessionNumber || (addWorkoutDay.workouts?.length || 0) + 1}
+          mode={workoutModalMode}
+          existingWorkout={editingWorkout}
           onClose={() => {
-            setShowMoveframeModal(false);
-            setEditingMoveframe(null);
+            setShowAddWorkoutModal(false);
+            setAddWorkoutDay(null);
+            setEditingWorkout(null);
           }}
-          onSave={handleMoveframeSave}
-        />
-      )}
-
-      {showArchiveModal && (
-        <ArchiveModal
-          onClose={() => setShowArchiveModal(false)}
-          onApplyTemplate={handleApplyTemplate}
-          targetDayId={selectedDay}
-        />
-      )}
-
-      {showSaveTemplateModal && saveTemplateData && (
-        <SaveTemplateModal
-          onClose={() => {
-            setShowSaveTemplateModal(false);
-            setSaveTemplateData(null);
+          onSave={async (workoutData) => {
+            const token = localStorage.getItem('token');
+            const isEdit = workoutModalMode === 'edit' && workoutData.id;
+            
+            const url = isEdit 
+              ? `/api/workouts/sessions?id=${workoutData.id}` 
+              : '/api/workouts/sessions';
+            
+            await fetch(url, {
+              method: isEdit ? 'PATCH' : 'POST',
+              headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ...(isEdit ? {} : { workoutDayId: workoutData.dayId }),
+                ...(isEdit ? {} : { sessionNumber: workoutData.sessionNumber }),
+                name: workoutData.name,
+                code: workoutData.code,
+                time: workoutData.time,
+                location: workoutData.location,
+                notes: workoutData.notes,
+                ...(isEdit ? {} : { status: 'PLANNED_FUTURE' })
+              })
+            });
+            
+            // Keep day and its parent week expanded
+            if (addWorkoutDay) {
+              const newExpandedDays = new Set(expandedDays);
+              newExpandedDays.add(addWorkoutDay.id);
+              setExpandedDays(newExpandedDays);
+              
+              // Find and expand the parent week
+              const parentWeek = workoutPlan?.weeks?.find((week: any) => 
+                week.days?.some((day: any) => day.id === addWorkoutDay.id)
+              );
+              if (parentWeek) {
+                const newExpandedWeeks = new Set(expandedWeeks);
+                newExpandedWeeks.add(parentWeek.id);
+                setExpandedWeeks(newExpandedWeeks);
+              }
+            }
+            
+            setShowAddWorkoutModal(false);
+            setAddWorkoutDay(null);
+            loadWorkoutData();
           }}
-          onSave={handleTemplateSaved}
-          sourceType={saveTemplateType}
-          sourceData={saveTemplateData}
         />
       )}
-
-      {showImportFromCoachModal && (
-        <ImportFromCoachModal
-          onClose={() => setShowImportFromCoachModal(false)}
-          onImport={handleImportComplete}
-          targetDayId={selectedDay}
-        />
-      )}
-
-      {showMarkAsDoneModal && workoutToMarkDone && (
-        <MarkAsDoneModal
-          workoutSession={workoutToMarkDone}
-          onClose={() => {
-            setShowMarkAsDoneModal(false);
-            setWorkoutToMarkDone(null);
+      
+       {showAddMoveframeModal && selectedWorkout && (
+         <AddMoveframeModal
+           workoutId={selectedWorkout}
+           onClose={() => setShowAddMoveframeModal(false)}
+           onSave={async (moveframeData) => {
+             console.log('Creating moveframe with data:', moveframeData);
+             
+             try {
+               const token = localStorage.getItem('token');
+               
+               // Get or create a default section first
+               let sectionId = 'default';
+               try {
+                 const sectionsResponse = await fetch('/api/workouts/sections', {
+                   headers: { 'Authorization': `Bearer ${token}` }
+                 });
+                 
+                 if (sectionsResponse.ok) {
+                   const sectionsData = await sectionsResponse.json();
+                   if (sectionsData.sections && sectionsData.sections.length > 0) {
+                     sectionId = sectionsData.sections[0].id;
+                   }
+                 }
+               } catch (sectionError) {
+                 console.warn('Could not fetch sections, using default:', sectionError);
+               }
+               
+               const response = await fetch('/api/workouts/moveframes', {
+                 method: 'POST',
+                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                 body: JSON.stringify({
+                   workoutSessionId: moveframeData.workoutId,
+                   sport: moveframeData.sport,
+                   type: moveframeData.type || 'STANDARD',
+                   description: moveframeData.description || '',
+                   sectionId: sectionId,
+                   movelaps: [
+                     {
+                       distance: moveframeData.distance || '',
+                       speed: moveframeData.speed || '',
+                       reps: parseInt(moveframeData.repetitions) || 1,
+                       pause: moveframeData.pause || '',
+                       notes: '',
+                       status: 'PENDING'  // ✅ FIXED: Changed from 'PLANNED' to 'PENDING'
+                     }
+                   ]
+                 })
+               });
+               
+               if (response.ok) {
+                 const result = await response.json();
+                 console.log('Moveframe created successfully:', result);
+                 
+                 // Keep workout expanded
+                 if (selectedWorkout) {
+                   const newExpandedWorkouts = new Set(expandedWorkouts);
+                   newExpandedWorkouts.add(selectedWorkout);
+                   setExpandedWorkouts(newExpandedWorkouts);
+                 }
+                 
+                 setShowAddMoveframeModal(false);
+                 await loadWorkoutData();
+                 
+                 alert('Moveframe added successfully!');
+               } else {
+                 const error = await response.json();
+                 console.error('Failed to create moveframe:', error);
+                 alert(`Failed to create moveframe: ${error.error || 'Unknown error'}`);
+               }
+             } catch (error) {
+               console.error('Error creating moveframe:', error);
+               alert('Error creating moveframe. Check console for details.');
+             }
+           }}
+         />
+       )}
+       
+       {showImportModal && (activeSection === 'A' || activeSection === 'B') && (
+         <ImportWorkoutsModal
+           targetSection={activeSection}
+           onClose={() => setShowImportModal(false)}
+           onImport={async (sourceType, sourceId, workouts) => {
+             try {
+               const token = localStorage.getItem('token');
+               const response = await fetch('/api/workouts/import', {
+                 method: 'POST',
+                 headers: {
+                   'Authorization': `Bearer ${token}`,
+                   'Content-Type': 'application/json'
+                 },
+                 body: JSON.stringify({
+                   targetSection: activeSection,
+                   sourceType,
+                   sourceId,
+                   workoutIds: workouts.map(w => w.id)
+                 })
+               });
+               
+               if (response.ok) {
+                 setShowImportModal(false);
+                 loadWorkoutData();
+                 alert(`Successfully imported ${workouts.length} workout(s)!`);
+               } else {
+                 alert('Failed to import workouts');
+               }
+             } catch (error) {
+               console.error('Error importing workouts:', error);
+               alert('Error importing workouts');
+             }
+           }}
+         />
+       )}
+       
+      {showAddDayModal && workoutPlan && (
+        <AddDayModal
+          workoutPlanId={workoutPlan.id}
+          onClose={() => setShowAddDayModal(false)}
+          onSave={() => {
+            setShowAddDayModal(false);
+            loadWorkoutData();
           }}
-          onSave={handleSaveMarkAsDone}
         />
       )}
-
-      {showPrintModal && (
-        <PrintWorkoutModal
-          onClose={() => setShowPrintModal(false)}
-          selectedDay={selectedDay}
-          selectedWorkout={selectedWorkout}
-          workoutPlan={workoutPlan}
-        />
-      )}
-    </div>
-  );
-}
-
+     </div>
+   );
+ }

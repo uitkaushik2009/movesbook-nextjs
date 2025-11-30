@@ -17,7 +17,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    console.log('POST /api/workouts/moveframes - Request received');
+    
     const body = await request.json();
+    console.log('Request body:', JSON.stringify(body, null, 2));
+    
     const {
       workoutSessionId,
       sport,
@@ -26,38 +30,98 @@ export async function POST(request: NextRequest) {
       description,
       movelaps
     } = body;
+    
+    // Validate required fields
+    if (!workoutSessionId) {
+      console.error('Missing workoutSessionId');
+      return NextResponse.json({ error: 'workoutSessionId is required' }, { status: 400 });
+    }
+    if (!sport) {
+      console.error('Missing sport');
+      return NextResponse.json({ error: 'sport is required' }, { status: 400 });
+    }
+    if (!movelaps || !Array.isArray(movelaps) || movelaps.length === 0) {
+      console.error('Invalid movelaps:', movelaps);
+      return NextResponse.json({ error: 'movelaps must be a non-empty array' }, { status: 400 });
+    }
+    
+    console.log('Validated - workoutSessionId:', workoutSessionId);
+    console.log('Validated - sport:', sport);
+    console.log('Validated - movelaps count:', movelaps.length);
+
+    // Ensure we have a valid sectionId - create default section if needed
+    let finalSectionId = sectionId;
+    
+    if (!finalSectionId || finalSectionId === 'default') {
+      console.log('No valid sectionId provided, finding or creating default section...');
+      
+      let defaultSection = await prisma.workoutSection.findFirst({
+        where: {
+          userId: decoded.userId,
+          name: 'Default'
+        }
+      });
+      
+      if (!defaultSection) {
+        console.log('Creating default section for user:', decoded.userId);
+        defaultSection = await prisma.workoutSection.create({
+          data: {
+            userId: decoded.userId,
+            name: 'Default',
+            description: 'Default workout section',
+            color: '#3b82f6'
+          }
+        });
+        console.log('Default section created:', defaultSection.id);
+      } else {
+        console.log('Using existing default section:', defaultSection.id);
+      }
+      
+      finalSectionId = defaultSection.id;
+    }
 
     // Get existing moveframes count to determine letter
     const existingCount = await prisma.moveframe.count({
       where: { workoutSessionId }
     });
+    
+    console.log('Creating moveframe - letter will be:', indexToLetter(existingCount));
+    
+    const moveframeData = {
+      workoutSessionId,
+      letter: indexToLetter(existingCount),
+      sport: sport as any,
+      sectionId: finalSectionId,
+      type: type as any,
+      description: description || '',
+    };
+    
+    const movelapsData = movelaps.map((lap: any, index: number) => ({
+      repetitionNumber: index + 1,
+      distance: lap.distance ? parseInt(lap.distance) : null,
+      speed: lap.speed || null,
+      style: lap.style || null,
+      pace: lap.pace || null,
+      time: lap.time || null,
+      reps: lap.reps || 1,
+      restType: lap.restType || null,
+      pause: lap.pause || null,
+      alarm: lap.alarm ? parseInt(lap.alarm) : null,
+      sound: lap.sound || null,
+      notes: lap.notes || null,
+      status: (lap.status || 'PENDING') as any,
+      isSkipped: lap.isSkipped || false,
+      isDisabled: lap.isDisabled || false
+    }));
+    
+    console.log('Moveframe data:', JSON.stringify(moveframeData, null, 2));
+    console.log('Movelaps data:', JSON.stringify(movelapsData, null, 2));
 
     const moveframe = await prisma.moveframe.create({
       data: {
-        workoutSessionId,
-        letter: indexToLetter(existingCount),
-        sport: sport as any,
-        sectionId,
-        type: type as any,
-        description,
+        ...moveframeData,
         movelaps: {
-          create: movelaps.map((lap: any, index: number) => ({
-            repetitionNumber: index + 1,
-            distance: lap.distance,
-            speed: lap.speed,
-            style: lap.style,
-            pace: lap.pace,
-            time: lap.time,
-            reps: lap.reps,
-            restType: lap.restType as any,
-            pause: lap.pause,
-            alarm: lap.alarm,
-            sound: lap.sound,
-            notes: lap.notes,
-            status: lap.status as any,
-            isSkipped: lap.isSkipped || false,
-            isDisabled: lap.isDisabled || false
-          }))
+          create: movelapsData
         }
       },
       include: {
@@ -66,11 +130,23 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log('✅ Moveframe created successfully:', moveframe.id);
+
     return NextResponse.json({ moveframe });
-  } catch (error) {
-    console.error('Error creating moveframe:', error);
+  } catch (error: any) {
+    console.error('❌ Error creating moveframe:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error code:', error.code);
+    console.error('Full error:', JSON.stringify(error, null, 2));
+    
     return NextResponse.json(
-      { error: 'Failed to create moveframe' },
+      { 
+        error: 'Failed to create moveframe',
+        details: error.message,
+        code: error.code,
+        name: error.name
+      },
       { status: 500 }
     );
   }

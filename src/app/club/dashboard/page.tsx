@@ -105,6 +105,15 @@ export default function ClubDashboard() {
     }
   }, [activeTab]);
 
+  // Auto-hide left sidebar when workout section opens
+  useEffect(() => {
+    if (showWorkoutSection) {
+      setShowLeftSidebar(false);
+    } else {
+      setShowLeftSidebar(true);
+    }
+  }, [showWorkoutSection]);
+
   // Redirect to home if not authenticated
   useEffect(() => {
     if (!loading && !user) {

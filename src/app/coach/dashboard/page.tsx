@@ -90,6 +90,15 @@ export default function CoachDashboard() {
     }
   }, [activeTab]);
 
+  // Auto-hide left sidebar when workout section opens
+  useEffect(() => {
+    if (showWorkoutSection) {
+      setShowLeftSidebar(false);
+    } else {
+      setShowLeftSidebar(true);
+    }
+  }, [showWorkoutSection]);
+
   // Don't render if not authenticated (after all hooks are called)
   if (loading || !user) {
     return null;
