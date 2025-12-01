@@ -44,6 +44,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [selectedMoveframe, setSelectedMoveframe] = useState<any>(null);
   const [showWorkoutSelector, setShowWorkoutSelector] = useState(false);
   const [availableWorkouts, setAvailableWorkouts] = useState<any[]>([]);
+  const [showDaySelector, setShowDaySelector] = useState(false);
+  const [editingDay, setEditingDay] = useState<any>(null);
+  const [showEditDayModal, setShowEditDayModal] = useState(false);
 
   useEffect(() => {
     loadUserProfile();
@@ -206,16 +209,22 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               
               <div className="flex gap-2 items-center">
                 {/* Quick Action Buttons */}
-                {/* Add Day button only for Sections B, C, D (not A) */}
-                {activeSection !== 'A' && (
-                  <button 
-                    onClick={() => setShowAddDayModal(true)}
-                    className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Add Day
-                  </button>
-                )}
+                {/* Edit Day button - Select and edit day notes/annotations */}
+                <button 
+                  onClick={() => {
+                    // Show day selector to pick which day to edit
+                    if (!workoutPlan || !workoutPlan.weeks || workoutPlan.weeks.length === 0) {
+                      alert('No days available. Please create a plan first.');
+                      return;
+                    }
+                    setShowDaySelector(true);
+                  }}
+                  className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                  title="Edit day notes and annotations"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Edit Day
+                </button>
                 
                 {/* Virtual Start Date for Sections B & C */}
                 {(activeSection === 'B' || activeSection === 'C') && (
@@ -892,6 +901,196 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 Cancel
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Day Selector Modal - For Editing Day Notes/Annotations */}
+      {showDaySelector && workoutPlan && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Select Day to Edit</h2>
+              <button onClick={() => setShowDaySelector(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Select a day from the grid below to edit its notes, weather, feeling, and annotations.
+            </p>
+            
+            {/* Display days in a grid format by week */}
+            <div className="space-y-6">
+              {workoutPlan.weeks.map((week: any) => (
+                <div key={week.id} className="border border-gray-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-900 mb-3">Week {week.weekNumber}</h3>
+                  <div className="grid grid-cols-7 gap-2">
+                    {week.days.map((day: any) => {
+                      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                      return (
+                        <button
+                          key={day.id}
+                          onClick={() => {
+                            setEditingDay(day);
+                            setShowDaySelector(false);
+                            setShowEditDayModal(true);
+                          }}
+                          className="p-3 border-2 border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-colors text-center"
+                        >
+                          <div className="text-xs font-medium text-gray-600">
+                            {dayNames[day.dayOfWeek - 1]}
+                          </div>
+                          <div className="text-sm font-bold text-gray-900 mt-1">
+                            {new Date(day.date).getDate()}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {new Date(day.date).toLocaleDateString('en-US', { month: 'short' })}
+                          </div>
+                          {day.notes && (
+                            <div className="mt-1 text-xs text-blue-600">📝</div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setShowDaySelector(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Edit Day Modal - Edit day notes, weather, feeling, annotations */}
+      {showEditDayModal && editingDay && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Edit Day</h2>
+                <p className="text-sm text-gray-500">
+                  {new Date(editingDay.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                </p>
+              </div>
+              <button onClick={() => setShowEditDayModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              
+              try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/workouts/days/${editingDay.id}`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    notes: formData.get('notes'),
+                    weather: formData.get('weather'),
+                    feelingStatus: formData.get('feelingStatus'),
+                    periodId: editingDay.periodId // Keep existing period
+                  })
+                });
+                
+                if (response.ok) {
+                  setShowEditDayModal(false);
+                  setEditingDay(null);
+                  await loadWorkoutData(); // Reload to show changes
+                  alert('Day updated successfully!');
+                } else {
+                  alert('Failed to update day');
+                }
+              } catch (error) {
+                console.error('Error updating day:', error);
+                alert('Error updating day');
+              }
+            }} className="space-y-4">
+              
+              {/* Weather */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Weather
+                </label>
+                <input
+                  type="text"
+                  name="weather"
+                  defaultValue={editingDay.weather || ''}
+                  placeholder="Sunny, Rainy, Cloudy, etc."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              
+              {/* Feeling/Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Feeling (1-10)
+                </label>
+                <select
+                  name="feelingStatus"
+                  defaultValue={editingDay.feelingStatus || '5'}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="1">1 - Very Poor</option>
+                  <option value="2">2 - Poor</option>
+                  <option value="3">3 - Below Average</option>
+                  <option value="4">4 - Below Average</option>
+                  <option value="5">5 - Average</option>
+                  <option value="6">6 - Above Average</option>
+                  <option value="7">7 - Good</option>
+                  <option value="8">8 - Very Good</option>
+                  <option value="9">9 - Excellent</option>
+                  <option value="10">10 - Perfect</option>
+                </select>
+              </div>
+              
+              {/* Notes / Annotations */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Notes / Annotations
+                </label>
+                <textarea
+                  name="notes"
+                  defaultValue={editingDay.notes || ''}
+                  placeholder="Add any notes, observations, or annotations for this day..."
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Use this field to store day annotations, training observations, how you felt, etc.
+                </p>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setShowEditDayModal(false)}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
