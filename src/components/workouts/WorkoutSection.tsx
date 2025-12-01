@@ -41,6 +41,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [athleteList, setAthleteList] = useState<any[]>([]);
   const [userType, setUserType] = useState<string | null>(null);
   const [showAthleteSelector, setShowAthleteSelector] = useState(false);
+  const [selectedMoveframe, setSelectedMoveframe] = useState<any>(null);
+  const [showWorkoutSelector, setShowWorkoutSelector] = useState(false);
+  const [availableWorkouts, setAvailableWorkouts] = useState<any[]>([]);
 
   useEffect(() => {
     loadUserProfile();
@@ -238,16 +241,40 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 
                 <button 
                   onClick={() => {
-                    // In table view, get first available day or let modal handle selection
-                    if (!selectedDay && workoutPlan?.weeks?.[0]?.days?.[0]) {
-                      setAddWorkoutDay(workoutPlan.weeks[0].days[0]);
+                    // Add Workout: User must select a day first from calendar or row
+                    if (!selectedDay && !addWorkoutDay) {
+                      alert('Please select a day first by clicking on a row or date in the calendar');
+                      return;
                     }
+                    
+                    // Find the selected day
+                    let dayToUse = addWorkoutDay;
+                    if (!dayToUse && selectedDay) {
+                      dayToUse = workoutPlan?.weeks?.flatMap((w: any) => w.days)?.find((d: any) => d.id === selectedDay);
+                    }
+                    if (!dayToUse && workoutPlan?.weeks?.[0]?.days?.[0]) {
+                      dayToUse = workoutPlan.weeks[0].days[0];
+                    }
+                    
+                    if (!dayToUse) {
+                      alert('Please select a valid day');
+                      return;
+                    }
+                    
+                    // Check how many workouts exist (max 3 per day)
+                    const existingWorkouts = dayToUse.workouts || [];
+                    if (existingWorkouts.length >= 3) {
+                      alert('Maximum 3 workouts per day. Please edit an existing workout.');
+                      return;
+                    }
+                    
+                    setAddWorkoutDay(dayToUse);
                     setWorkoutModalMode('add');
                     setEditingWorkout(null);
                     setShowAddWorkoutModal(true);
                   }}
                   className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                  title="Add workout"
+                  title="Add workout to selected day"
                 >
                   <Plus className="w-4 h-4" />
                   Add Workout
@@ -255,14 +282,40 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 
                 <button 
                   onClick={() => {
-                    // In table view, get first available workout or let modal handle selection
-                    if (!selectedWorkout && workoutPlan?.weeks?.[0]?.days?.[0]?.workouts?.[0]) {
-                      setSelectedWorkout(workoutPlan.weeks[0].days[0].workouts[0].id);
+                    // Add Moveframe: MOST IMPORTANT - Must select workout first
+                    // Step 1: Find the selected day
+                    if (!selectedDay && !addWorkoutDay) {
+                      alert('Please select a day first by clicking on a row or date in the calendar');
+                      return;
                     }
-                    setShowAddMoveframeModal(true);
+                    
+                    let dayToUse = addWorkoutDay;
+                    if (!dayToUse && selectedDay) {
+                      dayToUse = workoutPlan?.weeks?.flatMap((w: any) => w.days)?.find((d: any) => d.id === selectedDay);
+                    }
+                    if (!dayToUse && workoutPlan?.weeks?.[0]?.days?.[0]) {
+                      dayToUse = workoutPlan.weeks[0].days[0];
+                    }
+                    
+                    if (!dayToUse) {
+                      alert('Please select a valid day');
+                      return;
+                    }
+                    
+                    // Step 2: Check if day has any workouts
+                    const existingWorkouts = dayToUse.workouts || [];
+                    if (existingWorkouts.length === 0) {
+                      alert('No workouts exist for this day. Please add a workout first.');
+                      return;
+                    }
+                    
+                    // Step 3: Show workout selector prompt (ONLY EXISTING workouts)
+                    setAvailableWorkouts(existingWorkouts);
+                    setAddWorkoutDay(dayToUse);
+                    setShowWorkoutSelector(true);
                   }}
-                  className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                  title="Add moveframe"
+                  className="px-3 py-1.5 bg-orange-600 text-white hover:bg-orange-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                  title="Add moveframe to a workout (select workout first)"
                 >
                   <Plus className="w-4 h-4" />
                   Add Moveframe
@@ -767,6 +820,76 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Workout Selector Modal - For Adding Moveframe */}
+      {showWorkoutSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Select Workout for Moveframe</h2>
+              <button onClick={() => setShowWorkoutSelector(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Select which workout to add the moveframe to. Showing all existing workouts for {addWorkoutDay?.date ? new Date(addWorkoutDay.date).toLocaleDateString() : 'selected day'}.
+            </p>
+            
+            <div className="space-y-3">
+              {availableWorkouts.map((workout, index) => (
+                <button
+                  key={workout.id}
+                  onClick={() => {
+                    setSelectedWorkout(workout.id);
+                    setShowWorkoutSelector(false);
+                    setShowAddMoveframeModal(true);
+                  }}
+                  className="w-full text-left px-4 py-4 border-2 border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-lg text-blue-600">Workout #{index + 1}</span>
+                        <span className="text-sm text-gray-500">
+                          {addWorkoutDay?.date ? new Date(addWorkoutDay.date).toLocaleDateString() : ''}
+                        </span>
+                      </div>
+                      <div className="mt-1">
+                        <span className="font-medium text-gray-900">
+                          {workout.name || '<no name assigned>'}
+                        </span>
+                      </div>
+                      {workout.moveframes && workout.moveframes.length > 0 && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-xs text-gray-600">Sports:</span>
+                          <div className="flex gap-1">
+                            {Array.from(new Set(workout.moveframes.map((mf: any) => mf.sport))).slice(0, 4).map((sport: string, idx: number) => (
+                              <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                                {sport}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-blue-600 text-2xl">→</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setShowWorkoutSelector(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
               </button>
             </div>
           </div>
