@@ -1,95 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { verifyToken } from '@/lib/auth';
 
-// PATCH /api/workouts/moveframes/[id] - Update moveframe (e.g., move to another workout)
+// PATCH - Update moveframe (for drag and drop)
 export async function PATCH(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = req.headers.get('authorization')?.split(' ')[1];
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { id } = params;
+    const body = await request.json();
+    const { workoutSessionId } = body;
 
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    console.log('📝 Updating moveframe:', { id, workoutSessionId });
 
-    const moveframeId = params.id;
-    const body = await req.json();
-    const { workoutSessionId, ...updateData } = body;
-
-    console.log('[API] PATCH /api/workouts/moveframes/[id]');
-    console.log('Moveframe ID:', moveframeId);
-    console.log('Update data:', body);
-
-    // Update the moveframe
+    // Update moveframe
     const updatedMoveframe = await prisma.moveframe.update({
-      where: { id: moveframeId },
+      where: { id },
       data: {
-        ...(workoutSessionId && { workoutSessionId }),
-        ...updateData
+        workoutSessionId: workoutSessionId,
       },
       include: {
         movelaps: true,
-        section: true,
-        workoutSession: true
-      }
+      },
     });
 
-    console.log('[API] Moveframe updated successfully:', updatedMoveframe.id);
+    console.log('✅ Moveframe updated successfully');
 
-    return NextResponse.json({ moveframe: updatedMoveframe });
-  } catch (error: any) {
-    console.error('[API] Error updating moveframe:', error);
+    return NextResponse.json({ 
+      success: true,
+      moveframe: updatedMoveframe 
+    });
+
+  } catch (error) {
+    console.error('❌ Update moveframe error:', error);
     return NextResponse.json(
-      { error: 'Failed to update moveframe', details: error.message },
+      { error: 'Failed to update moveframe', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/workouts/moveframes/[id] - Delete moveframe
+// DELETE - Delete moveframe
 export async function DELETE(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const token = req.headers.get('authorization')?.split(' ')[1];
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { id } = params;
 
-    const decoded = verifyToken(token);
-    if (!decoded || !decoded.userId) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
+    console.log('🗑️ Deleting moveframe:', id);
 
-    const moveframeId = params.id;
-
-    console.log('[API] DELETE /api/workouts/moveframes/[id]');
-    console.log('Moveframe ID:', moveframeId);
-
-    // Delete associated movelaps first
+    // Delete all movelaps first
     await prisma.movelap.deleteMany({
-      where: { moveframeId }
+      where: { moveframeId: id }
     });
 
-    // Delete the moveframe
+    // Delete moveframe
     await prisma.moveframe.delete({
-      where: { id: moveframeId }
+      where: { id }
     });
 
-    console.log('[API] Moveframe deleted successfully');
+    console.log('✅ Moveframe deleted successfully');
 
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('[API] Error deleting moveframe:', error);
+    return NextResponse.json({ 
+      success: true,
+      message: 'Moveframe deleted' 
+    });
+
+  } catch (error) {
+    console.error('❌ Delete moveframe error:', error);
     return NextResponse.json(
-      { error: 'Failed to delete moveframe', details: error.message },
+      { error: 'Failed to delete moveframe', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

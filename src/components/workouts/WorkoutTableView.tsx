@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { Edit, Copy, Trash2, ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
+import { Edit, Copy, Trash2, ChevronDown, ChevronRight, MoreVertical, GripVertical } from 'lucide-react';
+import { WorkoutActionModal, MoveframePositionModal, ConfirmRemovalModal } from './DragDropModals';
 
 interface WorkoutTableViewProps {
   workoutPlan: any;
@@ -39,6 +40,17 @@ export default function WorkoutTableView({
   const [resizingColumn, setResizingColumn] = useState<string | null>(null);
   const [resizeStartX, setResizeStartX] = useState(0);
   const [resizeStartWidth, setResizeStartWidth] = useState(0);
+  
+  // Drag and drop state
+  const [draggedWorkout, setDraggedWorkout] = useState<any>(null);
+  const [draggedMoveframe, setDraggedMoveframe] = useState<any>(null);
+  const [dragOverDay, setDragOverDay] = useState<string | null>(null);
+  const [dragOverWorkout, setDragOverWorkout] = useState<string | null>(null);
+  const [dragOverMoveframe, setDragOverMoveframe] = useState<string | null>(null);
+  const [showWorkoutActionModal, setShowWorkoutActionModal] = useState(false);
+  const [showMoveframePositionModal, setShowMoveframePositionModal] = useState(false);
+  const [showConfirmRemovalModal, setShowConfirmRemovalModal] = useState(false);
+  const [dragContext, setDragContext] = useState<any>(null);
 
   const toggleOptions = (dayId: string) => {
     setExpandedOptions(expandedOptions === dayId ? null : dayId);
@@ -133,6 +145,259 @@ export default function WorkoutTableView({
     alert('Grid settings reset to default!');
   };
 
+  // ========== DRAG AND DROP HANDLERS ==========
+  
+  // Workout drag handlers
+  const handleWorkoutDragStart = (e: React.DragEvent, workout: any, day: any) => {
+    e.stopPropagation();
+    setDraggedWorkout({ workout, sourceDay: day });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDayDragOver = (e: React.DragEvent, day: any) => {
+    if (draggedWorkout) {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverDay(day.id);
+    }
+  };
+
+  const handleDayDragLeave = () => {
+    setDragOverDay(null);
+  };
+
+  const handleWorkoutDrop = (e: React.DragEvent, targetDay: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverDay(null);
+
+    if (!draggedWorkout) return;
+
+    const { workout: sourceWorkout, sourceDay } = draggedWorkout;
+    
+    // Check if target day already has workouts
+    const existingWorkout = targetDay.workouts?.[0]; // Check first workout slot
+
+    setDragContext({
+      sourceWorkout,
+      sourceDay,
+      targetDay,
+      existingWorkout
+    });
+
+    setShowWorkoutActionModal(true);
+    setDraggedWorkout(null);
+  };
+
+  const handleWorkoutAction = async (action: 'copy' | 'move' | 'switch') => {
+    const { sourceWorkout, sourceDay, targetDay, existingWorkout } = dragContext;
+
+    // If Copy or Move and target exists, confirm removal
+    if ((action === 'copy' || action === 'move') && existingWorkout) {
+      setDragContext({ ...dragContext, pendingAction: action });
+      setShowWorkoutActionModal(false);
+      setShowConfirmRemovalModal(true);
+      return;
+    }
+
+    await executeWorkoutAction(action);
+  };
+
+  const executeWorkoutAction = async (action: 'copy' | 'move' | 'switch') => {
+    const { sourceWorkout, sourceDay, targetDay, existingWorkout } = dragContext;
+
+    try {
+      if (action === 'copy') {
+        // Delete existing if confirmed
+        if (existingWorkout) {
+          await fetch(`/api/workouts/sessions/${existingWorkout.id}`, {
+            method: 'DELETE',
+          });
+        }
+
+        // Copy workout
+        const response = await fetch('/api/workouts/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...sourceWorkout,
+            id: undefined,
+            dayId: targetDay.id,
+          }),
+        });
+
+        if (!response.ok) throw new Error('Copy failed');
+
+      } else if (action === 'move') {
+        // Delete existing if confirmed
+        if (existingWorkout) {
+          await fetch(`/api/workouts/sessions/${existingWorkout.id}`, {
+            method: 'DELETE',
+          });
+        }
+
+        // Move workout
+        const response = await fetch(`/api/workouts/sessions/${sourceWorkout.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dayId: targetDay.id }),
+        });
+
+        if (!response.ok) throw new Error('Move failed');
+
+      } else if (action === 'switch') {
+        // Switch both workouts' days
+        await Promise.all([
+          fetch(`/api/workouts/sessions/${sourceWorkout.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dayId: targetDay.id }),
+          }),
+          fetch(`/api/workouts/sessions/${existingWorkout.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dayId: sourceDay.id }),
+          }),
+        ]);
+      }
+
+      // Refresh data
+      if (onDataChanged) {
+        onDataChanged();
+      }
+
+      // Close modals
+      setShowWorkoutActionModal(false);
+      setShowConfirmRemovalModal(false);
+      setDragContext(null);
+
+    } catch (error) {
+      console.error('Workout action failed:', error);
+      alert('Failed to complete action');
+    }
+  };
+
+  // Moveframe drag handlers
+  const handleMoveframeDragStart = (e: React.DragEvent, moveframe: any, workout: any, day: any) => {
+    e.stopPropagation();
+    setDraggedMoveframe({ moveframe, sourceWorkout: workout, sourceDay: day });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleMoveframeDragOver = (e: React.DragEvent, targetMoveframe: any) => {
+    if (draggedMoveframe) {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragOverMoveframe(targetMoveframe.id);
+    }
+  };
+
+  const handleMoveframeDragLeave = () => {
+    setDragOverMoveframe(null);
+  };
+
+  const handleMoveframeDrop = (e: React.DragEvent, targetMoveframe: any, targetWorkout: any, targetDay: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverMoveframe(null);
+
+    if (!draggedMoveframe) return;
+
+    const { moveframe: sourceMoveframe, sourceWorkout, sourceDay } = draggedMoveframe;
+
+    // Save context for position modal
+    setDragContext({
+      sourceMoveframe,
+      sourceWorkout,
+      sourceDay,
+      targetMoveframe,
+      targetWorkout,
+      targetDay
+    });
+
+    setShowMoveframePositionModal(true);
+    setDraggedMoveframe(null);
+  };
+
+  const handleMoveframeDropOnDay = async (e: React.DragEvent, targetDay: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggedMoveframe) return;
+
+    const { moveframe: sourceMoveframe, sourceWorkout } = draggedMoveframe;
+    
+    // Get first workout of target day or create one
+    let targetWorkout = targetDay.workouts?.[0];
+
+    if (!targetWorkout) {
+      // Create a workout
+      const response = await fetch('/api/workouts/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'New Workout',
+          dayId: targetDay.id,
+        }),
+      });
+
+      if (!response.ok) {
+        alert('Failed to create workout');
+        return;
+      }
+
+      const data = await response.json();
+      targetWorkout = data.session;
+    }
+
+    // Move moveframe to end of target workout (append)
+    try {
+      await fetch(`/api/workouts/moveframes/${sourceMoveframe.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workoutSessionId: targetWorkout.id,
+        }),
+      });
+
+      if (onDataChanged) {
+        onDataChanged();
+      }
+
+      setDraggedMoveframe(null);
+    } catch (error) {
+      console.error('Moveframe drop failed:', error);
+      alert('Failed to move moveframe');
+    }
+  };
+
+  const handleMoveframePosition = async (position: 'before' | 'after') => {
+    const { sourceMoveframe, targetWorkout } = dragContext;
+
+    try {
+      // Just move the moveframe to the target workout
+      // Position will be handled by alphabetical sorting (A, B, C...)
+      await fetch(`/api/workouts/moveframes/${sourceMoveframe.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workoutSessionId: targetWorkout.id,
+        }),
+      });
+
+      if (onDataChanged) {
+        onDataChanged();
+      }
+
+      setShowMoveframePositionModal(false);
+      setDragContext(null);
+
+    } catch (error) {
+      console.error('Moveframe position failed:', error);
+      alert('Failed to position moveframe');
+    }
+  };
+
   // Load saved settings on mount
   useEffect(() => {
     const saved = localStorage.getItem('workoutTableGridSettings');
@@ -141,81 +406,6 @@ export default function WorkoutTableView({
       setColumnWidths(savedWidths);
     }
   }, []);
-
-  // Drag & Drop handlers for moveframes
-  const [draggedMoveframe, setDraggedMoveframe] = useState<any>(null);
-  const [draggedMovelap, setDraggedMovelap] = useState<any>(null);
-
-  const handleMoveframeDragStart = (e: React.DragEvent, moveframe: any, workout: any) => {
-    setDraggedMoveframe({ moveframe, sourceWorkout: workout });
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleMoveframeDrop = async (e: React.DragEvent, targetWorkout: any) => {
-    e.preventDefault();
-    if (!draggedMoveframe) return;
-
-    const { moveframe, sourceWorkout } = draggedMoveframe;
-    
-    // If dropping on same workout, do nothing
-    if (sourceWorkout.id === targetWorkout.id) {
-      setDraggedMoveframe(null);
-      return;
-    }
-
-    const token = localStorage.getItem('token');
-    
-    try {
-      // Update moveframe's workout session
-      const response = await fetch(`/api/workouts/moveframes/${moveframe.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          workoutSessionId: targetWorkout.id
-        })
-      });
-
-      if (response.ok) {
-        setDraggedMoveframe(null);
-        if (onDataChanged) onDataChanged();
-      }
-    } catch (error) {
-      console.error('Error moving moveframe:', error);
-    }
-  };
-
-  const handleMovelapDragStart = (e: React.DragEvent, movelap: any, moveframe: any) => {
-    setDraggedMovelap({ movelap, sourceMoveframe: moveframe });
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleMovelapDrop = async (e: React.DragEvent, targetPosition: number, targetMoveframe: any) => {
-    e.preventDefault();
-    if (!draggedMovelap) return;
-
-    const { movelap, sourceMoveframe } = draggedMovelap;
-    
-    // Only allow dropping within same moveframe
-    if (sourceMoveframe.id !== targetMoveframe.id) {
-      alert('Movelaps can only be moved within the same moveframe');
-      setDraggedMovelap(null);
-      return;
-    }
-
-    const token = localStorage.getItem('token');
-    
-    try {
-      // Update movelap order (implement API endpoint if needed)
-      // For now, just refresh
-      setDraggedMovelap(null);
-      if (onDataChanged) onDataChanged();
-    } catch (error) {
-      console.error('Error moving movelap:', error);
-    }
-  };
 
   const handleCopy = () => {
     if (selectedDays.size === 0) return;
@@ -834,6 +1024,8 @@ export default function WorkoutTableView({
                 <tr 
                   key={`${day.id}-${workout.id}`} 
                   className={rowBgClass}
+                  draggable
+                  onDragStart={(e) => handleWorkoutDragStart(e, workout, day)}
                   onDoubleClick={() => onEditWorkout?.(workout, day)}
                 >
                   {isFirstWorkout && (
@@ -854,11 +1046,14 @@ export default function WorkoutTableView({
                         {day.dayOfWeek}
                       </td>
                       <td 
-                        className={`border border-gray-300 px-2 py-2 text-center font-medium sticky z-10 ${stickyBg} cursor-pointer hover:bg-blue-200`} 
+                        className={`border border-gray-300 px-2 py-2 text-center font-medium sticky z-10 ${stickyBg} cursor-pointer hover:bg-blue-200 ${dragOverDay === day.id ? 'ring-4 ring-green-500 bg-green-100' : ''}`} 
                         style={{left: '160px'}} 
                         rowSpan={dayWorkouts.length}
                         onClick={() => toggleDayDetails(day.id)}
-                        title="Click to expand/collapse workouts"
+                        onDragOver={(e) => handleDayDragOver(e, day)}
+                        onDragLeave={handleDayDragLeave}
+                        onDrop={(e) => handleWorkoutDrop(e, day)}
+                        title="Click to expand/collapse workouts | Drop workout here"
                       >
                         {getDayName(day.dayOfWeek)}
                       </td>
@@ -984,10 +1179,13 @@ export default function WorkoutTableView({
                   <td 
                     className="border border-gray-300 px-2 py-1 text-xs"
                     onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => handleMoveframeDrop(e, workout)}
+                    onDrop={(e) => handleMoveframeDropOnDay(e, day)}
                   >
                     <div className="flex items-center gap-2 justify-between">
                       <div className="flex items-center gap-1 flex-1">
+                        <div title="Drag to move workout">
+                          <GripVertical size={14} className="text-gray-400 cursor-grab active:cursor-grabbing" />
+                        </div>
                         <button
                           onClick={() => toggleWorkoutExpansion(workout.id)}
                           className="hover:bg-gray-200 rounded p-0.5"
@@ -1023,14 +1221,18 @@ export default function WorkoutTableView({
                   workoutRows.push(
                     <tr 
                       key={`mf-${moveframe.id}`}
-                      className="bg-blue-50 hover:bg-blue-100"
+                      className={`bg-blue-50 hover:bg-blue-100 ${dragOverMoveframe === moveframe.id ? 'ring-2 ring-purple-500' : ''}`}
                       draggable
-                      onDragStart={(e) => handleMoveframeDragStart(e, moveframe, workout)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => handleMoveframeDrop(e, workout)}
+                      onDragStart={(e) => handleMoveframeDragStart(e, moveframe, workout, day)}
+                      onDragOver={(e) => handleMoveframeDragOver(e, moveframe)}
+                      onDragLeave={handleMoveframeDragLeave}
+                      onDrop={(e) => handleMoveframeDrop(e, moveframe, workout, day)}
                     >
                       <td colSpan={6} className="border border-gray-300 px-4 py-1 text-xs">
                         <div className="flex items-center gap-2">
+                          <div title="Drag to move moveframe">
+                            <GripVertical size={12} className="text-gray-400 cursor-grab active:cursor-grabbing" />
+                          </div>
                           <button
                             onClick={() => toggleMoveframeExpansion(moveframe.id)}
                             className="hover:bg-gray-200 rounded p-0.5"
@@ -1042,7 +1244,6 @@ export default function WorkoutTableView({
                           <span className="text-gray-700">{moveframe.sport}</span>
                           <span className="text-gray-500">({moveframe.type || 'Exercise'})</span>
                           {moveframe.description && <span className="text-gray-400 italic">- {moveframe.description}</span>}
-                          <span className="ml-auto text-gray-500 text-xs cursor-move" title="Drag to move to another workout">⋮⋮</span>
                         </div>
                       </td>
                       <td colSpan={16} className="border border-gray-300 px-2 py-1 text-xs text-gray-600">
@@ -1060,10 +1261,6 @@ export default function WorkoutTableView({
                         <tr 
                           key={`lap-${movelap.id}`}
                           className="bg-green-50 hover:bg-green-100"
-                          draggable
-                          onDragStart={(e) => handleMovelapDragStart(e, movelap, moveframe)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => handleMovelapDrop(e, lapIndex, moveframe)}
                         >
                           <td colSpan={6} className="border border-gray-300 px-8 py-1 text-xs">
                             <div className="flex items-center gap-2">
@@ -1170,6 +1367,48 @@ export default function WorkoutTableView({
       {/* Inner div with same width as table to create scrollbar */}
       <div style={{ width: '1600px', height: '1px' }}></div>
     </div>
+
+    {/* Drag and Drop Modals */}
+    {dragContext && (
+      <>
+        <WorkoutActionModal
+          isOpen={showWorkoutActionModal}
+          onClose={() => {
+            setShowWorkoutActionModal(false);
+            setDragContext(null);
+          }}
+          onAction={handleWorkoutAction}
+          sourceWorkout={dragContext.sourceWorkout}
+          targetDay={dragContext.targetDay}
+          existingWorkout={dragContext.existingWorkout}
+        />
+
+        <MoveframePositionModal
+          isOpen={showMoveframePositionModal}
+          onClose={() => {
+            setShowMoveframePositionModal(false);
+            setDragContext(null);
+          }}
+          onPosition={handleMoveframePosition}
+          sourceMoveframe={dragContext.sourceMoveframe}
+          targetMoveframe={dragContext.targetMoveframe}
+        />
+
+        <ConfirmRemovalModal
+          isOpen={showConfirmRemovalModal}
+          onClose={() => {
+            setShowConfirmRemovalModal(false);
+            setShowWorkoutActionModal(true); // Go back to action modal
+          }}
+          onConfirm={() => {
+            const action = dragContext.pendingAction || 'move';
+            executeWorkoutAction(action);
+          }}
+          itemType="workout"
+          itemName={dragContext.existingWorkout?.name || 'Unnamed Workout'}
+        />
+      </>
+    )}
   </div>
   );
 }
