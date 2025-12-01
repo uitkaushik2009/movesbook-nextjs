@@ -131,9 +131,9 @@ export async function POST(request: NextRequest) {
     console.log('POST /api/workouts/plan - Request received');
     
     const body = await request.json();
-    const { name, type, startDate, numberOfWeeks } = body;
+    const { name, type, startDate, numberOfWeeks, autoCreateDays } = body;
     
-    console.log('Request body:', { name, type, numberOfWeeks });
+    console.log('Request body:', { name, type, numberOfWeeks, autoCreateDays });
 
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + (numberOfWeeks * 7));
@@ -172,9 +172,16 @@ export async function POST(request: NextRequest) {
     });
     console.log('Plan created with ID:', plan.id);
 
-    // Generate weeks - LIMIT to avoid timeout
-    const weeksToCreate = Math.min(numberOfWeeks, numberOfWeeks <= 10 ? numberOfWeeks : 10);
-    console.log(`Will create ${weeksToCreate} weeks (requested ${numberOfWeeks}, limited for performance)`);
+    // Generate weeks - For Section A (CURRENT_WEEKS), create all 3 weeks immediately
+    // For others, create first 10 weeks (or all if <= 10)
+    let weeksToCreate;
+    if (type === 'CURRENT_WEEKS') {
+      weeksToCreate = numberOfWeeks; // Always create all weeks for Section A (3 weeks)
+      console.log(`Section A: Creating all ${weeksToCreate} weeks with all days`);
+    } else {
+      weeksToCreate = Math.min(numberOfWeeks, 10); // Create first 10 weeks for other sections
+      console.log(`Will create ${weeksToCreate} weeks (requested ${numberOfWeeks}, creating initial batch)`);
+    }
     
     for (let i = 0; i < weeksToCreate; i++) {
       console.log(`Creating week ${i + 1}...`);

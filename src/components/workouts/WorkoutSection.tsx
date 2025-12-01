@@ -35,11 +35,52 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
+  const [virtualStartDate, setVirtualStartDate] = useState<Date | null>(null);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [selectedAthlete, setSelectedAthlete] = useState<any>(null);
+  const [athleteList, setAthleteList] = useState<any[]>([]);
+  const [userType, setUserType] = useState<string | null>(null);
+  const [showAthleteSelector, setShowAthleteSelector] = useState(false);
 
   useEffect(() => {
+    loadUserProfile();
     loadWorkoutData();
     loadPeriods();
   }, [activeSection]);
+  
+  const loadUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      if (user) {
+        const userData = JSON.parse(user);
+        setUserType(userData.userType);
+        
+        // For Section C, if user is coach/team/club, load their athletes
+        if (activeSection === 'C' && ['COACH', 'TEAM', 'CLUB', 'TEAM_MANAGER', 'CLUB_TRAINER'].includes(userData.userType)) {
+          await loadAthleteList();
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
+  
+  const loadAthleteList = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/coach/athletes', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAthleteList(data.athletes || []);
+      }
+    } catch (error) {
+      console.error('Error loading athletes:', error);
+    }
+  };
 
   const loadWorkoutData = async () => {
     setIsLoading(true);
@@ -162,13 +203,38 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               
               <div className="flex gap-2 items-center">
                 {/* Quick Action Buttons */}
-                <button 
-                  onClick={() => setShowAddDayModal(true)}
-                  className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Day
-                </button>
+                {/* Add Day button only for Sections B, C, D (not A) */}
+                {activeSection !== 'A' && (
+                  <button 
+                    onClick={() => setShowAddDayModal(true)}
+                    className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Day
+                  </button>
+                )}
+                
+                {/* Virtual Start Date for Sections B & C */}
+                {(activeSection === 'B' || activeSection === 'C') && (
+                  <button 
+                    onClick={() => setShowStartDatePicker(true)}
+                    className="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    {virtualStartDate ? `Start: ${virtualStartDate.toLocaleDateString()}` : 'Set Virtual Start Date'}
+                  </button>
+                )}
+                
+                {/* Athlete Selector for Section C (Coaches/Teams/Clubs only) */}
+                {activeSection === 'C' && userType && ['COACH', 'TEAM', 'CLUB', 'TEAM_MANAGER', 'CLUB_TRAINER'].includes(userType) && (
+                  <button 
+                    onClick={() => setShowAthleteSelector(true)}
+                    className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {selectedAthlete ? `Viewing: ${selectedAthlete.name}` : 'Select Athlete'}
+                  </button>
+                )}
                 
                 <button 
                   onClick={() => {
@@ -319,29 +385,34 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                      nextMonday.setDate(today.getDate() + daysUntilMonday);
                      nextMonday.setHours(0, 0, 0, 0);
                      
-                     // Calculate number of weeks based on section
-                     const numberOfWeeks = activeSection === 'A' ? 3 : 52; // 3 weeks or full year
-                     
-                     console.log('Creating plan:', {
-                       type: planTypeMap[activeSection],
-                       startDate: nextMonday.toISOString(),
-                       numberOfWeeks
-                     });
-                     
-                     // Create workout plan
-                     const response = await fetch('/api/workouts/plan', {
-                       method: 'POST',
-                       headers: {
-                         'Authorization': `Bearer ${token}`,
-                         'Content-Type': 'application/json'
-                       },
-                       body: JSON.stringify({
-                         type: planTypeMap[activeSection],
-                         name: `${activeSection === 'A' ? 'Current Weeks' : activeSection === 'B' ? 'Yearly Plan' : activeSection === 'C' ? 'Workouts Done' : 'Archive'} Plan`,
-                         startDate: nextMonday.toISOString(),
-                         numberOfWeeks
-                       })
-                     });
+                    // Calculate number of weeks based on section
+                    const numberOfWeeks = activeSection === 'A' ? 3 : 52; // 3 weeks or full year
+                    
+                    // For Section A, auto-create all days (Monday-Sunday)
+                    const autoCreateDays = activeSection === 'A';
+                    
+                    console.log('Creating plan:', {
+                      type: planTypeMap[activeSection],
+                      startDate: nextMonday.toISOString(),
+                      numberOfWeeks,
+                      autoCreateDays
+                    });
+                    
+                    // Create workout plan
+                    const response = await fetch('/api/workouts/plan', {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                      },
+                      body: JSON.stringify({
+                        type: planTypeMap[activeSection],
+                        name: `${activeSection === 'A' ? 'Current Weeks' : activeSection === 'B' ? 'Yearly Plan' : activeSection === 'C' ? 'Workouts Done' : 'Archive'} Plan`,
+                        startDate: nextMonday.toISOString(),
+                        numberOfWeeks,
+                        autoCreateDays  // New flag for Section A
+                      })
+                    });
                      
                      if (response.ok) {
                        const result = await response.json();
@@ -580,6 +651,126 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             loadWorkoutData();
           }}
         />
+      )}
+      
+      {/* Virtual Start Date Modal for Sections B & C */}
+      {showStartDatePicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Set Virtual Start Date</h2>
+              <button onClick={() => setShowStartDatePicker(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              {activeSection === 'B' ? 
+                'Set the starting date for your yearly plan (365 days from this date)' :
+                'Set the starting date to view your completed workouts (365 days from this date)'
+              }
+            </p>
+            
+            <input
+              type="date"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+              onChange={(e) => {
+                if (e.target.value) {
+                  const selected = new Date(e.target.value);
+                  setVirtualStartDate(selected);
+                }
+              }}
+            />
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowStartDatePicker(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (virtualStartDate) {
+                    setShowStartDatePicker(false);
+                    // Reload data with new start date
+                    await loadWorkoutData();
+                  }
+                }}
+                disabled={!virtualStartDate}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Athlete Selector Modal for Section C (Coaches/Teams/Clubs) */}
+      {showAthleteSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Select Athlete</h2>
+              <button onClick={() => setShowAthleteSelector(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Select an athlete to view their completed workouts. You can only view workouts if the athlete has given you permission.
+            </p>
+            
+            {athleteList.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>No athletes found.</p>
+                <p className="text-sm mt-2">Athletes you manage will appear here.</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {athleteList.map((athlete) => (
+                  <button
+                    key={athlete.id}
+                    onClick={() => {
+                      setSelectedAthlete(athlete);
+                      setShowAthleteSelector(false);
+                      loadWorkoutData(); // Reload data for selected athlete
+                    }}
+                    className="w-full text-left px-4 py-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <div className="font-medium text-gray-900">{athlete.name}</div>
+                      <div className="text-sm text-gray-500">{athlete.email}</div>
+                    </div>
+                    {selectedAthlete?.id === athlete.id && (
+                      <div className="text-blue-600 text-sm font-medium">✓ Selected</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setSelectedAthlete(null);
+                  setShowAthleteSelector(false);
+                  loadWorkoutData(); // Reload own data
+                }}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                View My Workouts
+              </button>
+              <button
+                onClick={() => setShowAthleteSelector(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
       )}
      </div>
    );
