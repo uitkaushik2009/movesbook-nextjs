@@ -7,15 +7,52 @@ import Image from 'next/image';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 
+// List of countries
+const countries = [
+  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Argentina', 'Armenia', 'Australia', 'Austria', 'Azerbaijan',
+  'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia',
+  'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi',
+  'Cambodia', 'Cameroon', 'Canada', 'Cape Verde', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia',
+  'Comoros', 'Congo', 'Costa Rica', 'Croatia', 'Cuba', 'Cyprus', 'Czech Republic',
+  'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic',
+  'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Estonia', 'Ethiopia',
+  'Fiji', 'Finland', 'France',
+  'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana',
+  'Haiti', 'Honduras', 'Hungary',
+  'Iceland', 'India', 'Indonesia', 'Iran', 'Iraq', 'Ireland', 'Israel', 'Italy',
+  'Jamaica', 'Japan', 'Jordan',
+  'Kazakhstan', 'Kenya', 'Kiribati', 'Korea North', 'Korea South', 'Kosovo', 'Kuwait', 'Kyrgyzstan',
+  'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein', 'Lithuania', 'Luxembourg',
+  'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta', 'Marshall Islands', 'Mauritania', 'Mauritius',
+  'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar',
+  'Namibia', 'Nauru', 'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'Norway',
+  'Oman',
+  'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Poland', 'Portugal',
+  'Qatar',
+  'Romania', 'Russia', 'Rwanda',
+  'Saint Kitts and Nevis', 'Saint Lucia', 'Saint Vincent', 'Samoa', 'San Marino', 'Sao Tome and Principe',
+  'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia',
+  'Solomon Islands', 'Somalia', 'South Africa', 'South Sudan', 'Spain', 'Sri Lanka', 'Sudan', 'Suriname', 'Swaziland', 'Sweden', 'Switzerland', 'Syria',
+  'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Tuvalu',
+  'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan',
+  'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam',
+  'Yemen',
+  'Zambia', 'Zimbabwe'
+];
+
 export default function RegisterPage() {
   const { t } = useLanguage();
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    surname: '',
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
-    userType: 'athlete' as 'athlete' | 'coach' | 'team' | 'club' | 'group'
+    userType: 'athlete' as 'athlete' | 'coach' | 'team' | 'club' | 'group' | 'groupAdmin',
+    gender: '' as '' | 'male' | 'female' | 'other',
+    birthdate: '',
+    country: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -34,6 +71,13 @@ export default function RegisterPage() {
       return;
     }
     
+    // Validate country selection
+    if (!formData.country) {
+      setError('Please select your country');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
@@ -41,11 +85,16 @@ export default function RegisterPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: formData.name,
+          name: `${formData.firstName} ${formData.surname}`.trim(),
+          firstName: formData.firstName,
+          surname: formData.surname,
           username: formData.username,
           email: formData.email,
           password: formData.password,
-          userType: formData.userType
+          userType: formData.userType,
+          gender: formData.gender || undefined,
+          birthdate: formData.birthdate || undefined,
+          country: formData.country
         }),
       });
 
@@ -79,7 +128,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+    <div className="min-h-screen flex items-start justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 py-12">
       {/* Background Image with Overlay */}
       <div className="fixed inset-0 z-0">
         <Image
@@ -104,85 +153,106 @@ export default function RegisterPage() {
       </div>
 
       {/* Centered Transparent Form */}
-      <div className="relative z-10 w-full max-w-md">
-        <div className="bg-white bg-opacity-10 backdrop-blur-xl rounded-3xl shadow-2xl border border-cyan-500 border-opacity-30 p-8">
+      <div className="relative z-10 w-full max-w-2xl mb-12">
+        <div className="bg-white bg-opacity-10 backdrop-blur-xl rounded-3xl shadow-2xl border border-cyan-500 border-opacity-30 p-6 overflow-visible">
           {/* Logo and Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-2">MovesBook</h1>
-            <p className="text-cyan-100 text-lg">{t('auth_join_community')}</p>
+          <div className="text-center mb-5">
+            <h1 className="text-3xl font-bold text-white mb-1">MovesBook</h1>
+            <p className="text-cyan-100 text-base">{t('auth_join_community')}</p>
           </div>
 
           {error && (
-            <div className="bg-red-500 bg-opacity-20 backdrop-blur-sm border border-red-400 border-opacity-30 text-red-200 px-4 py-3 rounded-xl mb-6">
+            <div className="bg-red-500 bg-opacity-20 backdrop-blur-sm border border-red-400 border-opacity-30 text-red-200 px-3 py-2 rounded-xl mb-4 text-sm">
               {error}
             </div>
           )}
 
           {success && (
-            <div className="bg-green-500 bg-opacity-20 backdrop-blur-sm border border-green-400 border-opacity-30 text-green-200 px-4 py-3 rounded-xl mb-6">
+            <div className="bg-green-500 bg-opacity-20 backdrop-blur-sm border border-green-400 border-opacity-30 text-green-200 px-3 py-2 rounded-xl mb-4 text-sm">
               {t('auth_registration_success')}
             </div>
           )}
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              {/* User Type Selection */}
-              <div>
-                <label htmlFor="user-type" className="block text-sm font-medium text-white mb-2">
-                  {t('auth_select_user_type')}: {t('auth_required_field')}
-                </label>
-                <select
-                  id="user-type"
-                  name="userType"
-                  className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  value={formData.userType}
-                  onChange={(e) => setFormData({...formData, userType: e.target.value as any})}
-                >
-                  <option value="athlete" className="text-gray-800">{t('user_type_athlete')}</option>
-                  <option value="coach" className="text-gray-800">{t('user_type_coach')}</option>
-                  <option value="team" className="text-gray-800">{t('user_type_team')}</option>
-                  <option value="club" className="text-gray-800">{t('user_type_club')}</option>
-                  <option value="group" className="text-gray-800">{t('user_type_group')}</option>
-                </select>
-              </div>
+          <form className="space-y-4 pb-8" onSubmit={handleSubmit}>
+            {/* User Type Selection - Full Width */}
+            <div>
+              <label htmlFor="user-type" className="block text-sm font-medium text-white mb-2">
+                {t('auth_select_user_type')}: <span className="text-red-400">*</span>
+              </label>
+              <select
+                id="user-type"
+                name="userType"
+                required
+                className="w-full px-4 py-2.5 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
+                style={{ color: formData.userType ? 'white' : '#a0d2eb' }}
+                value={formData.userType}
+                onChange={(e) => setFormData({...formData, userType: e.target.value as any})}
+              >
+                <option value="athlete" className="text-gray-800">Athlete</option>
+                <option value="coach" className="text-gray-800">Coach</option>
+                <option value="team" className="text-gray-800">Team</option>
+                <option value="club" className="text-gray-800">Club</option>
+                <option value="group" className="text-gray-800">Group</option>
+                <option value="groupAdmin" className="text-gray-800">Group Administrator</option>
+              </select>
+            </div>
 
-              {/* Full Name Input */}
+            {/* Name + Surname - 2 Columns */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-white mb-2">
-                  {t('auth_full_name')} {t('auth_required_field')}
+                <label htmlFor="firstName" className="block text-sm font-medium text-white mb-2">
+                  Name <span className="text-red-400">*</span>
                 </label>
                 <input
-                  id="name"
-                  name="name"
+                  id="firstName"
+                  name="firstName"
                   type="text"
                   required
-                  className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  placeholder={t('auth_full_name_placeholder')}
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
+                  placeholder="First name"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({...formData, firstName: e.target.value})}
                 />
               </div>
 
-              {/* Username Input */}
               <div>
-                <label htmlFor="username" className="block text-sm font-medium text-white mb-2">
-                  {t('auth_username')} {t('auth_required_field')}
+                <label htmlFor="surname" className="block text-sm font-medium text-white mb-2">
+                  Surname <span className="text-red-400">*</span>
                 </label>
                 <input
-                  id="username"
-                  name="username"
+                  id="surname"
+                  name="surname"
                   type="text"
                   required
-                  className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  placeholder={t('auth_username_placeholder')}
-                  value={formData.username}
-                  onChange={(e) => setFormData({...formData, username: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
+                  placeholder="Surname"
+                  value={formData.surname}
+                  onChange={(e) => setFormData({...formData, surname: e.target.value})}
                 />
               </div>
+            </div>
 
-              {/* Email Input */}
+            {/* Username - Full Width */}
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium text-white mb-2">
+                {t('auth_username')} <span className="text-red-400">*</span>
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                required
+                className="w-full px-4 py-2.5 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
+                placeholder="Username"
+                value={formData.username}
+                onChange={(e) => setFormData({...formData, username: e.target.value})}
+              />
+            </div>
+
+            {/* Email + Country - 2 Columns */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-white mb-2">
-                  {t('auth_email_address')} {t('auth_required_field')}
+                  Email <span className="text-red-400">*</span>
                 </label>
                 <input
                   id="email"
@@ -190,17 +260,89 @@ export default function RegisterPage() {
                   type="email"
                   autoComplete="email"
                   required
-                  className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  placeholder={t('auth_email_placeholder')}
+                  className="w-full px-4 py-2.5 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
+                  placeholder="Email address"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                 />
               </div>
 
-              {/* Password Input */}
+              <div className="relative">
+                <label htmlFor="country" className="block text-sm font-medium text-white mb-2">
+                  Country <span className="text-red-400">*</span>
+                </label>
+                <select
+                  id="country"
+                  name="country"
+                  required
+                  size={1}
+                  className="w-full px-4 py-2.5 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200 appearance-none cursor-pointer relative z-50"
+                  style={{ 
+                    color: formData.country ? 'white' : '#a0d2eb',
+                    backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a0d2eb' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                    backgroundPosition: 'right 0.5rem center',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: '1.5em 1.5em',
+                    paddingRight: '2.5rem',
+                    WebkitAppearance: 'menulist',
+                    MozAppearance: 'menulist'
+                  }}
+                  value={formData.country}
+                  onChange={(e) => setFormData({...formData, country: e.target.value})}
+                >
+                  <option value="" className="text-gray-400 bg-gray-800">Select country</option>
+                  {countries.map((country) => (
+                    <option key={country} value={country} className="text-white bg-gray-800">
+                      {country}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Gender + Birthdate - 2 Columns (Optional for Statistics) */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="gender" className="block text-sm font-medium text-white mb-2">
+                  Gender <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <select
+                  id="gender"
+                  name="gender"
+                  className="w-full px-4 py-2.5 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
+                  style={{ color: formData.gender ? 'white' : '#a0d2eb' }}
+                  value={formData.gender}
+                  onChange={(e) => setFormData({...formData, gender: e.target.value as any})}
+                >
+                  <option value="" className="text-gray-400">Not specified</option>
+                  <option value="male" className="text-gray-800">Male</option>
+                  <option value="female" className="text-gray-800">Female</option>
+                  <option value="other" className="text-gray-800">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="birthdate" className="block text-sm font-medium text-white mb-2">
+                  Birthdate <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <input
+                  id="birthdate"
+                  name="birthdate"
+                  type="date"
+                  className="w-full px-4 py-2.5 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
+                  style={{ colorScheme: 'dark' }}
+                  value={formData.birthdate}
+                  onChange={(e) => setFormData({...formData, birthdate: e.target.value})}
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            </div>
+
+            {/* Password + Confirm Password - 2 Columns */}
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-white mb-2">
-                  {t('auth_password')} {t('auth_required_field')}
+                  Password <span className="text-red-400">*</span>
                 </label>
                 <input
                   id="password"
@@ -209,17 +351,16 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  placeholder={t('auth_password_placeholder')}
+                  className="w-full px-4 py-2.5 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
+                  placeholder="Min 6 characters"
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                 />
               </div>
 
-              {/* Confirm Password Input */}
               <div>
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-white mb-2">
-                  {t('auth_confirm_password')} {t('auth_required_field')}
+                  Confirm <span className="text-red-400">*</span>
                 </label>
                 <input
                   id="confirmPassword"
@@ -228,8 +369,8 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   required
                   minLength={6}
-                  className="w-full px-4 py-3 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
-                  placeholder={t('auth_confirm_password_placeholder')}
+                  className="w-full px-4 py-2.5 bg-white bg-opacity-10 backdrop-blur-sm border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200"
+                  placeholder="Confirm password"
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
                 />
@@ -237,15 +378,15 @@ export default function RegisterPage() {
             </div>
 
             {/* Terms and Conditions */}
-            <div className="flex items-center">
+            <div className="flex items-center pt-2">
               <input
                 id="terms"
                 name="terms"
                 type="checkbox"
                 required
-                className="w-4 h-4 text-cyan-400 bg-white bg-opacity-10 border-cyan-500 border-opacity-30 rounded focus:ring-cyan-400 focus:ring-offset-transparent"
+                className="w-4 h-4 text-cyan-400 bg-white bg-opacity-10 border-cyan-500 border-opacity-30 rounded focus:ring-cyan-400 focus:ring-offset-transparent flex-shrink-0"
               />
-              <label htmlFor="terms" className="ml-2 block text-sm text-cyan-100">
+              <label htmlFor="terms" className="ml-2 block text-xs text-cyan-100">
                 {t('auth_agree_to')}{' '}
                 <Link href="/terms" className="text-cyan-300 hover:text-cyan-200 underline">
                   {t('footer_terms')}
@@ -258,26 +399,24 @@ export default function RegisterPage() {
             </div>
 
             {/* Submit Button */}
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-4 px-6 bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-semibold rounded-xl hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 shadow-2xl"
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                    {t('btn_creating_account')}
-                  </div>
-                ) : (
-                  t('btn_register')
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-3 px-6 bg-gradient-to-r from-cyan-500 to-purple-500 text-white font-semibold rounded-xl hover:from-cyan-600 hover:to-purple-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 shadow-2xl"
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  {t('btn_creating_account')}
+                </div>
+              ) : (
+                t('btn_register')
+              )}
+            </button>
 
             {/* Sign In Link */}
-            <div className="text-center">
-              <span className="text-sm text-cyan-200">
+            <div className="text-center pt-2">
+              <span className="text-xs text-cyan-200">
                 {t('btn_already_have_account')}{' '}
                 <button
                   type="button"

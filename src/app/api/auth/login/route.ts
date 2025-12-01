@@ -19,12 +19,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by email OR username in NEW table first
+    // Find user by email OR username in NEW table first (case-insensitive for MySQL)
+    // Try with exact match first, then lowercase match
     let user = await prisma.user.findFirst({
       where: {
         OR: [
           { email: loginIdentifier },
-          { username: loginIdentifier }
+          { username: loginIdentifier },
+          { email: loginIdentifier.toLowerCase() },
+          { username: loginIdentifier.toLowerCase() }
         ]
       },
       select: {
@@ -38,21 +41,22 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // If not found in new table, check LEGACY table and migrate on login
+    // If not found in new table, check LEGACY table and migrate on login (if legacy table exists)
     if (!user) {
-      console.log(`User not found in new table, checking legacy table for: ${loginIdentifier}`);
-      
-      const legacyUser = await prisma.$queryRaw<any[]>`
-        SELECT id, username, email, password, 
-               COALESCE(firstname, '') as firstname,
-               COALESCE(lastname, '') as lastname,
-               role_id,
-               CASE WHEN created IS NULL OR created = '0000-00-00' THEN NOW() ELSE created END as created
-        FROM users
-        WHERE (email = ${loginIdentifier} OR username = ${loginIdentifier})
-        AND delete_status = 'N'
-        LIMIT 1
-      `;
+      try {
+        console.log(`User not found in new table, checking legacy table for: ${loginIdentifier}`);
+        
+        const legacyUser = await prisma.$queryRaw<any[]>`
+          SELECT id, username, email, password, 
+                 COALESCE(firstname, '') as firstname,
+                 COALESCE(lastname, '') as lastname,
+                 role_id,
+                 CASE WHEN created IS NULL OR created = '0000-00-00' THEN NOW() ELSE created END as created
+          FROM users
+          WHERE (email = ${loginIdentifier} OR username = ${loginIdentifier})
+          AND delete_status = 'N'
+          LIMIT 1
+        `;
 
       if (legacyUser.length > 0) {
         const legacy = legacyUser[0];
@@ -107,8 +111,13 @@ export async function POST(request: NextRequest) {
             password: legacy.password,
             userType: mapUserType(legacy.role_id || 1),
             createdAt: legacy.created || new Date(),
-          };
+            updatedAt: new Date(),
+          } as any;
         }
+      }
+      } catch (legacyError: any) {
+        // Legacy table doesn't exist or query failed - that's okay for new installations
+        console.log('Legacy users table not found or inaccessible (this is normal for new installations)');
       }
     }
 
@@ -128,15 +137,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If user is using old SHA1 password, upgrade to bcrypt
-    if (user.password.length === 40 && /^[a-f0-9]+$/i.test(user.password)) {
-      const newHashedPassword = await hashPassword(password);
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { password: newHashedPassword }
-      });
-      console.log(`Upgraded password for user ${user.email} from SHA1 to bcrypt`);
-    }
+    // Auto-upgrade disabled - keeping SHA1 passwords as-is
 
     // Check user type if specified
     if (userType) {
@@ -184,13 +185,17 @@ function mapUserType(roleIdOrType: number | string): UserType {
       'ATHLETE': UserType.ATHLETE,
       'coach': UserType.COACH,
       'COACH': UserType.COACH,
-      'team': UserType.TEAM_MANAGER,
-      'TEAM_MANAGER': UserType.TEAM_MANAGER,
-      'team_manager': UserType.TEAM_MANAGER,
-      'club': UserType.CLUB_TRAINER,
-      'CLUB_TRAINER': UserType.CLUB_TRAINER,
-      'club_trainer': UserType.CLUB_TRAINER,
-      'group': UserType.GROUP_ADMIN,
+      'team': UserType.TEAM,
+      'TEAM': UserType.TEAM,
+      'TEAM_MANAGER': UserType.TEAM,
+      'team_manager': UserType.TEAM,
+      'club': UserType.CLUB,
+      'CLUB': UserType.CLUB,
+      'CLUB_TRAINER': UserType.CLUB,
+      'club_trainer': UserType.CLUB,
+      'group': UserType.GROUP,
+      'GROUP': UserType.GROUP,
+      'groupAdmin': UserType.GROUP_ADMIN,
       'GROUP_ADMIN': UserType.GROUP_ADMIN,
       'group_admin': UserType.GROUP_ADMIN,
       'admin': UserType.ADMIN,
@@ -203,10 +208,11 @@ function mapUserType(roleIdOrType: number | string): UserType {
   const roleMap: { [key: number]: UserType } = {
     1: UserType.ATHLETE,
     2: UserType.COACH,
-    3: UserType.TEAM_MANAGER,
-    4: UserType.CLUB_TRAINER,
-    5: UserType.GROUP_ADMIN,
-    6: UserType.ADMIN
+    3: UserType.TEAM,
+    4: UserType.CLUB,
+    5: UserType.GROUP,
+    6: UserType.GROUP_ADMIN,
+    99: UserType.ADMIN
   };
   return roleMap[roleIdOrType as number] || UserType.ATHLETE;
 }

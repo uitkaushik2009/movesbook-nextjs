@@ -6,6 +6,20 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserSettings } from '@/hooks/useUserSettings';
 
+interface MovelapRowSettings {
+  codeSection: { color: string; bold: boolean; displayMode: 'always' | 'once' };
+  movaAction: { color: string; bold: boolean; displayMode: 'always' | 'once' };
+  exercise: { color: string; bold: boolean };
+  style: { color: string };
+  speed: { color: string; bold: boolean };
+  time: { color: string; bold: boolean; fontStyle: 'normal' | 'italic' };
+  pace: { color: string; fontStyle: 'normal' | 'italic' };
+  recoverRest: { color: string; bold: boolean; fontStyle: 'normal' | 'italic' };
+  restartTo: { color: string; bold: boolean; fontStyle: 'normal' | 'italic' };
+  annotations: { color: string };
+  aimSound: { color: string };
+}
+
 interface ColorSettings {
   pageBackground: string;
   pageBackgroundOpacity: number;
@@ -53,7 +67,25 @@ interface ColorSettings {
   borderEnabled?: boolean;
   borderColor?: string;
   borderWidth?: string;
+  // Movelaps Table settings
+  movelapTextColorSource?: 'table' | 'rows';
+  // Movelaps Rows settings
+  movelapRows?: MovelapRowSettings;
 }
+
+const defaultMovelapRows: MovelapRowSettings = {
+  codeSection: { color: '#1e293b', bold: true, displayMode: 'always' },
+  movaAction: { color: '#1e293b', bold: true, displayMode: 'always' },
+  exercise: { color: '#1e293b', bold: true },
+  style: { color: '#1e293b' },
+  speed: { color: '#1e293b', bold: true },
+  time: { color: '#1e293b', bold: true, fontStyle: 'normal' },
+  pace: { color: '#1e293b', fontStyle: 'normal' },
+  recoverRest: { color: '#1e293b', bold: true, fontStyle: 'normal' },
+  restartTo: { color: '#1e293b', bold: true, fontStyle: 'normal' },
+  annotations: { color: '#1e293b' },
+  aimSound: { color: '#1e293b' },
+};
 
 const defaultColors: ColorSettings = {
   pageBackground: '#eeefe6',
@@ -98,6 +130,8 @@ const defaultColors: ColorSettings = {
   selectedRowTextMoveframe: '#ef4444',
   alternateRowmoveframe: '#dbeafe',
   alternateRowTextmoveframe: '#1e293b',
+  movelapTextColorSource: 'table',
+  movelapRows: defaultMovelapRows,
   // Border settings
   borderEnabled: false,
   borderColor: '#000000',
@@ -125,6 +159,8 @@ export default function BackgroundsColorsSettings() {
     headers: true,
     buttons: true,
     rows: false,
+    movelapsTable: false,
+    movelapsRows: false,
   });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   
@@ -183,7 +219,7 @@ export default function BackgroundsColorsSettings() {
     }
   }, []);
 
-  const handleColorChange = async (key: keyof ColorSettings, value: string | number | boolean) => {
+  const handleColorChange = async (key: keyof ColorSettings, value: string | number | boolean | MovelapRowSettings) => {
     const newColors = { ...colors, [key]: value };
     setColors(newColors);
 
@@ -908,12 +944,12 @@ export default function BackgroundsColorsSettings() {
               bgColor={colors.moveframeHeader}
             />
             <ColorPicker
-              label="Movelap Header Background"
+              label="Movelap Header Background (Odd Rows: 1, 3, 5...)"
               value={colors.movelapHeader}
               onChange={(v) => handleColorChange('movelapHeader', v)}
             />
             <ColorPicker
-              label="Movelap Header Text"
+              label="Movelap Header Text (All Rows: Even & Odd)"
               value={colors.movelapHeaderText}
               onChange={(v) => handleColorChange('movelapHeaderText', v)}
               showContrast
@@ -1021,7 +1057,7 @@ export default function BackgroundsColorsSettings() {
               onChange={(v) => handleColorChange('alternateRowTextMoveframe', v)}
             />
             <ColorPicker
-              label="Alternate Row Background of the Movelaps"
+              label="Alternate Row Background of the Movelaps (Even Rows: 2, 4, 6...)"
               value={colors.alternateRowMovelap}
               onChange={(v) => handleColorChange('alternateRowMovelap', v)}
             />
@@ -1042,6 +1078,584 @@ export default function BackgroundsColorsSettings() {
               showContrast
               bgColor={colors.selectedRow}
             />
+          </CollapsibleSection>
+
+          {/* Movelaps Table Section */}
+          <CollapsibleSection
+            title="Movelaps Table"
+            expanded={expandedSections.movelapsTable}
+            onToggle={() => toggleSection('movelapsTable')}
+          >
+            <ColorPicker
+              label="Movelaps Table Background"
+              value={colors.movelapHeader}
+              onChange={(v) => handleColorChange('movelapHeader', v)}
+            />
+            <ColorPicker
+              label="Movelaps Table Text Color"
+              value={colors.movelapHeaderText}
+              onChange={(v) => handleColorChange('movelapHeaderText', v)}
+              showContrast
+              bgColor={colors.movelapHeader}
+            />
+            
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Text Color Source for Movelaps
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="movelapTextColorSource"
+                    value="table"
+                    checked={colors.movelapTextColorSource === 'table'}
+                    onChange={(e) => handleColorChange('movelapTextColorSource', e.target.value)}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="ml-3 text-sm">Use Movelaps Table text color (above)</span>
+                </label>
+                <label className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="movelapTextColorSource"
+                    value="rows"
+                    checked={colors.movelapTextColorSource === 'rows'}
+                    onChange={(e) => handleColorChange('movelapTextColorSource', e.target.value)}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="ml-3 text-sm">Use individual Movelaps Rows settings (below)</span>
+                </label>
+              </div>
+            </div>
+          </CollapsibleSection>
+
+          {/* Movelaps Rows Section */}
+          <CollapsibleSection
+            title="Movelaps Rows Settings"
+            expanded={expandedSections.movelapsRows}
+            onToggle={() => toggleSection('movelapsRows')}
+          >
+            <div className="space-y-6">
+              {/* Code Section */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Code Section</h4>
+                <div className="space-y-3">
+                  <ColorPicker
+                    label="Text Color"
+                    value={colors.movelapRows?.codeSection.color || defaultMovelapRows.codeSection.color}
+                    onChange={(v) => {
+                      const newRows: MovelapRowSettings = { 
+                        ...defaultMovelapRows,
+                        ...colors.movelapRows,
+                        codeSection: { 
+                          ...defaultMovelapRows.codeSection,
+                          ...(colors.movelapRows?.codeSection || {}), 
+                          color: v 
+                        }
+                      };
+                      handleColorChange('movelapRows', newRows);
+                    }}
+                  />
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      checked={colors.movelapRows?.codeSection.bold ?? true}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          codeSection: { 
+                            ...defaultMovelapRows.codeSection,
+                            ...(colors.movelapRows?.codeSection || {}), 
+                            bold: e.target.checked 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-4 h-4 mr-2"
+                    />
+                    Bold
+                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Display Mode</label>
+                    <select
+                      value={colors.movelapRows?.codeSection.displayMode || 'always'}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          codeSection: { 
+                            ...defaultMovelapRows.codeSection,
+                            ...(colors.movelapRows?.codeSection || {}), 
+                            displayMode: e.target.value as 'always' | 'once' 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="always">Display Always</option>
+                      <option value="once">Display Once</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mova Action */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Mova Action</h4>
+                <div className="space-y-3">
+                  <ColorPicker
+                    label="Text Color"
+                    value={colors.movelapRows?.movaAction.color || defaultMovelapRows.movaAction.color}
+                    onChange={(v) => {
+                      const newRows: MovelapRowSettings = { 
+                        ...defaultMovelapRows,
+                        ...colors.movelapRows,
+                        movaAction: { 
+                          ...defaultMovelapRows.movaAction,
+                          ...(colors.movelapRows?.movaAction || {}), 
+                          color: v 
+                        }
+                      };
+                      handleColorChange('movelapRows', newRows);
+                    }}
+                  />
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      checked={colors.movelapRows?.movaAction.bold ?? true}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          movaAction: { 
+                            ...defaultMovelapRows.movaAction,
+                            ...(colors.movelapRows?.movaAction || {}), 
+                            bold: e.target.checked 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-4 h-4 mr-2"
+                    />
+                    Bold
+                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Display Mode</label>
+                    <select
+                      value={colors.movelapRows?.movaAction.displayMode || 'always'}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          movaAction: { 
+                            ...defaultMovelapRows.movaAction,
+                            ...(colors.movelapRows?.movaAction || {}), 
+                            displayMode: e.target.value as 'always' | 'once' 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="always">Display Always</option>
+                      <option value="once">Display Once</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Exercise */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Exercise</h4>
+                <div className="space-y-3">
+                  <ColorPicker
+                    label="Text Color"
+                    value={colors.movelapRows?.exercise.color || defaultMovelapRows.exercise.color}
+                    onChange={(v) => {
+                      const newRows: MovelapRowSettings = { 
+                        ...defaultMovelapRows,
+                        ...colors.movelapRows,
+                        exercise: { 
+                          ...defaultMovelapRows.exercise,
+                          ...(colors.movelapRows?.exercise || {}), 
+                          color: v 
+                        }
+                      };
+                      handleColorChange('movelapRows', newRows);
+                    }}
+                  />
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      checked={colors.movelapRows?.exercise.bold ?? true}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          exercise: { 
+                            ...defaultMovelapRows.exercise,
+                            ...(colors.movelapRows?.exercise || {}), 
+                            bold: e.target.checked 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-4 h-4 mr-2"
+                    />
+                    Bold
+                  </label>
+                </div>
+              </div>
+
+              {/* Style */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Style</h4>
+                <ColorPicker
+                  label="Text Color"
+                  value={colors.movelapRows?.style.color || defaultMovelapRows.style.color}
+                  onChange={(v) => {
+                    const newRows: MovelapRowSettings = { 
+                      ...defaultMovelapRows,
+                      ...colors.movelapRows,
+                      style: { 
+                        ...defaultMovelapRows.style,
+                        ...(colors.movelapRows?.style || {}), 
+                        color: v 
+                      }
+                    };
+                    handleColorChange('movelapRows', newRows);
+                  }}
+                />
+              </div>
+
+              {/* Speed */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Speed</h4>
+                <div className="space-y-3">
+                  <ColorPicker
+                    label="Text Color"
+                    value={colors.movelapRows?.speed.color || defaultMovelapRows.speed.color}
+                    onChange={(v) => {
+                      const newRows: MovelapRowSettings = { 
+                        ...defaultMovelapRows,
+                        ...colors.movelapRows,
+                        speed: { 
+                          ...defaultMovelapRows.speed,
+                          ...(colors.movelapRows?.speed || {}), 
+                          color: v 
+                        }
+                      };
+                      handleColorChange('movelapRows', newRows);
+                    }}
+                  />
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      checked={colors.movelapRows?.speed.bold ?? true}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          speed: { 
+                            ...defaultMovelapRows.speed,
+                            ...(colors.movelapRows?.speed || {}), 
+                            bold: e.target.checked 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-4 h-4 mr-2"
+                    />
+                    Bold
+                  </label>
+                </div>
+              </div>
+
+              {/* Time */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Time</h4>
+                <div className="space-y-3">
+                  <ColorPicker
+                    label="Text Color"
+                    value={colors.movelapRows?.time.color || defaultMovelapRows.time.color}
+                    onChange={(v) => {
+                      const newRows: MovelapRowSettings = { 
+                        ...defaultMovelapRows,
+                        ...colors.movelapRows,
+                        time: { 
+                          ...defaultMovelapRows.time,
+                          ...(colors.movelapRows?.time || {}), 
+                          color: v 
+                        }
+                      };
+                      handleColorChange('movelapRows', newRows);
+                    }}
+                  />
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      checked={colors.movelapRows?.time.bold ?? true}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          time: { 
+                            ...defaultMovelapRows.time,
+                            ...(colors.movelapRows?.time || {}), 
+                            bold: e.target.checked 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-4 h-4 mr-2"
+                    />
+                    Bold
+                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Font Style</label>
+                    <select
+                      value={colors.movelapRows?.time.fontStyle || 'normal'}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          time: { 
+                            ...defaultMovelapRows.time,
+                            ...(colors.movelapRows?.time || {}), 
+                            fontStyle: e.target.value as 'normal' | 'italic' 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="normal">Normal</option>
+                      <option value="italic">Italic</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Pace */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Pace</h4>
+                <div className="space-y-3">
+                  <ColorPicker
+                    label="Text Color"
+                    value={colors.movelapRows?.pace.color || defaultMovelapRows.pace.color}
+                    onChange={(v) => {
+                      const newRows: MovelapRowSettings = { 
+                        ...defaultMovelapRows,
+                        ...colors.movelapRows,
+                        pace: { 
+                          ...defaultMovelapRows.pace,
+                          ...(colors.movelapRows?.pace || {}), 
+                          color: v 
+                        }
+                      };
+                      handleColorChange('movelapRows', newRows);
+                    }}
+                  />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Font Style</label>
+                    <select
+                      value={colors.movelapRows?.pace.fontStyle || 'normal'}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          pace: { 
+                            ...defaultMovelapRows.pace,
+                            ...(colors.movelapRows?.pace || {}), 
+                            fontStyle: e.target.value as 'normal' | 'italic' 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="normal">Normal</option>
+                      <option value="italic">Italic</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recover/Rest */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Recover/Rest</h4>
+                <div className="space-y-3">
+                  <ColorPicker
+                    label="Text Color"
+                    value={colors.movelapRows?.recoverRest.color || defaultMovelapRows.recoverRest.color}
+                    onChange={(v) => {
+                      const newRows: MovelapRowSettings = { 
+                        ...defaultMovelapRows,
+                        ...colors.movelapRows,
+                        recoverRest: { 
+                          ...defaultMovelapRows.recoverRest,
+                          ...(colors.movelapRows?.recoverRest || {}), 
+                          color: v 
+                        }
+                      };
+                      handleColorChange('movelapRows', newRows);
+                    }}
+                  />
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      checked={colors.movelapRows?.recoverRest.bold ?? true}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          recoverRest: { 
+                            ...defaultMovelapRows.recoverRest,
+                            ...(colors.movelapRows?.recoverRest || {}), 
+                            bold: e.target.checked 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-4 h-4 mr-2"
+                    />
+                    Bold
+                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Font Style</label>
+                    <select
+                      value={colors.movelapRows?.recoverRest.fontStyle || 'normal'}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          recoverRest: { 
+                            ...defaultMovelapRows.recoverRest,
+                            ...(colors.movelapRows?.recoverRest || {}), 
+                            fontStyle: e.target.value as 'normal' | 'italic' 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="normal">Normal</option>
+                      <option value="italic">Italic</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Restart To */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Restart To</h4>
+                <div className="space-y-3">
+                  <ColorPicker
+                    label="Text Color"
+                    value={colors.movelapRows?.restartTo.color || defaultMovelapRows.restartTo.color}
+                    onChange={(v) => {
+                      const newRows: MovelapRowSettings = { 
+                        ...defaultMovelapRows,
+                        ...colors.movelapRows,
+                        restartTo: { 
+                          ...defaultMovelapRows.restartTo,
+                          ...(colors.movelapRows?.restartTo || {}), 
+                          color: v 
+                        }
+                      };
+                      handleColorChange('movelapRows', newRows);
+                    }}
+                  />
+                  <label className="flex items-center text-sm">
+                    <input
+                      type="checkbox"
+                      checked={colors.movelapRows?.restartTo.bold ?? true}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          restartTo: { 
+                            ...defaultMovelapRows.restartTo,
+                            ...(colors.movelapRows?.restartTo || {}), 
+                            bold: e.target.checked 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-4 h-4 mr-2"
+                    />
+                    Bold
+                  </label>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Font Style</label>
+                    <select
+                      value={colors.movelapRows?.restartTo.fontStyle || 'normal'}
+                      onChange={(e) => {
+                        const newRows: MovelapRowSettings = { 
+                          ...defaultMovelapRows,
+                          ...colors.movelapRows,
+                          restartTo: { 
+                            ...defaultMovelapRows.restartTo,
+                            ...(colors.movelapRows?.restartTo || {}), 
+                            fontStyle: e.target.value as 'normal' | 'italic' 
+                          }
+                        };
+                        handleColorChange('movelapRows', newRows);
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="normal">Normal</option>
+                      <option value="italic">Italic</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Annotations */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Annotations</h4>
+                <ColorPicker
+                  label="Text Color"
+                  value={colors.movelapRows?.annotations.color || defaultMovelapRows.annotations.color}
+                  onChange={(v) => {
+                    const newRows: MovelapRowSettings = { 
+                      ...defaultMovelapRows,
+                      ...colors.movelapRows,
+                      annotations: { 
+                        ...defaultMovelapRows.annotations,
+                        ...(colors.movelapRows?.annotations || {}), 
+                        color: v 
+                      }
+                    };
+                    handleColorChange('movelapRows', newRows);
+                  }}
+                />
+              </div>
+
+              {/* Aim & Sound */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-sm text-gray-900 mb-3">Aim & Sound</h4>
+                <ColorPicker
+                  label="Text Color"
+                  value={colors.movelapRows?.aimSound.color || defaultMovelapRows.aimSound.color}
+                  onChange={(v) => {
+                    const newRows: MovelapRowSettings = { 
+                      ...defaultMovelapRows,
+                      ...colors.movelapRows,
+                      aimSound: { 
+                        ...defaultMovelapRows.aimSound,
+                        ...(colors.movelapRows?.aimSound || {}), 
+                        color: v 
+                      }
+                    };
+                    handleColorChange('movelapRows', newRows);
+                  }}
+                />
+              </div>
+            </div>
           </CollapsibleSection>
         </div>
 
@@ -1087,8 +1701,8 @@ export default function BackgroundsColorsSettings() {
                   color: colors.workoutHeaderText
                 }}
               >
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-semibold">Workout 1 of Monday</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">Workout 1 - Monday 23</span>
                   <div className="flex gap-2">
                     <button
                       className="px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors"
@@ -1135,6 +1749,7 @@ export default function BackgroundsColorsSettings() {
                       Print
                     </button>
                   </div>
+                  </div>
                 </div>
 
                 {/* Moveframes */}
@@ -1146,7 +1761,7 @@ export default function BackgroundsColorsSettings() {
                       color: colors.moveframeHeaderText
                     }}
                   >
-                    Moveframe A - Warm up
+                  Moveframe A  Warmup
                   </div>
                   <div
                     className="p-3 rounded-lg font-semibold"
@@ -1155,42 +1770,30 @@ export default function BackgroundsColorsSettings() {
                       color: colors.alternateRowTextMoveframe
                     }}
                   >
-                    Moveframe B - 100m • 4 A2 Break 1:30
-                  </div>
+                  Moveframe B - 100 x 4 A2 Break 1'30"
                 </div>
               </div>
 
-              {/* Lap Rows with Alternating Colors */}
+              {/* Movelap Rows with Alternating Colors */}
               <div className="space-y-2">
                 {[1, 2, 3, 4].map((row) => (
                   <div
                     key={row}
                     className="p-2.5 rounded-lg text-sm"
                     style={{
-                      backgroundColor: row % 2 === 0 ? colors.alternateRowMovelap : 'white',
-                      color: row % 2 === 0 ? colors.alternateRowTextMovelap : colors.movelapHeaderText
+                      backgroundColor: row % 2 === 0 ? colors.alternateRowMovelap : colors.movelapHeader,
+                      color: colors.movelapHeaderText
                     }}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="font-medium">Lap # {row}</span>
-                      <span className="text-xs">100m • A2 • 1:30</span>
+                      <span className="font-medium">Lap #{row}</span>
+                      <span className="text-xs">100m - A2 - B 1'30"</span>
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Selected Row */}
-              <div
-                className="p-4 rounded-lg font-semibold"
-                style={{
-                  backgroundColor: colors.selectedRow,
-                  color: colors.selectedRowText
-                }}
-              >
-                Selected Row - Active Moveframe
-              </div>
-
-              {/* Microlap Preview */}
+              {/* Microlap Details */}
               <div
                 className="p-4 rounded-lg"
                 style={{
@@ -1204,6 +1807,17 @@ export default function BackgroundsColorsSettings() {
                   <div>Speed: A2</div>
                   <div>Pause: 1:30</div>
                 </div>
+              </div>
+
+              {/* Selected Row - Active Moveframe */}
+              <div
+                className="p-4 rounded-lg font-semibold"
+                style={{
+                  backgroundColor: colors.selectedRow,
+                  color: colors.selectedRowText
+                }}
+              >
+                Selected Row - Active Moveframe
               </div>
             </div>
           </div>

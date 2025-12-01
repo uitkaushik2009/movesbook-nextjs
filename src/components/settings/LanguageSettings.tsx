@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Globe, Settings as SettingsIcon, FileText, ArrowUp, ArrowDown } from 'lucide-react';
 import { i18n } from '@/lib/i18n';
 import RichTextEditor from './RichTextEditor';
@@ -65,6 +65,36 @@ export default function LanguageSettings() {
   const [tab2SearchQuery, setTab2SearchQuery] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+  
+  // Column widths state for Tab 2
+  const [columnWidths, setColumnWidths] = useState({
+    srNo: 60,
+    varName: 200,
+    en: 150,
+    it: 150,
+    fr: 150,
+    de: 150,
+    es: 150,
+    pt: 150,
+    ru: 150,
+    hi: 150,
+    ja: 150,
+    id: 150,
+    zh: 150,
+    ar: 150,
+    actions: 120
+  });
+  
+  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
+  const [resizeStartX, setResizeStartX] = useState(0);
+  const [resizeStartWidth, setResizeStartWidth] = useState(0);
+  
+  // Refs for sticky scrollbar
+  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const scrollbarRef = useRef<HTMLDivElement>(null);
+  const [scrollbarWidth, setScrollbarWidth] = useState(0);
+  const [scrollbarLeft, setScrollbarLeft] = useState(0);
+  const [scrollbarContainerWidth, setScrollbarContainerWidth] = useState(0);
   
   // Tab 3 search, view, and pagination state
   const [tab3SearchQuery, setTab3SearchQuery] = useState('');
@@ -560,6 +590,126 @@ export default function LanguageSettings() {
     setEditingKey(null);
     setEditedValues({});
   };
+  
+  // Column resize handlers
+  const handleResizeStart = (e: React.MouseEvent, columnName: string) => {
+    e.preventDefault();
+    setResizingColumn(columnName);
+    setResizeStartX(e.clientX);
+    setResizeStartWidth(columnWidths[columnName as keyof typeof columnWidths]);
+  };
+  
+  const handleResizeMove = (e: MouseEvent) => {
+    if (!resizingColumn) return;
+    
+    const diff = e.clientX - resizeStartX;
+    const newWidth = Math.max(60, resizeStartWidth + diff);
+    
+    setColumnWidths(prev => ({
+      ...prev,
+      [resizingColumn]: newWidth
+    }));
+    
+    // Update scrollbar width after resize
+    const tableContainer = tableContainerRef.current;
+    if (tableContainer) {
+      const table = tableContainer.querySelector('table');
+      if (table) {
+        setScrollbarWidth(table.scrollWidth);
+      }
+    }
+  };
+  
+  const handleResizeEnd = () => {
+    setResizingColumn(null);
+  };
+  
+  // Add mouse event listeners for column resizing
+  useEffect(() => {
+    if (resizingColumn) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleResizeMove);
+        document.removeEventListener('mouseup', handleResizeEnd);
+      };
+    }
+  }, [resizingColumn, resizeStartX, resizeStartWidth]);
+  
+  // Sync scrollbar with table container
+  useEffect(() => {
+    if (activeTab !== 'settings') {
+      // Reset when not on settings tab
+      setScrollbarWidth(0);
+      setScrollbarLeft(0);
+      setScrollbarContainerWidth(0);
+      return;
+    }
+    
+    const tableContainer = tableContainerRef.current;
+    const scrollbar = scrollbarRef.current;
+    
+    if (!tableContainer) {
+      console.log('No table container found');
+      return;
+    }
+    
+    // Set scrollbar width and position to match table container
+    const updateScrollbarWidth = () => {
+      const table = tableContainer.querySelector('table');
+      const rect = tableContainer.getBoundingClientRect();
+      if (table && rect) {
+        const totalWidth = Object.values(columnWidths).reduce((sum, w) => sum + w, 0);
+        const contentWidth = Math.max(totalWidth, 1400);
+        
+        console.log('Updating scrollbar:', {
+          totalWidth,
+          contentWidth,
+          containerWidth: rect.width,
+          left: rect.left
+        });
+        
+        setScrollbarWidth(contentWidth);
+        setScrollbarLeft(rect.left);
+        setScrollbarContainerWidth(rect.width);
+      }
+    };
+    
+    // Initial updates
+    updateScrollbarWidth();
+    setTimeout(updateScrollbarWidth, 100);
+    setTimeout(updateScrollbarWidth, 500);
+    
+    window.addEventListener('resize', updateScrollbarWidth);
+    window.addEventListener('scroll', updateScrollbarWidth);
+    
+    if (scrollbar) {
+      // Sync scrollbar with table
+      const handleTableScroll = () => {
+        scrollbar.scrollLeft = tableContainer.scrollLeft;
+      };
+      
+      const handleScrollbarScroll = () => {
+        tableContainer.scrollLeft = scrollbar.scrollLeft;
+      };
+      
+      tableContainer.addEventListener('scroll', handleTableScroll);
+      scrollbar.addEventListener('scroll', handleScrollbarScroll);
+      
+      return () => {
+        window.removeEventListener('resize', updateScrollbarWidth);
+        window.removeEventListener('scroll', updateScrollbarWidth);
+        tableContainer.removeEventListener('scroll', handleTableScroll);
+        scrollbar.removeEventListener('scroll', handleScrollbarScroll);
+      };
+    }
+    
+    return () => {
+      window.removeEventListener('resize', updateScrollbarWidth);
+      window.removeEventListener('scroll', updateScrollbarWidth);
+    };
+  }, [activeTab, columnWidths, filteredKeys.length]);
 
   const handleDeleteOrRestore = (keyName: string, isCurrentlyDeleted: boolean) => {
     setPendingActionKey(keyName);
@@ -1109,26 +1259,111 @@ export default function LanguageSettings() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-gray-700">Language Page</span>
-                {Array.from({ length: Math.ceil(filteredKeys.length / itemsPerPage) }, (_, i) => i + 1)
-                  .slice(0, 5)
-                  .map(page => (
+                
+                {/* Previous Button */}
                     <button 
-                      key={page}
-                      onClick={() => setTab2Page(page)}
+                  onClick={() => setTab2Page(Math.max(1, tab2Page - 1))}
+                  disabled={tab2Page === 1}
+                  className={`px-3 py-2 font-semibold transition ${
+                    tab2Page === 1
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  }`}
+                >
+                  ←
+                </button>
+                
+                {(() => {
+                  const totalPages = Math.ceil(filteredKeys.length / itemsPerPage);
+                  const pages = [];
+                  
+                  // Always show first page
+                  if (totalPages > 0) {
+                    pages.push(
+                      <button 
+                        key={1}
+                        onClick={() => setTab2Page(1)}
                       className={`px-4 py-2 font-semibold transition ${
-                        tab2Page === page
+                          tab2Page === 1
                           ? 'bg-gray-700 text-white'
                           : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
                       }`}
                     >
-                      {page}
+                        1
                     </button>
-                  ))}
-                {Math.ceil(filteredKeys.length / itemsPerPage) > 5 && (
-                  <span className="text-gray-600 px-2">
-                    ... {Math.ceil(filteredKeys.length / itemsPerPage)}
+                    );
+                  }
+                  
+                  // Add ellipsis if needed
+                  if (tab2Page > 3) {
+                    pages.push(
+                      <span key="ellipsis1" className="px-2 text-gray-600">
+                        ...
                   </span>
-                )}
+                    );
+                  }
+                  
+                  // Show pages around current page
+                  const start = Math.max(2, tab2Page - 1);
+                  const end = Math.min(totalPages - 1, tab2Page + 1);
+                  
+                  for (let i = start; i <= end; i++) {
+                    pages.push(
+                      <button 
+                        key={i}
+                        onClick={() => setTab2Page(i)}
+                        className={`px-4 py-2 font-semibold transition ${
+                          tab2Page === i
+                            ? 'bg-gray-700 text-white'
+                            : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                        }`}
+                      >
+                        {i}
+                      </button>
+                    );
+                  }
+                  
+                  // Add ellipsis if needed
+                  if (tab2Page < totalPages - 2) {
+                    pages.push(
+                      <span key="ellipsis2" className="px-2 text-gray-600">
+                        ...
+                      </span>
+                    );
+                  }
+                  
+                  // Always show last page (if more than 1 page)
+                  if (totalPages > 1) {
+                    pages.push(
+                      <button 
+                        key={totalPages}
+                        onClick={() => setTab2Page(totalPages)}
+                        className={`px-4 py-2 font-semibold transition ${
+                          tab2Page === totalPages
+                            ? 'bg-gray-700 text-white'
+                            : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                        }`}
+                      >
+                        {totalPages}
+                      </button>
+                    );
+                  }
+                  
+                  return pages;
+                })()}
+                
+                {/* Next Button */}
+                <button
+                  onClick={() => setTab2Page(Math.min(Math.ceil(filteredKeys.length / itemsPerPage), tab2Page + 1))}
+                  disabled={tab2Page >= Math.ceil(filteredKeys.length / itemsPerPage)}
+                  className={`px-3 py-2 font-semibold transition ${
+                    tab2Page >= Math.ceil(filteredKeys.length / itemsPerPage)
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                  }`}
+                >
+                  →
+                </button>
               </div>
             </div>
 
@@ -1188,19 +1423,154 @@ export default function LanguageSettings() {
               </button>
             </div>
 
-            {/* Table View */}
-            <div className="bg-white border border-gray-300 overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-100 border-b border-gray-300">
+            {/* Table View - Horizontal Scroll with Sticky En & It */}
+            <div 
+              ref={tableContainerRef}
+              className="bg-white border border-gray-300" 
+              id="language-table-container" 
+              style={{
+                maxHeight: 'calc(100vh - 360px)', 
+                overflowY: 'auto',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                position: 'relative'
+              }}
+            >
+              <table style={{ 
+                tableLayout: 'fixed', 
+                width: `${Object.values(columnWidths).reduce((sum, w) => sum + w, 0)}px`,
+                minWidth: '1400px'
+              }}>
+                <thead className="bg-gray-100 border-b border-gray-300 sticky top-0 z-30">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">Sr.No</th>
-                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">Variable_name</th>
-                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">En</th>
-                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">It</th>
-                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">Fr</th>
-                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">De</th>
-                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900">Es</th>
-                    <th className="px-4 py-3 text-center text-sm font-bold text-gray-900">Actions</th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 sticky left-0 bg-gray-100 z-40 relative select-none" style={{width: `${columnWidths.srNo}px`}}>
+                      Sr.No
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'srNo')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 sticky bg-gray-100 z-40 relative select-none" style={{width: `${columnWidths.varName}px`, left: `${columnWidths.srNo}px`}}>
+                      Variable_name
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'varName')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-red-700 sticky bg-gray-100 z-40 relative select-none" style={{width: `${columnWidths.en}px`, left: `${columnWidths.srNo + columnWidths.varName}px`}}>
+                      En
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'en')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-red-700 sticky bg-gray-100 z-40 relative select-none" style={{width: `${columnWidths.it}px`, left: `${columnWidths.srNo + columnWidths.varName + columnWidths.en}px`}}>
+                      It
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'it')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 relative select-none" style={{width: `${columnWidths.fr}px`}}>
+                      Fr
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'fr')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 relative select-none" style={{width: `${columnWidths.de}px`}}>
+                      De
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'de')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 relative select-none" style={{width: `${columnWidths.es}px`}}>
+                      Es
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'es')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 relative select-none" style={{width: `${columnWidths.pt}px`}}>
+                      Pt
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'pt')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 relative select-none" style={{width: `${columnWidths.ru}px`}}>
+                      Ru
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'ru')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 relative select-none" style={{width: `${columnWidths.hi}px`}}>
+                      Hi
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'hi')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 relative select-none" style={{width: `${columnWidths.ja}px`}}>
+                      Ja
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'ja')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 relative select-none" style={{width: `${columnWidths.id}px`}}>
+                      Id
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'id')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 relative select-none" style={{width: `${columnWidths.zh}px`}}>
+                      Zh
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'zh')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-bold text-gray-900 relative select-none" style={{width: `${columnWidths.ar}px`}}>
+                      Ar
+                      <div 
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500 group"
+                        onMouseDown={(e) => handleResizeStart(e, 'ar')}
+                      >
+                        <div className="w-full h-full group-hover:bg-blue-500"></div>
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 text-center text-sm font-bold text-gray-900 sticky right-0 bg-gray-100 z-40 shadow-lg select-none" style={{width: `${columnWidths.actions}px`}}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1212,17 +1582,25 @@ export default function LanguageSettings() {
                     }`;
                     const textClasses = isDeleted ? 'text-gray-400 line-through' : 'text-gray-900';
                     
+                    const stickyBg = isDeleted ? 'bg-gray-100' : 'bg-white';
+                    const leftOffsets = {
+                      srNo: 0,
+                      varName: columnWidths.srNo,
+                      en: columnWidths.srNo + columnWidths.varName,
+                      it: columnWidths.srNo + columnWidths.varName + columnWidths.en
+                    };
+                    
                     return (
                       <tr key={key.key} className={rowClasses}>
-                        <td className={`px-4 py-3 text-sm font-medium ${textClasses}`}>
-                          {(tab2Page - 1) * itemsPerPage + index + 1}
+                        <td className={`px-4 py-3 text-sm font-medium ${textClasses} sticky left-0 z-10 ${stickyBg} overflow-hidden`} style={{width: `${columnWidths.srNo}px`}}>
+                          <div className="truncate">{(tab2Page - 1) * itemsPerPage + index + 1}</div>
                         </td>
-                        <td className={`px-4 py-3 text-sm font-semibold ${isDeleted ? 'text-gray-400 line-through' : 'text-red-700'}`}>
-                          {key.key}
+                        <td className={`px-4 py-3 text-sm font-semibold ${isDeleted ? 'text-gray-400 line-through' : 'text-red-700'} sticky z-10 ${stickyBg} overflow-hidden`} style={{left: `${leftOffsets.varName}px`, width: `${columnWidths.varName}px`}}>
+                          <div className="truncate" title={key.key}>{key.key}</div>
                         </td>
                         
-                        {/* English */}
-                        <td className="px-4 py-3 text-sm">
+                        {/* English - Sticky RED column */}
+                        <td className={`px-4 py-3 text-sm sticky z-10 ${stickyBg} overflow-hidden`} style={{left: `${leftOffsets.en}px`, width: `${columnWidths.en}px`}}>
                           {isEditing ? (
                             <input
                               type="text"
@@ -1231,12 +1609,14 @@ export default function LanguageSettings() {
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                             />
                           ) : (
+                            <div className="truncate" title={key.values.en}>
                             <span className={textClasses}>{key.values.en || ''}</span>
+                            </div>
                           )}
                         </td>
                         
-                        {/* Italian */}
-                        <td className="px-4 py-3 text-sm">
+                        {/* Italian - Sticky RED column */}
+                        <td className={`px-4 py-3 text-sm sticky z-10 ${stickyBg} overflow-hidden`} style={{left: `${leftOffsets.it}px`, width: `${columnWidths.it}px`}}>
                           {isEditing ? (
                             <input
                               type="text"
@@ -1245,12 +1625,14 @@ export default function LanguageSettings() {
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                             />
                           ) : (
+                            <div className="truncate" title={key.values.it}>
                             <span className={textClasses}>{key.values.it || ''}</span>
+                            </div>
                           )}
                         </td>
                         
-                        {/* French */}
-                        <td className="px-4 py-3 text-sm">
+                        {/* French - Scrollable */}
+                        <td className="px-4 py-3 text-sm overflow-hidden" style={{width: `${columnWidths.fr}px`}}>
                           {isEditing ? (
                             <input
                               type="text"
@@ -1259,12 +1641,14 @@ export default function LanguageSettings() {
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                             />
                           ) : (
+                            <div className="truncate" title={key.values.fr}>
                             <span className={textClasses}>{key.values.fr || ''}</span>
+                            </div>
                           )}
                         </td>
                         
-                        {/* German */}
-                        <td className="px-4 py-3 text-sm">
+                        {/* German - Scrollable */}
+                        <td className="px-4 py-3 text-sm overflow-hidden" style={{width: `${columnWidths.de}px`}}>
                           {isEditing ? (
                             <input
                               type="text"
@@ -1273,12 +1657,12 @@ export default function LanguageSettings() {
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                             />
                           ) : (
-                            <span className={textClasses}>{key.values.de || ''}</span>
+                            <div className="truncate" title={key.values.de}><span className={textClasses}>{key.values.de || ''}</span></div>
                           )}
                         </td>
                         
-                        {/* Spanish */}
-                        <td className="px-4 py-3 text-sm">
+                        {/* Spanish - Scrollable */}
+                        <td className="px-4 py-3 text-sm overflow-hidden" style={{width: `${columnWidths.es}px`}}>
                           {isEditing ? (
                             <input
                               type="text"
@@ -1287,12 +1671,110 @@ export default function LanguageSettings() {
                               className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                             />
                           ) : (
-                            <span className={textClasses}>{key.values.es || ''}</span>
+                            <div className="truncate" title={key.values.es}><span className={textClasses}>{key.values.es || ''}</span></div>
                           )}
                         </td>
                         
-                        {/* Actions */}
-                        <td className="px-4 py-3 text-center">
+                        {/* Portuguese - Scrollable */}
+                        <td className="px-4 py-3 text-sm overflow-hidden" style={{width: `${columnWidths.pt}px`}}>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.pt || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, pt: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <div className="truncate" title={key.values.pt}><span className={textClasses}>{key.values.pt || ''}</span></div>
+                          )}
+                        </td>
+                        
+                        {/* Russian - Scrollable */}
+                        <td className="px-4 py-3 text-sm overflow-hidden" style={{width: `${columnWidths.ru}px`}}>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.ru || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, ru: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <div className="truncate" title={key.values.ru}><span className={textClasses}>{key.values.ru || ''}</span></div>
+                          )}
+                        </td>
+                        
+                        {/* Hindi - Scrollable */}
+                        <td className="px-4 py-3 text-sm overflow-hidden" style={{width: `${columnWidths.hi}px`}}>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.hi || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, hi: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <div className="truncate" title={key.values.hi}><span className={textClasses}>{key.values.hi || ''}</span></div>
+                          )}
+                        </td>
+                        
+                        {/* Japanese - Scrollable */}
+                        <td className="px-4 py-3 text-sm overflow-hidden" style={{width: `${columnWidths.ja}px`}}>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.ja || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, ja: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <div className="truncate" title={key.values.ja}><span className={textClasses}>{key.values.ja || ''}</span></div>
+                          )}
+                        </td>
+                        
+                        {/* Indonesian - Scrollable */}
+                        <td className="px-4 py-3 text-sm overflow-hidden" style={{width: `${columnWidths.id}px`}}>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.id || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, id: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <div className="truncate" title={key.values.id}><span className={textClasses}>{key.values.id || ''}</span></div>
+                          )}
+                        </td>
+                        
+                        {/* Chinese - Scrollable */}
+                        <td className="px-4 py-3 text-sm overflow-hidden" style={{width: `${columnWidths.zh}px`}}>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.zh || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, zh: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <div className="truncate" title={key.values.zh}><span className={textClasses}>{key.values.zh || ''}</span></div>
+                          )}
+                        </td>
+                        
+                        {/* Arabic - Scrollable */}
+                        <td className="px-4 py-3 text-sm overflow-hidden" style={{width: `${columnWidths.ar}px`}}>
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              value={editedValues.ar || ''}
+                              onChange={(e) => setEditedValues(prev => ({ ...prev, ar: e.target.value }))}
+                              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                            />
+                          ) : (
+                            <div className="truncate" title={key.values.ar}><span className={textClasses}>{key.values.ar || ''}</span></div>
+                          )}
+                        </td>
+                        
+                        {/* Actions - Sticky Right */}
+                        <td className={`px-4 py-3 text-center sticky right-0 z-10 ${stickyBg} shadow-lg`} style={{width: `${columnWidths.actions}px`}}>
                           <div className="flex items-center justify-center gap-2">
                             {isEditing ? (
                               <>
@@ -1341,7 +1823,44 @@ export default function LanguageSettings() {
                   })}
                 </tbody>
               </table>
+              <style jsx>{`
+                #language-table-container::-webkit-scrollbar {
+                  display: none;
+                }
+              `}</style>
             </div>
+            
+            {/* Sticky Horizontal Scrollbar - Always visible at window bottom */}
+            {activeTab === 'settings' && (
+              <div 
+                ref={scrollbarRef}
+                className="fixed bottom-0 overflow-x-auto z-50"
+                style={{
+                  height: '32px',
+                  backgroundColor: '#374151',
+                  left: scrollbarLeft > 0 ? `${scrollbarLeft}px` : '0',
+                  width: scrollbarContainerWidth > 0 ? `${scrollbarContainerWidth}px` : '100%',
+                  boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.1)'
+                }}
+              >
+                <div 
+                  style={{ 
+                    width: `${scrollbarWidth || 2200}px`, 
+                    height: '32px', 
+                    backgroundColor: 'rgba(156, 163, 175, 0.3)',
+                    minWidth: '2200px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  {/* Visual indicator */}
+                  <span className="text-white text-xs font-medium opacity-70">
+                    ← Scroll horizontally to see all 12 languages →
+                  </span>
+                </div>
+              </div>
+            )}
 
           </div>
         )}
@@ -1463,19 +1982,84 @@ export default function LanguageSettings() {
                           </button>
                           
                           <div className="flex items-center gap-1">
-                            {Array.from({ length: Math.ceil(filteredKeys.length / itemsPerPage) }, (_, i) => i + 1).map((page) => (
+                            {(() => {
+                              const totalPages = Math.ceil(filteredKeys.length / itemsPerPage);
+                              const pages = [];
+                              
+                              // Always show first page
+                              if (totalPages > 0) {
+                                pages.push(
                               <button
-                                key={page}
-                                onClick={() => setTab3Page(page)}
+                                    key={1}
+                                    onClick={() => setTab3Page(1)}
                                 className={`w-10 h-10 rounded font-semibold transition ${
-                                  page === tab3Page
+                                      tab3Page === 1
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
                               >
-                                {page}
+                                    1
                               </button>
-                            ))}
+                                );
+                              }
+                              
+                              // Add ellipsis if needed
+                              if (tab3Page > 4) {
+                                pages.push(
+                                  <span key="ellipsis1" className="px-2 text-gray-600">
+                                    ...
+                                  </span>
+                                );
+                              }
+                              
+                              // Show pages around current page
+                              const start = Math.max(2, tab3Page - 2);
+                              const end = Math.min(totalPages - 1, tab3Page + 2);
+                              
+                              for (let i = start; i <= end; i++) {
+                                pages.push(
+                                  <button
+                                    key={i}
+                                    onClick={() => setTab3Page(i)}
+                                    className={`w-10 h-10 rounded font-semibold transition ${
+                                      tab3Page === i
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    }`}
+                                  >
+                                    {i}
+                                  </button>
+                                );
+                              }
+                              
+                              // Add ellipsis if needed
+                              if (tab3Page < totalPages - 3) {
+                                pages.push(
+                                  <span key="ellipsis2" className="px-2 text-gray-600">
+                                    ...
+                                  </span>
+                                );
+                              }
+                              
+                              // Always show last page (if more than 1 page)
+                              if (totalPages > 1) {
+                                pages.push(
+                                  <button
+                                    key={totalPages}
+                                    onClick={() => setTab3Page(totalPages)}
+                                    className={`w-10 h-10 rounded font-semibold transition ${
+                                      tab3Page === totalPages
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    }`}
+                                  >
+                                    {totalPages}
+                                  </button>
+                                );
+                              }
+                              
+                              return pages;
+                            })()}
                           </div>
                           
                           <button
@@ -1619,19 +2203,84 @@ export default function LanguageSettings() {
                           </button>
                           
                           <div className="flex items-center gap-1">
-                            {Array.from({ length: Math.ceil(filteredKeys.length / itemsPerPage) }, (_, i) => i + 1).map((page) => (
+                            {(() => {
+                              const totalPages = Math.ceil(filteredKeys.length / itemsPerPage);
+                              const pages = [];
+                              
+                              // Always show first page
+                              if (totalPages > 0) {
+                                pages.push(
                               <button
-                                key={page}
-                                onClick={() => setTab3Page(page)}
+                                    key={1}
+                                    onClick={() => setTab3Page(1)}
                                 className={`w-10 h-10 rounded font-semibold transition ${
-                                  page === tab3Page
+                                      tab3Page === 1
                                     ? 'bg-blue-600 text-white'
                                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                 }`}
                               >
-                                {page}
+                                    1
                               </button>
-                            ))}
+                                );
+                              }
+                              
+                              // Add ellipsis if needed
+                              if (tab3Page > 4) {
+                                pages.push(
+                                  <span key="ellipsis1" className="px-2 text-gray-600">
+                                    ...
+                                  </span>
+                                );
+                              }
+                              
+                              // Show pages around current page
+                              const start = Math.max(2, tab3Page - 2);
+                              const end = Math.min(totalPages - 1, tab3Page + 2);
+                              
+                              for (let i = start; i <= end; i++) {
+                                pages.push(
+                                  <button
+                                    key={i}
+                                    onClick={() => setTab3Page(i)}
+                                    className={`w-10 h-10 rounded font-semibold transition ${
+                                      tab3Page === i
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    }`}
+                                  >
+                                    {i}
+                                  </button>
+                                );
+                              }
+                              
+                              // Add ellipsis if needed
+                              if (tab3Page < totalPages - 3) {
+                                pages.push(
+                                  <span key="ellipsis2" className="px-2 text-gray-600">
+                                    ...
+                                  </span>
+                                );
+                              }
+                              
+                              // Always show last page (if more than 1 page)
+                              if (totalPages > 1) {
+                                pages.push(
+                                  <button
+                                    key={totalPages}
+                                    onClick={() => setTab3Page(totalPages)}
+                                    className={`w-10 h-10 rounded font-semibold transition ${
+                                      tab3Page === totalPages
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                    }`}
+                                  >
+                                    {totalPages}
+                                  </button>
+                                );
+                              }
+                              
+                              return pages;
+                            })()}
                           </div>
                           
                           <button

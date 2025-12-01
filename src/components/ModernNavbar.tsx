@@ -62,7 +62,7 @@ interface ModernNavbarProps {
 export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, isAuthenticated, requireAuth } = useAuth();
+  const { user, logout, isAuthenticated, requireAuth, login } = useAuth();
   const { currentLanguage, setLanguage, t, availableLanguages } = useLanguage();
   
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -70,6 +70,19 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminUser, setAdminUser] = useState<any>(null);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<'username' | 'question' | 'reset'>('username');
+  const [forgotPasswordUsername, setForgotPasswordUsername] = useState('');
+  const [securityQuestion, setSecurityQuestion] = useState('');
+  const [securityAnswer, setSecurityAnswer] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [forgotPasswordError, setForgotPasswordError] = useState('');
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState('');
   
   const languageDropdownRef = useRef<HTMLDivElement>(null);
   const userDropdownRef = useRef<HTMLDivElement>(null);
@@ -135,12 +148,14 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
     { href: '/coaches', label: 'Coaches', icon: UserCircle },
     { href: '/teams', label: 'Teams', icon: Users2 },
     { href: '/groups', label: 'Groups', icon: Users },
-    { href: '/clubs', label: 'Sport Clubs', icon: Building2 },
+    { href: '/clubs', label: 'Clubs', icon: Building2 },
     { href: '/testimonials', label: 'Testimonials', icon: MessageCircle },
     { href: '/blog', label: t('nav_blog'), icon: MessageCircle },
     { href: '/news', label: t('nav_news'), icon: Newspaper },
-    { href: '/sell-buy', label: t('nav_sell_buy'), icon: ShoppingCart },
-    { href: '/job-offers', label: t('nav_job_offers'), icon: Briefcase },
+    { href: '/sell-buy', label: 'Sell/Buy', icon: ShoppingCart },
+    { href: '/job-offers', label: 'Jobs', icon: Briefcase },
+    { href: '/promote-yourself', label: 'Promote', icon: Megaphone },
+    { href: '/our-shop', label: 'Shop', icon: ShoppingBag },
   ];
 
   const socialLinks = [
@@ -178,11 +193,114 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
     setIsMobileMenuOpen(false);
   };
 
-  const handleLoginClick = () => {
-    if (onLoginClick) {
-      onLoginClick();
-    }
+  const handleForgotPasswordClick = () => {
+    setShowForgotPasswordModal(true);
+    setForgotPasswordStep('username');
+    setForgotPasswordUsername('');
+    setSecurityQuestion('');
+    setSecurityAnswer('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
     setIsMobileMenuOpen(false);
+  };
+
+  const handleForgotPasswordSubmit = async () => {
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+
+    if (forgotPasswordStep === 'username') {
+      if (!forgotPasswordUsername.trim()) {
+        setForgotPasswordError('Please enter your username or email');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/auth/get-security-question', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier: forgotPasswordUsername })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.question) {
+          setSecurityQuestion(data.question);
+          setForgotPasswordStep('question');
+        } else {
+          setForgotPasswordError(data.error || 'User not found or no security question set');
+        }
+      } catch (error) {
+        setForgotPasswordError('Failed to retrieve security question');
+      }
+    } else if (forgotPasswordStep === 'question') {
+      if (!securityAnswer.trim()) {
+        setForgotPasswordError('Please answer the security question');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/auth/verify-security-answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identifier: forgotPasswordUsername,
+            answer: securityAnswer
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.verified) {
+          setForgotPasswordStep('reset');
+        } else {
+          setForgotPasswordError(data.error || 'Incorrect answer');
+        }
+      } catch (error) {
+        setForgotPasswordError('Failed to verify answer');
+      }
+    } else if (forgotPasswordStep === 'reset') {
+      if (!newPassword || !confirmPassword) {
+        setForgotPasswordError('Please fill in both password fields');
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        setForgotPasswordError('Password must be at least 6 characters');
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setForgotPasswordError('Passwords do not match');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identifier: forgotPasswordUsername,
+            answer: securityAnswer,
+            newPassword: newPassword
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setForgotPasswordSuccess('Password reset successfully! You can now login.');
+          setTimeout(() => {
+            setShowForgotPasswordModal(false);
+          }, 2000);
+        } else {
+          setForgotPasswordError(data.error || 'Failed to reset password');
+        }
+      } catch (error) {
+        setForgotPasswordError('Failed to reset password');
+      }
+    }
   };
 
   const handleAdminClick = () => {
@@ -233,6 +351,81 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
       router.push(lastPage || defaultPage);
     }
     setIsMobileMenuOpen(false);
+  };
+
+  const handleInlineLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    
+    if (!loginUsername.trim() || !loginPassword.trim()) {
+      setLoginError('Please enter both username and password');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    setLoginError('');
+
+    try {
+      // First try regular user login
+      let response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: loginUsername,
+          password: loginPassword
+        })
+      });
+
+      let data = await response.json();
+
+      // If regular login fails, try admin login
+      if (!response.ok) {
+        console.log('Regular login failed, trying admin login...');
+        response = await fetch('/api/auth/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identifier: loginUsername,
+            password: loginPassword
+          })
+        });
+
+        data = await response.json();
+
+        if (response.ok && data.user) {
+          // Admin login successful
+          localStorage.setItem('adminToken', data.token);
+          localStorage.setItem('adminUser', JSON.stringify(data.user));
+          
+          // Clear form
+          setLoginUsername('');
+          setLoginPassword('');
+          setLoginError('');
+          
+          // Redirect to admin dashboard
+          router.push('/admin/dashboard');
+          return;
+        }
+      }
+
+      if (response.ok && data.user) {
+        // Regular user login successful
+        // Use the login function from useAuth (token first, then user)
+        // The login function will automatically redirect to the appropriate dashboard
+        login(data.token, data.user);
+        
+        // Clear form
+        setLoginUsername('');
+        setLoginPassword('');
+        setLoginError('');
+      } else {
+        setLoginError(data.error || 'Invalid username or password');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError('An error occurred. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   return (
@@ -512,21 +705,58 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                   )}
                 </div>
               ) : (
-                /* Login Buttons */
-                <div className="flex items-center space-x-3">
+                /* Inline Login Form */
+                <div className="flex flex-col items-end gap-1">
+                  <form onSubmit={handleInlineLogin} className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      placeholder="Username"
+                      value={loginUsername}
+                      onChange={(e) => {
+                        setLoginUsername(e.target.value);
+                        setLoginError('');
+                      }}
+                      className="px-3 py-2 bg-white bg-opacity-10 border border-cyan-500 border-opacity-30 rounded-lg text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all text-sm w-40"
+                      disabled={isLoggingIn}
+                    />
+                    <input
+                      type="password"
+                      placeholder="Password"
+                      value={loginPassword}
+                      onChange={(e) => {
+                        setLoginPassword(e.target.value);
+                        setLoginError('');
+                      }}
+                      className="px-3 py-2 bg-white bg-opacity-10 border border-cyan-500 border-opacity-30 rounded-lg text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all text-sm w-40"
+                      disabled={isLoggingIn}
+                      onKeyPress={(e) => e.key === 'Enter' && handleInlineLogin()}
+                    />
                   <button
-                    onClick={handleLoginClick}
-                    className="text-cyan-100 hover:text-white px-6 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 hover:bg-white hover:bg-opacity-10 whitespace-nowrap"
+                      type="submit"
+                      disabled={isLoggingIn}
+                      className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
                   >
-                    {t('nav_login')}
+                      {isLoggingIn ? '...' : 'Login'}
                   </button>
+                  </form>
+                  {loginError && (
+                    <span className="text-xs text-red-300 px-2">{loginError}</span>
+                  )}
+                  <div className="flex items-center gap-3 px-2">
+                    <Link
+                      href="/register"
+                      className="text-xs text-green-300 hover:text-green-100 font-semibold underline transition-colors"
+                    >
+                      Sign up Free
+                    </Link>
+                    <span className="text-gray-500">•</span>
                   <button
-                    onClick={handleAdminClick}
-                    className="text-red-100 hover:text-white px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-300 hover:bg-red-500 hover:bg-opacity-20 whitespace-nowrap flex items-center space-x-2"
+                      onClick={handleForgotPasswordClick}
+                      className="text-xs text-cyan-200 hover:text-white underline transition-colors"
                   >
-                    <Shield className="w-4 h-4" />
-                    <span>{t('nav_admin')}</span>
+                      Forgot Password?
                   </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -637,21 +867,60 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
                       </button>
                     </>
                   ) : (
-                    <>
+                    <div className="space-y-3">
+                      <form onSubmit={handleInlineLogin} className="space-y-3">
+                        <input
+                          type="text"
+                          placeholder="Username"
+                          value={loginUsername}
+                          onChange={(e) => {
+                            setLoginUsername(e.target.value);
+                            setLoginError('');
+                          }}
+                          className="w-full px-4 py-3 bg-white bg-opacity-10 border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+                          disabled={isLoggingIn}
+                        />
+                        <input
+                          type="password"
+                          placeholder="Password"
+                          value={loginPassword}
+                          onChange={(e) => {
+                            setLoginPassword(e.target.value);
+                            setLoginError('');
+                          }}
+                          className="w-full px-4 py-3 bg-white bg-opacity-10 border border-cyan-500 border-opacity-30 rounded-xl text-white placeholder-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+                          disabled={isLoggingIn}
+                        />
+                        {loginError && (
+                          <p className="text-sm text-red-300 px-2">{loginError}</p>
+                        )}
                       <button
-                        onClick={handleLoginClick}
-                        className="w-full text-center px-6 py-4 text-cyan-100 hover:bg-white hover:bg-opacity-10 rounded-2xl transition-all duration-300 font-semibold"
+                          type="submit"
+                          disabled={isLoggingIn}
+                          className="w-full px-6 py-4 bg-cyan-600 hover:bg-cyan-700 text-white rounded-xl font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {t('nav_login')}
+                          {isLoggingIn ? 'Logging in...' : 'Login'}
                       </button>
+                      </form>
+                      
+                      {/* Links below Login */}
+                      <div className="flex items-center justify-center gap-3 px-2">
+                        <Link
+                          href="/register"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="text-sm text-green-300 hover:text-green-100 font-semibold underline transition-colors"
+                        >
+                          Sign up Free
+                        </Link>
+                        <span className="text-gray-500">•</span>
                       <button
-                        onClick={handleAdminClick}
-                        className="w-full flex items-center justify-center px-6 py-4 text-red-100 hover:bg-red-500 hover:bg-opacity-20 rounded-2xl transition-all duration-300 font-semibold"
+                          onClick={handleForgotPasswordClick}
+                          className="text-sm text-cyan-200 hover:text-white underline transition-colors"
                       >
-                        <Shield className="w-5 h-5 mr-2" />
-                        {t('nav_admin_login')}
+                          Forgot Password?
                       </button>
-                    </>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -659,6 +928,117 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
           )}
         </div>
       </nav>
+
+      {/* Forgot Password Modal */}
+      {showForgotPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">Forgot Password</h2>
+              <button
+                onClick={() => setShowForgotPasswordModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {forgotPasswordError && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                {forgotPasswordError}
+              </div>
+            )}
+
+            {forgotPasswordSuccess && (
+              <div className="mb-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded">
+                {forgotPasswordSuccess}
+              </div>
+            )}
+
+            {forgotPasswordStep === 'username' && (
+              <div>
+                <p className="text-gray-600 mb-4">
+                  Enter your username or email to retrieve your security question.
+                </p>
+                <input
+                  type="text"
+                  value={forgotPasswordUsername}
+                  onChange={(e) => setForgotPasswordUsername(e.target.value)}
+                  placeholder="Username or Email"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent mb-4"
+                  onKeyPress={(e) => e.key === 'Enter' && handleForgotPasswordSubmit()}
+                />
+                <button
+                  onClick={handleForgotPasswordSubmit}
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+
+            {forgotPasswordStep === 'question' && (
+              <div>
+                <p className="text-gray-600 mb-2">Security Question:</p>
+                <div className="mb-4 p-3 bg-gray-100 rounded-lg">
+                  <p className="font-semibold text-gray-800">{securityQuestion}</p>
+                </div>
+                <input
+                  type="text"
+                  value={securityAnswer}
+                  onChange={(e) => setSecurityAnswer(e.target.value)}
+                  placeholder="Your Answer"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent mb-4"
+                  onKeyPress={(e) => e.key === 'Enter' && handleForgotPasswordSubmit()}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setForgotPasswordStep('username')}
+                    className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleForgotPasswordSubmit}
+                    className="flex-1 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                  >
+                    Verify
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {forgotPasswordStep === 'reset' && (
+              <div>
+                <p className="text-gray-600 mb-4">
+                  Enter your new password.
+                </p>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="New Password"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent mb-3"
+                />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm New Password"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent mb-4"
+                  onKeyPress={(e) => e.key === 'Enter' && handleForgotPasswordSubmit()}
+                />
+                <button
+                  onClick={handleForgotPasswordSubmit}
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  Reset Password
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -199,8 +199,8 @@ export default function WorkoutGrid({
                                   <span className="font-semibold text-green-700">Workout #{workout.sessionNumber || index + 1}</span>
                                   <span className="text-sm text-gray-700">{workout.name || 'Unnamed'}</span>
                                   <div className="ml-auto flex gap-2">
-                                    <button className="p-1 hover:bg-green-200 rounded">
-                                      <Plus className="w-4 h-4" title="Add Moveframe" />
+                                    <button className="p-1 hover:bg-green-200 rounded" title="Add Moveframe">
+                                      <Plus className="w-4 h-4" />
                                     </button>
                                     <button 
                                       onClick={(e) => {

@@ -11,8 +11,13 @@ export interface User {
   export enum UserType {
     ATHLETE = 'ATHLETE',
     COACH = 'COACH',
-    TEAM_MANAGER = 'TEAM_MANAGER',
-    CLUB_TRAINER = 'CLUB_TRAINER'
+    TEAM = 'TEAM',
+    TEAM_MANAGER = 'TEAM_MANAGER',  // Legacy
+    CLUB = 'CLUB',
+    CLUB_TRAINER = 'CLUB_TRAINER',  // Legacy
+    GROUP = 'GROUP',
+    GROUP_ADMIN = 'GROUP_ADMIN',
+    ADMIN = 'ADMIN'
   }
   
   // Workout Types

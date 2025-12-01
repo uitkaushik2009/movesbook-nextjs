@@ -13,7 +13,8 @@ import {
   Globe,
   LogOut,
   Menu,
-  X
+  X,
+  Building2
 } from 'lucide-react';
 import Image from 'next/image';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -204,6 +205,14 @@ export default function AdminNavbar() {
               </Link>
 
               <Link 
+                href="/admin/clubs"
+                className="flex items-center gap-2 px-3 lg:px-6 py-3 lg:py-4 hover:bg-gray-600 transition border-r border-gray-600 text-sm lg:text-base"
+              >
+                <Building2 className="w-4 h-4 lg:w-5 lg:h-5" />
+                <span className="font-medium">Clubs</span>
+              </Link>
+
+              <Link 
                 href="/settings"
                 className="flex items-center gap-2 px-3 lg:px-6 py-3 lg:py-4 hover:bg-gray-600 transition border-r border-gray-600 text-sm lg:text-base"
               >
@@ -369,6 +378,15 @@ export default function AdminNavbar() {
             >
               <Users className="w-5 h-5" />
               <span className="font-medium">Teams</span>
+            </Link>
+
+            <Link 
+              href="/admin/clubs"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-3 px-6 py-4 hover:bg-gray-600 transition border-b border-gray-600"
+            >
+              <Building2 className="w-5 h-5" />
+              <span className="font-medium">Clubs</span>
             </Link>
 
             <Link 

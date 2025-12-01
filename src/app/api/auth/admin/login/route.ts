@@ -57,12 +57,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // First, check if Super Admin exists in super_admins table
+    // First, check if Super Admin exists in super_admins table - case-insensitive
     const superAdmin = await prisma.superAdmin.findFirst({
       where: {
         OR: [
           { email: loginIdentifier },
-          { username: loginIdentifier }
+          { username: loginIdentifier },
+          { email: loginIdentifier.toLowerCase() },
+          { username: loginIdentifier.toLowerCase() }
         ],
         isActive: true
       }
@@ -102,12 +104,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Try to find user in NEW database (regular admin users)
+    // Try to find user in NEW database (regular admin users) - case-insensitive
     let user = await prisma.user.findFirst({
       where: {
         OR: [
           { email: loginIdentifier },
-          { username: loginIdentifier }
+          { username: loginIdentifier },
+          { email: loginIdentifier.toLowerCase() },
+          { username: loginIdentifier.toLowerCase() }
         ],
         userType: 'ADMIN'
       },
@@ -122,32 +126,37 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // If not found in new table, check LEGACY table
+    // If not found in new table, check LEGACY table (if it exists)
     if (!user) {
-      const legacyUser = await prisma.$queryRaw<any[]>`
-        SELECT id, username, email, password, role_id,
-               COALESCE(firstname, '') as firstname,
-               COALESCE(lastname, '') as lastname
-        FROM users
-        WHERE (email = ${loginIdentifier} OR username = ${loginIdentifier})
-        AND delete_status = 'N'
-        AND role_id IN (5, 6)
-        LIMIT 1
-      `;
+      try {
+        const legacyUser = await prisma.$queryRaw<any[]>`
+          SELECT id, username, email, password, role_id,
+                 COALESCE(firstname, '') as firstname,
+                 COALESCE(lastname, '') as lastname
+          FROM users
+          WHERE (email = ${loginIdentifier} OR username = ${loginIdentifier})
+          AND delete_status = 'N'
+          AND role_id IN (5, 6)
+          LIMIT 1
+        `;
 
-      if (legacyUser.length > 0) {
-        const legacy = legacyUser[0];
-        const name = `${legacy.firstname || ''} ${legacy.lastname || ''}`.trim() || legacy.username;
-        
-        user = {
-          id: `legacy_${legacy.id}`,
-          name: name,
-          username: legacy.username,
-          email: legacy.email,
-          password: legacy.password,
-          userType: legacy.role_id === 6 ? 'ADMIN' : 'GROUP_ADMIN',
-          createdAt: new Date(),
-        };
+        if (legacyUser.length > 0) {
+          const legacy = legacyUser[0];
+          const name = `${legacy.firstname || ''} ${legacy.lastname || ''}`.trim() || legacy.username;
+          
+          user = {
+            id: `legacy_${legacy.id}`,
+            name: name,
+            username: legacy.username,
+            email: legacy.email,
+            password: legacy.password,
+            userType: legacy.role_id === 6 ? 'ADMIN' : 'GROUP_ADMIN',
+            createdAt: new Date(),
+          };
+        }
+      } catch (legacyError: any) {
+        // Legacy table doesn't exist or query failed - that's okay, just skip it
+        console.log('Legacy users table not found or inaccessible (this is normal for new installations)');
       }
     }
 
@@ -162,20 +171,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // If user is using old SHA1 password, upgrade to bcrypt
-      if (user.password.length === 40 && /^[a-f0-9]+$/i.test(user.password)) {
-        try {
-          const newHashedPassword = await hashPassword(password);
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { password: newHashedPassword }
-          });
-          console.log(`Upgraded admin password for ${user.email} from SHA1 to bcrypt`);
-        } catch (err) {
-          console.error('Password upgrade failed:', err);
-          // Continue anyway - password was verified
-        }
-      }
+      // Auto-upgrade disabled - keeping SHA1 passwords as-is
 
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;

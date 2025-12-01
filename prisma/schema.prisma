@@ -13,7 +13,14 @@ model User {
   username  String   @unique
   password  String
   name      String
+  firstName String?
+  surname   String?
+  gender    String?
+  birthdate DateTime?
+  country   String?
   userType  UserType
+  securityQuestion String? // Security question for password reset
+  securityAnswer   String? // Hashed security answer
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -46,8 +53,11 @@ model User {
 enum UserType {
   ATHLETE
   COACH
-  TEAM_MANAGER
-  CLUB_TRAINER
+  TEAM
+  TEAM_MANAGER  // Legacy, maps to TEAM
+  CLUB
+  CLUB_TRAINER  // Legacy, maps to CLUB
+  GROUP
   GROUP_ADMIN
   ADMIN
 }

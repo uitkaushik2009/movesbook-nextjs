@@ -1,109 +1,96 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-const prisma = new PrismaClient();
-
-export async function PUT(
-  request: NextRequest,
+// PATCH /api/workouts/moveframes/[id] - Update moveframe (e.g., move to another workout)
+export async function PATCH(
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    const token = req.headers.get('authorization')?.split(' ')[1];
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.replace('Bearer ', '');
     const decoded = verifyToken(token);
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const {
-      sport,
-      sectionId,
-      type,
-      description,
-      movelaps
-    } = body;
+    const moveframeId = params.id;
+    const body = await req.json();
+    const { workoutSessionId, ...updateData } = body;
 
-    // Delete existing movelaps and create new ones
-    await prisma.movelap.deleteMany({
-      where: { moveframeId: params.id }
-    });
+    console.log('[API] PATCH /api/workouts/moveframes/[id]');
+    console.log('Moveframe ID:', moveframeId);
+    console.log('Update data:', body);
 
-    const moveframe = await prisma.moveframe.update({
-      where: { id: params.id },
+    // Update the moveframe
+    const updatedMoveframe = await prisma.moveframe.update({
+      where: { id: moveframeId },
       data: {
-        sport: sport as any,
-        sectionId,
-        type: type as any,
-        description,
-        movelaps: {
-          create: movelaps.map((lap: any, index: number) => ({
-            repetitionNumber: index + 1,
-            distance: lap.distance,
-            speed: lap.speed,
-            style: lap.style,
-            pace: lap.pace,
-            time: lap.time,
-            reps: lap.reps,
-            restType: lap.restType as any,
-            pause: lap.pause,
-            alarm: lap.alarm,
-            sound: lap.sound,
-            notes: lap.notes,
-            status: lap.status as any,
-            isSkipped: lap.isSkipped || false,
-            isDisabled: lap.isDisabled || false
-          }))
-        }
+        ...(workoutSessionId && { workoutSessionId }),
+        ...updateData
       },
       include: {
+        movelaps: true,
         section: true,
-        movelaps: true
+        workoutSession: true
       }
     });
 
-    return NextResponse.json({ moveframe });
-  } catch (error) {
-    console.error('Error updating moveframe:', error);
+    console.log('[API] Moveframe updated successfully:', updatedMoveframe.id);
+
+    return NextResponse.json({ moveframe: updatedMoveframe });
+  } catch (error: any) {
+    console.error('[API] Error updating moveframe:', error);
     return NextResponse.json(
-      { error: 'Failed to update moveframe' },
+      { error: 'Failed to update moveframe', details: error.message },
       { status: 500 }
     );
   }
 }
 
+// DELETE /api/workouts/moveframes/[id] - Delete moveframe
 export async function DELETE(
-  request: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    const token = req.headers.get('authorization')?.split(' ')[1];
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const token = authHeader.replace('Bearer ', '');
     const decoded = verifyToken(token);
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    await prisma.moveframe.delete({
-      where: { id: params.id }
+    const moveframeId = params.id;
+
+    console.log('[API] DELETE /api/workouts/moveframes/[id]');
+    console.log('Moveframe ID:', moveframeId);
+
+    // Delete associated movelaps first
+    await prisma.movelap.deleteMany({
+      where: { moveframeId }
     });
 
+    // Delete the moveframe
+    await prisma.moveframe.delete({
+      where: { id: moveframeId }
+    });
+
+    console.log('[API] Moveframe deleted successfully');
+
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting moveframe:', error);
+  } catch (error: any) {
+    console.error('[API] Error deleting moveframe:', error);
     return NextResponse.json(
-      { error: 'Failed to delete moveframe' },
+      { error: 'Failed to delete moveframe', details: error.message },
       { status: 500 }
     );
   }
 }
-

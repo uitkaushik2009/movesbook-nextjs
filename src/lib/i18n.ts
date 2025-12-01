@@ -219,10 +219,10 @@ export interface LanguageStrings {
         // User Types
         'user_type_athlete': 'Athlete',
         'user_type_coach': 'Coach',
-        'user_type_club': 'Club Trainer',
-        'user_type_team': 'Team Trainer',
-        'user_type_group': 'Group Trainer',
-        'user_type_group_admin': 'Group Admin',
+        'user_type_club': 'Club',
+        'user_type_team': 'Team',
+        'user_type_group': 'Group',
+        'user_type_group_admin': 'Group Administrator',
         
         // Right Sidebar
         'sidebar_quick_actions': 'Quick Actions',
@@ -821,9 +821,9 @@ export interface LanguageStrings {
         'home_subtitle': 'Transforma tu viaje de fitness con nuestro sistema integral de gestión',
         'user_type_athlete': 'Atleta',
         'user_type_coach': 'Entrenador',
-        'user_type_club': 'Entrenador de Club',
-        'user_type_team': 'Entrenador de Equipo',
-        'user_type_group': 'Entrenador de Grupo',
+        'user_type_club': 'Club',
+        'user_type_team': 'Equipo',
+        'user_type_group': 'Grupo',
         'user_type_group_admin': 'Administrador de Grupo',
         'home_sports_categories': 'Categorías Deportivas',
         'home_sports_subtitle': 'Explora nuestros programas de entrenamiento integrales en varias disciplinas deportivas',

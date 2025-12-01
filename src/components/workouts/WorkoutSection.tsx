@@ -108,7 +108,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   return (
     <div className="flex flex-col h-full bg-white">
       {/* Small header bar with close button */}
-      <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between border-b">
+      <div className="bg-blue-600 text-white px-2 py-2 flex items-center justify-between border-b">
         <h3 className="text-lg font-semibold">Workout Planning</h3>
         <button onClick={onClose} className="p-1.5 hover:bg-blue-700 rounded-full transition-colors">
           <X className="w-4 h-4" />
@@ -116,7 +116,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       </div>
 
       {/* Internal Navbar - Section Tabs */}
-      <div className="bg-white border-b border-gray-300 px-4 py-2">
+      <div className="bg-white border-b border-gray-300 px-2 py-2">
         <div className="flex items-center gap-2">
           {/* Section Tabs */}
           {['A', 'B', 'C', 'D'].map((section) => (
@@ -150,7 +150,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       <div className="flex-1 flex overflow-hidden">
         {/* Center - main workout area (full width, no sidebars) */}
         <main className="flex-1 bg-white overflow-auto w-full">
-          <div className="p-4">
+          <div className="p-2">
             {/* View Toggle & Quick Actions */}
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">
@@ -171,24 +171,32 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 </button>
                 
                 <button 
-                  onClick={() => selectedDay && setShowAddWorkoutModal(true)}
-                  disabled={!selectedDay}
-                  className={`px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors ${
-                    selectedDay ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                  title={!selectedDay ? 'Select a day first' : 'Add workout to selected day'}
+                  onClick={() => {
+                    // In table view, get first available day or let modal handle selection
+                    if (!selectedDay && workoutPlan?.weeks?.[0]?.days?.[0]) {
+                      setAddWorkoutDay(workoutPlan.weeks[0].days[0]);
+                    }
+                    setWorkoutModalMode('add');
+                    setEditingWorkout(null);
+                    setShowAddWorkoutModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                  title="Add workout"
                 >
                   <Plus className="w-4 h-4" />
                   Add Workout
                 </button>
                 
                 <button 
-                  onClick={() => selectedWorkout && setShowAddMoveframeModal(true)}
-                  disabled={!selectedWorkout}
-                  className={`px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors ${
-                    selectedWorkout ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                  title={!selectedWorkout ? 'Select a workout first' : 'Add moveframe to selected workout'}
+                  onClick={() => {
+                    // In table view, get first available workout or let modal handle selection
+                    if (!selectedWorkout && workoutPlan?.weeks?.[0]?.days?.[0]?.workouts?.[0]) {
+                      setSelectedWorkout(workoutPlan.weeks[0].days[0].workouts[0].id);
+                    }
+                    setShowAddMoveframeModal(true);
+                  }}
+                  className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                  title="Add moveframe"
                 >
                   <Plus className="w-4 h-4" />
                   Add Moveframe
@@ -370,9 +378,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setWorkoutModalMode('edit');
                    setShowAddWorkoutModal(true);
                  }}
-                 onEditDay={(day) => {
-                   console.log('Edit day:', day);
-                 }}
+                onEditDay={(day) => {
+                  // TODO: Implement edit day modal
+                  alert(`Edit Day: ${day.dayOfWeek} - Week ${day.weekNumber}\nThis feature will open a modal to edit day details (weather, feeling, notes, etc.)`);
+                  console.log('Edit day:', day);
+                }}
                  onAddWorkout={(day) => {
                    setAddWorkoutDay(day);
                    setWorkoutModalMode('add');

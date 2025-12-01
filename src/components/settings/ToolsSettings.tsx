@@ -711,11 +711,12 @@ export default function ToolsSettings() {
 
   const handleLoadConfirm = async () => {
     try {
-      const response = await fetch(`/api/admin/tools-defaults/load?language=${selectedLanguage}`);
+      // Always load from English (en) as the base/default language
+      const response = await fetch(`/api/admin/tools-defaults/load?language=en`);
       const data = await response.json();
 
       if (response.ok && data.toolsData) {
-        // Merge loaded settings with current settings
+        // Load English settings into current language for translation
         if (data.toolsData.periods) {
           setPeriods(prev => [...prev, ...data.toolsData.periods.filter((p: Period) => 
             !prev.some(existing => existing.id === p.id)
@@ -747,10 +748,10 @@ export default function ToolsSettings() {
           )]);
         }
         
-        alert(`✅ Default settings for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name} loaded!\n\nNote: Your existing items have been preserved.`);
+        alert(`✅ English default settings loaded!\n\nYou can now edit and translate these items into ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}, then click "Save as DEFAULT" to save them for this language.\n\nNote: Your existing items have been preserved.`);
         setShowLoadDialog(false);
       } else {
-        alert(`ℹ️ No default settings found for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}.`);
+        alert(`ℹ️ No English default settings found. Please create English defaults first.`);
         setShowLoadDialog(false);
       }
     } catch (error) {
@@ -985,18 +986,18 @@ export default function ToolsSettings() {
             <button
               onClick={loadLanguageDefaults}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-              title="Load language-specific default tools (merges with current)"
+              title="Load English defaults for translation into current language"
             >
               <Download className="w-3.5 h-3.5" />
-              Load
+              Load (EN→{supportedLanguages.find(l => l.code === selectedLanguage)?.code.toUpperCase()})
             </button>
             <button
               onClick={saveLanguageDefaults}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition"
-              title="Save current tools as defaults for this language (requires password)"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition font-semibold"
+              title={`Save current tools as DEFAULT for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name} (requires Super Admin password)`}
             >
               <Save className="w-3.5 h-3.5" />
-              Save
+              Save as DEFAULT
             </button>
           </div>
         </div>
@@ -2212,10 +2213,10 @@ export default function ToolsSettings() {
           <div className="bg-white rounded-2xl p-8 max-w-md w-full">
             <h3 className="text-xl font-semibold mb-4">🔐 Super Admin Authentication</h3>
             <p className="text-gray-600 mb-4">
-              You are about to save default tools settings for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>.
+              You are about to save the current tools settings as <strong>DEFAULT</strong> for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>.
             </p>
-            <p className="text-sm text-gray-500 mb-4">
-              These settings will be automatically loaded when users select this language for the first time.
+            <p className="text-sm text-orange-700 bg-orange-50 p-3 rounded-lg mb-4">
+              📌 <strong>Note:</strong> These settings will be automatically loaded when users select {supportedLanguages.find(l => l.code === selectedLanguage)?.name} as their language for the first time.
             </p>
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2256,12 +2257,15 @@ export default function ToolsSettings() {
       {showLoadDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <h3 className="text-xl font-semibold mb-4">📥 Load Language Defaults</h3>
+            <h3 className="text-xl font-semibold mb-4">📥 Load English Defaults for Translation</h3>
             <p className="text-gray-600 mb-4">
-              Load default tools settings for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>?
+              Load <strong>English</strong> default tools settings into <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong> for translation?
+            </p>
+            <p className="text-sm text-blue-700 bg-blue-50 p-3 rounded-lg mb-4">
+              📖 <strong>How it works:</strong> This will load the English defaults, which you can then edit/translate into {supportedLanguages.find(l => l.code === selectedLanguage)?.name}. After translation, click "Save as DEFAULT" to save them for {supportedLanguages.find(l => l.code === selectedLanguage)?.name}.
             </p>
             <p className="text-sm text-yellow-700 bg-yellow-50 p-3 rounded-lg mb-4">
-              ⚠️ <strong>Note:</strong> This will add default items for this language. Your existing items will be preserved.
+              ⚠️ <strong>Note:</strong> Your existing items will be preserved (no duplicates will be added).
             </p>
             <div className="flex gap-3">
               <button

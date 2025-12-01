@@ -6,18 +6,11 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { identifier, answer, newPassword } = await request.json();
+    const { identifier, answer } = await request.json();
 
-    if (!identifier || !answer || !newPassword) {
+    if (!identifier || !answer) {
       return NextResponse.json(
-        { error: 'All fields are required' },
-        { status: 400 }
-      );
-    }
-
-    if (newPassword.length < 6) {
-      return NextResponse.json(
-        { error: 'Password must be at least 6 characters' },
+        { error: 'Username/email and answer are required' },
         { status: 400 }
       );
     }
@@ -52,35 +45,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the security answer again
+    // Hash the provided answer and compare with stored hash
     const hashedAnswer = hashPasswordSHA1(answer.toLowerCase().trim());
     
     if (hashedAnswer !== user.securityAnswer) {
       return NextResponse.json(
-        { error: 'Incorrect security answer' },
+        { error: 'Incorrect answer' },
         { status: 401 }
       );
     }
 
-    // Hash the new password with SHA1 (for consistency with your existing system)
-    const hashedPassword = hashPasswordSHA1(newPassword);
-
-    // Update the password
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { password: hashedPassword }
-    });
-
     return NextResponse.json({
       success: true,
-      message: 'Password reset successfully'
+      verified: true
     });
 
   } catch (error) {
-    console.error('Reset password error:', error);
+    console.error('Verify security answer error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
+

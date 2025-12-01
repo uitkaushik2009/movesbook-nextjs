@@ -25,107 +25,308 @@ export default function WorkoutTableView({
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollbarStyle, setScrollbarStyle] = useState({ left: 0, width: '100%' });
   const [expandedOptions, setExpandedOptions] = useState<string | null>(null);
-  const [copiedDay, setCopiedDay] = useState<any>(null);
-  const [cutDay, setCutDay] = useState<any>(null);
+  const [copiedDays, setCopiedDays] = useState<any[]>([]);
+  const [cutDays, setCutDays] = useState<any[]>([]);
+  const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set());
+  const [expandedDayDetails, setExpandedDayDetails] = useState<Set<string>>(new Set());
+  const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
+  const [expandedMoveframes, setExpandedMoveframes] = useState<Set<string>>(new Set());
+  
+  // Column configuration state
+  const [columnWidths, setColumnWidths] = useState<{ [key: string]: number }>({
+    checkbox: 40, week: 60, dayWeek: 60, dayname: 80, date: 100, period: 100
+  });
+  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
+  const [resizeStartX, setResizeStartX] = useState(0);
+  const [resizeStartWidth, setResizeStartWidth] = useState(0);
 
   const toggleOptions = (dayId: string) => {
     setExpandedOptions(expandedOptions === dayId ? null : dayId);
   };
 
-  const handleCopy = (day: any) => {
-    setCopiedDay(day);
-    setCutDay(null);
-    setExpandedOptions(null);
+  const toggleDaySelection = (dayId: string) => {
+    const newSelected = new Set(selectedDays);
+    if (newSelected.has(dayId)) {
+      newSelected.delete(dayId);
+    } else {
+      newSelected.add(dayId);
+    }
+    setSelectedDays(newSelected);
   };
 
-  const handleMove = (day: any) => {
-    setCutDay(day);
-    setCopiedDay(null);
-    setExpandedOptions(null);
+  const toggleDayDetails = (dayId: string) => {
+    const newExpanded = new Set(expandedDayDetails);
+    if (newExpanded.has(dayId)) {
+      newExpanded.delete(dayId);
+    } else {
+      newExpanded.add(dayId);
+    }
+    setExpandedDayDetails(newExpanded);
   };
 
-  const handlePaste = async (targetDay: any) => {
-    const sourceDay = copiedDay || cutDay;
-    if (!sourceDay) {
+  const toggleWorkoutExpansion = (workoutId: string) => {
+    const newExpanded = new Set(expandedWorkouts);
+    if (newExpanded.has(workoutId)) {
+      newExpanded.delete(workoutId);
+    } else {
+      newExpanded.add(workoutId);
+    }
+    setExpandedWorkouts(newExpanded);
+  };
+
+  const toggleMoveframeExpansion = (moveframeId: string) => {
+    const newExpanded = new Set(expandedMoveframes);
+    if (newExpanded.has(moveframeId)) {
+      newExpanded.delete(moveframeId);
+    } else {
+      newExpanded.add(moveframeId);
+    }
+    setExpandedMoveframes(newExpanded);
+  };
+
+  // Column resize handlers
+  const handleResizeStart = (e: React.MouseEvent, columnKey: string) => {
+    e.preventDefault();
+    setResizingColumn(columnKey);
+    setResizeStartX(e.clientX);
+    setResizeStartWidth(columnWidths[columnKey] || 100);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (resizingColumn) {
+        const diff = e.clientX - resizeStartX;
+        const newWidth = Math.max(40, resizeStartWidth + diff);
+        setColumnWidths(prev => ({ ...prev, [resizingColumn]: newWidth }));
+      }
+    };
+
+    const handleMouseUp = () => {
+      if (resizingColumn) {
+        setResizingColumn(null);
+      }
+    };
+
+    if (resizingColumn) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingColumn, resizeStartX, resizeStartWidth]);
+
+  // Save/Reset grid settings
+  const saveGridSettings = () => {
+    localStorage.setItem('workoutTableGridSettings', JSON.stringify({ columnWidths }));
+    alert('Grid settings saved!');
+  };
+
+  const resetGridSettings = () => {
+    const defaultWidths = {
+      checkbox: 40, week: 60, dayWeek: 60, dayname: 80, date: 100, period: 100
+    };
+    setColumnWidths(defaultWidths);
+    localStorage.removeItem('workoutTableGridSettings');
+    alert('Grid settings reset to default!');
+  };
+
+  // Load saved settings on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('workoutTableGridSettings');
+    if (saved) {
+      const { columnWidths: savedWidths } = JSON.parse(saved);
+      setColumnWidths(savedWidths);
+    }
+  }, []);
+
+  // Drag & Drop handlers for moveframes
+  const [draggedMoveframe, setDraggedMoveframe] = useState<any>(null);
+  const [draggedMovelap, setDraggedMovelap] = useState<any>(null);
+
+  const handleMoveframeDragStart = (e: React.DragEvent, moveframe: any, workout: any) => {
+    setDraggedMoveframe({ moveframe, sourceWorkout: workout });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleMoveframeDrop = async (e: React.DragEvent, targetWorkout: any) => {
+    e.preventDefault();
+    if (!draggedMoveframe) return;
+
+    const { moveframe, sourceWorkout } = draggedMoveframe;
+    
+    // If dropping on same workout, do nothing
+    if (sourceWorkout.id === targetWorkout.id) {
+      setDraggedMoveframe(null);
       return;
     }
 
     const token = localStorage.getItem('token');
     
     try {
-      // Copy all workouts from source day to target day
-      const workoutsToCopy = sourceDay.workouts || [];
-      
-      for (const workout of workoutsToCopy) {
-        // Create workout in target day
-        const workoutResponse = await fetch('/api/workouts/sessions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            workoutDayId: targetDay.id,
-            sessionNumber: (targetDay.workouts?.length || 0) + 1,
-            name: workout.name,
-            code: workout.code,
-            time: workout.time,
-            location: workout.location,
-            notes: workout.notes,
-            status: 'PLANNED_FUTURE'
-          })
-        });
+      // Update moveframe's workout session
+      const response = await fetch(`/api/workouts/moveframes/${moveframe.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          workoutSessionId: targetWorkout.id
+        })
+      });
 
-        if (!workoutResponse.ok) {
-          console.error('Failed to copy workout:', await workoutResponse.json());
-          continue;
-        }
+      if (response.ok) {
+        setDraggedMoveframe(null);
+        if (onDataChanged) onDataChanged();
+      }
+    } catch (error) {
+      console.error('Error moving moveframe:', error);
+    }
+  };
 
-        const { session: newWorkout } = await workoutResponse.json();
+  const handleMovelapDragStart = (e: React.DragEvent, movelap: any, moveframe: any) => {
+    setDraggedMovelap({ movelap, sourceMoveframe: moveframe });
+    e.dataTransfer.effectAllowed = 'move';
+  };
 
-        // Copy all moveframes for this workout
-        for (const moveframe of (workout.moveframes || [])) {
-          const moveframeResponse = await fetch('/api/workouts/moveframes', {
+  const handleMovelapDrop = async (e: React.DragEvent, targetPosition: number, targetMoveframe: any) => {
+    e.preventDefault();
+    if (!draggedMovelap) return;
+
+    const { movelap, sourceMoveframe } = draggedMovelap;
+    
+    // Only allow dropping within same moveframe
+    if (sourceMoveframe.id !== targetMoveframe.id) {
+      alert('Movelaps can only be moved within the same moveframe');
+      setDraggedMovelap(null);
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    
+    try {
+      // Update movelap order (implement API endpoint if needed)
+      // For now, just refresh
+      setDraggedMovelap(null);
+      if (onDataChanged) onDataChanged();
+    } catch (error) {
+      console.error('Error moving movelap:', error);
+    }
+  };
+
+  const handleCopy = () => {
+    if (selectedDays.size === 0) return;
+    
+    const allDays = workoutPlan.weeks.flatMap((week: any) => week.days || []);
+    const daysToCopy = allDays.filter((day: any) => selectedDays.has(day.id));
+    
+    setCopiedDays(daysToCopy);
+    setCutDays([]);
+    setExpandedOptions(null);
+  };
+
+  const handleMove = () => {
+    if (selectedDays.size === 0) return;
+    
+    const allDays = workoutPlan.weeks.flatMap((week: any) => week.days || []);
+    const daysToCut = allDays.filter((day: any) => selectedDays.has(day.id));
+    
+    setCutDays(daysToCut);
+    setCopiedDays([]);
+    setExpandedOptions(null);
+  };
+
+  const handlePaste = async (targetDay: any) => {
+    const sourceDays = copiedDays.length > 0 ? copiedDays : cutDays;
+    if (sourceDays.length === 0) {
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    
+    try {
+      // Copy workouts from all selected source days to target day
+      for (const sourceDay of sourceDays) {
+        const workoutsToCopy = sourceDay.workouts || [];
+        
+        for (const workout of workoutsToCopy) {
+          // Create workout in target day
+          const workoutResponse = await fetch('/api/workouts/sessions', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              workoutSessionId: newWorkout.id,
-              sport: moveframe.sport,
-              type: moveframe.type,
-              description: moveframe.description,
-              sectionId: moveframe.sectionId,
-              movelaps: moveframe.movelaps?.map((lap: any) => ({
-                distance: lap.distance,
-                speed: lap.speed,
-                reps: lap.reps,
-                pause: lap.pause,
-                notes: lap.notes,
-                status: 'PENDING'
-              })) || []
+              workoutDayId: targetDay.id,
+              sessionNumber: (targetDay.workouts?.length || 0) + 1,
+              name: workout.name,
+              code: workout.code,
+              time: workout.time,
+              location: workout.location,
+              notes: workout.notes,
+              status: 'PLANNED_FUTURE'
             })
           });
 
-          if (!moveframeResponse.ok) {
-            console.error('Failed to copy moveframe:', await moveframeResponse.json());
+          if (!workoutResponse.ok) {
+            console.error('Failed to copy workout:', await workoutResponse.json());
+            continue;
+          }
+
+          const { session: newWorkout } = await workoutResponse.json();
+
+          // Copy all moveframes for this workout
+          for (const moveframe of (workout.moveframes || [])) {
+            const moveframeResponse = await fetch('/api/workouts/moveframes', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                workoutSessionId: newWorkout.id,
+                sport: moveframe.sport,
+                type: moveframe.type,
+                description: moveframe.description,
+                sectionId: moveframe.sectionId,
+                movelaps: moveframe.movelaps?.map((lap: any) => ({
+                  distance: lap.distance,
+                  speed: lap.speed,
+                  reps: lap.reps,
+                  pause: lap.pause,
+                  notes: lap.notes,
+                  status: 'PENDING'
+                })) || []
+              })
+            });
+
+            if (!moveframeResponse.ok) {
+              console.error('Failed to copy moveframe:', await moveframeResponse.json());
+            }
           }
         }
       }
 
-      // If it was a move (cut), delete workouts from source day
-      if (cutDay) {
-        for (const workout of workoutsToCopy) {
-          await fetch(`/api/workouts/sessions/${workout.id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
+      // If it was a move (cut), delete workouts from source days
+      if (cutDays.length > 0) {
+        for (const sourceDay of sourceDays) {
+          const workoutsToDelete = sourceDay.workouts || [];
+          for (const workout of workoutsToDelete) {
+            await fetch(`/api/workouts/sessions/${workout.id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+          }
         }
-        setCutDay(null);
+        setCutDays([]);
       }
 
-      setCopiedDay(null);
+      setCopiedDays([]);
+      setSelectedDays(new Set());
       setExpandedOptions(null);
       
       // Refresh data to show changes
@@ -137,13 +338,25 @@ export default function WorkoutTableView({
     }
   };
 
-  const handleShare = (day: any) => {
-    // TODO: Implement share functionality
+  const handleEdit = (day: any) => {
+    onEditDay?.(day);
     setExpandedOptions(null);
   };
 
-  const handleClear = async (day: any) => {
-    if (!confirm(`Clear all workouts from ${getDayName(day.dayOfWeek)}?`)) {
+  const handleExport = (day: any) => {
+    // TODO: Implement export functionality
+    alert(`Export day: ${getDayName(day.dayOfWeek)} - Week ${day.weekNumber}\nThis will export the day data to a file.`);
+    setExpandedOptions(null);
+  };
+
+  const handleShare = (day: any) => {
+    // TODO: Implement share functionality
+    alert(`Share day: ${getDayName(day.dayOfWeek)}\nThis will share the day with coach/team/club.`);
+    setExpandedOptions(null);
+  };
+
+  const handleDelete = async (day: any) => {
+    if (!confirm(`Delete all workouts from ${getDayName(day.dayOfWeek)}?`)) {
       return;
     }
 
@@ -167,8 +380,14 @@ export default function WorkoutTableView({
         onDataChanged();
       }
     } catch (error) {
-      console.error('Error clearing workouts:', error);
+      console.error('Error deleting workouts:', error);
     }
+  };
+
+  const handlePrint = (day: any) => {
+    // TODO: Implement print functionality
+    alert(`Print day: ${getDayName(day.dayOfWeek)} - Week ${day.weekNumber}\nThis will open a print dialog for the day.`);
+    setExpandedOptions(null);
   };
 
   useEffect(() => {
@@ -228,7 +447,46 @@ export default function WorkoutTableView({
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
-  // Helper to get unique sports for a day (max 4)
+  // Generate alphabetical letter for moveframe (A, B, C...Z, AA, AB, AC...)
+  const generateMoveframeLetter = (index: number): string => {
+    let letter = '';
+    let num = index;
+    while (num >= 0) {
+      letter = String.fromCharCode(65 + (num % 26)) + letter;
+      num = Math.floor(num / 26) - 1;
+    }
+    return letter;
+  };
+
+  // Sort and assign letters to moveframes
+  const getSortedMoveframes = (workout: any) => {
+    if (!workout.moveframes) return [];
+    return workout.moveframes
+      .sort((a: any, b: any) => {
+        // Sort by creation order or ID
+        return (a.createdAt || a.id).localeCompare(b.createdAt || b.id);
+      })
+      .map((mf: any, index: number) => ({
+        ...mf,
+        letter: generateMoveframeLetter(index)
+      }));
+  };
+
+  // Sort movelaps numerically
+  const getSortedMovelaps = (moveframe: any) => {
+    if (!moveframe.movelaps) return [];
+    return moveframe.movelaps
+      .sort((a: any, b: any) => {
+        // Sort by creation order or ID
+        return (a.createdAt || a.id).localeCompare(b.createdAt || b.id);
+      })
+      .map((lap: any, index: number) => ({
+        ...lap,
+        number: index + 1
+      }));
+  };
+
+  // Helper to get unique sports for a day (max 4) - aggregated across ALL workouts in the day
   const getDaySports = (day: any): string[] => {
     const sports = new Set<string>();
     day.workouts?.forEach((workout: any) => {
@@ -236,7 +494,31 @@ export default function WorkoutTableView({
         if (mf.sport) sports.add(mf.sport);
       });
     });
-    return Array.from(sports).slice(0, 4); // Max 4 sports
+    return Array.from(sports).slice(0, 4); // Max 4 different sports per day
+  };
+
+  // Helper to get sport data aggregated at DAY level (not per workout)
+  const getDaySportData = (day: any, sport: string) => {
+    let totalDistance = 0;
+    let totalDuration = 0;
+    let totalCalories = 0;
+
+    day.workouts?.forEach((workout: any) => {
+      workout.moveframes?.forEach((mf: any) => {
+        if (mf.sport === sport) {
+          mf.movelaps?.forEach((lap: any) => {
+            if (lap.distance) totalDistance += lap.distance;
+            // Add duration and calories calculations here
+          });
+        }
+      });
+    });
+
+    return {
+      distance: totalDistance > 0 ? totalDistance : null,
+      duration: totalDuration > 0 ? totalDuration : null,
+      calories: totalCalories > 0 ? totalCalories : null
+    };
   };
 
   // Helper to aggregate sport data for a workout
@@ -270,6 +552,22 @@ export default function WorkoutTableView({
 
   return (
     <div ref={containerRef} className="relative flex flex-col pb-8">
+      {/* Grid Settings Toolbar */}
+      <div className="flex justify-end gap-2 mb-2 px-2">
+        <button
+          onClick={saveGridSettings}
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
+        >
+          💾 Save Grid Settings
+        </button>
+        <button
+          onClick={resetGridSettings}
+          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm font-medium"
+        >
+          🔄 Reset to Default
+        </button>
+      </div>
+      
       {/* Main table container - horizontal scroll hidden, vertical scroll visible */}
       <div 
         className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-360px)] border border-gray-400 relative"
@@ -296,11 +594,66 @@ export default function WorkoutTableView({
               }
             `}</style>
           <tr className="bg-gray-200 border-b-2 border-gray-400">
-            <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky left-0 z-50 bg-gray-200" style={{width: '60px'}} rowSpan={2}>Week n.</th>
-            <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200" style={{width: '60px', left: '60px'}} rowSpan={2}>Day week n.</th>
-            <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200" style={{width: '80px', left: '120px'}} rowSpan={2}>Dayname</th>
-            <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200" style={{width: '100px', left: '200px'}} rowSpan={2}>Date</th>
-            <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200" style={{width: '100px', left: '300px'}} rowSpan={2}>Period</th>
+            <th className="border border-gray-400 px-1 py-1 text-center font-bold sticky left-0 z-50 bg-gray-200 relative" style={{width: `${columnWidths.checkbox}px`}} rowSpan={2}>
+              <input 
+                type="checkbox" 
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    const allDayIds = new Set(allDays.map((d: any) => d.id));
+                    setSelectedDays(allDayIds);
+                  } else {
+                    setSelectedDays(new Set());
+                  }
+                }}
+                checked={selectedDays.size > 0 && selectedDays.size === allDays.length}
+                className="cursor-pointer"
+              />
+              <div
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500"
+                onMouseDown={(e) => handleResizeStart(e, 'checkbox')}
+                title="Double-click and drag to resize"
+              />
+            </th>
+            <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200 relative" style={{width: `${columnWidths.week}px`, left: `${columnWidths.checkbox}px`}} rowSpan={2}>
+              Week n.
+              <div
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500"
+                onMouseDown={(e) => handleResizeStart(e, 'week')}
+                title="Double-click and drag to resize"
+              />
+            </th>
+            <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200 relative" style={{width: `${columnWidths.dayWeek}px`, left: `${columnWidths.checkbox + columnWidths.week}px`}} rowSpan={2}>
+              Day wk
+              <div
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500"
+                onMouseDown={(e) => handleResizeStart(e, 'dayWeek')}
+                title="Double-click and drag to resize"
+              />
+            </th>
+            <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200 relative" style={{width: `${columnWidths.dayname}px`, left: `${columnWidths.checkbox + columnWidths.week + columnWidths.dayWeek}px`}} rowSpan={2}>
+              Dayname
+              <div
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500"
+                onMouseDown={(e) => handleResizeStart(e, 'dayname')}
+                title="Double-click and drag to resize"
+              />
+            </th>
+            <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200 relative" style={{width: `${columnWidths.date}px`, left: `${columnWidths.checkbox + columnWidths.week + columnWidths.dayWeek + columnWidths.dayname}px`}} rowSpan={2}>
+              Date
+              <div
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500"
+                onMouseDown={(e) => handleResizeStart(e, 'date')}
+                title="Double-click and drag to resize"
+              />
+            </th>
+            <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200 relative" style={{width: `${columnWidths.period}px`, left: `${columnWidths.checkbox + columnWidths.week + columnWidths.dayWeek + columnWidths.dayname + columnWidths.date}px`}} rowSpan={2}>
+              Period
+              <div
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500"
+                onMouseDown={(e) => handleResizeStart(e, 'period')}
+                title="Double-click and drag to resize"
+              />
+            </th>
             
             {/* S1-S4 Sports columns */}
             {[0, 1, 2, 3].map((sportIndex) => (
@@ -309,7 +662,10 @@ export default function WorkoutTableView({
               </th>
             ))}
             
-            <th className="border border-gray-400 px-1 py-1 text-center font-bold" style={{width: '60px'}} rowSpan={2}>Options</th>
+            <th className="border border-gray-400 px-1 py-1 text-center font-bold sticky right-0 z-50 bg-gray-200 shadow-lg" style={{width: '80px'}} rowSpan={2}>Options</th>
+            
+            {/* Workout Name column header */}
+            <th className="border border-gray-400 px-2 py-1 text-center font-bold bg-purple-100" style={{width: '250px'}} rowSpan={2}>Workout / Moveframe / Movelap</th>
           </tr>
           <tr className="bg-gray-100 border-b border-gray-400">
             {/* Sub-headers for each sport */}
@@ -332,97 +688,124 @@ export default function WorkoutTableView({
             const hasWorkouts = dayWorkouts.length > 0;
 
             if (!hasWorkouts) {
-              const isCopied = copiedDay?.id === day.id;
-              const isCut = cutDay?.id === day.id;
-              const rowBgClass = isCut ? 'bg-gray-300' : isCopied ? 'bg-blue-100' : 'hover:bg-gray-50';
+              const isCopied = copiedDays.some((d: any) => d.id === day.id);
+              const isCut = cutDays.some((d: any) => d.id === day.id);
+              const isSelected = selectedDays.has(day.id);
+              const rowBgClass = isCut ? 'bg-gray-300' : isCopied ? 'bg-blue-100' : isSelected ? 'bg-yellow-50' : 'hover:bg-gray-50';
               
-              const stickyBg = isCut ? 'bg-gray-300' : isCopied ? 'bg-blue-100' : 'bg-white';
+              const stickyBg = isCut ? 'bg-gray-300' : isCopied ? 'bg-blue-100' : isSelected ? 'bg-yellow-50' : 'bg-white';
               
               return (
-                <tr key={day.id} className={rowBgClass}>
-                  <td className={`border border-gray-300 px-2 py-2 text-center font-semibold sticky left-0 z-10 ${stickyBg}`}>
+                <tr 
+                  key={day.id} 
+                  className={rowBgClass}
+                  onDoubleClick={() => onEditDay?.(day)}
+                >
+                  <td className={`border border-gray-300 px-1 py-1 text-center sticky left-0 z-10 ${stickyBg}`}>
+                    <input 
+                      type="checkbox" 
+                      checked={isSelected}
+                      onChange={() => toggleDaySelection(day.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="cursor-pointer"
+                    />
+                  </td>
+                  <td className={`border border-gray-300 px-2 py-2 text-center font-semibold sticky z-10 ${stickyBg}`} style={{left: '40px'}}>
                     {day.weekNumber}
                   </td>
-                  <td className={`border border-gray-300 px-2 py-2 text-center sticky z-10 ${stickyBg}`} style={{left: '60px'}}>
+                  <td className={`border border-gray-300 px-2 py-2 text-center sticky z-10 ${stickyBg}`} style={{left: '100px'}}>
                     {day.dayOfWeek}
                   </td>
-                  <td className={`border border-gray-300 px-2 py-2 text-center font-medium sticky z-10 ${stickyBg}`} style={{left: '120px'}}>
+                  <td 
+                    className={`border border-gray-300 px-2 py-2 text-center font-medium sticky z-10 ${stickyBg} cursor-pointer hover:bg-blue-100`} 
+                    style={{left: '160px'}}
+                    onClick={() => toggleDayDetails(day.id)}
+                    title="Click to expand/collapse day details"
+                  >
                     {getDayName(day.dayOfWeek)}
                   </td>
-                  <td className={`border border-gray-300 px-2 py-1 text-center text-xs sticky z-10 ${stickyBg}`} style={{left: '200px'}}>
+                  <td className={`border border-gray-300 px-2 py-1 text-center text-xs sticky z-10 ${stickyBg}`} style={{left: '240px'}}>
                     {formatDate(day.date)}
                   </td>
-                  <td className={`border border-gray-300 px-2 py-1 text-center sticky z-10 ${stickyBg}`} style={{left: '300px'}}>
+                  <td className={`border border-gray-300 px-2 py-1 text-center sticky z-10 ${stickyBg}`} style={{left: '340px'}}>
                     {day.period?.name || '-'}
                   </td>
                   <td className="border border-gray-300 px-2 py-2 text-center text-gray-400 italic" colSpan={16}>
                     No workouts
                   </td>
-                  <td className="border border-gray-300 px-1 py-1 text-center">
+                  <td className="border border-gray-300 px-1 py-1 text-center sticky right-0 z-10 bg-white shadow-lg">
                     <div className="relative">
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleOptions(day.id);
                         }}
-                        className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                        title="Options"
+                        className="px-2 py-1 hover:bg-gray-200 rounded text-gray-700 text-xs font-medium"
+                        title="Click for options"
                       >
-                        <MoreVertical className="w-4 h-4" />
+                        Copy
                       </button>
                       
                       {expandedOptions === day.id && (
                         <div 
-                          className="absolute right-0 top-full mt-1 bg-white border border-gray-300 rounded shadow-lg z-50 min-w-[120px]"
+                          className="absolute right-0 top-full mt-1 bg-white border-2 border-gray-400 rounded shadow-2xl z-[9999] min-w-[140px]"
                           onClick={(e) => e.stopPropagation()}
+                          style={{ marginRight: '-1px' }}
                         >
                           <button 
-                            onClick={() => handleCopy(day)}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 flex items-center gap-2"
-                            title="Copy"
+                            onClick={() => handleEdit(day)}
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 font-medium"
+                            title="Edit"
                           >
-                            <Copy className="w-3 h-3" /> Copy
+                            Edit
                           </button>
                           <button 
-                            onClick={() => handleMove(day)}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-2"
-                            title="Move (Cut)"
-                          >
-                            <Edit className="w-3 h-3" /> Move
-                          </button>
-                          <button 
-                            onClick={() => handlePaste(day)}
-                            disabled={!copiedDay && !cutDay}
-                            className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${
-                              copiedDay || cutDay ? 'hover:bg-purple-50 text-purple-600' : 'text-gray-400 cursor-not-allowed'
+                            onClick={handleCopy}
+                            disabled={selectedDays.size === 0}
+                            className={`w-full px-3 py-2 text-left text-xs border-t ${
+                              selectedDays.size > 0 ? 'hover:bg-blue-50' : 'text-gray-400 cursor-not-allowed'
                             }`}
-                            title="Paste"
+                            title={selectedDays.size > 0 ? `Copy ${selectedDays.size} selected day(s)` : 'Select days first'}
                           >
-                            📋 Paste
+                            Copy
+                          </button>
+                          <button 
+                            onClick={handleMove}
+                            disabled={selectedDays.size === 0}
+                            className={`w-full px-3 py-2 text-left text-xs ${
+                              selectedDays.size > 0 ? 'hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'
+                            }`}
+                            title={selectedDays.size > 0 ? `Move ${selectedDays.size} selected day(s)` : 'Select days first'}
+                          >
+                            Move
+                          </button>
+                          <button 
+                            onClick={() => handleExport(day)}
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 border-t"
+                            title="Export"
+                          >
+                            Export
                           </button>
                           <button 
                             onClick={() => handleShare(day)}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-green-50 flex items-center gap-2 border-t"
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-green-50"
                             title="Share"
                           >
-                            <Copy className="w-3 h-3" /> Share
+                            Share
                           </button>
                           <button 
-                            onClick={() => handleClear(day)}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 flex items-center gap-2 text-red-600"
-                            title="Clear"
+                            onClick={() => handleDelete(day)}
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 text-red-600 border-t"
+                            title="Delete"
                           >
-                            <Trash2 className="w-3 h-3" /> Clear
+                            Delete
                           </button>
                           <button 
-                            onClick={() => {
-                              onAddWorkout?.(day);
-                              setExpandedOptions(null);
-                            }}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-green-50 flex items-center gap-2 text-green-600 border-t font-bold"
-                            title="Add Workout"
+                            onClick={() => handlePrint(day)}
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50"
+                            title="Print"
                           >
-                            + Add Workout
+                            Print
                           </button>
                         </div>
                       )}
@@ -432,32 +815,57 @@ export default function WorkoutTableView({
               );
             }
 
-            // Day with workouts
-            return dayWorkouts.map((workout: any, workoutIndex: number) => {
+            // Day with workouts - show one row per workout, but aggregate sports at DAY level
+            const workoutRows: JSX.Element[] = [];
+            
+            dayWorkouts.forEach((workout: any, workoutIndex: number) => {
               const isFirstWorkout = workoutIndex === 0;
-              const isCopied = copiedDay?.id === day.id;
-              const isCut = cutDay?.id === day.id;
-              const rowBgClass = isCut ? 'bg-gray-300' : isCopied ? 'bg-blue-100' : 'hover:bg-blue-50';
+              const isCopied = copiedDays.some((d: any) => d.id === day.id);
+              const isCut = cutDays.some((d: any) => d.id === day.id);
+              const isSelected = selectedDays.has(day.id);
+              const isExpanded = expandedDayDetails.has(day.id);
+              const isWorkoutExpanded = expandedWorkouts.has(workout.id);
+              const rowBgClass = isCut ? 'bg-gray-300' : isCopied ? 'bg-blue-100' : isSelected ? 'bg-yellow-50' : 'hover:bg-blue-50';
               
-              const stickyBg = isCut ? 'bg-gray-300' : isCopied ? 'bg-blue-100' : 'bg-white';
+              const stickyBg = isCut ? 'bg-gray-300' : isCopied ? 'bg-blue-100' : isSelected ? 'bg-yellow-50' : 'bg-white';
               
-              return (
-                <tr key={`${day.id}-${workout.id}`} className={rowBgClass}>
+              // Workout row
+              workoutRows.push(
+                <tr 
+                  key={`${day.id}-${workout.id}`} 
+                  className={rowBgClass}
+                  onDoubleClick={() => onEditWorkout?.(workout, day)}
+                >
                   {isFirstWorkout && (
                     <>
-                      <td className={`border border-gray-300 px-2 py-2 text-center font-semibold sticky left-0 z-10 ${stickyBg}`} rowSpan={dayWorkouts.length}>
+                      <td className={`border border-gray-300 px-1 py-1 text-center sticky left-0 z-10 ${stickyBg}`} rowSpan={dayWorkouts.length}>
+                        <input 
+                          type="checkbox" 
+                          checked={isSelected}
+                          onChange={() => toggleDaySelection(day.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="cursor-pointer"
+                        />
+                      </td>
+                      <td className={`border border-gray-300 px-2 py-2 text-center font-semibold sticky z-10 ${stickyBg}`} style={{left: '40px'}} rowSpan={dayWorkouts.length}>
                         {day.weekNumber}
                       </td>
-                      <td className={`border border-gray-300 px-2 py-2 text-center sticky z-10 ${stickyBg}`} style={{left: '60px'}} rowSpan={dayWorkouts.length}>
+                      <td className={`border border-gray-300 px-2 py-2 text-center sticky z-10 ${stickyBg}`} style={{left: '100px'}} rowSpan={dayWorkouts.length}>
                         {day.dayOfWeek}
                       </td>
-                      <td className={`border border-gray-300 px-2 py-2 text-center font-medium sticky z-10 ${stickyBg}`} style={{left: '120px'}} rowSpan={dayWorkouts.length}>
+                      <td 
+                        className={`border border-gray-300 px-2 py-2 text-center font-medium sticky z-10 ${stickyBg} cursor-pointer hover:bg-blue-200`} 
+                        style={{left: '160px'}} 
+                        rowSpan={dayWorkouts.length}
+                        onClick={() => toggleDayDetails(day.id)}
+                        title="Click to expand/collapse workouts"
+                      >
                         {getDayName(day.dayOfWeek)}
                       </td>
-                      <td className={`border border-gray-300 px-2 py-1 text-center text-xs sticky z-10 ${stickyBg}`} style={{left: '200px'}} rowSpan={dayWorkouts.length}>
+                      <td className={`border border-gray-300 px-2 py-1 text-center text-xs sticky z-10 ${stickyBg}`} style={{left: '240px'}} rowSpan={dayWorkouts.length}>
                         {formatDate(day.date)}
                       </td>
-                      <td className={`border border-gray-300 px-2 py-1 text-center text-xs sticky z-10 ${stickyBg}`} style={{left: '300px'}} rowSpan={dayWorkouts.length}>
+                      <td className={`border border-gray-300 px-2 py-1 text-center text-xs sticky z-10 ${stickyBg}`} style={{left: '340px'}} rowSpan={dayWorkouts.length}>
                         <div className="px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: day.period?.color || '#3b82f6' }}>
                           {day.period?.name || 'Period'}
                         </div>
@@ -465,110 +873,278 @@ export default function WorkoutTableView({
                     </>
                   )}
                   
-                  {/* Sport columns - show data for each sport */}
-                  {[0, 1, 2, 3].map((sportIndex) => {
+                  {/* Sport columns - DAY LEVEL aggregation (S1-S4 are unique sports in the entire day) */}
+                  {isFirstWorkout && [0, 1, 2, 3].map((sportIndex) => {
                     const sport = daySports[sportIndex];
-                    const sportData = sport ? getWorkoutSportData(workout, sport) : null;
+                    const sportData = sport ? getDaySportData(day, sport) : null;
                     
                     return (
                       <React.Fragment key={sportIndex}>
-                        <td className={`border border-gray-300 px-1 py-1 text-center text-xs font-medium ${sportColors[sportIndex].cell}`}>
+                        <td className={`border border-gray-300 px-1 py-1 text-center text-xs font-medium ${sportColors[sportIndex].cell}`} rowSpan={dayWorkouts.length}>
                           {sport || '-'}
                         </td>
-                        <td className={`border border-gray-300 px-1 py-1 text-right text-xs ${sportColors[sportIndex].cell}`}>
+                        <td className={`border border-gray-300 px-1 py-1 text-right text-xs ${sportColors[sportIndex].cell}`} rowSpan={dayWorkouts.length}>
                           {sportData?.distance || '-'}
                         </td>
-                        <td className={`border border-gray-300 px-1 py-1 text-right text-xs ${sportColors[sportIndex].cell}`}>
+                        <td className={`border border-gray-300 px-1 py-1 text-right text-xs ${sportColors[sportIndex].cell}`} rowSpan={dayWorkouts.length}>
                           {sportData?.duration || '-'}
                         </td>
-                        <td className={`border border-gray-300 px-1 py-1 text-right text-xs ${sportColors[sportIndex].cell}`}>
+                        <td className={`border border-gray-300 px-1 py-1 text-right text-xs ${sportColors[sportIndex].cell}`} rowSpan={dayWorkouts.length}>
                           {sportData?.calories || '-'}
                         </td>
                       </React.Fragment>
                     );
                   })}
                   
-                  {/* Options column - accordion for day and workout actions */}
+                  {/* Options column - sticky on the right */}
                   {isFirstWorkout ? (
-                    <td className="border border-gray-300 px-1 py-1 text-center" rowSpan={dayWorkouts.length}>
+                    <td className={`border border-gray-300 px-1 py-1 text-center sticky right-0 z-10 shadow-lg ${stickyBg}`} rowSpan={dayWorkouts.length}>
                       <div className="relative flex flex-col gap-1">
-                        {/* Day Options Accordion */}
+                        {/* Day Options Button */}
                         <button 
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleOptions(day.id);
                           }}
-                          className="p-1 hover:bg-gray-200 rounded text-gray-600 text-xs flex items-center justify-center gap-1"
-                          title="Day Options"
+                          className="px-2 py-1 hover:bg-gray-200 rounded text-gray-700 text-xs font-medium"
+                          title="Click for options"
                         >
-                          <MoreVertical className="w-4 h-4" />
+                          Copy
                         </button>
                         
                         {expandedOptions === day.id && (
                           <div 
-                            className="absolute right-full top-0 mr-1 bg-white border border-gray-300 rounded shadow-lg z-50 min-w-[120px]"
+                            className="absolute right-0 top-full mt-1 bg-white border-2 border-gray-400 rounded shadow-2xl z-[9999] min-w-[140px]"
                             onClick={(e) => e.stopPropagation()}
+                            style={{ marginRight: '-1px' }}
                           >
                             <button 
-                              onClick={() => handleCopy(day)}
-                              className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 flex items-center gap-2"
-                              title="Copy Day"
+                              onClick={() => handleEdit(day)}
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 font-medium"
+                              title="Edit"
                             >
-                              <Copy className="w-3 h-3" /> Copy
+                              Edit
                             </button>
                             <button 
-                              onClick={() => handleMove(day)}
-                              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50 flex items-center gap-2"
-                              title="Move Day (Cut)"
-                            >
-                              <Edit className="w-3 h-3" /> Move
-                            </button>
-                            <button 
-                              onClick={() => handlePaste(day)}
-                              disabled={!copiedDay && !cutDay}
-                              className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${
-                                copiedDay || cutDay ? 'hover:bg-purple-50 text-purple-600' : 'text-gray-400 cursor-not-allowed'
+                              onClick={handleCopy}
+                              disabled={selectedDays.size === 0}
+                              className={`w-full px-3 py-2 text-left text-xs border-t ${
+                                selectedDays.size > 0 ? 'hover:bg-blue-50' : 'text-gray-400 cursor-not-allowed'
                               }`}
-                              title="Paste"
+                              title={selectedDays.size > 0 ? `Copy ${selectedDays.size} selected day(s)` : 'Select days first'}
                             >
-                              📋 Paste
+                              Copy
+                            </button>
+                            <button 
+                              onClick={handleMove}
+                              disabled={selectedDays.size === 0}
+                              className={`w-full px-3 py-2 text-left text-xs ${
+                                selectedDays.size > 0 ? 'hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'
+                              }`}
+                              title={selectedDays.size > 0 ? `Move ${selectedDays.size} selected day(s)` : 'Select days first'}
+                            >
+                              Move
+                            </button>
+                            <button 
+                              onClick={() => handleExport(day)}
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 border-t"
+                              title="Export"
+                            >
+                              Export
                             </button>
                             <button 
                               onClick={() => handleShare(day)}
-                              className="w-full px-3 py-2 text-left text-xs hover:bg-green-50 flex items-center gap-2 border-t"
-                              title="Share Day"
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-green-50"
+                              title="Share"
                             >
-                              <Copy className="w-3 h-3" /> Share
+                              Share
                             </button>
                             <button 
-                              onClick={() => handleClear(day)}
-                              className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 flex items-center gap-2 text-red-600"
-                              title="Clear Day"
+                              onClick={() => handleDelete(day)}
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 text-red-600 border-t"
+                              title="Delete"
                             >
-                              <Trash2 className="w-3 h-3" /> Clear
+                              Delete
+                            </button>
+                            <button 
+                              onClick={() => handlePrint(day)}
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50"
+                              title="Print"
+                            >
+                              Print
                             </button>
                           </div>
                         )}
                         
-                        {/* Workout Edit Buttons */}
-                        <div className="border-t border-gray-300 pt-1 flex flex-col gap-0.5">
-                          {dayWorkouts.map((wo: any, idx: number) => (
-                            <button 
-                              key={wo.id}
-                              onClick={() => onEditWorkout?.(wo, day)}
-                              className="text-blue-600 hover:bg-blue-100 px-1 py-0.5 rounded text-xs"
-                              title={`Edit Workout ${idx + 1}`}
-                            >
-                              W{idx + 1}
-                            </button>
-                          ))}
-                        </div>
                       </div>
                     </td>
                   ) : null}
+                  
+                  {/* Workout name/details column with expand icon */}
+                  <td 
+                    className="border border-gray-300 px-2 py-1 text-xs"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => handleMoveframeDrop(e, workout)}
+                  >
+                    <div className="flex items-center gap-2 justify-between">
+                      <div className="flex items-center gap-1 flex-1">
+                        <button
+                          onClick={() => toggleWorkoutExpansion(workout.id)}
+                          className="hover:bg-gray-200 rounded p-0.5"
+                          title="Expand to show moveframes"
+                        >
+                          {isWorkoutExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                        </button>
+                        <span className="font-medium">{workout.name || `Workout ${workoutIndex + 1}`}</span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddMoveframe?.(workout);
+                        }}
+                        className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 flex-shrink-0"
+                        title="Add moveframe to this workout"
+                      >
+                        + Add Moveframe
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               );
+
+              // Add moveframe rows if workout is expanded
+              if (isWorkoutExpanded) {
+                const sortedMoveframes = getSortedMoveframes(workout);
+                
+                sortedMoveframes.forEach((moveframe: any, mfIndex: number) => {
+                  const isMoveframeExpanded = expandedMoveframes.has(moveframe.id);
+                  
+                  // Moveframe row
+                  workoutRows.push(
+                    <tr 
+                      key={`mf-${moveframe.id}`}
+                      className="bg-blue-50 hover:bg-blue-100"
+                      draggable
+                      onDragStart={(e) => handleMoveframeDragStart(e, moveframe, workout)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => handleMoveframeDrop(e, workout)}
+                    >
+                      <td colSpan={6} className="border border-gray-300 px-4 py-1 text-xs">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleMoveframeExpansion(moveframe.id)}
+                            className="hover:bg-gray-200 rounded p-0.5"
+                            title="Expand to show movelaps"
+                          >
+                            {isMoveframeExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                          </button>
+                          <span className="font-bold text-blue-700">{moveframe.letter}</span>
+                          <span className="text-gray-700">{moveframe.sport}</span>
+                          <span className="text-gray-500">({moveframe.type || 'Exercise'})</span>
+                          {moveframe.description && <span className="text-gray-400 italic">- {moveframe.description}</span>}
+                          <span className="ml-auto text-gray-500 text-xs cursor-move" title="Drag to move to another workout">⋮⋮</span>
+                        </div>
+                      </td>
+                      <td colSpan={16} className="border border-gray-300 px-2 py-1 text-xs text-gray-600">
+                        {moveframe.notes || ''}
+                      </td>
+                    </tr>
+                  );
+
+                  // Add movelap rows if moveframe is expanded
+                  if (isMoveframeExpanded) {
+                    const sortedMovelaps = getSortedMovelaps(moveframe);
+                    
+                    sortedMovelaps.forEach((movelap: any, lapIndex: number) => {
+                      workoutRows.push(
+                        <tr 
+                          key={`lap-${movelap.id}`}
+                          className="bg-green-50 hover:bg-green-100"
+                          draggable
+                          onDragStart={(e) => handleMovelapDragStart(e, movelap, moveframe)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => handleMovelapDrop(e, lapIndex, moveframe)}
+                        >
+                          <td colSpan={6} className="border border-gray-300 px-8 py-1 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-green-700">{movelap.number}.</span>
+                              <span className="text-gray-600">Dist: {movelap.distance || '-'}</span>
+                              <span className="text-gray-600">Speed: {movelap.speed || '-'}</span>
+                              <span className="text-gray-600">Reps: {movelap.reps || '-'}</span>
+                              <span className="text-gray-600">Pause: {movelap.pause || '-'}</span>
+                              <span className="ml-auto text-gray-500 text-xs cursor-move" title="Drag to reorder within moveframe">⋮⋮</span>
+                            </div>
+                          </td>
+                          <td colSpan={16} className="border border-gray-300 px-2 py-1 text-xs text-gray-600">
+                            {movelap.notes || ''}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  }
+                });
+              }
             });
+
+            // Add expanded day details row if day details are expanded
+            if (expandedDayDetails.has(day.id) && hasWorkouts) {
+              workoutRows.push(
+                <tr key={`${day.id}-details`} className="bg-gray-50">
+                  <td colSpan={23} className="border border-gray-300 px-4 py-3">
+                    <div className="space-y-2">
+                      <div className="font-bold text-sm text-gray-700 mb-2">📋 Day Details for {getDayName(day.dayOfWeek)}:</div>
+                      <div className="text-xs text-gray-600 mb-3">
+                        <span className="font-medium">Week:</span> {day.weekNumber} | 
+                        <span className="font-medium ml-2">Date:</span> {formatDate(day.date)} | 
+                        <span className="font-medium ml-2">Period:</span> {day.period?.name || 'N/A'} |
+                        <span className="font-medium ml-2">Weather:</span> {day.weather || 'N/A'} |
+                        <span className="font-medium ml-2">Feeling:</span> {day.feeling || 'N/A'}
+                      </div>
+                      {day.notes && (
+                        <div className="text-xs text-gray-600 italic mb-3 p-2 bg-yellow-50 border-l-2 border-yellow-400">
+                          <span className="font-medium">Day Notes:</span> {day.notes}
+                        </div>
+                      )}
+                      <div className="font-semibold text-sm text-blue-700 mb-2">🏋️ Workouts ({dayWorkouts.length}):</div>
+                      {dayWorkouts.map((workout: any, idx: number) => (
+                        <div key={workout.id} className="bg-white border border-gray-200 rounded p-3 shadow-sm">
+                          <div className="font-semibold text-sm text-blue-600 mb-1">
+                            Workout #{idx + 1}: {workout.name || 'Unnamed Workout'}
+                          </div>
+                          <div className="text-xs text-gray-600 mt-1 grid grid-cols-2 gap-2">
+                            <div><span className="font-medium">Code:</span> {workout.code || 'N/A'}</div>
+                            <div><span className="font-medium">Time:</span> {workout.time || 'N/A'}</div>
+                            <div><span className="font-medium">Location:</span> {workout.location || 'N/A'}</div>
+                            <div><span className="font-medium">Surface:</span> {workout.surface || 'N/A'}</div>
+                            <div><span className="font-medium">Status:</span> <span className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: workout.status === 'COMPLETED' ? '#10b981' : '#fbbf24', color: 'white' }}>{workout.status || 'PLANNED'}</span></div>
+                          </div>
+                          {workout.notes && (
+                            <div className="text-xs text-gray-500 mt-2 p-2 bg-blue-50 rounded">
+                              <span className="font-medium">Notes:</span> {workout.notes}
+                            </div>
+                          )}
+                          {workout.moveframes && workout.moveframes.length > 0 && (
+                            <div className="mt-3 pl-3 border-l-4 border-blue-300">
+                              <div className="text-xs font-medium text-gray-700 mb-1">📋 Moveframes ({workout.moveframes.length}):</div>
+                              {getSortedMoveframes(workout).map((mf: any) => (
+                                <div key={mf.id} className="text-xs text-gray-600 mt-1 pl-2">
+                                  <span className="font-bold text-blue-700">{mf.letter}.</span> {mf.sport} - {mf.type || 'N/A'} {mf.description ? `(${mf.description})` : ''}
+                                  {mf.movelaps && mf.movelaps.length > 0 && (
+                                    <span className="ml-2 text-gray-400">• {mf.movelaps.length} laps</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              );
+            }
+
+            return workoutRows;
           })}
         </tbody>
       </table>

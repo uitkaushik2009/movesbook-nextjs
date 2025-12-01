@@ -6,14 +6,25 @@ const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, username, email, password, userType } = await request.json();
+    const { 
+      name, 
+      firstName, 
+      surname, 
+      username, 
+      email, 
+      password, 
+      userType, 
+      gender, 
+      birthdate, 
+      country 
+    } = await request.json();
 
-    console.log('Registration attempt:', { name, username, email, userType });
+    console.log('Registration attempt:', { name, firstName, surname, username, email, userType, country });
 
     // Validate required fields
-    if (!name || !username || !email || !password || !userType) {
+    if (!name || !username || !email || !password || !userType || !country) {
       return NextResponse.json(
-        { error: 'All fields are required' },
+        { error: 'All required fields must be filled' },
         { status: 400 }
       );
     }
@@ -43,14 +54,19 @@ export async function POST(request: NextRequest) {
 
     console.log('Creating user with type:', dbUserType);
 
-    // Create user
+    // Create user with new profile fields
     const user = await prisma.user.create({
       data: {
         name,
+        firstName: firstName || undefined,
+        surname: surname || undefined,
         username,
         email,
         password: hashedPassword,
         userType: dbUserType,
+        gender: gender || undefined,
+        birthdate: birthdate ? new Date(birthdate) : undefined,
+        country: country || undefined,
       },
       select: {
         id: true,
@@ -181,9 +197,10 @@ function mapUserType(frontendType: string): UserType {
   const typeMap: { [key: string]: UserType } = {
     'athlete': UserType.ATHLETE,
     'coach': UserType.COACH,
-    'team': UserType.TEAM_MANAGER,
-    'club': UserType.CLUB_TRAINER,
-    'group': UserType.GROUP_ADMIN
+    'team': UserType.TEAM,
+    'club': UserType.CLUB,
+    'group': UserType.GROUP,
+    'groupAdmin': UserType.GROUP_ADMIN
   };
   
   return typeMap[frontendType] || UserType.ATHLETE;
