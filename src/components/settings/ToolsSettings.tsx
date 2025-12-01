@@ -931,41 +931,8 @@ export default function ToolsSettings() {
         </button>
       </div>
 
-      {/* Save to Database & Language Defaults */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {/* Save to Database */}
-        <div className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg">
-          <div className="flex items-center gap-3">
-            <Save className="w-4 h-4 text-green-600" />
-            <div>
-              <span className="text-sm font-semibold text-gray-800">Personal Settings</span>
-              {lastSavedTime && (
-                <div className="text-xs text-gray-600">
-                  Last saved: {lastSavedTime.toLocaleTimeString()}
-                </div>
-              )}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleManualSave}
-            disabled={isSavingToDatabase}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm"
-            title="Save all tools settings to database (auto-saves on changes)"
-          >
-            {isSavingToDatabase ? (
-              <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-3.5 h-3.5" />
-                Save to Database
-              </>
-            )}
-          </button>
-        </div>
+      {/* Language Defaults - Admin Only */}
+      <div className="grid grid-cols-1 gap-3">
 
         {/* Language Defaults */}
         <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
@@ -1519,11 +1486,17 @@ export default function ToolsSettings() {
           <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl border border-purple-200 p-6">
             <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
               <span className="text-2xl">📱</span>
-              Compatible Devices
+              Device Management - Super Admin Only
             </h3>
-            <p className="text-gray-600 text-sm">
-              Manage fitness devices and wearables that can sync with Movesbook. Enable/disable device integration and configure sync protocols.
+            <p className="text-gray-600 text-sm mb-3">
+              Add new devices and their descriptions that will be shown to users when they select their Services.
             </p>
+            <div className="bg-white rounded-lg p-3 border border-purple-100">
+              <p className="text-xs text-gray-500">
+                <strong className="text-purple-700">Note:</strong> Device communication protocols will be synced and linked to official reading protocols in future updates. 
+                Users will be able to configure their personal device settings after login.
+              </p>
+            </div>
           </div>
 
           {/* Action Bar */}
@@ -2144,13 +2117,13 @@ export default function ToolsSettings() {
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Description (Shown to Users)</label>
                   <textarea
                     value={editingDevice.description}
                     onChange={(e) => setEditingDevice({ ...editingDevice, description: e.target.value })}
                     rows={3}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="Device description and features"
+                    placeholder="Enter description that users will see when selecting this device in their Services"
                   />
                 </div>
 
@@ -2164,11 +2137,11 @@ export default function ToolsSettings() {
                       className="w-5 h-5 text-purple-600"
                     />
                     <label htmlFor="deviceEnabled" className="text-sm font-semibold text-gray-700">
-                      Enable this device for app integration
+                      Make this device available to users
                     </label>
                   </div>
                   <p className="text-xs text-gray-500 mt-2 ml-8">
-                    Enabled devices will be available for users to connect and sync workout data
+                    When enabled, users will see this device option in their Services and can select it for workout tracking
                   </p>
                 </div>
               </div>

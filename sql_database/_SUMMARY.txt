@@ -1,0 +1,713 @@
+SQL Database Split Summary
+============================================================
+
+Original file: moves.sql
+Total tables: 414
+Total categories: 145
+
+Categories and table counts:
+------------------------------------------------------------
+
+about_info_tables.sql (1 tables):
+  - aboutinfos
+
+access_control_tables.sql (3 tables):
+  - access_control_panel
+  - club_access_controls
+  - club_access_settings
+
+activity_tables.sql (2 tables):
+  - activity_clubs
+  - activity_users
+
+additional_tables.sql (1 tables):
+  - additional_sports
+
+admin_tables.sql (3 tables):
+  - admins
+  - adminsettings
+  - admin_setting_for_users
+
+albums_tables.sql (2 tables):
+  - albums
+  - album_images
+
+all_tables.sql (1 tables):
+  - all_invoicenumbers
+
+answers_tables.sql (1 tables):
+  - answers
+
+archive_tables.sql (2 tables):
+  - archive_deadlines
+  - archive_seles
+
+aros_acos_tables.sql (3 tables):
+  - acos
+  - aros
+  - aros_acos
+
+assign_tables.sql (1 tables):
+  - assign_lane_to_users
+
+assistance_tables.sql (5 tables):
+  - assistances
+  - assistance_comments
+  - assistance_likes
+  - assistance_replies
+  - assistance_votes
+
+athletes_tables.sql (2 tables):
+  - athletes
+  - athlete_subscription_histories
+
+attachments_tables.sql (1 tables):
+  - attachments
+
+audio_tables.sql (3 tables):
+  - audio_settings
+  - audio_setting_types
+  - audio_setting_type_descriptions
+
+automatic_tables.sql (2 tables):
+  - automatic_alerts
+  - automatic_messages
+
+bacheca_tables.sql (1 tables):
+  - bacheca_settings
+
+backoffice_tables.sql (2 tables):
+  - backoffice_pages
+  - backoffice_sections
+
+banners_tables.sql (4 tables):
+  - banners
+  - banner_menu_user_settings
+  - banner_tours
+  - banner_user_seens
+
+blogs_tables.sql (1 tables):
+  - blogs
+
+brands_tables.sql (1 tables):
+  - brands
+
+bugs_tables.sql (1 tables):
+  - bugs_and_error_reports
+
+build_tables.sql (1 tables):
+  - build_fors
+
+buyed_tables.sql (1 tables):
+  - buyed_optional_modules
+
+call_centers_tables.sql (1 tables):
+  - call_centers
+
+campaigns_tables.sql (1 tables):
+  - campaigns
+
+cards_tables.sql (15 tables):
+  - cards_operater_pool_allocations
+  - card_colornames
+  - card_magnetic_pools
+  - card_magnetic_pool_allocations
+  - card_pricelists
+  - card_pricelists1
+  - card_purchases
+  - card_purchase_rest_details
+  - card_rfidbadges_pools
+  - card_rfidbadges_pool_allocations
+  - card_rfidbracelets_pools
+  - card_rfidbracelets_pool_allocations
+  - card_smartcards_pools
+  - card_smartcards_pool_allocations
+  - card_types
+
+categories_tables.sql (3 tables):
+  - categories
+  - classifiedcategories
+  - classifieds
+
+central_tables.sql (2 tables):
+  - central_left_area_settings
+  - central_left_carousel_settings
+
+clients_tables.sql (2 tables):
+  - clients
+  - clients_securities
+
+club_features_tables.sql (1 tables):
+  - clubfeatures
+
+club_members_tables.sql (11 tables):
+  - club_members
+  - club_membership_payment_details
+  - club_membership_payment_history
+  - club_membership_payment_installments
+  - club_membership_requests
+  - club_membership_tax_documents
+  - club_membership_time_tables
+  - club_members_list
+  - club_member_accounts
+  - club_member_professions
+  - club_member_subscriptions
+
+club_payments_tables.sql (3 tables):
+  - club_acnt_payterms
+  - club_idcard_payterms
+  - club_subscription_payment_terms
+
+club_settings_tables.sql (31 tables):
+  - clubsetting_membertype_models
+  - club_audio_settings
+  - club_cardreader_internal_station_settings
+  - club_cardreader_parking_settings
+  - club_cardreader_primary_control_settings
+  - club_cardreader_purchase_product_settings
+  - club_cardreader_services_to_decrease_settings
+  - club_cardreader_sport_hall_settings
+  - club_member_additional_settings
+  - club_reader_other_settings
+  - club_security_other_settings
+  - club_security_setting_items_buttons
+  - club_security_setting_item_functions
+  - club_security_setting_item_functions_other_settings
+  - club_settings
+  - club_setting_areas
+  - club_setting_contacts
+  - club_setting_emp_occupations
+  - club_setting_membertypes
+  - club_setting_professions
+  - club_setting_sectors
+  - club_setting_services
+  - club_setting_special_services
+  - club_setting_subscription_packages
+  - club_setting_subscription_typologies
+  - club_setting_subscription_typology_defaults
+  - club_setting_typology_listprices
+  - club_setting_videos
+  - club_site_settings
+  - club_staff_color_settings
+  - club_staff_presentation_settings
+
+club_tables_tables.sql (33 tables):
+  - clubs
+  - clubtypes
+  - club_activities
+  - club_buy_accounts
+  - club_card_control_modes
+  - club_card_readers
+  - club_card_reader_types
+  - club_card_timetables
+  - club_enable_disable_pages
+  - club_favorite_page
+  - club_free_purches_accounts
+  - club_givenaccount_histories
+  - club_help_edits
+  - club_homepage
+  - club_linkings
+  - club_link_requests
+  - club_operators
+  - club_operator_assign_access_levels
+  - club_operator_references
+  - club_operator_security_passwords
+  - club_password_mangments
+  - club_password_requests
+  - club_purchase_accounts
+  - club_purchase_account_rest_details
+  - club_purchase_sponsors
+  - club_request_accounts
+  - club_request_accounts_old
+  - club_security_system_passwords
+  - club_sponsor_timetables
+  - club_stauts_securities
+  - club_subadmins
+  - club_subscription_histories
+  - club_thirdparty_messages
+
+co_tables.sql (1 tables):
+  - co_admin_asign_operators
+
+comments_tables.sql (8 tables):
+  - comments
+  - feedback_comments
+  - html_page_comments
+  - news_comments
+  - news_comment_share_posts
+  - poll_comment_categories
+  - review_comments
+  - user_comments
+
+competitions_tables.sql (1 tables):
+  - races
+
+countries_tables.sql (3 tables):
+  - countries
+  - countries_setting_for_overviews
+  - country-old
+
+credits_tables.sql (1 tables):
+  - credits
+
+currencies_tables.sql (1 tables):
+  - currencies
+
+customers_tables.sql (1 tables):
+  - customer_testimonials
+
+dashboard_tables.sql (2 tables):
+  - dashboard_items
+  - dashboard_settings
+
+deadline_tables.sql (2 tables):
+  - deadline_expenses
+  - deadline_expenses_details
+
+dealers_tables.sql (1 tables):
+  - dealers
+
+debt_tables.sql (2 tables):
+  - debt_members
+  - debt_member_installments
+
+default_tables.sql (3 tables):
+  - default_operator_settings
+  - default_reference_settings
+  - default_sub_admin_settings
+
+deletion_tables.sql (2 tables):
+  - deletion_logs
+  - deletion_settings
+
+devices_tables.sql (4 tables):
+  - devices
+  - device_logs
+  - device_requests
+  - device_settings
+
+email_tables.sql (1 tables):
+  - email_histories
+
+events_tables.sql (5 tables):
+  - eventcategorories
+  - eventguests
+  - eventhosts
+  - eventimages
+  - events
+
+facebook_tables.sql (1 tables):
+  - facebook_postings
+
+faq_tables.sql (5 tables):
+  - faqs
+  - faqs_links
+  - faq_pages
+  - faq_related_pages
+  - faq_settings
+
+feedback_tables.sql (1 tables):
+  - feedbacks
+
+finance_tables.sql (2 tables):
+  - payment_instalments
+  - payment_instalment_details
+
+food_tables.sql (2 tables):
+  - foodtypes
+  - food_sections
+
+frame_tables.sql (1 tables):
+  - frame_settings
+
+free_tables.sql (1 tables):
+  - free_account_settings
+
+friendship_tables.sql (1 tables):
+  - friendship_groups
+
+function_tables.sql (4 tables):
+  - function_management_features
+  - function_permissions
+  - function_training_features
+  - function_training_permissions
+
+google_tables.sql (1 tables):
+  - google_users
+
+groups_tables.sql (2 tables):
+  - groups
+  - group_subscription_histories
+
+guests_tables.sql (3 tables):
+  - guestbannersettingclubs
+  - guestbannersettings
+  - guestuserbanners
+
+help_tables.sql (8 tables):
+  - helppasswords
+  - help_html_pages
+  - help_html_page_orders
+  - help_html_page_sections
+  - help_pages
+  - help_page_links
+  - help_page_link_confirms
+  - help_supports
+
+history_tables.sql (3 tables):
+  - coach_subscription_histories
+  - team_subscription_histories
+  - temp_historical_records
+
+home_tables.sql (1 tables):
+  - home_banner_settings
+
+homepg_tables.sql (2 tables):
+  - homepg_images
+  - homepg_settings
+
+html_tables.sql (6 tables):
+  - html_orders
+  - html_pages_settings
+  - html_page_chapters
+  - html_page_chapter_links
+  - html_page_replies
+  - html_process_all_settings
+
+income_tables.sql (1 tables):
+  - income_virtual_costs
+
+insert_tables.sql (2 tables):
+  - insert_credits
+  - insert_credit_details
+
+introduction_tables.sql (1 tables):
+  - introduction_messages
+
+invite_tables.sql (1 tables):
+  - invite_friends_mailcontents
+
+invitefriends_tables.sql (1 tables):
+  - invitefriends_socialcontents
+
+item_tables.sql (1 tables):
+  - item_member_settings
+
+lanes_tables.sql (1 tables):
+  - lanes_for_days
+
+language_tables.sql (3 tables):
+  - languages
+  - language_paragraphs
+  - language_values
+
+likes_tables.sql (1 tables):
+  - review_likes
+
+manage_tables.sql (1 tables):
+  - manage_features
+
+management_tables.sql (7 tables):
+  - management_databases
+  - management_database_deletion_settings
+  - management_informations
+  - management_information_sections
+  - management_infos
+  - management_languages
+  - management_language_values
+
+manufacturing_tables.sql (1 tables):
+  - manufacturing_orders
+
+map_tables.sql (1 tables):
+  - map_settings
+
+media_tables.sql (3 tables):
+  - media
+  - media_albums
+  - media_posts
+
+member_tables.sql (2 tables):
+  - member_alert_users
+  - member_otherdetails
+
+menu_tables.sql (1 tables):
+  - menu_settings
+
+messages_tables.sql (1 tables):
+  - messages
+
+moment_tables.sql (1 tables):
+  - moment_cash
+
+mood_tables.sql (1 tables):
+  - mood_music
+
+movesbook_tables.sql (1 tables):
+  - movesbook_website_settings
+
+mub_tables.sql (2 tables):
+  - mub_buttons
+  - mub_languages
+
+music_tables.sql (2 tables):
+  - music_playlists
+  - music_settings
+
+mydesk_tables.sql (1 tables):
+  - mydesk_pages
+
+mydesksingleuser_tables.sql (1 tables):
+  - mydesksingleuser_pages
+
+myposts_tables.sql (3 tables):
+  - myposts_settings
+  - myposts_usersettingclubs
+  - myposts_usersettings
+
+newpost_tables.sql (1 tables):
+  - newpost_lists
+
+newposts_tables.sql (2 tables):
+  - newposts_usersettingclubs
+  - newposts_usersettings
+
+news_tables.sql (8 tables):
+  - news
+  - newsletter_subscriptions
+  - news_about_last_releases
+  - news_about_last_releases_display_modes
+  - news_categories
+  - news_related_articles
+  - news_settings
+  - news_share_post
+
+notifications_tables.sql (2 tables):
+  - notifications
+  - notifications_visited
+
+other_tables.sql (32 tables):
+  - coaches
+  - colors
+  - continents
+  - distributors
+  - educations
+  - employments
+  - expenses
+  - favourites
+  - features
+  - flags
+  - friendships
+  - functions
+  - manufacturers
+  - measures
+  - multifactories
+  - musics
+  - operators
+  - operatorsettings
+  - polls
+  - potentialrevenues
+  - sections
+  - sharings
+  - sizes
+  - sponsors
+  - sub
+  - subadminsettings
+  - supportcontactmails
+  - themes
+  - thoughts
+  - timezones
+  - units
+  - weeks
+
+overview_tables.sql (2 tables):
+  - overview_settings
+  - overview_subtool_settings
+
+packages_tables.sql (4 tables):
+  - packages
+  - packages_old
+  - package_last_news
+  - package_management_features
+
+panel_tables.sql (1 tables):
+  - panel_control_alerts
+
+payement_tables.sql (1 tables):
+  - payement_types
+
+playlist_tables.sql (1 tables):
+  - playlist_genders
+
+poll_tables.sql (3 tables):
+  - poll_options
+  - poll_respond_categories
+  - poll_view_categories
+
+posts_tables.sql (3 tables):
+  - posts
+  - posts1
+  - posts_go
+
+privacy_tables.sql (1 tables):
+  - privacy_features
+
+products_tables.sql (4 tables):
+  - products
+  - product_categories
+  - product_orders
+  - product_sub_categories
+
+profiles_tables.sql (1 tables):
+  - profiles
+
+promocode_tables.sql (2 tables):
+  - promocode_applies
+  - promocode_settings
+
+questions_tables.sql (2 tables):
+  - questioncategories
+  - questions
+
+reader_tables.sql (1 tables):
+  - reader_datas
+
+regions_tables.sql (1 tables):
+  - regions
+
+renewal_tables.sql (1 tables):
+  - renewal_requests
+
+reservations_tables.sql (1 tables):
+  - reservations
+
+reviews_tables.sql (3 tables):
+  - reviews
+  - review_deletions
+  - review_sections
+
+roles_tables.sql (1 tables):
+  - roles
+
+section_tables.sql (1 tables):
+  - section_accesses
+
+security_tables.sql (1 tables):
+  - securities
+
+services_tables.sql (2 tables):
+  - service_purchases
+  - service_purchases_details
+
+settings_tables.sql (7 tables):
+  - settings
+  - setting_clubguestbanners
+  - setting_clubguestbanner_lists
+  - setting_myposts
+  - setting_mypost_lists
+  - setting_newposts
+  - setting_newpost_lists
+
+site_tables.sql (1 tables):
+  - site_pages
+
+social_tables.sql (4 tables):
+  - social_profiles
+  - social_profiles-last
+  - social_sites
+  - social_site_users
+
+spedition_tables.sql (1 tables):
+  - spedition_modes
+
+sponsor_tables.sql (1 tables):
+  - sponsor_infos
+
+sponsors_tables.sql (2 tables):
+  - sponsors_purchases
+  - sponsors_setting
+
+sports_tables.sql (4 tables):
+  - sportbanners
+  - sports
+  - sport_grids
+  - sport_roles
+
+statistics_tables.sql (2 tables):
+  - states
+  - states_old
+
+sub_tables.sql (1 tables):
+  - sub_admins
+
+subscriptions_tables.sql (4 tables):
+  - subscriptions
+  - subscriptions_old
+  - subscription_settings
+  - subscription_settings_types
+
+subtopic_tables.sql (1 tables):
+  - subtopic_settings
+
+system_tables.sql (1 tables):
+  - systemadministration_languages
+
+teams_tables.sql (3 tables):
+  - teams
+  - teamtypes
+  - team_members
+
+temp_tables.sql (4 tables):
+  - temp_club_members
+  - temp_club_member_types
+  - temp_profile_images
+  - temp_subscriptionuserlists
+
+terms_tables.sql (2 tables):
+  - term_standards
+  - term_standard_contents
+
+testimonials_tables.sql (1 tables):
+  - testimonial_settings
+
+theme_tables.sql (1 tables):
+  - theme_selections
+
+thirdparty_tables.sql (1 tables):
+  - thirdparty_pricelists
+
+track_tables.sql (1 tables):
+  - track_visitors
+
+types_tables.sql (1 tables):
+  - types_of_card
+
+typology_tables.sql (1 tables):
+  - typology_messages
+
+users_tables.sql (11 tables):
+  - userlogins
+  - users
+  - users_bk
+  - users_subscriptionsettings_types
+  - usertypes
+  - user_activated_functions
+  - user_activities
+  - user_expiration_msg_settings
+  - user_logs
+  - user_payments
+  - user_reader_datas
+
+vip_tables.sql (2 tables):
+  - vip_settings
+  - vip_types
+
+website_tables.sql (1 tables):
+  - website_settings
+
+why_tables.sql (2 tables):
+  - why_movesbook_infos
+  - why_movesbook_sections
+
+zones_tables.sql (1 tables):
+  - zones

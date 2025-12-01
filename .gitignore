@@ -64,8 +64,14 @@ logs
 temp/
 tmp/
 *.tmp
-*.js
-*.txt
-*.md
+test-*.js
 *.env
-*.bat
+
+# Keep deployment and migration scripts
+!migrate-*.js
+!check-*.js
+!deploy-*.sh
+!deploy-*.bat
+!*-GUIDE.md
+!*-IMPLEMENTATION.md
+!*-COMPLETE.md

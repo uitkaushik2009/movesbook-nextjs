@@ -1775,7 +1775,7 @@ export default function BackgroundsColorsSettings() {
               </div>
 
               {/* Movelap Rows with Alternating Colors */}
-              <div className="space-y-2">
+              <div className="space-y-2 max-w-lg ml-auto">
                 {[1, 2, 3, 4].map((row) => (
                   <div
                     key={row}
@@ -1795,7 +1795,7 @@ export default function BackgroundsColorsSettings() {
 
               {/* Microlap Details */}
               <div
-                className="p-4 rounded-lg"
+                className="p-4 rounded-lg max-w-xs mx-auto"
                 style={{
                   backgroundColor: colors.microlapBackground,
                   color: colors.microlapText
