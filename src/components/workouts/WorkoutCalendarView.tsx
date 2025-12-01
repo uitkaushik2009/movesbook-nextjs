@@ -74,30 +74,66 @@ export default function WorkoutCalendarView({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // Helper function to render workout symbols
-  const renderWorkoutSymbols = (workouts: any[], inline: boolean = true) => {
-    const symbols = ['○', '□', '△']; // Circle, Square, Triangle
-    const workoutCounts = [0, 0, 0]; // Count for each workout slot
+  // Get workout status color based on plan date and completion
+  const getWorkoutStatusColor = (workout: any, dayDate: Date) => {
+    if (!workout) return 'text-gray-300'; // White (not planned) - greyed out
     
-    if (workouts) {
-      workouts.forEach((workout: any, index: number) => {
-        if (index < 3) workoutCounts[index] = 1;
-      });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const workoutDate = new Date(dayDate);
+    workoutDate.setHours(0, 0, 0, 0);
+    
+    // Calculate days difference
+    const diffTime = workoutDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Check if workout is completed
+    const isCompleted = workout.status === 'COMPLETED' || workout.isDone;
+    const completionRate = workout.completionRate || 0;
+    const isDifferent = workout.isDifferent || false;
+    
+    if (isCompleted) {
+      if (isDifferent) {
+        return 'text-blue-500'; // Blue = done but differently
+      } else if (completionRate < 75) {
+        return 'text-green-300'; // Light green = done at <75%
+      } else {
+        return 'text-green-600'; // Green = done at >75%
+      }
     }
+    
+    // Planned but not done yet
+    if (diffDays < 0) {
+      return 'text-white'; // Past but not done = white
+    } else if (diffDays <= 7) {
+      return 'text-red-500'; // Red = planned this week
+    } else if (diffDays <= 14) {
+      return 'text-orange-500'; // Orange = planned next week
+    } else {
+      return 'text-yellow-400'; // Yellow = planned in future
+    }
+  };
+  
+  // Helper function to render workout symbols
+  const renderWorkoutSymbols = (workouts: any[], dayDate: Date, inline: boolean = true) => {
+    const symbols = ['○', '□', '△']; // Circle, Square, Triangle
     
     if (inline) {
       return (
         <div className="flex gap-0.5 justify-center mt-0.5">
-          {symbols.map((symbol, idx) => (
-            <span
-              key={idx}
-              className={`text-xs ${
-                workoutCounts[idx] > 0 ? 'text-blue-600 font-bold' : 'text-gray-300'
-              }`}
-            >
-              {symbol}
-            </span>
-          ))}
+          {symbols.map((symbol, idx) => {
+            const workout = workouts?.[idx];
+            const colorClass = getWorkoutStatusColor(workout, dayDate);
+            
+            return (
+              <span
+                key={idx}
+                className={`text-xs font-bold ${colorClass}`}
+              >
+                {symbol}
+              </span>
+            );
+          })}
         </div>
       );
     }
@@ -207,13 +243,13 @@ export default function WorkoutCalendarView({
                         onClick={() => workoutDay && onDayClick?.(workoutDay)}
                         className={`h-10 flex flex-col items-center justify-center text-xs rounded transition-all ${
                           hasWorkouts
-                            ? 'bg-blue-100 border border-blue-300 cursor-pointer hover:bg-blue-200'
+                            ? 'bg-gray-50 border border-gray-300 cursor-pointer hover:bg-gray-100'
                             : 'bg-white border border-gray-200 hover:bg-gray-50'
                         } ${isToday ? 'ring-2 ring-green-500 ring-inset' : ''}`}
                         title={workoutDay ? `Week ${workoutDay.weekNumber}${hasWorkouts ? `, ${workoutDay.workouts.length} workout(s)` : ''}` : ''}
                       >
                         <span className="font-semibold text-gray-800">{date.getDate()}</span>
-                        {renderWorkoutSymbols(workoutDay?.workouts || [])}
+                        {renderWorkoutSymbols(workoutDay?.workouts || [], date)}
                       </div>
                     );
                   })}
@@ -268,7 +304,7 @@ export default function WorkoutCalendarView({
                             onClick={() => workoutDay && onDayClick?.(workoutDay)}
                             className={`h-24 p-1 border rounded transition-all cursor-pointer ${
                               workouts.length > 0
-                                ? 'bg-blue-50 border-blue-300 hover:bg-blue-100'
+                                ? 'bg-gray-50 border-gray-300 hover:bg-gray-100'
                                 : 'bg-white border-gray-200 hover:bg-gray-50'
                             } ${isToday ? 'ring-2 ring-green-500' : ''}`}
                             title={workoutDay ? `Week ${workoutDay.weekNumber}` : ''}
@@ -283,6 +319,7 @@ export default function WorkoutCalendarView({
                               {[0, 1, 2].map((idx) => {
                                 const symbols = ['○', '□', '△'];
                                 const workout = workouts[idx];
+                                const colorClass = getWorkoutStatusColor(workout, date);
                                 
                                 if (!workout) {
                                   return (
@@ -296,14 +333,14 @@ export default function WorkoutCalendarView({
                                 const sports = Array.from(new Set(workout.moveframes?.map((mf: any) => mf.sport) || []));
                                 
                                 return (
-                                  <div key={idx} className="flex items-center gap-0.5 text-blue-600">
+                                  <div key={idx} className={`flex items-center gap-0.5 ${colorClass}`}>
                                     <span className="font-bold">{symbols[idx]}</span>
                                     <span className="truncate text-xs">
                                       {sports.slice(0, 2).join(',') || '-'}
                                     </span>
                                     {distance > 0 && (
                                       <span className="text-xs font-semibold">
-                                        {(distance / 1000).toFixed(1)}k
+                                        {(distance / 1000).toFixed(1)}k·K{coefficient}
                                       </span>
                                     )}
                                   </div>
@@ -342,16 +379,36 @@ export default function WorkoutCalendarView({
             </div>
           </div>
           
-          {/* Symbol Status */}
+          {/* Workout Status Colors */}
           <div className="space-y-1">
-            <div className="font-semibold text-gray-700 mb-2">Symbol Status:</div>
+            <div className="font-semibold text-gray-700 mb-2">Workout Status Colors:</div>
             <div className="flex items-center gap-2">
               <span className="text-gray-300 font-bold text-lg">○</span>
-              <span>Empty (greyed)</span>
+              <span className="text-xs">White = Not planned</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-blue-600 font-bold text-lg">○</span>
-              <span>Filled (has workout)</span>
+              <span className="text-yellow-400 font-bold text-lg">○</span>
+              <span className="text-xs">Yellow = Planned in future</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-orange-500 font-bold text-lg">○</span>
+              <span className="text-xs">Orange = Next week</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-red-500 font-bold text-lg">○</span>
+              <span className="text-xs">Red = This week</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-blue-500 font-bold text-lg">○</span>
+              <span className="text-xs">Blue = Done differently</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-green-300 font-bold text-lg">○</span>
+              <span className="text-xs">Light Green = Done &lt;75%</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-green-600 font-bold text-lg">○</span>
+              <span className="text-xs">Green = Done &gt;75%</span>
             </div>
           </div>
           
