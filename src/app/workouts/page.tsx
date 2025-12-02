@@ -34,6 +34,7 @@ export default function WorkoutsPage() {
   const [showAddWorkoutModal, setShowAddWorkoutModal] = useState(false);
   const [addWorkoutDay, setAddWorkoutDay] = useState<any>(null);
   const [showAddMoveframeModal, setShowAddMoveframeModal] = useState(false);
+  const [excludeStretchingFromTotals, setExcludeStretchingFromTotals] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -190,6 +191,8 @@ export default function WorkoutsPage() {
                   workoutPlan={workoutPlan}
                   activeSection={activeSection}
                   periods={periods}
+                  excludeStretchingFromTotals={excludeStretchingFromTotals}
+                  setExcludeStretchingFromTotals={setExcludeStretchingFromTotals}
                   onDaySelect={(day) => setSelectedDay(day.id)}
                   onWorkoutSelect={(workoutId) => setSelectedWorkout(workoutId)}
                   onAddWorkoutToDay={(day) => {

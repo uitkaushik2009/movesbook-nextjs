@@ -3,20 +3,27 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Edit, Copy, Trash2, ChevronDown, ChevronRight, MoreVertical, GripVertical } from 'lucide-react';
 import { WorkoutActionModal, MoveframePositionModal, ConfirmRemovalModal } from './DragDropModals';
+import WorkoutLegend from './WorkoutLegend';
 
 interface WorkoutTableViewProps {
   workoutPlan: any;
   periods: any[];
+  activeSection?: 'A' | 'B' | 'C' | 'D';
+  excludeStretchingFromTotals: boolean;
+  setExcludeStretchingFromTotals: (value: boolean) => void;
   onEditWorkout?: (workout: any, day: any) => void;
   onEditDay?: (day: any) => void;
   onAddWorkout?: (day: any) => void;
-  onAddMoveframe?: (workout: any) => void;
+  onAddMoveframe?: (workout: any, day: any) => void;
   onDataChanged?: () => void; // New prop to refresh data without full reload
 }
 
 export default function WorkoutTableView({
   workoutPlan,
   periods,
+  activeSection = 'A',
+  excludeStretchingFromTotals,
+  setExcludeStretchingFromTotals,
   onEditWorkout,
   onEditDay,
   onAddWorkout,
@@ -684,7 +691,20 @@ export default function WorkoutTableView({
         if (mf.sport) sports.add(mf.sport);
       });
     });
-    return Array.from(sports).slice(0, 4); // Max 4 different sports per day
+    
+    const sportsArray = Array.from(sports);
+    
+    // Auto-exclude stretching if there are 4 sports and stretching is one of them
+    if (sportsArray.length === 4 && sportsArray.some(s => s.toLowerCase() === 'stretching')) {
+      return sportsArray.filter(s => s.toLowerCase() !== 'stretching').slice(0, 4);
+    }
+    
+    // Manual exclusion if checkbox is checked
+    if (excludeStretchingFromTotals) {
+      return sportsArray.filter(s => s.toLowerCase() !== 'stretching').slice(0, 4);
+    }
+    
+    return sportsArray.slice(0, 4); // Max 4 different sports per day
   };
 
   // Helper to get sport data aggregated at DAY level (not per workout)
@@ -742,20 +762,68 @@ export default function WorkoutTableView({
 
   return (
     <div ref={containerRef} className="relative flex flex-col pb-8">
-      {/* Grid Settings Toolbar */}
-      <div className="flex justify-end gap-2 mb-2 px-2">
-        <button
-          onClick={saveGridSettings}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium"
-        >
-          💾 Save Grid Settings
-        </button>
-        <button
-          onClick={resetGridSettings}
-          className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm font-medium"
-        >
-          🔄 Reset to Default
-        </button>
+      {/* Exclude Stretching Checkbox */}
+      <div className="flex items-center justify-between mb-3 px-2 py-2 bg-gray-50 border border-gray-300 rounded">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={excludeStretchingFromTotals}
+            onChange={(e) => setExcludeStretchingFromTotals(e.target.checked)}
+            className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+          />
+          <span className="text-sm font-medium text-gray-700">
+            Exclude stretching from the totals
+          </span>
+        </label>
+        <span className="text-xs text-gray-500 italic">
+          Note: Stretching is auto-excluded when 4 sports are selected
+        </span>
+      </div>
+      
+      {/* Action Buttons Toolbar */}
+      <div className="flex items-center justify-between mb-2 px-2 py-2 bg-white border border-gray-300 rounded">
+        <div className="flex gap-2">
+          <button
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium flex items-center gap-1"
+            title="Day options"
+          >
+            📅 Day
+          </button>
+          <button
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium flex items-center gap-1"
+            title="Workout options"
+          >
+            🏋️ Workout
+          </button>
+          <button
+            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm font-medium flex items-center gap-1"
+            title="Moveframe options"
+          >
+            📋 Moveframe
+          </button>
+          <button
+            className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm font-medium flex items-center gap-1"
+            title="Movelaps options"
+          >
+            🔄 Movelaps
+          </button>
+        </div>
+        
+        {/* Grid Settings */}
+        <div className="flex gap-2">
+          <button
+            onClick={saveGridSettings}
+            className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-xs font-medium"
+          >
+            💾 Save Grid
+          </button>
+          <button
+            onClick={resetGridSettings}
+            className="px-3 py-1.5 bg-gray-600 text-white rounded hover:bg-gray-700 text-xs font-medium"
+          >
+            🔄 Reset
+          </button>
+        </div>
       </div>
       
       {/* Main table container - horizontal scroll hidden, vertical scroll visible */}
@@ -805,7 +873,7 @@ export default function WorkoutTableView({
               />
             </th>
             <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200 relative" style={{width: `${columnWidths.week}px`, left: `${columnWidths.checkbox}px`}} rowSpan={2}>
-              Week n.
+              Week
               <div
                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500"
                 onMouseDown={(e) => handleResizeStart(e, 'week')}
@@ -813,7 +881,7 @@ export default function WorkoutTableView({
               />
             </th>
             <th className="border border-gray-400 px-2 py-1 text-center font-bold sticky z-50 bg-gray-200 relative" style={{width: `${columnWidths.dayWeek}px`, left: `${columnWidths.checkbox + columnWidths.week}px`}} rowSpan={2}>
-              Day wk
+              Day
               <div
                 className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-blue-500"
                 onMouseDown={(e) => handleResizeStart(e, 'dayWeek')}
@@ -933,7 +1001,7 @@ export default function WorkoutTableView({
                         className="px-2 py-1 hover:bg-gray-200 rounded text-gray-700 text-xs font-medium"
                         title="Click for options"
                       >
-                        Copy
+                        Options
                       </button>
                       
                       {expandedOptions === day.id && (
@@ -1104,7 +1172,7 @@ export default function WorkoutTableView({
                           className="px-2 py-1 hover:bg-gray-200 rounded text-gray-700 text-xs font-medium"
                           title="Click for options"
                         >
-                          Copy
+                          Options
                         </button>
                         
                         {expandedOptions === day.id && (
@@ -1198,7 +1266,7 @@ export default function WorkoutTableView({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onAddMoveframe?.(workout);
+                          onAddMoveframe?.(workout, day);
                         }}
                         className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 flex-shrink-0"
                         title="Add moveframe to this workout"
@@ -1289,13 +1357,22 @@ export default function WorkoutTableView({
                 <tr key={`${day.id}-details`} className="bg-gray-50">
                   <td colSpan={23} className="border border-gray-300 px-4 py-3">
                     <div className="space-y-2">
-                      <div className="font-bold text-sm text-gray-700 mb-2">📋 Day Details for {getDayName(day.dayOfWeek)}:</div>
+                      <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-300">
+                        <div className="font-bold text-base text-gray-700">
+                          📋 Day Details for {getDayName(day.dayOfWeek)}
+                        </div>
+                        <div className="flex gap-4 text-xs text-gray-600">
+                          <span><span className="font-medium text-gray-700">Week:</span> {day.weekNumber}</span>
+                          <span><span className="font-medium text-gray-700">Date:</span> {formatDate(day.date)}</span>
+                          <span><span className="font-medium text-gray-700">Period:</span> 
+                            <span className="ml-1 px-2 py-0.5 rounded text-white text-xs" style={{ backgroundColor: day.period?.color || '#3b82f6' }}>
+                              {day.period?.name || 'N/A'}
+                            </span>
+                          </span>
+                        </div>
+                      </div>
                       <div className="text-xs text-gray-600 mb-3">
-                        <span className="font-medium">Week:</span> {day.weekNumber} | 
-                        <span className="font-medium ml-2">Date:</span> {formatDate(day.date)} | 
-                        <span className="font-medium ml-2">Period:</span> {day.period?.name || 'N/A'} |
-                        <span className="font-medium ml-2">Weather:</span> {day.weather || 'N/A'} |
-                        <span className="font-medium ml-2">Feeling:</span> {day.feeling || 'N/A'}
+                        <span className="font-medium">Feeling:</span> {day.feeling || 'N/A'}
                       </div>
                       {day.notes && (
                         <div className="text-xs text-gray-600 italic mb-3 p-2 bg-yellow-50 border-l-2 border-yellow-400">
@@ -1305,15 +1382,32 @@ export default function WorkoutTableView({
                       <div className="font-semibold text-sm text-blue-700 mb-2">🏋️ Workouts ({dayWorkouts.length}):</div>
                       {dayWorkouts.map((workout: any, idx: number) => (
                         <div key={workout.id} className="bg-white border border-gray-200 rounded p-3 shadow-sm">
-                          <div className="font-semibold text-sm text-blue-600 mb-1">
-                            Workout #{idx + 1}: {workout.name || 'Unnamed Workout'}
+                          <div className="flex items-center gap-3 mb-2 flex-wrap">
+                            <div className="font-semibold text-sm text-blue-600">
+                              Workout #{idx + 1}: {workout.name || 'Unnamed Workout'}
+                            </div>
+                            <span className="text-xs text-gray-600">
+                              <span className="font-medium text-gray-700">Code:</span> {workout.code || 'N/A'}
+                            </span>
+                            <span className="text-xs text-gray-600">
+                              <span className="font-medium text-gray-700">Status:</span> 
+                              <span className="ml-1 px-2 py-0.5 rounded text-xs font-medium" style={{ 
+                                backgroundColor: workout.status === 'COMPLETED' ? '#10b981' : workout.status === 'IN_PROGRESS' ? '#fbbf24' : '#6b7280', 
+                                color: 'white' 
+                              }}>
+                                {workout.status || 'PLANNED'}
+                              </span>
+                            </span>
                           </div>
                           <div className="text-xs text-gray-600 mt-1 grid grid-cols-2 gap-2">
-                            <div><span className="font-medium">Code:</span> {workout.code || 'N/A'}</div>
                             <div><span className="font-medium">Time:</span> {workout.time || 'N/A'}</div>
                             <div><span className="font-medium">Location:</span> {workout.location || 'N/A'}</div>
-                            <div><span className="font-medium">Surface:</span> {workout.surface || 'N/A'}</div>
-                            <div><span className="font-medium">Status:</span> <span className="px-1 py-0.5 rounded text-xs" style={{ backgroundColor: workout.status === 'COMPLETED' ? '#10b981' : '#fbbf24', color: 'white' }}>{workout.status || 'PLANNED'}</span></div>
+                            {activeSection === 'C' && (
+                              <>
+                                <div><span className="font-medium">Weather:</span> {day.weather || 'N/A'}</div>
+                                <div><span className="font-medium">Surface:</span> {workout.surface || 'N/A'}</div>
+                              </>
+                            )}
                           </div>
                           {workout.notes && (
                             <div className="text-xs text-gray-500 mt-2 p-2 bg-blue-50 rounded">
@@ -1322,13 +1416,55 @@ export default function WorkoutTableView({
                           )}
                           {workout.moveframes && workout.moveframes.length > 0 && (
                             <div className="mt-3 pl-3 border-l-4 border-blue-300">
-                              <div className="text-xs font-medium text-gray-700 mb-1">📋 Moveframes ({workout.moveframes.length}):</div>
-                              {getSortedMoveframes(workout).map((mf: any) => (
-                                <div key={mf.id} className="text-xs text-gray-600 mt-1 pl-2">
-                                  <span className="font-bold text-blue-700">{mf.letter}.</span> {mf.sport} - {mf.type || 'N/A'} {mf.description ? `(${mf.description})` : ''}
-                                  {mf.movelaps && mf.movelaps.length > 0 && (
-                                    <span className="ml-2 text-gray-400">• {mf.movelaps.length} laps</span>
-                                  )}
+                              <div className="text-xs font-medium text-gray-700 mb-2">📋 Moveframes ({workout.moveframes.length}):</div>
+                              {getSortedMoveframes(workout).map((mf: any, mfIdx: number) => (
+                                <div key={mf.id} className="bg-blue-50 rounded p-2 mb-2 text-xs">
+                                  <div className="flex items-start gap-2 mb-1">
+                                    <span className="font-bold text-blue-700 min-w-[20px]">{mf.letter}.</span>
+                                    <div className="flex-1">
+                                      <div className="font-semibold text-gray-800">
+                                        {mf.sport} - <span className="text-blue-600">{mf.type || 'STANDARD'}</span>
+                                      </div>
+                                      {mf.description && (
+                                        <div className="text-gray-600 italic mt-1">{mf.description}</div>
+                                      )}
+                                      <div className="grid grid-cols-4 gap-2 mt-2 text-gray-600">
+                                        {mf.distance && <div><span className="font-medium">Distance:</span> {mf.distance}</div>}
+                                        {mf.repetitions && <div><span className="font-medium">Reps:</span> {mf.repetitions}</div>}
+                                        {mf.speed && <div><span className="font-medium">Speed:</span> {mf.speed}</div>}
+                                        {mf.pause && <div><span className="font-medium">Pause:</span> {mf.pause}</div>}
+                                        {mf.duration && <div><span className="font-medium">Duration:</span> {mf.duration}</div>}
+                                        {mf.intensity && <div><span className="font-medium">Intensity:</span> {mf.intensity}</div>}
+                                      </div>
+                                      {mf.equipment && (
+                                        <div className="text-gray-600 mt-1">
+                                          <span className="font-medium">Equipment:</span> {mf.equipment}
+                                        </div>
+                                      )}
+                                      {mf.notes && (
+                                        <div className="text-gray-500 italic mt-1 text-xs bg-white p-1 rounded">
+                                          💬 {mf.notes}
+                                        </div>
+                                      )}
+                                      {mf.movelaps && mf.movelaps.length > 0 && (
+                                        <div className="mt-2 ml-4 space-y-1">
+                                          <div className="text-xs font-medium text-green-700">🔄 Movelaps ({mf.movelaps.length}):</div>
+                                          {mf.movelaps.map((lap: any, lapIdx: number) => (
+                                            <div key={lap.id} className="bg-white rounded p-1.5 text-xs border border-green-200">
+                                              <span className="font-semibold text-green-600">Lap {lapIdx + 1}:</span>
+                                              <span className="ml-2 text-gray-600">
+                                                {lap.distance && `${lap.distance} `}
+                                                {lap.speed && `@ ${lap.speed} `}
+                                                {lap.reps && `× ${lap.reps} `}
+                                                {lap.pause && `⏸️ ${lap.pause}`}
+                                              </span>
+                                              {lap.notes && <div className="text-gray-500 italic text-xs mt-0.5">💬 {lap.notes}</div>}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -1409,6 +1545,9 @@ export default function WorkoutTableView({
         />
       </>
     )}
+    
+    {/* Legend */}
+    <WorkoutLegend />
   </div>
   );
 }

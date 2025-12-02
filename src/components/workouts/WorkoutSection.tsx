@@ -19,7 +19,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [workoutPlan, setWorkoutPlan] = useState<any>(null);
   const [periods, setPeriods] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<any>(null);
   const [selectedWorkout, setSelectedWorkout] = useState<string | null>(null);
   const [showAddWorkoutModal, setShowAddWorkoutModal] = useState(false);
   const [addWorkoutDay, setAddWorkoutDay] = useState<any>(null);
@@ -47,6 +47,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [showDaySelector, setShowDaySelector] = useState(false);
   const [editingDay, setEditingDay] = useState<any>(null);
   const [showEditDayModal, setShowEditDayModal] = useState(false);
+  const [excludeStretchingFromTotals, setExcludeStretchingFromTotals] = useState(false);
 
   useEffect(() => {
     loadUserProfile();
@@ -398,6 +399,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               <WorkoutCalendarView
                 workoutPlan={workoutPlan}
                 periods={periods}
+                excludeStretchingFromTotals={excludeStretchingFromTotals}
+                setExcludeStretchingFromTotals={setExcludeStretchingFromTotals}
                 onDayClick={(day) => {
                   setSelectedDay(day.id);
                   setAddWorkoutDay(day);
@@ -410,6 +413,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  workoutPlan={workoutPlan}
                  activeSection={activeSection}
                  periods={periods}
+                 excludeStretchingFromTotals={excludeStretchingFromTotals}
+                 setExcludeStretchingFromTotals={setExcludeStretchingFromTotals}
                  onDaySelect={(day) => setSelectedDay(day.id)}
                  onWorkoutSelect={(workoutId) => setSelectedWorkout(workoutId)}
                  onAddWorkoutToDay={(day) => {
@@ -417,6 +422,10 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setWorkoutModalMode('add');
                    setEditingWorkout(null);
                    setShowAddWorkoutModal(true);
+                 }}
+                 onEditDay={(day) => {
+                   setEditingDay(day);
+                   setShowEditDayModal(true);
                  }}
                  onEditWorkout={(workout, day) => {
                    setEditingWorkout(workout);
@@ -505,6 +514,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                      : workoutPlan
                  }
                  periods={periods}
+                 activeSection={activeSection}
+                 excludeStretchingFromTotals={excludeStretchingFromTotals}
+                 setExcludeStretchingFromTotals={setExcludeStretchingFromTotals}
                  onEditWorkout={(workout, day) => {
                    setEditingWorkout(workout);
                    setAddWorkoutDay(day);
@@ -522,8 +534,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setEditingWorkout(null);
                    setShowAddWorkoutModal(true);
                  }}
-                 onAddMoveframe={(workout) => {
+                 onAddMoveframe={(workout, day) => {
                    setSelectedWorkout(workout.id);
+                   setSelectedDay(day);
                    setShowAddMoveframeModal(true);
                  }}
                  onDataChanged={loadWorkoutData}
@@ -591,11 +604,20 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         />
       )}
       
-       {showAddMoveframeModal && selectedWorkout && (
-         <AddMoveframeModal
-           workoutId={selectedWorkout}
-           onClose={() => setShowAddMoveframeModal(false)}
-           onSave={async (moveframeData) => {
+       {showAddMoveframeModal && selectedWorkout && selectedDay && (() => {
+         // Find the current workout data
+         const currentWorkoutData = selectedDay.workouts?.find((w: any) => w.id === selectedWorkout);
+         
+         return (
+           <AddMoveframeModal
+             workoutId={selectedWorkout}
+             dayData={selectedDay}
+             currentWorkoutData={currentWorkoutData}
+             onClose={() => {
+               setShowAddMoveframeModal(false);
+               setSelectedDay(null);
+             }}
+             onSave={async (moveframeData) => {
              console.log('Creating moveframe with data:', moveframeData);
              
              try {
@@ -666,7 +688,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
              }
            }}
          />
-       )}
+         );
+       })()}
        
        {showImportModal && (activeSection === 'A' || activeSection === 'B') && (
          <ImportWorkoutsModal

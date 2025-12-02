@@ -2,16 +2,21 @@
 
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react';
+import WorkoutLegend from './WorkoutLegend';
 
 interface WorkoutCalendarViewProps {
   workoutPlan: any;
   periods: any[];
+  excludeStretchingFromTotals: boolean;
+  setExcludeStretchingFromTotals: (value: boolean) => void;
   onDayClick?: (day: any) => void;
 }
 
 export default function WorkoutCalendarView({
   workoutPlan,
   periods,
+  excludeStretchingFromTotals,
+  setExcludeStretchingFromTotals,
   onDayClick
 }: WorkoutCalendarViewProps) {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
@@ -152,9 +157,42 @@ export default function WorkoutCalendarView({
     
     return { distance: totalDistance, coefficient: 1 }; // K coefficient placeholder
   };
+  
+  // Helper to filter sports (applying stretching exclusion rules)
+  const filterSports = (sports: string[]): string[] => {
+    // Auto-exclude stretching if there are 4 sports and stretching is one of them
+    if (sports.length === 4 && sports.some(s => s.toLowerCase() === 'stretching')) {
+      return sports.filter(s => s.toLowerCase() !== 'stretching');
+    }
+    
+    // Manual exclusion if checkbox is checked
+    if (excludeStretchingFromTotals) {
+      return sports.filter(s => s.toLowerCase() !== 'stretching');
+    }
+    
+    return sports;
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
+      {/* Exclude Stretching Checkbox */}
+      <div className="flex items-center justify-between mb-3 px-2 py-2 bg-gray-50 border border-gray-300 rounded">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={excludeStretchingFromTotals}
+            onChange={(e) => setExcludeStretchingFromTotals(e.target.checked)}
+            className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+          />
+          <span className="text-sm font-medium text-gray-700">
+            Exclude stretching from the totals
+          </span>
+        </label>
+        <span className="text-xs text-gray-500 italic">
+          Note: Stretching is auto-excluded when 4 sports are selected
+        </span>
+      </div>
+      
       {/* Year Header with View Mode Toggle */}
       <div className="flex items-center justify-between mb-4">
         <button
@@ -330,7 +368,8 @@ export default function WorkoutCalendarView({
                                 }
                                 
                                 const { distance, coefficient } = getWorkoutTotal(workout);
-                                const sports = Array.from(new Set(workout.moveframes?.map((mf: any) => mf.sport) || []));
+                                const allSports = Array.from(new Set(workout.moveframes?.map((mf: any) => mf.sport as string) || [])) as string[];
+                                const sports = filterSports(allSports);
                                 
                                 return (
                                   <div key={idx} className={`flex items-center gap-0.5 ${colorClass}`}>
@@ -360,89 +399,7 @@ export default function WorkoutCalendarView({
       )}
 
       {/* Legend */}
-      <div className="mt-6 pt-4 border-t border-gray-200">
-        <div className="flex flex-wrap gap-6 text-sm">
-          {/* Workout Symbols */}
-          <div className="space-y-1">
-            <div className="font-semibold text-gray-700 mb-2">Workout Symbols:</div>
-            <div className="flex items-center gap-2">
-              <span className="text-blue-600 font-bold text-lg">○</span>
-              <span>Workout #1</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-blue-600 font-bold text-lg">□</span>
-              <span>Workout #2</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-blue-600 font-bold text-lg">△</span>
-              <span>Workout #3</span>
-            </div>
-          </div>
-          
-          {/* Workout Status Colors */}
-          <div className="space-y-1">
-            <div className="font-semibold text-gray-700 mb-2">Workout Status Colors:</div>
-            <div className="flex items-center gap-2">
-              <span className="text-gray-300 font-bold text-lg">○</span>
-              <span className="text-xs">White = Not planned</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-yellow-400 font-bold text-lg">○</span>
-              <span className="text-xs">Yellow = Planned in future</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-orange-500 font-bold text-lg">○</span>
-              <span className="text-xs">Orange = Next week</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-red-500 font-bold text-lg">○</span>
-              <span className="text-xs">Red = This week</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-blue-500 font-bold text-lg">○</span>
-              <span className="text-xs">Blue = Done differently</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-300 font-bold text-lg">○</span>
-              <span className="text-xs">Light Green = Done &lt;75%</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-green-600 font-bold text-lg">○</span>
-              <span className="text-xs">Green = Done &gt;75%</span>
-            </div>
-          </div>
-          
-          {/* Day Indicators */}
-          <div className="space-y-1">
-            <div className="font-semibold text-gray-700 mb-2">Day Status:</div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded"></div>
-              <span>Has Workouts</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-white border border-gray-200 rounded"></div>
-              <span>No Workouts</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 ring-2 ring-green-500 rounded"></div>
-              <span>Today</span>
-            </div>
-          </div>
-          
-          {/* Wide Mode Info */}
-          {viewMode === 'wide' && (
-            <div className="space-y-1">
-              <div className="font-semibold text-gray-700 mb-2">Wide Mode Details:</div>
-              <div className="text-xs text-gray-600">
-                • Sports shown beside symbols<br />
-                • Distance in kilometers (k)<br />
-                • K = Coefficient (future)<br />
-                • Max 2 sports shown per workout
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <WorkoutLegend showWideMode={viewMode === 'wide'} />
     </div>
   );
 }

@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, AlertCircle } from 'lucide-react';
 
 interface AddMoveframeModalProps {
   workoutId: string;
+  dayData?: any; // The entire day with all workouts
+  currentWorkoutData?: any; // The current workout
   onClose: () => void;
   onSave: (moveframeData: any) => void;
 }
@@ -17,6 +19,8 @@ const SPORTS = [
 
 export default function AddMoveframeModal({
   workoutId,
+  dayData,
+  currentWorkoutData,
   onClose,
   onSave
 }: AddMoveframeModalProps) {
@@ -29,12 +33,114 @@ export default function AddMoveframeModal({
     speed: '',
     pause: ''
   });
+  
+  const [validationError, setValidationError] = useState<string>('');
+
+  // Get all unique sports used in the entire day (across all workouts)
+  const getDaySports = (): string[] => {
+    if (!dayData || !dayData.workouts) return [];
+    
+    const allSports = new Set<string>();
+    dayData.workouts.forEach((workout: any) => {
+      if (workout.moveframes) {
+        workout.moveframes.forEach((mf: any) => {
+          allSports.add(mf.sport);
+        });
+      }
+    });
+    
+    const sportsArray = Array.from(allSports);
+    
+    // Auto-exclude stretching if there are 4 sports and stretching is one of them
+    // This is for counting purposes only - stretching can still be selected
+    if (sportsArray.length === 4 && sportsArray.some(s => s.toLowerCase() === 'stretching')) {
+      return sportsArray.filter(s => s.toLowerCase() !== 'stretching');
+    }
+    
+    return sportsArray;
+  };
+
+  // Get all unique sports used in the current workout only
+  const getWorkoutSports = (): string[] => {
+    if (!currentWorkoutData || !currentWorkoutData.moveframes) return [];
+    
+    const workoutSports = new Set<string>();
+    currentWorkoutData.moveframes.forEach((mf: any) => {
+      workoutSports.add(mf.sport);
+    });
+    
+    return Array.from(workoutSports);
+  };
+
+  // Check if a sport can be selected
+  const canSelectSport = (sport: string): boolean => {
+    const daySports = getDaySports();
+    const workoutSports = getWorkoutSports();
+    
+    // If sport is already in the day, it can always be used
+    if (daySports.includes(sport)) {
+      return true;
+    }
+    
+    // If day already has 4 different sports, cannot add a new one
+    if (daySports.length >= 4) {
+      return false;
+    }
+    
+    // If sport is not in workout yet, check if workout has less than 4 sports
+    if (!workoutSports.includes(sport) && workoutSports.length >= 4) {
+      return false;
+    }
+    
+    return true;
+  };
+
+  // Get reason why sport cannot be selected
+  const getSportDisabledReason = (sport: string): string => {
+    const daySports = getDaySports();
+    const workoutSports = getWorkoutSports();
+    
+    if (daySports.includes(sport)) {
+      return '';
+    }
+    
+    if (daySports.length >= 4) {
+      return `Day already has 4 sports (${daySports.join(', ')})`;
+    }
+    
+    if (!workoutSports.includes(sport) && workoutSports.length >= 4) {
+      return `Workout already has 4 sports (${workoutSports.join(', ')})`;
+    }
+    
+    return '';
+  };
+
+  // Validate when sport changes
+  useEffect(() => {
+    const error = getSportDisabledReason(moveframeData.sport);
+    setValidationError(error);
+  }, [moveframeData.sport]);
 
   const handleSave = () => {
+    // Final validation before save
+    if (!canSelectSport(moveframeData.sport)) {
+      alert('Cannot add this sport: ' + getSportDisabledReason(moveframeData.sport));
+      return;
+    }
+    
     onSave({
       ...moveframeData,
       workoutId
     });
+  };
+  
+  const handleSportChange = (newSport: string) => {
+    if (canSelectSport(newSport)) {
+      setMoveframeData({ ...moveframeData, sport: newSport });
+    } else {
+      // Show error but still allow selection (will be blocked on save)
+      setMoveframeData({ ...moveframeData, sport: newSport });
+    }
   };
 
   return (
@@ -53,20 +159,66 @@ export default function AddMoveframeModal({
 
         {/* Content */}
         <div className="p-6 space-y-4">
+          {/* Sport Limits Info */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-900">
+                <p className="font-semibold mb-1">Sport Selection Rules:</p>
+                <ul className="list-disc list-inside space-y-1 text-blue-800">
+                  <li>Max 4 different sports per day (across all workouts)</li>
+                  <li>Max 4 different sports per workout</li>
+                  <li>Day sports: {getDaySports().length}/4 ({getDaySports().join(', ') || 'None'})</li>
+                  <li>Workout sports: {getWorkoutSports().length}/4 ({getWorkoutSports().join(', ') || 'None'})</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Validation Error */}
+          {validationError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-red-900">
+                  <p className="font-semibold">Cannot use this sport:</p>
+                  <p className="text-red-800">{validationError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Sport Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Sport *
             </label>
-            <select
-              value={moveframeData.sport}
-              onChange={(e) => setMoveframeData({ ...moveframeData, sport: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              {SPORTS.map(sport => (
-                <option key={sport} value={sport}>{sport}</option>
-              ))}
-            </select>
+            <div className="grid grid-cols-3 gap-2">
+              {SPORTS.map(sport => {
+                const isDisabled = !canSelectSport(sport);
+                const isSelected = moveframeData.sport === sport;
+                const reason = getSportDisabledReason(sport);
+                
+                return (
+                  <button
+                    key={sport}
+                    type="button"
+                    onClick={() => handleSportChange(sport)}
+                    disabled={isDisabled && !isSelected}
+                    className={`px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-200'
+                        : isDisabled
+                        ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50 cursor-pointer'
+                    }`}
+                    title={isDisabled ? reason : `Select ${sport}`}
+                  >
+                    {sport.replace('_', ' ')}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Type Selection */}
