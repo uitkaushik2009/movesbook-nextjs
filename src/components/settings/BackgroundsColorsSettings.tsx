@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Palette, Eye, RefreshCw, Download, Upload, Save, AlertCircle, ChevronDown, ChevronUp, CheckCircle, Globe } from 'lucide-react';
+import { Palette, Eye, RefreshCw, Download, Upload, Save, AlertCircle, ChevronDown, ChevronUp, CheckCircle } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -23,10 +23,18 @@ interface MovelapRowSettings {
 interface ColorSettings {
   pageBackground: string;
   pageBackgroundOpacity: number;
+  weekHeader: string;
+  weekHeaderText: string;
   dayHeader: string;
   dayHeaderText: string;
+  dayAlternateRow: string;
+  dayAlternateRowText: string;
   workoutHeader: string;
   workoutHeaderText: string;
+  workout2Header: string;
+  workout2HeaderText: string;
+  workout3Header: string;
+  workout3HeaderText: string;
   moveframeHeader: string;
   moveframeHeaderText: string;
   movelapHeader: string;
@@ -63,10 +71,19 @@ interface ColorSettings {
   alternateRowTextMoveframe: string;
   alternateRowmoveframe: string;
   alternateRowTextmoveframe: string;
-  // Border settings
-  borderEnabled?: boolean;
-  borderColor?: string;
-  borderWidth?: string;
+  // Border settings - Separate for each section
+  dayBorderEnabled?: boolean;
+  dayBorderColor?: string;
+  dayBorderWidth?: string;
+  workoutBorderEnabled?: boolean;
+  workoutBorderColor?: string;
+  workoutBorderWidth?: string;
+  moveframeBorderEnabled?: boolean;
+  moveframeBorderColor?: string;
+  moveframeBorderWidth?: string;
+  movelapBorderEnabled?: boolean;
+  movelapBorderColor?: string;
+  movelapBorderWidth?: string;
   // Movelaps Table settings
   movelapTextColorSource?: 'table' | 'rows';
   // Movelaps Rows settings
@@ -90,10 +107,18 @@ const defaultMovelapRows: MovelapRowSettings = {
 const defaultColors: ColorSettings = {
   pageBackground: '#eeefe6',
   pageBackgroundOpacity: 89,
+  weekHeader: '#6b7cde',
+  weekHeaderText: '#ffffff',
   dayHeader: '#5168c2',
   dayHeaderText: '#e6e6ad',
+  dayAlternateRow: '#e0f2fe',
+  dayAlternateRowText: '#0c4a6e',
   workoutHeader: '#c6f8e2',
   workoutHeaderText: '#2386d1',
+  workout2Header: '#fed7aa',
+  workout2HeaderText: '#9a3412',
+  workout3Header: '#c6f8e2',
+  workout3HeaderText: '#2386d1',
   moveframeHeader: '#f7f2bb',
   moveframeHeaderText: '#f61909',
   movelapHeader: '#f7f7f7',
@@ -104,6 +129,8 @@ const defaultColors: ColorSettings = {
   selectedRowText: '#ef4444',
   alternateRow: '#f1f5f9',
   alternateRowText: '#1e293b',
+  alternateRowMovelap: '#dbeafe',
+  alternateRowTextMovelap: '#1e293b',
   buttonAdd: '#10b981',
   buttonAddHover: '#059669',
   buttonAddText: '#ffffff',
@@ -120,8 +147,6 @@ const defaultColors: ColorSettings = {
   buttonPrintHeaderText: '#ffffff',
   buttonEditHeaderText: '#ffffff',
   buttonDeleteHeaderText: '#ffffff',
-  alternateRowMovelap: '#dbeafe',
-  alternateRowTextMovelap: '#1e293b',
   selectedRowMovelap: '#fef08a',
   selectedRowTextMovelap: '#ef4444',
   alternateRowMoveframe: '#fef3c7',
@@ -132,10 +157,22 @@ const defaultColors: ColorSettings = {
   alternateRowTextmoveframe: '#1e293b',
   movelapTextColorSource: 'table',
   movelapRows: defaultMovelapRows,
-  // Border settings
-  borderEnabled: false,
-  borderColor: '#000000',
-  borderWidth: 'normal'
+  // Day border settings
+  dayBorderEnabled: false,
+  dayBorderColor: '#000000',
+  dayBorderWidth: 'normal',
+  // Workout border settings
+  workoutBorderEnabled: false,
+  workoutBorderColor: '#000000',
+  workoutBorderWidth: 'normal',
+  // Moveframe border settings
+  moveframeBorderEnabled: false,
+  moveframeBorderColor: '#000000',
+  moveframeBorderWidth: 'normal',
+  // Movelap border settings
+  movelapBorderEnabled: false,
+  movelapBorderColor: '#000000',
+  movelapBorderWidth: 'normal'
 };
 
 interface ColorScheme {
@@ -163,36 +200,6 @@ export default function BackgroundsColorsSettings() {
     movelapsRows: false,
   });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  
-  // Language-specific defaults state
-  const { currentLanguage } = useLanguage();
-  const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage || 'en');
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [superAdminPassword, setSuperAdminPassword] = useState('');
-  const [passwordAction, setPasswordAction] = useState<'save' | 'load'>('save');
-  const [showLoadDialog, setShowLoadDialog] = useState(false);
-  
-  // Auto-update selected language when user's language changes
-  useEffect(() => {
-    if (currentLanguage) {
-      setSelectedLanguage(currentLanguage);
-    }
-  }, [currentLanguage]);
-  
-  const supportedLanguages = [
-    { code: 'en', name: 'English' },
-    { code: 'fr', name: 'Français' },
-    { code: 'it', name: 'Italiano' },
-    { code: 'de', name: 'Deutsch' },
-    { code: 'es', name: 'Español' },
-    { code: 'pt', name: 'Português' },
-    { code: 'ru', name: 'Русский' },
-    { code: 'hi', name: 'हिन्दी' },
-    { code: 'ja', name: '日本語' },
-    { code: 'id', name: 'Indonesia' },
-    { code: 'zh', name: '中文' },
-    { code: 'ar', name: 'العربية' },
-  ];
 
   // Load color settings from database
   useEffect(() => {
@@ -253,72 +260,64 @@ export default function BackgroundsColorsSettings() {
     }
   };
 
-  // Save language-specific defaults
-  const saveLanguageDefaults = async () => {
-    setPasswordAction('save');
-    setShowPasswordDialog(true);
-  };
-
-  // Load language-specific defaults
-  const loadLanguageDefaults = async () => {
-    setShowLoadDialog(true);
-  };
-
-  // Handle password submission
-  const handlePasswordSubmit = async () => {
-    if (!superAdminPassword.trim()) {
-      alert('❌ Please enter Super Admin password');
+  // Save current settings as default
+  const saveAsDefault = async () => {
+    if (!confirm('Save current color settings as your default?')) {
       return;
     }
 
     try {
-      // Save current settings as defaults for selected language
-      const response = await fetch('/api/admin/color-defaults/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          language: selectedLanguage,
-          colors: colors,
-          password: superAdminPassword
-        })
-      });
-
-      const data = await response.json();
+      setSaveStatus('saving');
       
-      if (response.ok) {
-        alert(`✅ Default settings saved for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}!`);
-        setShowPasswordDialog(false);
-        setSuperAdminPassword('');
-      } else {
-        alert(`❌ ${data.error || 'Failed to save defaults'}`);
-      }
+      // Save to database with a special "isDefault" flag in workoutPreferences
+      await updateDbSetting('workoutPreferences', {
+        defaultColorSettings: colors
+      });
+      
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+      alert('✅ Current settings saved as your default!');
     } catch (error) {
-      console.error('Error:', error);
-      alert('❌ Error saving defaults');
+      console.error('Error saving default settings:', error);
+      alert('❌ Failed to save default settings');
+      setSaveStatus('idle');
     }
   };
 
-  // Handle load confirmation
-  const handleLoadConfirm = async () => {
+  // Load default settings
+  const loadDefaultSettings = async () => {
     try {
-      const response = await fetch(`/api/admin/color-defaults/load?language=${selectedLanguage}`);
-      const data = await response.json();
+      // Fetch from database
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('❌ Please log in to load your default settings');
+        return;
+      }
 
-      if (response.ok && data.colors) {
-        // Merge loaded settings with current settings
-        setColors(prevColors => ({
-          ...prevColors,
-          ...data.colors
-        }));
-        alert(`✅ Default settings for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name} loaded!\n\nNote: Your existing customizations have been preserved.`);
-        setShowLoadDialog(false);
+      const response = await fetch('/api/user/settings', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const settings = await response.json();
+        const workoutPrefs = settings.workoutPreferences || {};
+        
+        if (workoutPrefs.defaultColorSettings) {
+          setColors(workoutPrefs.defaultColorSettings);
+          alert('✅ Default settings loaded!');
+        } else {
+          alert('ℹ️ No default settings found. Using application defaults.');
+          setColors(defaultColors);
+        }
       } else {
-        alert(`ℹ️ No default settings found for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}.\n\nUsing application defaults.`);
-        setShowLoadDialog(false);
+        alert('❌ Failed to load default settings');
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('❌ Error loading defaults');
+      console.error('Error loading default settings:', error);
+      alert('❌ Error loading default settings');
     }
   };
 
@@ -550,34 +549,25 @@ export default function BackgroundsColorsSettings() {
           </div>
         </div>
 
-        {/* Language Defaults - Single Line */}
+        {/* Default Settings */}
         <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-          <Globe className="w-4 h-4 text-gray-500" />
-          <span className="text-sm font-medium text-gray-700">Language Defaults:</span>
-          <select
-            value={selectedLanguage}
-            onChange={(e) => setSelectedLanguage(e.target.value)}
-            className="px-3 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            {supportedLanguages.map(lang => (
-              <option key={lang.code} value={lang.code}>{lang.name}</option>
-            ))}
-          </select>
+          <Save className="w-4 h-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-700">Default Settings:</span>
           <button
-            onClick={loadLanguageDefaults}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
-            title="Load language-specific default colors (merges with current)"
+            onClick={saveAsDefault}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
+            title="Save current colors as your default settings"
           >
-            <Download className="w-3.5 h-3.5" />
-            Load
+            <Save className="w-4 h-4" />
+            Save as Default
           </button>
           <button
-            onClick={saveLanguageDefaults}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors"
-            title="Save current colors as defaults for this language (requires password)"
+            onClick={loadDefaultSettings}
+            className="flex items-center gap-1.5 px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium"
+            title="Load your saved default settings"
           >
-            <Save className="w-3.5 h-3.5" />
-            Save Defaults
+            <Download className="w-4 h-4" />
+            Load Default Settings
           </button>
         </div>
       </div>
@@ -645,80 +635,6 @@ export default function BackgroundsColorsSettings() {
         </div>
       )}
 
-      {/* Super Admin Password Dialog */}
-      {showPasswordDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <h3 className="text-xl font-semibold mb-4">🔐 Super Admin Authentication</h3>
-            <p className="text-gray-600 mb-4">
-              You are about to save default color settings for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>.
-            </p>
-            <p className="text-sm text-gray-500 mb-4">
-              These settings will be automatically loaded when users select this language for the first time.
-            </p>
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Super Admin Password:
-              </label>
-              <input
-                type="password"
-                value={superAdminPassword}
-                onChange={(e) => setSuperAdminPassword(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
-                placeholder="Enter password"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                autoFocus
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handlePasswordSubmit}
-                className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-semibold"
-              >
-                Save Defaults
-              </button>
-              <button
-                onClick={() => {
-                  setShowPasswordDialog(false);
-                  setSuperAdminPassword('');
-                }}
-                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Load Language Defaults Dialog */}
-      {showLoadDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <h3 className="text-xl font-semibold mb-4">📥 Load Language Defaults</h3>
-            <p className="text-gray-600 mb-4">
-              Load default color settings for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>?
-            </p>
-            <p className="text-sm text-yellow-700 bg-yellow-50 p-3 rounded-lg mb-4">
-              ⚠️ <strong>Note:</strong> This will merge the default settings with your current customizations. Your existing settings will be preserved unless overridden by the defaults.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleLoadConfirm}
-                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
-              >
-                Load Defaults
-              </button>
-              <button
-                onClick={() => setShowLoadDialog(false)}
-                className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Saved Color Schemes Section */}
       <div className="bg-white rounded-2xl border border-gray-200 p-6">
@@ -805,98 +721,315 @@ export default function BackgroundsColorsSettings() {
                 onChange={(v) => handleColorChange('pageBackgroundOpacity', v)}
               />
               
-              {/* Border Settings */}
-              <div className="p-4 bg-gray-50 rounded-xl border border-gray-200 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-gray-700">Border Settings</span>
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={colors.borderEnabled || false}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        handleColorChange('borderEnabled', e.target.checked);
-                      }}
-                      className="w-4 h-4 text-blue-600 rounded flex-shrink-0"
-                    />
-                    <span className="text-sm text-gray-600">Enable Border</span>
-                  </label>
+              {/* Border Settings for Each Section */}
+              <div className="space-y-3">
+                {/* DAY Border Settings */}
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-gray-900">📅 Day Border</span>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={colors.dayBorderEnabled || false}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleColorChange('dayBorderEnabled', e.target.checked);
+                        }}
+                        className="w-4 h-4 text-blue-600 rounded flex-shrink-0"
+                      />
+                      <span className="text-sm text-gray-700 font-medium">Enable</span>
+                    </label>
+                  </div>
+                  
+                  {colors.dayBorderEnabled && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600">Color</span>
+                        <div className="flex gap-1">
+                          {[
+                            { name: 'Black', value: '#000000' },
+                            { name: 'Red', value: '#ef4444' },
+                            { name: 'Blue', value: '#3b82f6' }
+                          ].map((color) => (
+                            <button
+                              key={color.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColorChange('dayBorderColor', color.value);
+                              }}
+                              className={`px-2 py-1 rounded border-2 transition-colors text-xs font-medium ${
+                                colors.dayBorderColor === color.value
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                              }`}
+                              style={{ borderLeftColor: color.value, borderLeftWidth: '3px' }}
+                            >
+                              {color.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600">Thickness</span>
+                        <div className="flex gap-1">
+                          {[
+                            { name: 'VT', value: 'very-thin' },
+                            { name: 'T', value: 'thin' },
+                            { name: 'N', value: 'normal' },
+                            { name: 'TH', value: 'thick' }
+                          ].map((width) => (
+                            <button
+                              key={width.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColorChange('dayBorderWidth', width.value);
+                              }}
+                              className={`px-2 py-1 rounded border-2 transition-colors text-xs font-medium ${
+                                colors.dayBorderWidth === width.value
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                              }`}
+                            >
+                              {width.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-                
-                {colors.borderEnabled && (
-                  <>
-                    {/* Border Color */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-600">Border Color</span>
-                      <div className="flex gap-2">
-                        {[
-                          { name: 'Black', value: '#000000' },
-                          { name: 'Red', value: '#ef4444' },
-                          { name: 'Blue', value: '#3b82f6' }
-                        ].map((color) => (
-                          <button
-                            key={color.value}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleColorChange('borderColor', color.value);
-                            }}
-                            className={`px-3 py-1.5 rounded-lg border-2 transition-colors text-sm font-medium ${
-                              colors.borderColor === color.value
-                                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                            }`}
-                            style={{ borderLeftColor: color.value, borderLeftWidth: '4px' }}
-                          >
-                            {color.name}
-                          </button>
-                        ))}
+
+                {/* WORKOUT Border Settings */}
+                <div className="p-4 bg-green-50 rounded-xl border border-green-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-gray-900">🏋️ Workout Border</span>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={colors.workoutBorderEnabled || false}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleColorChange('workoutBorderEnabled', e.target.checked);
+                        }}
+                        className="w-4 h-4 text-green-600 rounded flex-shrink-0"
+                      />
+                      <span className="text-sm text-gray-700 font-medium">Enable</span>
+                    </label>
+                  </div>
+                  
+                  {colors.workoutBorderEnabled && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600">Color</span>
+                        <div className="flex gap-1">
+                          {[
+                            { name: 'Black', value: '#000000' },
+                            { name: 'Red', value: '#ef4444' },
+                            { name: 'Blue', value: '#3b82f6' }
+                          ].map((color) => (
+                            <button
+                              key={color.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColorChange('workoutBorderColor', color.value);
+                              }}
+                              className={`px-2 py-1 rounded border-2 transition-colors text-xs font-medium ${
+                                colors.workoutBorderColor === color.value
+                                  ? 'border-green-500 bg-green-50 text-green-700'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                              }`}
+                              style={{ borderLeftColor: color.value, borderLeftWidth: '3px' }}
+                            >
+                              {color.name}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    
-                    {/* Border Width */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-600">Border Thickness</span>
-                      <div className="flex gap-2">
-                        {[
-                          { name: 'Very Thin', value: 'very-thin' },
-                          { name: 'Thin', value: 'thin' },
-                          { name: 'Normal', value: 'normal' },
-                          { name: 'Thick', value: 'thick' }
-                        ].map((width) => (
-                          <button
-                            key={width.value}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleColorChange('borderWidth', width.value);
-                            }}
-                            className={`px-3 py-1.5 rounded-lg border-2 transition-colors text-sm font-medium ${
-                              colors.borderWidth === width.value
-                                ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
-                            }`}
-                          >
-                            {width.name}
-                          </button>
-                        ))}
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600">Thickness</span>
+                        <div className="flex gap-1">
+                          {[
+                            { name: 'VT', value: 'very-thin' },
+                            { name: 'T', value: 'thin' },
+                            { name: 'N', value: 'normal' },
+                            { name: 'TH', value: 'thick' }
+                          ].map((width) => (
+                            <button
+                              key={width.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColorChange('workoutBorderWidth', width.value);
+                              }}
+                              className={`px-2 py-1 rounded border-2 transition-colors text-xs font-medium ${
+                                colors.workoutBorderWidth === width.value
+                                  ? 'border-green-500 bg-green-50 text-green-700'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                              }`}
+                            >
+                              {width.name}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    
-                    {/* Border Preview */}
-                    <div className="mt-4 p-4 rounded-lg" style={{
-                      backgroundColor: colors.pageBackground,
-                      opacity: colors.pageBackgroundOpacity / 100,
-                      border: `${
-                        colors.borderWidth === 'very-thin' ? '1px' :
-                        colors.borderWidth === 'thin' ? '2px' :
-                        colors.borderWidth === 'thick' ? '4px' : '3px'
-                      } solid ${colors.borderColor || '#000000'}`
-                    }}>
-                      <div className="text-center text-sm font-medium text-gray-700">
-                        Border Preview
+                    </>
+                  )}
+                </div>
+
+                {/* MOVEFRAME Border Settings */}
+                <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-gray-900">📋 Moveframe Border</span>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={colors.moveframeBorderEnabled || false}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleColorChange('moveframeBorderEnabled', e.target.checked);
+                        }}
+                        className="w-4 h-4 text-yellow-600 rounded flex-shrink-0"
+                      />
+                      <span className="text-sm text-gray-700 font-medium">Enable</span>
+                    </label>
+                  </div>
+                  
+                  {colors.moveframeBorderEnabled && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600">Color</span>
+                        <div className="flex gap-1">
+                          {[
+                            { name: 'Black', value: '#000000' },
+                            { name: 'Red', value: '#ef4444' },
+                            { name: 'Blue', value: '#3b82f6' }
+                          ].map((color) => (
+                            <button
+                              key={color.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColorChange('moveframeBorderColor', color.value);
+                              }}
+                              className={`px-2 py-1 rounded border-2 transition-colors text-xs font-medium ${
+                                colors.moveframeBorderColor === color.value
+                                  ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                              }`}
+                              style={{ borderLeftColor: color.value, borderLeftWidth: '3px' }}
+                            >
+                              {color.name}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </>
-                )}
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600">Thickness</span>
+                        <div className="flex gap-1">
+                          {[
+                            { name: 'VT', value: 'very-thin' },
+                            { name: 'T', value: 'thin' },
+                            { name: 'N', value: 'normal' },
+                            { name: 'TH', value: 'thick' }
+                          ].map((width) => (
+                            <button
+                              key={width.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColorChange('moveframeBorderWidth', width.value);
+                              }}
+                              className={`px-2 py-1 rounded border-2 transition-colors text-xs font-medium ${
+                                colors.moveframeBorderWidth === width.value
+                                  ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                              }`}
+                            >
+                              {width.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* MOVELAP Border Settings */}
+                <div className="p-4 bg-purple-50 rounded-xl border border-purple-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-gray-900">🔄 Movelap Border</span>
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={colors.movelapBorderEnabled || false}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          handleColorChange('movelapBorderEnabled', e.target.checked);
+                        }}
+                        className="w-4 h-4 text-purple-600 rounded flex-shrink-0"
+                      />
+                      <span className="text-sm text-gray-700 font-medium">Enable</span>
+                    </label>
+                  </div>
+                  
+                  {colors.movelapBorderEnabled && (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600">Color</span>
+                        <div className="flex gap-1">
+                          {[
+                            { name: 'Black', value: '#000000' },
+                            { name: 'Red', value: '#ef4444' },
+                            { name: 'Blue', value: '#3b82f6' }
+                          ].map((color) => (
+                            <button
+                              key={color.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColorChange('movelapBorderColor', color.value);
+                              }}
+                              className={`px-2 py-1 rounded border-2 transition-colors text-xs font-medium ${
+                                colors.movelapBorderColor === color.value
+                                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                              }`}
+                              style={{ borderLeftColor: color.value, borderLeftWidth: '3px' }}
+                            >
+                              {color.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-gray-600">Thickness</span>
+                        <div className="flex gap-1">
+                          {[
+                            { name: 'VT', value: 'very-thin' },
+                            { name: 'T', value: 'thin' },
+                            { name: 'N', value: 'normal' },
+                            { name: 'TH', value: 'thick' }
+                          ].map((width) => (
+                            <button
+                              key={width.value}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleColorChange('movelapBorderWidth', width.value);
+                              }}
+                              className={`px-2 py-1 rounded border-2 transition-colors text-xs font-medium ${
+                                colors.movelapBorderWidth === width.value
+                                  ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+                              }`}
+                            >
+                              {width.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -907,6 +1040,18 @@ export default function BackgroundsColorsSettings() {
             expanded={expandedSections.headers}
             onToggle={() => toggleSection('headers')}
           >
+            <ColorPicker
+              label="Week Header Background"
+              value={colors.weekHeader}
+              onChange={(v) => handleColorChange('weekHeader', v)}
+            />
+            <ColorPicker
+              label="Week Header Text"
+              value={colors.weekHeaderText}
+              onChange={(v) => handleColorChange('weekHeaderText', v)}
+              showContrast
+              bgColor={colors.weekHeader}
+            />
             <ColorPicker
               label="Day Header Background"
               value={colors.dayHeader}
@@ -920,16 +1065,52 @@ export default function BackgroundsColorsSettings() {
               bgColor={colors.dayHeader}
             />
             <ColorPicker
-              label="Workout Header Background"
+              label="Day Alternate Row Background (Even Days)"
+              value={colors.dayAlternateRow}
+              onChange={(v) => handleColorChange('dayAlternateRow', v)}
+            />
+            <ColorPicker
+              label="Day Alternate Row Text (Even Days)"
+              value={colors.dayAlternateRowText}
+              onChange={(v) => handleColorChange('dayAlternateRowText', v)}
+              showContrast
+              bgColor={colors.dayAlternateRow}
+            />
+            <ColorPicker
+              label="Workout #1 Header Background"
               value={colors.workoutHeader}
               onChange={(v) => handleColorChange('workoutHeader', v)}
             />
             <ColorPicker
-              label="Workout Header Text"
+              label="Workout #1 Header Text"
               value={colors.workoutHeaderText}
               onChange={(v) => handleColorChange('workoutHeaderText', v)}
               showContrast
-              bgColor={colors.moveframeHeader}
+              bgColor={colors.workoutHeader}
+            />
+            <ColorPicker
+              label="Workout #2 Header Background (Even Workout)"
+              value={colors.workout2Header}
+              onChange={(v) => handleColorChange('workout2Header', v)}
+            />
+            <ColorPicker
+              label="Workout #2 Header Text"
+              value={colors.workout2HeaderText}
+              onChange={(v) => handleColorChange('workout2HeaderText', v)}
+              showContrast
+              bgColor={colors.workout2Header}
+            />
+            <ColorPicker
+              label="Workout #3 Header Background"
+              value={colors.workout3Header}
+              onChange={(v) => handleColorChange('workout3Header', v)}
+            />
+            <ColorPicker
+              label="Workout #3 Header Text"
+              value={colors.workout3HeaderText}
+              onChange={(v) => handleColorChange('workout3HeaderText', v)}
+              showContrast
+              bgColor={colors.workout3Header}
             />
             <ColorPicker
               label="Moveframe Header Background"
@@ -1668,153 +1849,256 @@ export default function BackgroundsColorsSettings() {
             </h3>
 
             <div
-              className="rounded-xl border-2 border-dashed border-gray-300 p-6 space-y-4"
+              className="rounded-xl p-4 space-y-3"
               style={{
                 backgroundColor: colors.pageBackground,
                 opacity: colors.pageBackgroundOpacity / 100,
-                ...(colors.borderEnabled && {
-                  border: `${
-                    colors.borderWidth === 'very-thin' ? '1px' :
-                    colors.borderWidth === 'thin' ? '2px' :
-                    colors.borderWidth === 'thick' ? '4px' : '3px'
-                  } solid ${colors.borderColor || '#000000'}`,
-                  borderStyle: 'solid'
-                })
+                boxSizing: 'border-box'
               }}
             >
-              {/* Day Header */}
+              {/* Row 1: Week Header */}
               <div
-                className="p-4 rounded-lg font-bold text-lg"
+                className="p-3 rounded-lg font-bold"
                 style={{
-                  backgroundColor: colors.dayHeader,
-                  color: colors.dayHeaderText
+                  backgroundColor: colors.weekHeader,
+                  color: colors.weekHeaderText,
+                  boxSizing: 'border-box',
+                  border: colors.dayBorderEnabled
+                    ? `${
+                        colors.dayBorderWidth === 'very-thin' ? '1px' :
+                        colors.dayBorderWidth === 'thin' ? '2px' :
+                        colors.dayBorderWidth === 'thick' ? '4px' : '3px'
+                      } solid ${colors.dayBorderColor || '#000000'}`
+                    : '3px solid transparent'
                 }}
               >
                 Monday - Week 1
               </div>
 
-              {/* Workout Header with Buttons */}
+              {/* Row 2: Day Header */}
               <div
-                className="p-4 rounded-lg"
+                className="p-3 rounded-lg font-bold"
                 style={{
-                  backgroundColor: colors.workoutHeader,
-                  color: colors.workoutHeaderText
+                  backgroundColor: colors.dayHeader,
+                  color: colors.dayHeaderText,
+                  boxSizing: 'border-box',
+                  border: colors.dayBorderEnabled
+                    ? `${
+                        colors.dayBorderWidth === 'very-thin' ? '1px' :
+                        colors.dayBorderWidth === 'thin' ? '2px' :
+                        colors.dayBorderWidth === 'thick' ? '4px' : '3px'
+                      } solid ${colors.dayBorderColor || '#000000'}`
+                    : '3px solid transparent'
                 }}
               >
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold">Workout 1 - Monday 23</span>
-                  <div className="flex gap-2">
-                    <button
-                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors"
-                      style={{
-                        backgroundColor: hoveredButton === 'add' ? colors.buttonAddHover : colors.buttonAdd,
-                        color: colors.buttonAddHeaderText
-                      }}
-                      onMouseEnter={() => setHoveredButton('add')}
-                      onMouseLeave={() => setHoveredButton(null)}
-                    >
-                      Add
-                    </button>
-                    <button
-                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors"
-                      style={{
-                        backgroundColor: hoveredButton === 'edit' ? colors.buttonEditHover : colors.buttonEdit,
-                        color: colors.buttonEditHeaderText
-                      }}
-                      onMouseEnter={() => setHoveredButton('edit')}
-                      onMouseLeave={() => setHoveredButton(null)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors"
-                      style={{
-                        backgroundColor: hoveredButton === 'delete' ? colors.buttonDeleteHover : colors.buttonDelete,
-                        color: colors.buttonDeleteHeaderText
-                      }}
-                      onMouseEnter={() => setHoveredButton('delete')}
-                      onMouseLeave={() => setHoveredButton(null)}
-                    >
-                      Delete
-                    </button>
-                    <button
-                      className="px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors"
-                      style={{
-                        backgroundColor: hoveredButton === 'print' ? colors.buttonPrintHover : colors.buttonPrint,
-                        color: colors.buttonPrintHeaderText
-                      }}
-                      onMouseEnter={() => setHoveredButton('print')}
-                      onMouseLeave={() => setHoveredButton(null)}
-                    >
-                      Print
-                    </button>
-                  </div>
-                  </div>
-                </div>
+                Tuesday - Week 1
+              </div>
 
-                {/* Moveframes */}
-                <div className="space-y-2">
-                  <div
-                    className="p-3 rounded-lg font-semibold"
-                    style={{
-                      backgroundColor: colors.moveframeHeader,
-                      color: colors.moveframeHeaderText
-                    }}
-                  >
-                  Moveframe A  Warmup
+              {/* Row 3: Workout 1 - 92% width, right-sided */}
+              <div className="flex justify-end">
+                <div
+                  className="p-3 rounded-lg"
+                  style={{
+                    width: '92%',
+                    backgroundColor: colors.workoutHeader,
+                    color: colors.workoutHeaderText,
+                    boxSizing: 'border-box',
+                    border: colors.workoutBorderEnabled
+                      ? `${
+                          colors.workoutBorderWidth === 'very-thin' ? '1px' :
+                          colors.workoutBorderWidth === 'thin' ? '2px' :
+                          colors.workoutBorderWidth === 'thick' ? '4px' : '3px'
+                        } solid ${colors.workoutBorderColor || '#000000'}`
+                      : '3px solid transparent'
+                  }}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-sm">Workout 1 - Tuesday 23</span>
+                    <div className="flex gap-1">
+                      <button
+                        className="px-2 py-1 rounded text-xs font-semibold transition-colors"
+                        style={{
+                          backgroundColor: hoveredButton === 'add' ? colors.buttonAddHover : colors.buttonAdd,
+                          color: colors.buttonAddHeaderText
+                        }}
+                        onMouseEnter={() => setHoveredButton('add')}
+                        onMouseLeave={() => setHoveredButton(null)}
+                      >
+                        Add
+                      </button>
+                      <button
+                        className="px-2 py-1 rounded text-xs font-semibold transition-colors"
+                        style={{
+                          backgroundColor: hoveredButton === 'edit' ? colors.buttonEditHover : colors.buttonEdit,
+                          color: colors.buttonEditHeaderText
+                        }}
+                        onMouseEnter={() => setHoveredButton('edit')}
+                        onMouseLeave={() => setHoveredButton(null)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="px-2 py-1 rounded text-xs font-semibold transition-colors"
+                        style={{
+                          backgroundColor: hoveredButton === 'delete' ? colors.buttonDeleteHover : colors.buttonDelete,
+                          color: colors.buttonDeleteHeaderText
+                        }}
+                        onMouseEnter={() => setHoveredButton('delete')}
+                        onMouseLeave={() => setHoveredButton(null)}
+                      >
+                        Delete
+                      </button>
+                      <button
+                        className="px-2 py-1 rounded text-xs font-semibold transition-colors"
+                        style={{
+                          backgroundColor: hoveredButton === 'print' ? colors.buttonPrintHover : colors.buttonPrint,
+                          color: colors.buttonPrintHeaderText
+                        }}
+                        onMouseEnter={() => setHoveredButton('print')}
+                        onMouseLeave={() => setHoveredButton(null)}
+                      >
+                        Print
+                      </button>
+                    </div>
                   </div>
-                  <div
-                    className="p-3 rounded-lg font-semibold"
-                    style={{
-                      backgroundColor: colors.alternateRowMoveframe,
-                      color: colors.alternateRowTextMoveframe
-                    }}
-                  >
-                  Moveframe B - 100 x 4 A2 Break 1'30"
                 </div>
               </div>
 
-              {/* Movelap Rows with Alternating Colors */}
-              <div className="space-y-2 max-w-lg ml-auto">
+              {/* Row 4: Workout 2 - 92% width, right-sided */}
+              <div className="flex justify-end">
+                <div
+                  className="p-3 rounded-lg"
+                  style={{
+                    width: '92%',
+                    backgroundColor: colors.workout2Header,
+                    color: colors.workout2HeaderText,
+                    boxSizing: 'border-box',
+                    border: colors.workoutBorderEnabled
+                      ? `${
+                          colors.workoutBorderWidth === 'very-thin' ? '1px' :
+                          colors.workoutBorderWidth === 'thin' ? '2px' :
+                          colors.workoutBorderWidth === 'thick' ? '4px' : '3px'
+                        } solid ${colors.workoutBorderColor || '#000000'}`
+                      : '3px solid transparent'
+                  }}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-sm">Workout 2 - Tuesday 23</span>
+                    <div className="flex gap-1">
+                      <button className="px-2 py-1 rounded text-xs font-semibold" style={{ backgroundColor: colors.buttonAdd, color: colors.buttonAddHeaderText }}>Add</button>
+                      <button className="px-2 py-1 rounded text-xs font-semibold" style={{ backgroundColor: colors.buttonEdit, color: colors.buttonEditHeaderText }}>Edit</button>
+                      <button className="px-2 py-1 rounded text-xs font-semibold" style={{ backgroundColor: colors.buttonDelete, color: colors.buttonDeleteHeaderText }}>Delete</button>
+                      <button className="px-2 py-1 rounded text-xs font-semibold" style={{ backgroundColor: colors.buttonPrint, color: colors.buttonPrintHeaderText }}>Print</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 5: Moveframe A - 84% width, right-sided */}
+              <div className="flex justify-end">
+                <div
+                  className="p-2.5 rounded font-semibold text-sm"
+                  style={{
+                    width: '84%',
+                    backgroundColor: colors.moveframeHeader,
+                    color: colors.moveframeHeaderText,
+                    boxSizing: 'border-box',
+                    border: colors.moveframeBorderEnabled
+                      ? `${
+                          colors.moveframeBorderWidth === 'very-thin' ? '1px' :
+                          colors.moveframeBorderWidth === 'thin' ? '2px' :
+                          colors.moveframeBorderWidth === 'thick' ? '4px' : '3px'
+                        } solid ${colors.moveframeBorderColor || '#000000'}`
+                      : '3px solid transparent'
+                  }}
+                >
+                  Moveframe A Warmup
+                </div>
+              </div>
+
+              {/* Row 6: Moveframe B (Alternate) - 84% width, right-sided */}
+              <div className="flex justify-end">
+                <div
+                  className="p-2.5 rounded font-semibold text-sm"
+                  style={{
+                    width: '84%',
+                    backgroundColor: colors.alternateRowMoveframe,
+                    color: colors.alternateRowTextMoveframe,
+                    boxSizing: 'border-box',
+                    border: colors.moveframeBorderEnabled
+                      ? `${
+                          colors.moveframeBorderWidth === 'very-thin' ? '1px' :
+                          colors.moveframeBorderWidth === 'thin' ? '2px' :
+                          colors.moveframeBorderWidth === 'thick' ? '4px' : '3px'
+                        } solid ${colors.moveframeBorderColor || '#000000'}`
+                      : '3px solid transparent'
+                  }}
+                >
+                  Moveframe B - 100 × 4 A2 Break 1'30"
+                </div>
+              </div>
+
+              {/* Rows 7-10: Movelap Rows - 60% width, right-sided */}
+              <div className="space-y-1 flex flex-col items-end">
                 {[1, 2, 3, 4].map((row) => (
                   <div
                     key={row}
-                    className="p-2.5 rounded-lg text-sm"
+                    className="p-2 rounded text-xs flex justify-between items-center"
                     style={{
+                      width: '60%',
                       backgroundColor: row % 2 === 0 ? colors.alternateRowMovelap : colors.movelapHeader,
-                      color: colors.movelapHeaderText
+                      color: colors.movelapHeaderText,
+                      boxSizing: 'border-box',
+                      border: colors.movelapBorderEnabled
+                        ? `${
+                            colors.movelapBorderWidth === 'very-thin' ? '1px' :
+                            colors.movelapBorderWidth === 'thin' ? '2px' :
+                            colors.movelapBorderWidth === 'thick' ? '4px' : '3px'
+                          } solid ${colors.movelapBorderColor || '#000000'}`
+                        : '3px solid transparent'
                     }}
                   >
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Lap #{row}</span>
-                      <span className="text-xs">100m - A2 - B 1'30"</span>
-                    </div>
+                    <span className="font-medium">Lap #{row}</span>
+                    <span>100m - A2 - B 1'30"</span>
                   </div>
                 ))}
               </div>
 
-              {/* Microlap Details */}
-              <div
-                className="p-4 rounded-lg max-w-xs mx-auto"
-                style={{
-                  backgroundColor: colors.microlapBackground,
-                  color: colors.microlapText
-                }}
-              >
-                <h4 className="font-semibold mb-2">Microlap Details</h4>
-                <div className="text-sm space-y-1">
-                  <div>Distance: 400m</div>
-                  <div>Speed: A2</div>
-                  <div>Pause: 1:30</div>
+              {/* Row 11: Microlap Details - 35% width, right-sided */}
+              <div className="flex justify-end">
+                <div
+                  className="p-3 rounded"
+                  style={{
+                    width: '35%',
+                    backgroundColor: colors.microlapBackground,
+                    color: colors.microlapText,
+                    boxSizing: 'border-box',
+                    border: colors.movelapBorderEnabled
+                      ? `${
+                          colors.movelapBorderWidth === 'very-thin' ? '1px' :
+                          colors.movelapBorderWidth === 'thin' ? '2px' :
+                          colors.movelapBorderWidth === 'thick' ? '4px' : '3px'
+                        } solid ${colors.movelapBorderColor || '#000000'}`
+                      : '3px solid transparent'
+                  }}
+                >
+                  <h4 className="font-semibold text-sm mb-2">Microlap Details</h4>
+                  <div className="text-xs space-y-1">
+                    <div>Distance: 400m</div>
+                    <div>Speed: A2</div>
+                    <div>Pause: 1:30</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Selected Row - Active Moveframe */}
+              {/* Row 12: Selected Row - Active Moveframe */}
               <div
-                className="p-4 rounded-lg font-semibold"
+                className="p-3 rounded font-semibold text-sm"
                 style={{
                   backgroundColor: colors.selectedRow,
-                  color: colors.selectedRowText
+                  color: colors.selectedRowText,
+                  boxSizing: 'border-box',
+                  border: '3px solid transparent'
                 }}
               >
                 Selected Row - Active Moveframe

@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 interface WorkoutLegendProps {
   showWideMode?: boolean;
@@ -8,9 +9,28 @@ interface WorkoutLegendProps {
 }
 
 export default function WorkoutLegend({ showWideMode = false, className = '' }: WorkoutLegendProps) {
+  const [isExpanded, setIsExpanded] = useState(true);
+  
   return (
-    <div className={`mt-6 pt-4 border-t border-gray-200 ${className}`}>
-      <div className="flex flex-wrap gap-6 text-sm">
+    <div className={`mt-4 border border-blue-200 rounded-lg bg-blue-50 ${className}`}>
+      {/* Header - Always Visible */}
+      <div 
+        className="flex items-center justify-between p-3 cursor-pointer hover:bg-blue-100 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-2">
+          <Info className="w-5 h-5 text-blue-600" />
+          <h3 className="font-bold text-gray-900">Legend: Workout Symbols, Status Colors & Day Status</h3>
+        </div>
+        <button className="text-blue-600 hover:text-blue-800 transition-colors">
+          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        </button>
+      </div>
+      
+      {/* Content - Collapsible */}
+      {isExpanded && (
+        <div className="px-4 pb-4 pt-2 border-t border-blue-200">
+          <div className="flex flex-wrap gap-6 text-sm">
         {/* Workout Symbols */}
         <div className="space-y-1">
           <div className="font-semibold text-gray-700 mb-2">Workout Symbols:</div>
@@ -91,6 +111,8 @@ export default function WorkoutLegend({ showWideMode = false, className = '' }: 
           </div>
         )}
       </div>
+        </div>
+      )}
     </div>
   );
 }

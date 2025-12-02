@@ -175,6 +175,9 @@ export default function WorkoutCalendarView({
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-4">
+      {/* Legend */}
+      <WorkoutLegend showWideMode={viewMode === 'wide'} />
+      
       {/* Exclude Stretching Checkbox */}
       <div className="flex items-center justify-between mb-3 px-2 py-2 bg-gray-50 border border-gray-300 rounded">
         <label className="flex items-center gap-2 cursor-pointer">
@@ -397,9 +400,6 @@ export default function WorkoutCalendarView({
           ))}
         </div>
       )}
-
-      {/* Legend */}
-      <WorkoutLegend showWideMode={viewMode === 'wide'} />
     </div>
   );
 }

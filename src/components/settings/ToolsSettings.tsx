@@ -80,6 +80,8 @@ export default function ToolsSettings() {
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [editingExercise, setEditingExercise] = useState<Exercise | null>(null);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
+  const [editingSport, setEditingSport] = useState<Sport | null>(null);
+  const [showEditSportDialog, setShowEditSportDialog] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   
@@ -711,47 +713,38 @@ export default function ToolsSettings() {
 
   const handleLoadConfirm = async () => {
     try {
-      // Always load from English (en) as the base/default language
-      const response = await fetch(`/api/admin/tools-defaults/load?language=en`);
+      // Load from the selected language
+      const response = await fetch(`/api/admin/tools-defaults/load?language=${selectedLanguage}`);
       const data = await response.json();
 
       if (response.ok && data.toolsData) {
-        // Load English settings into current language for translation
+        const languageName = supportedLanguages.find(l => l.code === selectedLanguage)?.name;
+        
+        // Replace current data with loaded language data
         if (data.toolsData.periods) {
-          setPeriods(prev => [...prev, ...data.toolsData.periods.filter((p: Period) => 
-            !prev.some(existing => existing.id === p.id)
-          )]);
+          setPeriods(data.toolsData.periods);
         }
         if (data.toolsData.sections) {
-          setSections(prev => [...prev, ...data.toolsData.sections.filter((s: WorkoutSection) => 
-            !prev.some(existing => existing.id === s.id)
-          )]);
+          setSections(data.toolsData.sections);
         }
         if (data.toolsData.sports) {
-          setSports(prev => [...prev, ...data.toolsData.sports.filter((s: Sport) => 
-            !prev.some(existing => existing.id === s.id)
-          )]);
+          setSports(data.toolsData.sports);
         }
         if (data.toolsData.equipment) {
-          setEquipment(prev => [...prev, ...data.toolsData.equipment.filter((e: Equipment) => 
-            !prev.some(existing => existing.id === e.id)
-          )]);
+          setEquipment(data.toolsData.equipment);
         }
         if (data.toolsData.exercises) {
-          setExercises(prev => [...prev, ...data.toolsData.exercises.filter((e: Exercise) => 
-            !prev.some(existing => existing.id === e.id)
-          )]);
+          setExercises(data.toolsData.exercises);
         }
         if (data.toolsData.devices) {
-          setDevices(prev => [...prev, ...data.toolsData.devices.filter((d: Device) => 
-            !prev.some(existing => existing.id === d.id)
-          )]);
+          setDevices(data.toolsData.devices);
         }
         
-        alert(`✅ English default settings loaded!\n\nYou can now edit and translate these items into ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}, then click "Save as DEFAULT" to save them for this language.\n\nNote: Your existing items have been preserved.`);
+        alert(`✅ ${languageName} default settings loaded successfully!\n\nYou can now edit these items and click "Save as DEFAULT" to update the ${languageName} defaults.`);
         setShowLoadDialog(false);
       } else {
-        alert(`ℹ️ No English default settings found. Please create English defaults first.`);
+        const languageName = supportedLanguages.find(l => l.code === selectedLanguage)?.name;
+        alert(`ℹ️ No default settings found for ${languageName}.\n\nPlease create defaults for this language by:\n1. Loading English defaults if available\n2. Translating the items\n3. Saving them as ${languageName} defaults`);
         setShowLoadDialog(false);
       }
     } catch (error) {
@@ -953,10 +946,10 @@ export default function ToolsSettings() {
             <button
               onClick={loadLanguageDefaults}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-              title="Load English defaults for translation into current language"
+              title={`Load ${supportedLanguages.find(l => l.code === selectedLanguage)?.name} defaults`}
             >
               <Download className="w-3.5 h-3.5" />
-              Load (EN→{supportedLanguages.find(l => l.code === selectedLanguage)?.code.toUpperCase()})
+              Load ({supportedLanguages.find(l => l.code === selectedLanguage)?.code.toUpperCase()})
             </button>
             <button
               onClick={saveLanguageDefaults}
@@ -1152,6 +1145,18 @@ export default function ToolsSettings() {
                     <span className="text-xs text-gray-600">Quick access sport</span>
                   </div>
 
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSport(sport);
+                      setShowEditSportDialog(true);
+                    }}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    title="Edit sport name for translation"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+
                   <div className="text-sm text-blue-600 font-semibold">
                     Top {index + 1}
                   </div>
@@ -1196,6 +1201,18 @@ export default function ToolsSettings() {
                   )}
 
                   <span className="font-medium text-gray-700 flex-1">{sport.name}</span>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSport(sport);
+                      setShowEditSportDialog(true);
+                    }}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                    title="Edit sport name for translation"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
 
                   <span className="text-xs text-gray-500">
                     #{5 + index + 1}
@@ -2230,27 +2247,103 @@ export default function ToolsSettings() {
       {showLoadDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <h3 className="text-xl font-semibold mb-4">📥 Load English Defaults for Translation</h3>
+            <h3 className="text-xl font-semibold mb-4">📥 Load {supportedLanguages.find(l => l.code === selectedLanguage)?.name} Defaults</h3>
             <p className="text-gray-600 mb-4">
-              Load <strong>English</strong> default tools settings into <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong> for translation?
+              Load default tools settings for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>?
             </p>
             <p className="text-sm text-blue-700 bg-blue-50 p-3 rounded-lg mb-4">
-              📖 <strong>How it works:</strong> This will load the English defaults, which you can then edit/translate into {supportedLanguages.find(l => l.code === selectedLanguage)?.name}. After translation, click "Save as DEFAULT" to save them for {supportedLanguages.find(l => l.code === selectedLanguage)?.name}.
+              📖 <strong>How it works:</strong> This will load the saved {supportedLanguages.find(l => l.code === selectedLanguage)?.name} defaults. You can then edit them and click "Save as DEFAULT" to update them.
             </p>
             <p className="text-sm text-yellow-700 bg-yellow-50 p-3 rounded-lg mb-4">
-              ⚠️ <strong>Note:</strong> Your existing items will be preserved (no duplicates will be added).
+              ⚠️ <strong>Note:</strong> This will replace your current unsaved changes with the {supportedLanguages.find(l => l.code === selectedLanguage)?.name} defaults.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={handleLoadConfirm}
                 className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
               >
-                Load Defaults
+                Load {supportedLanguages.find(l => l.code === selectedLanguage)?.name}
               </button>
               <button
                 onClick={() => setShowLoadDialog(false)}
                 className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
               >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Sport Dialog */}
+      {showEditSportDialog && editingSport && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full">
+            <h3 className="text-2xl font-bold mb-6">
+              ✏️ Edit Sport - Translation
+            </h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Sport Name</label>
+                <input
+                  type="text"
+                  value={editingSport.name}
+                  onChange={(e) => setEditingSport({ ...editingSport, name: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter sport name in your language"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Translate the sport name into {supportedLanguages.find(l => l.code === selectedLanguage)?.name}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Sport Icon (Emoji)</label>
+                <input
+                  type="text"
+                  value={editingSport.icon}
+                  onChange={(e) => setEditingSport({ ...editingSport, icon: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-2xl text-center"
+                  placeholder="🏊‍♂️"
+                  maxLength={5}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  You can change the emoji icon if needed
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-700">
+                  <strong>💡 Tip:</strong> After translating all sports, click "Save as DEFAULT" at the top to save them for {supportedLanguages.find(l => l.code === selectedLanguage)?.name}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => {
+                  if (!editingSport.name.trim()) {
+                    alert('Please enter a sport name');
+                    return;
+                  }
+                  setSports(sports.map(s => s.id === editingSport.id ? editingSport : s));
+                  setShowEditSportDialog(false);
+                  setEditingSport(null);
+                }}
+                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                Save
+              </button>
+              <button
+                onClick={() => {
+                  setShowEditSportDialog(false);
+                  setEditingSport(null);
+                }}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold flex items-center justify-center gap-2"
+              >
+                <X className="w-4 h-4" />
                 Cancel
               </button>
             </div>

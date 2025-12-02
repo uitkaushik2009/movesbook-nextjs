@@ -9,6 +9,9 @@ import SimpleFooter from '@/components/SimpleFooter';
 import WorkoutGrid from '@/components/workouts/WorkoutGrid';
 import AddWorkoutModal from '@/components/workouts/AddWorkoutModal';
 import AddMoveframeModal from '@/components/workouts/AddMoveframeModal';
+import WorkoutRightSidebar from '@/components/workouts/WorkoutRightSidebar';
+import WorkoutLeftSidebar from '@/components/workouts/WorkoutLeftSidebar';
+import WorkoutHierarchyGuide from '@/components/workouts/WorkoutHierarchyGuide';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -29,12 +32,16 @@ export default function WorkoutsPage() {
   // Selection states
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [selectedWorkout, setSelectedWorkout] = useState<string | null>(null);
+  const [selectedMoveframe, setSelectedMoveframe] = useState<string | null>(null);
+  const [selectedMovelap, setSelectedMovelap] = useState<string | null>(null);
+  const [activeLevel, setActiveLevel] = useState<'day' | 'workout' | 'moveframe' | 'movelap' | null>(null);
   
   // Modal states
   const [showAddWorkoutModal, setShowAddWorkoutModal] = useState(false);
   const [addWorkoutDay, setAddWorkoutDay] = useState<any>(null);
   const [showAddMoveframeModal, setShowAddMoveframeModal] = useState(false);
   const [excludeStretchingFromTotals, setExcludeStretchingFromTotals] = useState(false);
+  const [showHierarchyGuide, setShowHierarchyGuide] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -106,66 +113,15 @@ export default function WorkoutsPage() {
       <div className="flex-1 flex overflow-hidden">
         
         {/* LEFT SIDEBAR - Workout Menu */}
-        <aside className="w-64 bg-gray-900 text-white flex flex-col overflow-y-auto">
-          <div className="p-4 border-b border-gray-700">
-            <h2 className="text-xl font-bold">Workout Menu</h2>
-          </div>
-          
-          {/* Workout Sections */}
-          <div className="p-3 space-y-2">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">
-              Sections
-            </h3>
-            
-            <button
-              onClick={() => setActiveSection('A')}
-              className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
-                activeSection === 'A'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 hover:bg-gray-700'
-              }`}
-            >
-              <div className="font-semibold text-sm">Section A: Current</div>
-              <div className="text-xs opacity-75">2-3 Weeks</div>
-            </button>
-            
-            <button
-              onClick={() => setActiveSection('B')}
-              className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
-                activeSection === 'B'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 hover:bg-gray-700'
-              }`}
-            >
-              <div className="font-semibold text-sm">Section B: Yearly</div>
-              <div className="text-xs opacity-75">Full Year</div>
-            </button>
-            
-            <button
-              onClick={() => setActiveSection('C')}
-              className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
-                activeSection === 'C'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 hover:bg-gray-700'
-              }`}
-            >
-              <div className="font-semibold text-sm">Section C: Done</div>
-              <div className="text-xs opacity-75">Diary</div>
-            </button>
-            
-            <button
-              onClick={() => setActiveSection('D')}
-              className={`w-full text-left px-3 py-2.5 rounded-lg transition-colors ${
-                activeSection === 'D'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-800 hover:bg-gray-700'
-              }`}
-            >
-              <div className="font-semibold text-sm">Section D: Archive</div>
-              <div className="text-xs opacity-75">Templates</div>
-            </button>
-          </div>
-        </aside>
+        <WorkoutLeftSidebar
+          activeSection={activeSection}
+          onSectionChange={setActiveSection}
+          onAddNewDay={() => console.log('Add new day')}
+          onAddWorkout={() => selectedDay && setShowAddWorkoutModal(true)}
+          onAddMoveframe={() => selectedWorkout && setShowAddMoveframeModal(true)}
+          onOpenSettings={() => console.log('Open settings')}
+          onOpenHierarchyGuide={() => setShowHierarchyGuide(true)}
+        />
         
         {/* CENTER - Main Workout Grid */}
         <main className="flex-1 bg-white overflow-auto">
@@ -206,59 +162,15 @@ export default function WorkoutsPage() {
         </main>
         
         {/* RIGHT SIDEBAR - Workout Tools */}
-        <aside className="w-64 bg-gray-50 border-l border-gray-200 flex flex-col overflow-y-auto">
-          <div className="p-4 bg-white border-b">
-            <h3 className="text-lg font-bold text-gray-800">Workout Tools</h3>
-          </div>
-          
-          <div className="p-4 space-y-3">
-            <button 
-              onClick={() => selectedDay && setShowAddWorkoutModal(true)}
-              disabled={!selectedDay}
-              className={`w-full px-4 py-3 rounded-lg transition-colors font-medium ${
-                selectedDay
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              + Add Workout
-            </button>
-            
-            <button 
-              onClick={() => selectedWorkout && setShowAddMoveframeModal(true)}
-              disabled={!selectedWorkout}
-              className={`w-full px-4 py-3 rounded-lg transition-colors font-medium ${
-                selectedWorkout
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              + Add Moveframe
-            </button>
-            
-            <button className="w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
-              📁 Load from Archive
-            </button>
-          </div>
-          
-          <div className="p-4 border-t">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Options</h4>
-            <div className="space-y-2 text-sm text-gray-600">
-              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">
-                🔄 Refresh
-              </button>
-              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">
-                📤 Export
-              </button>
-              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">
-                📥 Import
-              </button>
-              <button className="w-full text-left px-3 py-2 hover:bg-gray-100 rounded">
-                🖨️ Print
-              </button>
-            </div>
-          </div>
-        </aside>
+        <WorkoutRightSidebar
+          activeLevel={activeLevel}
+          selectedDay={selectedDay ? { id: selectedDay } : undefined}
+          selectedWorkout={selectedWorkout ? { id: selectedWorkout } : undefined}
+          selectedMoveframe={selectedMoveframe ? { id: selectedMoveframe } : undefined}
+          selectedMovelap={selectedMovelap ? { id: selectedMovelap } : undefined}
+          onAddWorkout={() => selectedDay && setShowAddWorkoutModal(true)}
+          onAddMoveframe={() => selectedWorkout && setShowAddMoveframeModal(true)}
+        />
         
       </div>
       
@@ -336,6 +248,13 @@ export default function WorkoutsPage() {
               console.error('Error adding moveframe:', error);
             }
           }}
+        />
+      )}
+      
+      {/* Hierarchy Guide Modal */}
+      {showHierarchyGuide && (
+        <WorkoutHierarchyGuide
+          onClose={() => setShowHierarchyGuide(false)}
         />
       )}
     </div>

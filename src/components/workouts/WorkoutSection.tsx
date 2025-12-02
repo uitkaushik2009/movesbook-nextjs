@@ -53,7 +53,65 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     loadUserProfile();
     loadWorkoutData();
     loadPeriods();
+    loadWorkoutPreferences();
   }, [activeSection]);
+
+  // Load workout preferences from database
+  const loadWorkoutPreferences = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('/api/user/settings', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const settings = await response.json();
+        const workoutPrefs = settings.workoutPreferences || {};
+        
+        // Load excludeStretchingFromTotals setting
+        if (workoutPrefs.excludeStretchingFromTotals !== undefined) {
+          setExcludeStretchingFromTotals(workoutPrefs.excludeStretchingFromTotals);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading workout preferences:', error);
+    }
+  };
+
+  // Save excludeStretchingFromTotals to database when it changes
+  useEffect(() => {
+    const saveExcludeStretchingSetting = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        await fetch('/api/user/settings', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            workoutPreferences: {
+              excludeStretchingFromTotals
+            }
+          })
+        });
+      } catch (error) {
+        console.error('Error saving excludeStretchingFromTotals setting:', error);
+      }
+    };
+
+    // Only save after initial load (skip first render)
+    if (excludeStretchingFromTotals !== false || document.readyState === 'complete') {
+      saveExcludeStretchingSetting();
+    }
+  }, [excludeStretchingFromTotals]);
   
   const loadUserProfile = async () => {
     try {
@@ -209,23 +267,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               </h2>
               
               <div className="flex gap-2 items-center">
-                {/* Quick Action Buttons */}
-                {/* Edit Day button - Select and edit day notes/annotations */}
-                <button 
-                  onClick={() => {
-                    // Show day selector to pick which day to edit
-                    if (!workoutPlan || !workoutPlan.weeks || workoutPlan.weeks.length === 0) {
-                      alert('No days available. Please create a plan first.');
-                      return;
-                    }
-                    setShowDaySelector(true);
-                  }}
-                  className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                  title="Edit day notes and annotations"
-                >
-                  <Calendar className="w-4 h-4" />
-                  Edit Day
-                </button>
                 
                 {/* Virtual Start Date for Sections B & C */}
                 {(activeSection === 'B' || activeSection === 'C') && (
@@ -249,89 +290,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   </button>
                 )}
                 
-                <button 
-                  onClick={() => {
-                    // Add Workout: User must select a day first from calendar or row
-                    if (!selectedDay && !addWorkoutDay) {
-                      alert('Please select a day first by clicking on a row or date in the calendar');
-                      return;
-                    }
-                    
-                    // Find the selected day
-                    let dayToUse = addWorkoutDay;
-                    if (!dayToUse && selectedDay) {
-                      dayToUse = workoutPlan?.weeks?.flatMap((w: any) => w.days)?.find((d: any) => d.id === selectedDay);
-                    }
-                    if (!dayToUse && workoutPlan?.weeks?.[0]?.days?.[0]) {
-                      dayToUse = workoutPlan.weeks[0].days[0];
-                    }
-                    
-                    if (!dayToUse) {
-                      alert('Please select a valid day');
-                      return;
-                    }
-                    
-                    // Check how many workouts exist (max 3 per day)
-                    const existingWorkouts = dayToUse.workouts || [];
-                    if (existingWorkouts.length >= 3) {
-                      alert('Maximum 3 workouts per day. Please edit an existing workout.');
-                      return;
-                    }
-                    
-                    setAddWorkoutDay(dayToUse);
-                    setWorkoutModalMode('add');
-                    setEditingWorkout(null);
-                    setShowAddWorkoutModal(true);
-                  }}
-                  className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                  title="Add workout to selected day"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Workout
-                </button>
-                
-                <button 
-                  onClick={() => {
-                    // Add Moveframe: MOST IMPORTANT - Must select workout first
-                    // Step 1: Find the selected day
-                    if (!selectedDay && !addWorkoutDay) {
-                      alert('Please select a day first by clicking on a row or date in the calendar');
-                      return;
-                    }
-                    
-                    let dayToUse = addWorkoutDay;
-                    if (!dayToUse && selectedDay) {
-                      dayToUse = workoutPlan?.weeks?.flatMap((w: any) => w.days)?.find((d: any) => d.id === selectedDay);
-                    }
-                    if (!dayToUse && workoutPlan?.weeks?.[0]?.days?.[0]) {
-                      dayToUse = workoutPlan.weeks[0].days[0];
-                    }
-                    
-                    if (!dayToUse) {
-                      alert('Please select a valid day');
-                      return;
-                    }
-                    
-                    // Step 2: Check if day has any workouts
-                    const existingWorkouts = dayToUse.workouts || [];
-                    if (existingWorkouts.length === 0) {
-                      alert('No workouts exist for this day. Please add a workout first.');
-                      return;
-                    }
-                    
-                    // Step 3: Show workout selector prompt (ONLY EXISTING workouts)
-                    setAvailableWorkouts(existingWorkouts);
-                    setAddWorkoutDay(dayToUse);
-                    setShowWorkoutSelector(true);
-                  }}
-                  className="px-3 py-1.5 bg-orange-600 text-white hover:bg-orange-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                  title="Add moveframe to a workout (select workout first)"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Moveframe
-                </button>
-                
-                <div className="w-px h-8 bg-gray-300 mx-2"></div>
                 
                 {/* View Toggle */}
                 <button
@@ -524,9 +482,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setShowAddWorkoutModal(true);
                  }}
                 onEditDay={(day) => {
-                  // TODO: Implement edit day modal
-                  alert(`Edit Day: ${day.dayOfWeek} - Week ${day.weekNumber}\nThis feature will open a modal to edit day details (weather, feeling, notes, etc.)`);
-                  console.log('Edit day:', day);
+                  setEditingDay(day);
+                  setShowEditDayModal(true);
                 }}
                  onAddWorkout={(day) => {
                    setAddWorkoutDay(day);

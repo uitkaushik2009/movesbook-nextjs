@@ -49,7 +49,7 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    userType: 'athlete' as 'athlete' | 'coach' | 'team' | 'club' | 'group' | 'groupAdmin',
+    userType: 'athlete' as 'athlete' | 'coach' | 'team' | 'club' | 'group',
     gender: '' as '' | 'male' | 'female' | 'other',
     birthdate: '',
     country: ''
@@ -192,7 +192,6 @@ export default function RegisterPage() {
                 <option value="team" className="text-gray-800">Team</option>
                 <option value="club" className="text-gray-800">Club</option>
                 <option value="group" className="text-gray-800">Group</option>
-                <option value="groupAdmin" className="text-gray-800">Group Administrator</option>
               </select>
             </div>
 

@@ -192,6 +192,9 @@ export default function WorkoutGrid({
 
   return (
     <div className="space-y-3">
+      {/* Legend */}
+      <WorkoutLegend />
+      
       {/* Exclude Stretching Checkbox */}
       <div className="flex items-center justify-between mb-3 px-2 py-2 bg-gray-50 border border-gray-300 rounded">
         <label className="flex items-center gap-2 cursor-pointer">
@@ -684,9 +687,6 @@ export default function WorkoutGrid({
           </button>
         </div>
       )}
-      
-      {/* Legend */}
-      <WorkoutLegend />
     </div>
   );
 }

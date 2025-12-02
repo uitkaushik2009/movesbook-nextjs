@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import ModernNavbar from '@/components/ModernNavbar';
 import ModernFooter from '@/components/ModernFooter';
-import LoginModal from '@/components/LoginModal';
 import AdminLoginModal from '@/components/AdminLoginModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect } from 'react';
@@ -216,23 +215,20 @@ function getFeaturesForUserType(userType: string) {
 export default function HomePage() {
   const { t } = useLanguage();
   const [userType, setUserType] = useState<'athlete' | 'coach' | 'team' | 'group' | 'club'>('athlete');
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
   const { requireAuth } = useAuth();
 
-  // Check URL parameters for login/admin modals
+  // Check URL parameters for admin modal
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('showLogin') === 'true') {
-      setShowLoginModal(true);
-    }
     if (params.get('showAdmin') === 'true') {
       setShowAdminModal(true);
     }
   }, []);
 
   const handleLoginClick = () => {
-    setShowLoginModal(true);
+    // Redirect to /login page instead of showing modal
+    window.location.href = '/login';
   };
 
   const handleAdminClick = () => {
@@ -252,18 +248,12 @@ export default function HomePage() {
         onLoginClick={handleLoginClick}
         onAdminClick={handleAdminClick}
       />
-      
-      {/* Login Modal */}
-      <LoginModal 
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-      />
 
       {/* Admin Login Modal */}
       <AdminLoginModal 
         isOpen={showAdminModal}
         onClose={() => setShowAdminModal(false)}
-        onSwitchToUserLogin={() => setShowLoginModal(true)}
+        onSwitchToUserLogin={() => window.location.href = '/login'}
       />
 
       {/* Hero Section */}
