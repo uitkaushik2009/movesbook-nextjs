@@ -904,7 +904,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  })
                });
                
-<<<<<<< HEAD
               if (response.ok) {
                 const result = await response.json();
                 console.log('Moveframe created successfully:', result);
@@ -930,23 +929,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 }
                 
                 showMessage('success', 'Moveframe added successfully');
-=======
-               if (response.ok) {
-                 const result = await response.json();
-                 console.log('Moveframe created successfully:', result);
-                 
-                 // Keep workout expanded
-                 if (selectedWorkout) {
-                   const newExpandedWorkouts = new Set(expandedWorkouts);
-                   newExpandedWorkouts.add(selectedWorkout);
-                   setExpandedWorkouts(newExpandedWorkouts);
-                 }
-                 
-                 setShowAddMoveframeModal(false);
-                 await loadWorkoutData();
-                 
-                 alert('Moveframe added successfully!');
->>>>>>> parent of 51565ec (database confirmation)
                } else {
                  const error = await response.json();
                  console.error('Failed to create moveframe:', error);
@@ -1197,6 +1179,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           </div>
         </div>
       )}
+      
       
       {/* Day Selector Modal - For Editing Day Notes/Annotations */}
       {showDaySelector && workoutPlan && (
