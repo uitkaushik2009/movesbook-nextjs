@@ -1417,6 +1417,9 @@ export default function WorkoutTableView({
                   key={day.id} 
                   className={`${rowBgClass} cursor-pointer ${dayStatus.border} ${getWeekEndBorder(day.dayOfWeek)}`}
                   onClick={() => {
+                    // Set as active day for add buttons
+                    setActiveDay?.(day);
+                    
                     // Check if this day has workouts
                     if (day.workouts && day.workouts.length > 0) {
                       toggleDayDetails(day.id);
