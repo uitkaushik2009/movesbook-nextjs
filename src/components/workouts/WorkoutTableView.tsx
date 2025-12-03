@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Edit, Copy, Trash2, ChevronDown, ChevronRight, MoreVertical, GripVertical } from 'lucide-react';
 import { WorkoutActionModal, MoveframePositionModal, ConfirmRemovalModal } from './DragDropModals';
 import WorkoutLegend from './WorkoutLegend';
+import RowActionButtons from './RowActionButtons';
 
 interface WorkoutTableViewProps {
   workoutPlan: any;
@@ -1702,89 +1703,27 @@ export default function WorkoutTableView({
                     </>
                   )}
                   
-                  {/* Options column - sticky on the right */}
-                  {isFirstWorkout ? (
-                    <td className={`border border-gray-300 px-1 py-1 text-center sticky right-0 z-10 shadow-lg ${stickyBg}`} rowSpan={dayWorkouts.length}>
-                      <div className="relative flex flex-col gap-1">
-                        {/* Day Options Button */}
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleOptions(day.id);
-                          }}
-                          className="px-2 py-1 hover:bg-gray-200 rounded text-gray-700 text-xs font-medium"
-                          title="Click for options"
-                        >
-                          Options
-                        </button>
-                        
-                        {expandedOptions === day.id && (
-                          <div 
-                            className="absolute right-0 top-full mt-1 bg-white border-2 border-gray-400 rounded shadow-2xl z-[9999] min-w-[140px]"
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ marginRight: '-1px' }}
-                          >
-                            <button 
-                              onClick={() => handleEdit(day)}
-                              className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 font-medium"
-                              title="Edit"
-                            >
-                              Edit
-                            </button>
-                            <button 
-                              onClick={handleCopy}
-                              disabled={selectedDays.size === 0}
-                              className={`w-full px-3 py-2 text-left text-xs border-t ${
-                                selectedDays.size > 0 ? 'hover:bg-blue-50' : 'text-gray-400 cursor-not-allowed'
-                              }`}
-                              title={selectedDays.size > 0 ? `Copy ${selectedDays.size} selected day(s)` : 'Select days first'}
-                            >
-                              Copy
-                            </button>
-                            <button 
-                              onClick={handleMove}
-                              disabled={selectedDays.size === 0}
-                              className={`w-full px-3 py-2 text-left text-xs ${
-                                selectedDays.size > 0 ? 'hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'
-                              }`}
-                              title={selectedDays.size > 0 ? `Move ${selectedDays.size} selected day(s)` : 'Select days first'}
-                            >
-                              Move
-                            </button>
-                            <button 
-                              onClick={() => handleExport(day)}
-                              className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 border-t"
-                              title="Export"
-                            >
-                              Export
-                            </button>
-                            <button 
-                              onClick={() => handleShare(day)}
-                              className="w-full px-3 py-2 text-left text-xs hover:bg-green-50"
-                              title="Share"
-                            >
-                              Share
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(day)}
-                              className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 text-red-600 border-t"
-                              title="Delete"
-                            >
-                              Delete
-                            </button>
-                            <button 
-                              onClick={() => handlePrint(day)}
-                              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50"
-                              title="Print"
-                            >
-                              Print
-                            </button>
-                          </div>
-                        )}
-                        
-                      </div>
-                    </td>
-                  ) : null}
+                  {/* Options column - sticky on the right - EACH WORKOUT gets its own! */}
+                  <td className={`border border-gray-300 px-1 py-1 text-center sticky right-0 z-10 shadow-lg ${stickyBg}`}>
+                    <RowActionButtons
+                      rowType="workout"
+                      rowId={workout.id}
+                      rowData={workout}
+                      onEdit={() => onEditWorkout?.(workout, day)}
+                      onDelete={() => {
+                        if (confirm(`Delete workout "${workout.name || `Workout ${workout.sessionNumber}`}"?`)) {
+                          // TODO: Implement workout deletion API call
+                          onDataChanged?.();
+                        }
+                      }}
+                      optionsMenuItems={[
+                        { label: 'Copy Workout', onClick: () => alert(`Copy workout: ${workout.name || `#${workout.sessionNumber}`}`) },
+                        { label: 'Move Workout', onClick: () => alert(`Move workout: ${workout.name || `#${workout.sessionNumber}`}`) },
+                        { label: 'Duplicate', onClick: () => alert(`Duplicate workout: ${workout.name || `#${workout.sessionNumber}`}`) },
+                        { label: 'Add Moveframe', onClick: () => onAddMoveframe?.(workout, day), className: 'w-full px-3 py-2 text-left text-xs hover:bg-green-50 border-t' }
+                      ]}
+                    />
+                  </td>
                 </tr>
               );
 
