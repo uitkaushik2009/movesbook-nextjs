@@ -1520,14 +1520,14 @@ export default function WorkoutTableView({
                     // Only toggle if not clicking on interactive elements
                     const target = e.target as HTMLElement;
                     if (!target.closest('input, button, select, textarea, a')) {
-                      toggleDayDetails(day.id);
+                      toggleWorkoutExpansion(workout.id);
                     }
                   }}
                   onDoubleClick={(e) => {
                     e.stopPropagation();
                     onEditWorkout?.(workout, day);
                   }}
-                  title="Click to expand/collapse details | Double-click to edit workout | Drag to move"
+                  title="Click to expand/collapse moveframes | Double-click to edit workout | Drag to move"
                 >
                   {isFirstWorkout && (
                     <>
@@ -1542,18 +1542,42 @@ export default function WorkoutTableView({
                         />
                       </td>
                       
-                      {/* Date */}
+                      {/* Date with Day Expand Button */}
                       <td className={`border border-gray-300 px-2 py-1 text-center text-xs sticky z-10 ${stickyBg}`} style={{left: `${leftPos}px`}} rowSpan={dayWorkouts.length}>
-                        {formatDate(day.date)}
+                        <div className="flex items-center justify-between gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleDayDetails(day.id);
+                            }}
+                            className="hover:bg-gray-200 rounded p-0.5"
+                            title="Toggle day details"
+                          >
+                            {expandedDayDetails.has(day.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                          </button>
+                          <span>{formatDate(day.date)}</span>
+                        </div>
                       </td>
                       
-                      {/* Workout # with symbols */}
+                      {/* Workout # with symbols and expand buttons */}
                       <td className={`border border-gray-300 px-2 py-1 text-center sticky z-10 ${stickyBg}`} style={{left: `${leftPos += columnWidths.date}px`}} rowSpan={dayWorkouts.length}>
                         <div className="flex flex-col items-center gap-0.5">
                           {dayWorkouts.map((w: any, idx: number) => (
-                            <span key={w.id} className="text-base" style={{ color: getWorkoutStatusColor(w.status || 'NOT_PLANNED').replace('#', '') === 'ffffff' ? '#d1d5db' : getWorkoutStatusColor(w.status || 'NOT_PLANNED') }}>
-                              {getWorkoutSymbol(w.sessionNumber || idx + 1)}
-                            </span>
+                            <div key={w.id} className="flex items-center gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleWorkoutExpansion(w.id);
+                                }}
+                                className="hover:bg-gray-200 rounded p-0.5"
+                                title={`Click to ${expandedWorkouts.has(w.id) ? 'collapse' : 'expand'} moveframes`}
+                              >
+                                {expandedWorkouts.has(w.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                              </button>
+                              <span className="text-base" style={{ color: getWorkoutStatusColor(w.status || 'NOT_PLANNED').replace('#', '') === 'ffffff' ? '#d1d5db' : getWorkoutStatusColor(w.status || 'NOT_PLANNED') }}>
+                                {getWorkoutSymbol(w.sessionNumber || idx + 1)}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       </td>
