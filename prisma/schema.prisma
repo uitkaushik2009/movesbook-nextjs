@@ -150,6 +150,14 @@ model WorkoutDay {
   weather      String?
   feelingStatus String?
   notes        String?  @db.Text
+  
+  // Section A/B/C/D classification
+  storageZone  StorageZone @default(B) // A=Current 2 weeks, B=Yearly plan, C=Done, D=Archive
+  isFromSharedSource Boolean @default(false)
+  creatorRole  UserType?  // Who created this workout
+  originalSenderId String?  // If received from coach/team/club
+  assignedToUserId String?  // Final athlete who owns this
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -159,7 +167,15 @@ model WorkoutDay {
 
   @@unique([userId, date]) // Ensure one day per date per user
   @@index([userId, date])
+  @@index([userId, storageZone, date]) // Query by section
   @@map("workout_days")
+}
+
+enum StorageZone {
+  A  // Current 2-week plan
+  B  // Yearly plan (beyond 2 weeks)
+  C  // Workouts done (diary)
+  D  // Archive / Incoming shared workouts
 }
 
 model Period {

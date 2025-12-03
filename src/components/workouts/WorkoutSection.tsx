@@ -253,8 +253,19 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Full API response:', JSON.stringify(data, null, 2));
         console.log('✅ Plan loaded:', data.plan?.id);
         console.log('📊 Number of weeks:', data.plan?.weeks?.length);
+        console.log('📊 Plan object:', data.plan);
+        console.log('📊 Weeks array:', data.plan?.weeks);
+        
+        // Debug: Check weeks structure
+        if (data.plan?.weeks && data.plan.weeks.length > 0) {
+          console.log('✅ First week:', data.plan.weeks[0]);
+          console.log('✅ First week days:', data.plan.weeks[0].days);
+        } else {
+          console.warn('⚠️ No weeks found in plan!');
+        }
         
         // Debug: Check moveframes
         if (data.plan?.weeks) {
@@ -272,8 +283,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         }
         
         setWorkoutPlan(data.plan);
+        console.log('✅ workoutPlan state set to:', data.plan);
       } else {
         console.error('❌ Failed to load plan:', response.status);
+        const errorText = await response.text();
+        console.error('❌ Error response:', errorText);
       }
     } catch (error) {
       console.error('💥 Error loading workout data:', error);

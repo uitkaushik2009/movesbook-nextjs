@@ -22,6 +22,32 @@ export async function GET(request: NextRequest) {
 
     console.log('GET - Finding NEWEST plan for type:', type);
 
+    // Calculate date ranges for sections
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const twoWeeksAhead = new Date(today);
+    twoWeeksAhead.setDate(twoWeeksAhead.getDate() + 13); // 14 days total (0-13)
+    
+    // Date filter based on section type
+    let dateFilter: any = {};
+    if (type === 'CURRENT_WEEKS') {
+      // Section A: Only current 2 weeks (today to +13 days)
+      dateFilter = {
+        gte: today,
+        lte: twoWeeksAhead
+      };
+      console.log(`Section A date range: ${today.toISOString()} to ${twoWeeksAhead.toISOString()}`);
+    } else if (type === 'YEARLY_PLAN') {
+      // Section B: Future dates beyond 2-week window
+      const dayAfterTwoWeeks = new Date(twoWeeksAhead);
+      dayAfterTwoWeeks.setDate(dayAfterTwoWeeks.getDate() + 1);
+      dateFilter = {
+        gte: dayAfterTwoWeeks
+      };
+      console.log(`Section B date range: from ${dayAfterTwoWeeks.toISOString()} onwards`);
+    }
+
     // Get or create workout plan - ORDER BY NEWEST FIRST!
     let plan = await prisma.workoutPlan.findFirst({
       where: {
@@ -32,6 +58,7 @@ export async function GET(request: NextRequest) {
         weeks: {
           include: {
             days: {
+              where: Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
               include: {
                 period: true,
                 workouts: {
@@ -61,19 +88,26 @@ export async function GET(request: NextRequest) {
 
     // If plan doesn't exist, create it
     if (!plan) {
-      const startDate = new Date();
-      const endDate = new Date();
-      
+      let startDate = new Date();
+      let endDate = new Date();
       let numberOfWeeks = 0;
+      
       if (type === 'CURRENT_WEEKS') {
-        endDate.setDate(endDate.getDate() + 21); // 3 weeks
-        numberOfWeeks = 3;
+        // Section A: Start today, 2 weeks (14 days) = 2 weeks
+        startDate = new Date(today);
+        endDate = new Date(twoWeeksAhead);
+        numberOfWeeks = 2; // 2 weeks for current period
       } else if (type === 'YEARLY_PLAN') {
-        endDate.setDate(endDate.getDate() + 364); // ~52 weeks
+        // Section B: Start after 2-week window, extend to 10 weeks ahead
+        const dayAfterTwoWeeks = new Date(twoWeeksAhead);
+        dayAfterTwoWeeks.setDate(dayAfterTwoWeeks.getDate() + 1);
+        startDate = dayAfterTwoWeeks;
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 70); // 10 weeks
         numberOfWeeks = 10; // Create first 10 weeks for yearly plan
       }
 
-      console.log(`Creating new ${type} plan with ${numberOfWeeks} weeks`);
+      console.log(`Creating new ${type} plan with ${numberOfWeeks} weeks from ${startDate.toISOString()} to ${endDate.toISOString()}`);
 
       // Get or create default period
       let defaultPeriod = await prisma.period.findFirst({
@@ -137,13 +171,14 @@ export async function GET(request: NextRequest) {
 
       console.log(`Created plan with ${numberOfWeeks} weeks and ${numberOfWeeks * 7} days`);
 
-      // Fetch the complete plan with all includes
+      // Fetch the complete plan with all includes and date filter
       plan = await prisma.workoutPlan.findUnique({
         where: { id: plan.id },
         include: {
           weeks: {
             include: {
               days: {
+                where: Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
                 include: {
                   period: true,
                   workouts: {
@@ -165,6 +200,16 @@ export async function GET(request: NextRequest) {
           }
         }
       });
+      
+      // Filter out weeks with no days (after date filtering)
+      if (plan && plan.weeks) {
+        plan.weeks = plan.weeks.filter((week: any) => week.days && week.days.length > 0);
+      }
+    }
+    
+    // Also filter weeks on existing plans
+    if (plan && plan.weeks) {
+      plan.weeks = plan.weeks.filter((week: any) => week.days && week.days.length > 0);
     }
 
     return NextResponse.json({ plan });

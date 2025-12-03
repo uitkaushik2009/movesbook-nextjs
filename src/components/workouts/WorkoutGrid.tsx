@@ -176,7 +176,13 @@ export default function WorkoutGrid({
     return sportIcons[sport?.toUpperCase()] || '🏋️';
   };
 
+  // Debug: Log what WorkoutGrid receives
+  console.log('🎯 WorkoutGrid received workoutPlan:', workoutPlan);
+  console.log('🎯 workoutPlan?.weeks:', workoutPlan?.weeks);
+  console.log('🎯 workoutPlan?.weeks?.length:', workoutPlan?.weeks?.length);
+  
   if (!workoutPlan || !workoutPlan.weeks) {
+    console.warn('⚠️ WorkoutGrid: No workoutPlan or no weeks');
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 text-lg mb-4">No workout plan yet</p>
@@ -185,6 +191,21 @@ export default function WorkoutGrid({
           className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
         >
           Create Workout Plan
+        </button>
+      </div>
+    );
+  }
+  
+  if (workoutPlan.weeks.length === 0) {
+    console.warn('⚠️ WorkoutGrid: Weeks array is empty');
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500 text-lg mb-4">No weeks in workout plan</p>
+        <button 
+          onClick={onCreatePlan}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+        >
+          Reload Workout Plan
         </button>
       </div>
     );
