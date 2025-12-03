@@ -39,6 +39,8 @@ import ImportWorkoutsModal from '@/components/workouts/ImportWorkoutsModal';
 import AddDayModal from '@/components/workouts/AddDayModal';
 import EditDayModal from '@/components/workouts/modals/EditDayModal';
 import AddMovelapModal from '@/components/workouts/modals/AddMovelapModal';
+import EditMoveframeModal from '@/components/workouts/modals/EditMoveframeModal';
+import EditMovelapModal from '@/components/workouts/modals/EditMovelapModal';
 
 // Icons
 import { X, Download, Plus, List, Table, Calendar } from 'lucide-react';
@@ -1091,6 +1093,39 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           onSuccess={(msg) => showMessage('success', msg)}
         />
       )}
+
+      {/* ==================== EDIT MOVEFRAME MODAL (Extracted Component) ==================== */}
+      {showEditMoveframeModal && editingMoveframe && activeWorkout && activeDay && (
+        <EditMoveframeModal
+          moveframe={editingMoveframe}
+          workout={activeWorkout}
+          day={activeDay}
+          onClose={() => {
+            setShowEditMoveframeModal(false);
+            setEditingMoveframe(null);
+          }}
+          onSave={() => loadWorkoutData(activeSection)}
+          onError={(msg) => showMessage('error', msg)}
+          onSuccess={(msg) => showMessage('success', msg)}
+        />
+      )}
+
+      {/* ==================== EDIT MOVELAP MODAL (Extracted Component) ==================== */}
+      {showEditMovelapModal && editingMovelap && activeMoveframe && activeWorkout && activeDay && (
+        <EditMovelapModal
+          movelap={editingMovelap}
+          moveframe={activeMoveframe}
+          workout={activeWorkout}
+          day={activeDay}
+          onClose={() => {
+            setShowEditMovelapModal(false);
+            setEditingMovelap(null);
+          }}
+          onSave={() => loadWorkoutData(activeSection)}
+          onError={(msg) => showMessage('error', msg)}
+          onSuccess={(msg) => showMessage('success', msg)}
+        />
+      )}
      </div>
    );
- }
+}
