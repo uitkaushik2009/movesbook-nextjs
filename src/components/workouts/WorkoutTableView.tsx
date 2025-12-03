@@ -29,10 +29,6 @@ interface WorkoutTableViewProps {
   onAddWorkoutClick?: () => void;
   onAddMoveframeClick?: () => void;
   onAddMovelapClick?: () => void;
-  // Expansion state control from parent
-  autoExpandDayId?: string | null;
-  autoExpandWorkoutId?: string | null;
-  autoExpandMoveframeId?: string | null;
 }
 
 export default function WorkoutTableView({
@@ -56,10 +52,7 @@ export default function WorkoutTableView({
   onEditDayClick,
   onAddWorkoutClick,
   onAddMoveframeClick,
-  onAddMovelapClick,
-  autoExpandDayId,
-  autoExpandWorkoutId,
-  autoExpandMoveframeId
+  onAddMovelapClick
 }: WorkoutTableViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollbarStyle, setScrollbarStyle] = useState({ left: 0, width: '100%' });
@@ -166,41 +159,6 @@ export default function WorkoutTableView({
     movelapTextColorSource: 'table',
     movelapRows: {}
   });
-
-  // Auto-expand all days with workouts on initial load
-  useEffect(() => {
-    if (workoutPlan?.weeks) {
-      const daysWithWorkouts = workoutPlan.weeks.flatMap((week: any) =>
-        (week.days || []).filter((day: any) => day.workouts && day.workouts.length > 0).map((day: any) => day.id)
-      );
-      if (daysWithWorkouts.length > 0) {
-        console.log('📂 Auto-expanding days with workouts:', daysWithWorkouts.length);
-        setExpandedDayDetails(new Set(daysWithWorkouts));
-      }
-    }
-  }, [workoutPlan]);
-
-  // Auto-expand rows when new items are added
-  useEffect(() => {
-    if (autoExpandDayId) {
-      console.log('🔓 Auto-expanding day:', autoExpandDayId);
-      setExpandedDayDetails(prev => new Set(prev).add(autoExpandDayId));
-    }
-  }, [autoExpandDayId]);
-
-  useEffect(() => {
-    if (autoExpandWorkoutId) {
-      console.log('🔓 Auto-expanding workout:', autoExpandWorkoutId);
-      setExpandedWorkouts(prev => new Set(prev).add(autoExpandWorkoutId));
-    }
-  }, [autoExpandWorkoutId]);
-
-  useEffect(() => {
-    if (autoExpandMoveframeId) {
-      console.log('🔓 Auto-expanding moveframe:', autoExpandMoveframeId);
-      setExpandedMoveframes(prev => new Set(prev).add(autoExpandMoveframeId));
-    }
-  }, [autoExpandMoveframeId]);
 
   // Helper function to generate border style based on settings
   const getBorderStyle = (section: 'day' | 'workout' | 'moveframe' | 'movelap') => {
@@ -1615,10 +1573,7 @@ export default function WorkoutTableView({
               );
             }
 
-            // Day with workouts - REMOVED OLD COMPACT VIEW
-            // Now using only the LIVE PREVIEW hierarchical layout below
-            
-            /* COMMENTED OUT OLD RENDERING - NOW USING LIVE PREVIEW LAYOUT ONLY
+            // Day with workouts - show one row per workout
             const workoutRows: JSX.Element[] = [];
             const primarySport = getPrimarySport(day);
             
@@ -2301,13 +2256,8 @@ export default function WorkoutTableView({
                 });
               }
             });
-            END OF COMMENTED OUT OLD RENDERING */
 
-            // ========== LIVE PREVIEW STYLED HIERARCHICAL LAYOUT ==========
-            // Declare workoutRows for the new hierarchical layout
-            const workoutRows: JSX.Element[] = [];
-            
-            // Always show expanded day details for hierarchical view
+            // Add expanded day details row if day details are expanded - LIVE PREVIEW STYLED LAYOUT
             if (expandedDayDetails.has(day.id) && hasWorkouts) {
               // ==================== DAY HEADER - 100% width ====================
               workoutRows.push(
