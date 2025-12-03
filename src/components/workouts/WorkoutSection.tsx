@@ -33,6 +33,7 @@ import { useWorkoutData } from '@/hooks/useWorkoutData';
 import WorkoutGrid from '@/components/workouts/WorkoutGrid';
 import WorkoutTableView from '@/components/workouts/WorkoutTableView';
 import WorkoutCalendarView from '@/components/workouts/WorkoutCalendarView';
+import DayWorkoutHierarchy from '@/components/workouts/tables/DayWorkoutHierarchy';
 import AddWorkoutModal from '@/components/workouts/AddWorkoutModal';
 import AddMoveframeModal from '@/components/workouts/AddMoveframeModal';
 import ImportWorkoutsModal from '@/components/workouts/ImportWorkoutsModal';
@@ -516,7 +517,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  }}
                />
             ) : (
-               <WorkoutTableView
+               <DayWorkoutHierarchy
                  workoutPlan={
                    selectedWeekForTable && workoutPlan
                      ? {
@@ -528,24 +529,10 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        }
                      : workoutPlan
                  }
-                 periods={periods}
-                 activeSection={activeSection}
-                 excludeStretchingFromTotals={excludeStretchingFromTotals}
-                 setExcludeStretchingFromTotals={setExcludeStretchingFromTotals}
                  onEditWorkout={(workout, day) => {
                    setEditingWorkout(workout);
                    setAddWorkoutDay(day);
                    setWorkoutModalMode('edit');
-                   setShowAddWorkoutModal(true);
-                 }}
-                onEditDay={(day) => {
-                  setEditingDay(day);
-                  setShowEditDayModal(true);
-                }}
-                 onAddWorkout={(day) => {
-                   setAddWorkoutDay(day);
-                   setWorkoutModalMode('add');
-                   setEditingWorkout(null);
                    setShowAddWorkoutModal(true);
                  }}
                  onAddMoveframe={(workout, day) => {
@@ -553,7 +540,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setSelectedDay(day);
                    setShowAddMoveframeModal(true);
                  }}
-                 onDataChanged={() => loadWorkoutData(activeSection)}
                  onEditMoveframe={(moveframe, workout, day) => {
                    setEditingMoveframe(moveframe);
                    setActiveDay(day);
@@ -570,15 +556,29 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setShowEditMovelapModal(true);
                  }}
                  onAddMovelap={(moveframe, workout, day) => {
-                   setActiveDay(day);
-                   setActiveWorkout(workout);
                    setActiveMoveframe(moveframe);
+                   setActiveWorkout(workout);
+                   setActiveDay(day);
                    setShowAddMovelapModal(true);
                  }}
-                 setActiveDay={setActiveDay}
-                 setActiveWorkout={setActiveWorkout}
-                 setActiveMoveframe={setActiveMoveframe}
-                 setActiveMovelap={setActiveMovelap}
+                 onDeleteWorkout={(workout, day) => {
+                   if (confirm('Are you sure you want to delete this workout?')) {
+                     // TODO: Implement delete workout API call
+                     loadWorkoutData(activeSection);
+                   }
+                 }}
+                 onDeleteMoveframe={(moveframe, workout, day) => {
+                   if (confirm('Are you sure you want to delete this moveframe?')) {
+                     // TODO: Implement delete moveframe API call
+                     loadWorkoutData(activeSection);
+                   }
+                 }}
+                 onDeleteMovelap={(movelap, moveframe, workout, day) => {
+                   if (confirm('Are you sure you want to delete this movelap?')) {
+                     // TODO: Implement delete movelap API call
+                     loadWorkoutData(activeSection);
+                   }
+                 }}
                />
             )}
           </div>
