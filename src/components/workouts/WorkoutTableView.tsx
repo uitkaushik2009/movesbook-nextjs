@@ -1858,58 +1858,26 @@ export default function WorkoutTableView({
                         {moveframe.notes || ''}
                       </td>
                       
-                      {/* Moveframe Options */}
+                      {/* Moveframe Options - Edit | Options | Delete */}
                       <td className="border border-gray-300 px-2 py-1 text-xs text-center sticky right-0 z-10 bg-blue-50">
-                        <div className="relative">
-                          <button 
-                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setMoveframeOptionsOpen(moveframeOptionsOpen === moveframe.id ? null : moveframe.id);
-                            }}
-                            title="Moveframe options"
-                          >
-                            Options
-                          </button>
-                          
-                          {moveframeOptionsOpen === moveframe.id && (
-                            <div 
-                              className="absolute right-0 top-full mt-1 bg-white border-2 border-gray-400 rounded shadow-2xl z-[9999] min-w-[140px]"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <button 
-                                onClick={() => { alert(`Edit moveframe ${moveframe.letter}`); setMoveframeOptionsOpen(null); }}
-                                className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 font-medium"
-                              >
-                                Edit
-                              </button>
-                              <button 
-                                onClick={() => { alert(`Copy moveframe ${moveframe.letter}`); setMoveframeOptionsOpen(null); }}
-                                className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 border-t"
-                              >
-                                Copy
-                              </button>
-                              <button 
-                                onClick={() => { alert(`Move moveframe ${moveframe.letter}`); setMoveframeOptionsOpen(null); }}
-                                className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50"
-                              >
-                                Move
-                              </button>
-                              <button 
-                                onClick={() => { alert(`Duplicate moveframe ${moveframe.letter}`); setMoveframeOptionsOpen(null); }}
-                                className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 border-t"
-                              >
-                                Duplicate
-                              </button>
-                              <button 
-                                onClick={() => { if(confirm(`Delete moveframe ${moveframe.letter}?`)) alert('Deleted'); setMoveframeOptionsOpen(null); }}
-                                className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 text-red-600 border-t"
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <RowActionButtons
+                          rowType="moveframe"
+                          rowId={moveframe.id}
+                          rowData={moveframe}
+                          onEdit={() => onEditMoveframe?.(moveframe, workout, day)}
+                          onDelete={() => {
+                            if (confirm(`Delete moveframe ${moveframe.letter}?`)) {
+                              // TODO: Implement moveframe deletion API call
+                              onDataChanged?.();
+                            }
+                          }}
+                          optionsMenuItems={[
+                            { label: 'Copy Moveframe', onClick: () => alert(`Copy moveframe ${moveframe.letter}`) },
+                            { label: 'Move Moveframe', onClick: () => alert(`Move moveframe ${moveframe.letter}`) },
+                            { label: 'Duplicate', onClick: () => alert(`Duplicate moveframe ${moveframe.letter}`) },
+                            { label: 'Add Movelap', onClick: () => onAddMovelap?.(moveframe, workout, day), className: 'w-full px-3 py-2 text-left text-xs hover:bg-green-50 border-t' }
+                          ]}
+                        />
                       </td>
                     </tr>
                   );
@@ -2030,64 +1998,27 @@ export default function WorkoutTableView({
                             {movelap.notes || ''}
                           </td>
                           
-                          {/* Movelap Options */}
+                          {/* Movelap Options - Edit | Options | Delete */}
                           <td className="px-2 py-1 text-xs text-center sticky right-0 z-10" style={rowStyle}>
-                            <div className="relative">
-                              <button 
-                                className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-medium"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setMovelapOptionsOpen(movelapOptionsOpen === movelap.id ? null : movelap.id);
-                                }}
-                                title="Movelap options"
-                              >
-                                Options
-                              </button>
-                              
-                              {movelapOptionsOpen === movelap.id && (
-                                <div 
-                                  className="absolute right-0 top-full mt-1 bg-white border-2 border-gray-400 rounded shadow-2xl z-[9999] min-w-[140px]"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <button 
-                                    onClick={() => { alert(`Edit movelap ${movelap.number}`); setMovelapOptionsOpen(null); }}
-                                    className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 font-medium"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button 
-                                    onClick={() => { alert(`Copy movelap ${movelap.number}`); setMovelapOptionsOpen(null); }}
-                                    className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 border-t"
-                                  >
-                                    Copy
-                                  </button>
-                                  <button 
-                                    onClick={() => { alert(`Move movelap ${movelap.number}`); setMovelapOptionsOpen(null); }}
-                                    className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50"
-                                  >
-                                    Move
-                                  </button>
-                                  <button 
-                                    onClick={() => { alert(`Duplicate movelap ${movelap.number}`); setMovelapOptionsOpen(null); }}
-                                    className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 border-t"
-                                  >
-                                    Duplicate
-                                  </button>
-                                  <button 
-                                    onClick={() => { alert(`Change color of movelap ${movelap.number}`); setMovelapOptionsOpen(null); }}
-                                    className="w-full px-3 py-2 text-left text-xs hover:bg-yellow-50 border-t"
-                                  >
-                                    Change Color
-                                  </button>
-                                  <button 
-                                    onClick={() => { if(confirm(`Delete movelap ${movelap.number}?`)) alert('Deleted'); setMovelapOptionsOpen(null); }}
-                                    className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 text-red-600 border-t"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              )}
-                            </div>
+                            <RowActionButtons
+                              rowType="movelap"
+                              rowId={movelap.id}
+                              rowData={movelap}
+                              onEdit={() => onEditMovelap?.(movelap, moveframe, workout, day)}
+                              onDelete={() => {
+                                if (confirm(`Delete movelap #${movelap.number}?`)) {
+                                  // TODO: Implement movelap deletion API call
+                                  onDataChanged?.();
+                                }
+                              }}
+                              optionsMenuItems={[
+                                { label: 'Copy Movelap', onClick: () => alert(`Copy movelap ${movelap.number}`) },
+                                { label: 'Move Up', onClick: () => alert(`Move movelap ${movelap.number} up`) },
+                                { label: 'Move Down', onClick: () => alert(`Move movelap ${movelap.number} down`) },
+                                { label: 'Duplicate', onClick: () => alert(`Duplicate movelap ${movelap.number}`) },
+                                { label: 'Change Color', onClick: () => alert(`Change color of movelap ${movelap.number}`), className: 'w-full px-3 py-2 text-left text-xs hover:bg-yellow-50 border-t' }
+                              ]}
+                            />
                           </td>
                         </tr>
                       );
