@@ -140,7 +140,7 @@ model WorkoutWeek {
 
 model WorkoutDay {
   id           String   @id @default(cuid())
-  userId       String   // Add userId field for direct user ownership
+  userId       String   // Required: direct user ownership
   workoutWeekId String
   date         DateTime
   weekNumber   Int
