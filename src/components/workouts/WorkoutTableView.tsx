@@ -1617,10 +1617,11 @@ export default function WorkoutTableView({
 
             // Day with workouts - REMOVED OLD COMPACT VIEW
             // Now using only the LIVE PREVIEW hierarchical layout below
+            
+            /* COMMENTED OUT OLD RENDERING - NOW USING LIVE PREVIEW LAYOUT ONLY
             const workoutRows: JSX.Element[] = [];
             const primarySport = getPrimarySport(day);
             
-            /* COMMENTED OUT OLD RENDERING - NOW USING LIVE PREVIEW LAYOUT ONLY
             dayWorkouts.forEach((workout: any, workoutIndex: number) => {
               const isFirstWorkout = workoutIndex === 0;
               const isCopied = copiedDays.some((d: any) => d.id === day.id);
@@ -2303,6 +2304,9 @@ export default function WorkoutTableView({
             END OF COMMENTED OUT OLD RENDERING */
 
             // ========== LIVE PREVIEW STYLED HIERARCHICAL LAYOUT ==========
+            // Declare workoutRows for the new hierarchical layout
+            const workoutRows: JSX.Element[] = [];
+            
             // Always show expanded day details for hierarchical view
             if (expandedDayDetails.has(day.id) && hasWorkouts) {
               // ==================== DAY HEADER - 100% width ====================
