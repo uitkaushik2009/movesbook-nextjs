@@ -221,6 +221,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
+      
+      // Redirect to login if no token
+      if (!token) {
+        console.error('❌ No authentication token found. Please log in.');
+        window.location.href = '/login';
+        return;
+      }
+      
       const planTypeMap = {
         'A': 'CURRENT_WEEKS',
         'B': 'YEARLY_PLAN',
@@ -234,6 +242,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         `/api/workouts/plan?type=${planTypeMap[activeSection]}`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
+      
+      if (response.status === 401) {
+        console.error('❌ Unauthorized. Token may be expired. Please log in again.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return;
+      }
       
       if (response.ok) {
         const data = await response.json();

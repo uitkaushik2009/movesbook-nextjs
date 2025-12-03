@@ -64,9 +64,14 @@ export function useUserSettings(userId?: string) {
 
     try {
       setLoading(true);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       const response = await fetch('/api/user/settings', {
         headers: {
-          'x-user-id': userId
+          'Authorization': `Bearer ${token}`
         }
       });
 
@@ -108,11 +113,16 @@ export function useUserSettings(userId?: string) {
     }
 
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       const response = await fetch('/api/user/settings', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': userId
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(newSettings)
       });
