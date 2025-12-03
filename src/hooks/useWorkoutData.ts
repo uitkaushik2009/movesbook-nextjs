@@ -70,13 +70,15 @@ export function useWorkoutData({
 
   /**
    * Load workout data for active section
+   * @param section - Optional section ID to load (defaults to initialSection)
    */
-  const loadWorkoutData = useCallback(async (section: SectionId = initialSection) => {
+  const loadWorkoutData = useCallback(async (section?: SectionId) => {
+    const targetSection = section || initialSection;
     setIsLoading(true);
     
     try {
-      const planType = sectionHelpers.getPlanType(section);
-      console.log('🔄 Loading workout data for section:', section, 'type:', planType);
+      const planType = sectionHelpers.getPlanType(targetSection);
+      console.log('🔄 Loading workout data for section:', targetSection, 'type:', planType);
       
       const response = await workoutPlanApi.get(planType);
 

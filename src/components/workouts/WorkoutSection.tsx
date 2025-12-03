@@ -131,7 +131,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     loadUserProfile();
     loadWorkoutData(activeSection);
     loadPeriods();
-  }, [activeSection, loadUserProfile, loadWorkoutData, loadPeriods]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection]); // Only re-run when section changes
 
   // ===== SMART BUTTON HANDLERS WITH SELECTION VALIDATION =====
   
@@ -515,7 +516,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             ) : (
                <WorkoutTableView
                  workoutPlan={
-                   selectedWeekForTable 
+                   selectedWeekForTable && workoutPlan
                      ? {
                          ...workoutPlan,
                          weeks: workoutPlan.weeks?.filter((week: any) => {
