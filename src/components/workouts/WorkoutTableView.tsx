@@ -167,6 +167,19 @@ export default function WorkoutTableView({
     movelapRows: {}
   });
 
+  // Auto-expand all days with workouts on initial load
+  useEffect(() => {
+    if (workoutPlan?.weeks) {
+      const daysWithWorkouts = workoutPlan.weeks.flatMap((week: any) =>
+        (week.days || []).filter((day: any) => day.workouts && day.workouts.length > 0).map((day: any) => day.id)
+      );
+      if (daysWithWorkouts.length > 0) {
+        console.log('📂 Auto-expanding days with workouts:', daysWithWorkouts.length);
+        setExpandedDayDetails(new Set(daysWithWorkouts));
+      }
+    }
+  }, [workoutPlan]);
+
   // Auto-expand rows when new items are added
   useEffect(() => {
     if (autoExpandDayId) {
@@ -1602,10 +1615,12 @@ export default function WorkoutTableView({
               );
             }
 
-            // Day with workouts - show one row per workout
+            // Day with workouts - REMOVED OLD COMPACT VIEW
+            // Now using only the LIVE PREVIEW hierarchical layout below
             const workoutRows: JSX.Element[] = [];
             const primarySport = getPrimarySport(day);
             
+            /* COMMENTED OUT OLD RENDERING - NOW USING LIVE PREVIEW LAYOUT ONLY
             dayWorkouts.forEach((workout: any, workoutIndex: number) => {
               const isFirstWorkout = workoutIndex === 0;
               const isCopied = copiedDays.some((d: any) => d.id === day.id);
@@ -2285,8 +2300,10 @@ export default function WorkoutTableView({
                 });
               }
             });
+            END OF COMMENTED OUT OLD RENDERING */
 
-            // Add expanded day details row if day details are expanded - LIVE PREVIEW STYLED LAYOUT
+            // ========== LIVE PREVIEW STYLED HIERARCHICAL LAYOUT ==========
+            // Always show expanded day details for hierarchical view
             if (expandedDayDetails.has(day.id) && hasWorkouts) {
               // ==================== DAY HEADER - 100% width ====================
               workoutRows.push(
