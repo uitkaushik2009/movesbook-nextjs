@@ -29,6 +29,10 @@ interface WorkoutTableViewProps {
   onAddWorkoutClick?: () => void;
   onAddMoveframeClick?: () => void;
   onAddMovelapClick?: () => void;
+  // Expansion state control from parent
+  autoExpandDayId?: string | null;
+  autoExpandWorkoutId?: string | null;
+  autoExpandMoveframeId?: string | null;
 }
 
 export default function WorkoutTableView({
@@ -52,7 +56,10 @@ export default function WorkoutTableView({
   onEditDayClick,
   onAddWorkoutClick,
   onAddMoveframeClick,
-  onAddMovelapClick
+  onAddMovelapClick,
+  autoExpandDayId,
+  autoExpandWorkoutId,
+  autoExpandMoveframeId
 }: WorkoutTableViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollbarStyle, setScrollbarStyle] = useState({ left: 0, width: '100%' });
@@ -159,6 +166,28 @@ export default function WorkoutTableView({
     movelapTextColorSource: 'table',
     movelapRows: {}
   });
+
+  // Auto-expand rows when new items are added
+  useEffect(() => {
+    if (autoExpandDayId) {
+      console.log('🔓 Auto-expanding day:', autoExpandDayId);
+      setExpandedDayDetails(prev => new Set(prev).add(autoExpandDayId));
+    }
+  }, [autoExpandDayId]);
+
+  useEffect(() => {
+    if (autoExpandWorkoutId) {
+      console.log('🔓 Auto-expanding workout:', autoExpandWorkoutId);
+      setExpandedWorkouts(prev => new Set(prev).add(autoExpandWorkoutId));
+    }
+  }, [autoExpandWorkoutId]);
+
+  useEffect(() => {
+    if (autoExpandMoveframeId) {
+      console.log('🔓 Auto-expanding moveframe:', autoExpandMoveframeId);
+      setExpandedMoveframes(prev => new Set(prev).add(autoExpandMoveframeId));
+    }
+  }, [autoExpandMoveframeId]);
 
   // Helper function to generate border style based on settings
   const getBorderStyle = (section: 'day' | 'workout' | 'moveframe' | 'movelap') => {

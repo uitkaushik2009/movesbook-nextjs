@@ -66,6 +66,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   // Inline feedback message (replaces alert modals)
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error' | 'info' | 'warning', text: string } | null>(null);
   
+  // Auto-expansion tracking for newly added items
+  const [autoExpandDayId, setAutoExpandDayId] = useState<string | null>(null);
+  const [autoExpandWorkoutId, setAutoExpandWorkoutId] = useState<string | null>(null);
+  const [autoExpandMoveframeId, setAutoExpandMoveframeId] = useState<string | null>(null);
+  
   // Section-specific settings
   const [userSubscription, setUserSubscription] = useState<{ expiryDate: Date | null, isActive: boolean }>({ expiryDate: null, isActive: true });
   const [managedAthletes, setManagedAthletes] = useState<any[]>([]);
@@ -434,6 +439,19 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         const result = await response.json();
         setShowAddMovelapModal(false);
         await loadWorkoutData(); // Reload to show new movelap
+        
+        // Auto-expand the day, workout, and moveframe to show the new movelap
+        if (activeDay && activeWorkout && activeMoveframe) {
+          setAutoExpandDayId(activeDay.id);
+          setAutoExpandWorkoutId(activeWorkout.id);
+          setAutoExpandMoveframeId(activeMoveframe.id);
+          setTimeout(() => {
+            setAutoExpandDayId(null);
+            setAutoExpandWorkoutId(null);
+            setAutoExpandMoveframeId(null);
+          }, 500); // Clear after expansion
+        }
+        
         showMessage('success', `Movelap added to ${activeMoveframe.letter || activeMoveframe.code}`);
       } else {
         const error = await response.json();
@@ -855,6 +873,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  onAddWorkoutClick={handleAddWorkout}
                  onAddMoveframeClick={handleAddMoveframe}
                  onAddMovelapClick={handleAddMovelap}
+                 autoExpandDayId={autoExpandDayId}
+                 autoExpandWorkoutId={autoExpandWorkoutId}
+                 autoExpandMoveframeId={autoExpandMoveframeId}
                />
             )}
           </div>
@@ -914,7 +935,16 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             
             setShowAddWorkoutModal(false);
             setAddWorkoutDay(null);
-            loadWorkoutData();
+            await loadWorkoutData();
+            
+            // Auto-expand the day to show the new workout
+            if (addWorkoutDay && !isEdit) {
+              setAutoExpandDayId(addWorkoutDay.id);
+              setTimeout(() => setAutoExpandDayId(null), 500); // Clear after expansion
+            }
+            
+            // Show success message
+            showMessage('success', `Workout ${isEdit ? 'updated' : 'added'} successfully`);
           }}
         />
       )}
@@ -977,21 +1007,31 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  })
                });
                
-               if (response.ok) {
-                 const result = await response.json();
-                 console.log('Moveframe created successfully:', result);
-                 
-                 // Keep workout expanded
-                 if (selectedWorkout) {
-                   const newExpandedWorkouts = new Set(expandedWorkouts);
-                   newExpandedWorkouts.add(selectedWorkout);
-                   setExpandedWorkouts(newExpandedWorkouts);
-                 }
-                 
-                 setShowAddMoveframeModal(false);
-                 await loadWorkoutData();
-                 
-                 showMessage('success', 'Moveframe added successfully');
+              if (response.ok) {
+                const result = await response.json();
+                console.log('Moveframe created successfully:', result);
+                
+                // Keep workout expanded
+                if (selectedWorkout) {
+                  const newExpandedWorkouts = new Set(expandedWorkouts);
+                  newExpandedWorkouts.add(selectedWorkout);
+                  setExpandedWorkouts(newExpandedWorkouts);
+                }
+                
+                setShowAddMoveframeModal(false);
+                await loadWorkoutData();
+                
+                // Auto-expand the day and workout to show the new moveframe
+                if (selectedDay && selectedWorkout) {
+                  setAutoExpandDayId(selectedDay.id);
+                  setAutoExpandWorkoutId(selectedWorkout);
+                  setTimeout(() => {
+                    setAutoExpandDayId(null);
+                    setAutoExpandWorkoutId(null);
+                  }, 500); // Clear after expansion
+                }
+                
+                showMessage('success', 'Moveframe added successfully');
                } else {
                  const error = await response.json();
                  console.error('Failed to create moveframe:', error);
