@@ -13,22 +13,9 @@ interface WorkoutTableViewProps {
   setExcludeStretchingFromTotals: (value: boolean) => void;
   onEditWorkout?: (workout: any, day: any) => void;
   onEditDay?: (day: any) => void;
-  onEditMoveframe?: (moveframe: any, workout: any, day: any) => void;
-  onEditMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
   onAddWorkout?: (day: any) => void;
   onAddMoveframe?: (workout: any, day: any) => void;
-  onAddMovelap?: (moveframe: any, workout: any, day: any) => void; // Direct add movelap with context
   onDataChanged?: () => void; // New prop to refresh data without full reload
-  // Active selection setters for hierarchical button behavior
-  setActiveDay?: (day: any) => void;
-  setActiveWorkout?: (workout: any) => void;
-  setActiveMoveframe?: (moveframe: any) => void;
-  setActiveMovelap?: (movelap: any) => void;
-  // Smart button handlers
-  onEditDayClick?: () => void;
-  onAddWorkoutClick?: () => void;
-  onAddMoveframeClick?: () => void;
-  onAddMovelapClick?: () => void;
 }
 
 export default function WorkoutTableView({
@@ -39,20 +26,9 @@ export default function WorkoutTableView({
   setExcludeStretchingFromTotals,
   onEditWorkout,
   onEditDay,
-  onEditMoveframe,
-  onEditMovelap,
   onAddWorkout,
   onAddMoveframe,
-  onAddMovelap,
-  onDataChanged,
-  setActiveDay,
-  setActiveWorkout,
-  setActiveMoveframe,
-  setActiveMovelap,
-  onEditDayClick,
-  onAddWorkoutClick,
-  onAddMoveframeClick,
-  onAddMovelapClick
+  onDataChanged
 }: WorkoutTableViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollbarStyle, setScrollbarStyle] = useState({ left: 0, width: '100%' });
@@ -89,109 +65,18 @@ export default function WorkoutTableView({
   const [moveframeOptionsOpen, setMoveframeOptionsOpen] = useState<string | null>(null);
   const [movelapOptionsOpen, setMovelapOptionsOpen] = useState<string | null>(null);
   
-  // Color and border settings - matches Live Preview from admin settings
+  // Color and border settings
   const [colorSettings, setColorSettings] = useState<any>({
-    // Page & Background
-    pageBackground: '#f3f4f6',
-    pageBackgroundOpacity: 100,
-    // Week Header (Row 1)
-    weekHeader: '#1e40af',
-    weekHeaderText: '#ffffff',
-    // Day Header (Row 2)
-    dayHeader: '#3b82f6',
-    dayHeaderText: '#ffffff',
-    dayAlternateRow: '#dbeafe',
-    dayAlternateRowText: '#1e293b',
-    // Workout Headers (Rows 3-4)
-    workoutHeader: '#22c55e',
-    workoutHeaderText: '#ffffff',
-    workout2Header: '#16a34a',
-    workout2HeaderText: '#ffffff',
-    workout3Header: '#15803d',
-    workout3HeaderText: '#ffffff',
-    // Moveframe (Rows 5-6)
-    moveframeHeader: '#eab308',
-    moveframeHeaderText: '#1e293b',
-    alternateRowMoveframe: '#fef08a',
-    alternateRowTextMoveframe: '#1e293b',
-    // Movelap (Rows 7-10)
-    movelapHeader: '#fecaca',
-    movelapHeaderText: '#1e293b',
-    alternateRowMovelap: '#fee2e2',
+    movelapHeader: '#f7f7f7',
+    movelapHeaderText: '#f50a2d',
+    alternateRowMovelap: '#dbeafe',
     alternateRowTextMovelap: '#1e293b',
-    // Microlap Details (Row 11)
-    microlapBackground: '#f3f4f6',
-    microlapText: '#1e293b',
-    // Selected Row
-    selectedRow: '#3b82f6',
-    selectedRowText: '#ffffff',
-    // Buttons
-    buttonAdd: '#22c55e',
-    buttonAddHover: '#16a34a',
-    buttonAddText: '#ffffff',
-    buttonAddHeaderText: '#ffffff',
-    buttonEdit: '#3b82f6',
-    buttonEditHover: '#2563eb',
-    buttonEditText: '#ffffff',
-    buttonEditHeaderText: '#ffffff',
-    buttonDelete: '#ef4444',
-    buttonDeleteHover: '#dc2626',
-    buttonDeleteText: '#ffffff',
-    buttonDeleteHeaderText: '#ffffff',
-    buttonPrint: '#8b5cf6',
-    buttonPrintHover: '#7c3aed',
-    buttonPrintText: '#ffffff',
-    buttonPrintHeaderText: '#ffffff',
-    // Border settings - Separate for each section
-    dayBorderEnabled: false,
-    dayBorderColor: '#000000',
-    dayBorderWidth: 'normal',
-    workoutBorderEnabled: false,
-    workoutBorderColor: '#000000',
-    workoutBorderWidth: 'normal',
-    moveframeBorderEnabled: false,
-    moveframeBorderColor: '#000000',
-    moveframeBorderWidth: 'normal',
-    movelapBorderEnabled: false,
-    movelapBorderColor: '#000000',
-    movelapBorderWidth: 'normal',
-    // Movelaps settings
+    borderEnabled: false,
+    borderColor: '#000000',
+    borderWidth: 'normal',
     movelapTextColorSource: 'table',
     movelapRows: {}
   });
-
-  // Helper function to generate border style based on settings
-  const getBorderStyle = (section: 'day' | 'workout' | 'moveframe' | 'movelap') => {
-    const enabledKey = `${section}BorderEnabled` as keyof typeof colorSettings;
-    const colorKey = `${section}BorderColor` as keyof typeof colorSettings;
-    const widthKey = `${section}BorderWidth` as keyof typeof colorSettings;
-    
-    const isEnabled = colorSettings[enabledKey];
-    const borderColor = colorSettings[colorKey] || '#000000';
-    const borderWidth = colorSettings[widthKey] || 'normal';
-    
-    const widthValue = 
-      borderWidth === 'very-thin' ? '1px' :
-      borderWidth === 'thin' ? '2px' :
-      borderWidth === 'thick' ? '4px' : '3px';
-    
-    return isEnabled 
-      ? `${widthValue} solid ${borderColor}` 
-      : '2px solid transparent';
-  };
-
-  // Helper function for button styles
-  const getButtonStyle = (type: 'add' | 'edit' | 'delete' | 'print', isHeader = true) => {
-    const bgKey = `button${type.charAt(0).toUpperCase() + type.slice(1)}` as keyof typeof colorSettings;
-    const textKey = isHeader 
-      ? `button${type.charAt(0).toUpperCase() + type.slice(1)}HeaderText` as keyof typeof colorSettings
-      : `button${type.charAt(0).toUpperCase() + type.slice(1)}Text` as keyof typeof colorSettings;
-    
-    return {
-      backgroundColor: colorSettings[bgKey] || '#3b82f6',
-      color: colorSettings[textKey] || '#ffffff'
-    };
-  };
 
   const toggleOptions = (dayId: string) => {
     setExpandedOptions(expandedOptions === dayId ? null : dayId);
@@ -566,85 +451,30 @@ export default function WorkoutTableView({
     }
   };
 
-  const handleMoveframeAction = async (action: 'copy' | 'move', position?: 'before' | 'after' | 'append') => {
-    if (!dragContext) return;
-    
-    const { moveframe: sourceMoveframe, sourceWorkout, targetWorkout, targetMoveframe } = dragContext;
+  const handleMoveframePosition = async (position: 'before' | 'after') => {
+    const { sourceMoveframe, targetWorkout } = dragContext;
 
     try {
-      const token = localStorage.getItem('token');
-      const headers: any = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
+      // Just move the moveframe to the target workout
+      // Position will be handled by alphabetical sorting (A, B, C...)
+      await fetch(`/api/workouts/moveframes/${sourceMoveframe.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workoutSessionId: targetWorkout.id,
+        }),
+      });
 
-      if (action === 'copy') {
-        // Copy: Create a new moveframe with same data in target workout
-        const response = await fetch(`/api/workouts/${targetWorkout.id}/moveframes`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            sport: sourceMoveframe.sport,
-            sectionId: sourceMoveframe.sectionId,
-            description: sourceMoveframe.description,
-            patternType: 'MONODISTANCE',
-            distance: sourceMoveframe.distance,
-            reps: sourceMoveframe.repetitions || sourceMoveframe.totalReps || 1,
-            speedCode: sourceMoveframe.speedCode,
-            style: sourceMoveframe.style,
-            pace: sourceMoveframe.pace,
-            time: sourceMoveframe.time,
-            restType: sourceMoveframe.restType,
-            pause: sourceMoveframe.pause,
-            alarm: sourceMoveframe.alarm,
-            sound: sourceMoveframe.sound,
-            macroRest: sourceMoveframe.macroRest,
-            // Position information
-            insertPosition: position,
-            targetMoveframeId: targetMoveframe?.id
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Copy failed');
-        }
-
-        alert('✅ Moveframe copied successfully!');
-
-      } else if (action === 'move') {
-        // Move: Update the moveframe's workout ID
-        const response = await fetch(`/api/workouts/moveframes/${sourceMoveframe.id}`, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({
-            workoutSessionId: targetWorkout.id,
-            // Position information
-            insertPosition: position,
-            targetMoveframeId: targetMoveframe?.id
-          }),
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.error || 'Move failed');
-        }
-
-        alert('✅ Moveframe moved successfully!');
-      }
-
-      // Refresh data
       if (onDataChanged) {
         onDataChanged();
       }
 
-      // Close modals
       setShowMoveframePositionModal(false);
       setDragContext(null);
 
     } catch (error) {
-      console.error('Moveframe action failed:', error);
-      alert(`Failed to ${action} moveframe: ${(error as Error).message}`);
+      console.error('Moveframe position failed:', error);
+      alert('Failed to position moveframe');
     }
   };
 
@@ -1063,15 +893,6 @@ export default function WorkoutTableView({
     return sportsArray.slice(0, 4); // Max 4 different sports per day
   };
 
-  // Helper to get unique sports for a single workout
-  const getWorkoutSports = (workout: any): string[] => {
-    const sports = new Set<string>();
-    workout.moveframes?.forEach((mf: any) => {
-      if (mf.sport) sports.add(mf.sport);
-    });
-    return Array.from(sports).slice(0, 4);
-  };
-
   // Helper to get sport data aggregated at DAY level (not per workout)
   const getDaySportData = (day: any, sport: string) => {
     let totalDistance = 0;
@@ -1170,19 +991,32 @@ export default function WorkoutTableView({
     return { border: 'border-gray-200', bg: 'bg-white' };
   };
 
+  // Get border style based on color settings (for movelaps)
+  const getBorderStyle = () => {
+    if (!colorSettings.movelapBorderEnabled) {
+      return {};
+    }
+
+    const borderWidth = 
+      colorSettings.movelapBorderWidth === 'very-thin' ? '1px' :
+      colorSettings.movelapBorderWidth === 'thin' ? '2px' :
+      colorSettings.movelapBorderWidth === 'thick' ? '4px' : '3px';
+
+    return {
+      border: `${borderWidth} solid ${colorSettings.movelapBorderColor || '#000000'}`
+    };
+  };
+
   // Get movelap row colors (alternating)
   const getMovelapRowStyle = (lapIndex: number) => {
     const isEven = lapIndex % 2 === 0;
     const bgColor = isEven ? colorSettings.alternateRowMovelap : colorSettings.movelapHeader;
     const textColor = isEven ? colorSettings.alternateRowTextMovelap : colorSettings.movelapHeaderText;
     
-    // Get border style for movelap section
-    const borderStyle = getBorderStyle('movelap');
-    
     return {
       backgroundColor: bgColor,
       color: textColor,
-      border: borderStyle
+      ...getBorderStyle()
     };
   };
 
@@ -1213,32 +1047,81 @@ export default function WorkoutTableView({
       <div className="flex items-center justify-between mb-2 px-2 py-2 bg-white border border-gray-300 rounded">
         <div className="flex gap-2">
           <button
-            onClick={onEditDayClick}
-            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium flex items-center gap-1"
-            title="Edit selected day metadata (date, period, weather, feeling, notes)"
+            onClick={() => {
+              if (selectedDays.size > 0) {
+                const firstSelectedDayId = Array.from(selectedDays)[0];
+                const day = allDays.find((d: any) => d.id === firstSelectedDayId);
+                if (day && onEditDay) {
+                  onEditDay(day);
+                }
+              } else {
+                alert('Please select a day first by checking its checkbox.');
+              }
+            }}
+            className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm font-medium flex items-center gap-1 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            title="Edit selected day"
+            disabled={selectedDays.size === 0}
           >
             📅 Edit Day
           </button>
           <button
-            onClick={onAddWorkoutClick}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium flex items-center gap-1"
-            title="Add workout to selected day (click a day row first)"
+            onClick={() => {
+              if (selectedDays.size > 0) {
+                const firstSelectedDayId = Array.from(selectedDays)[0];
+                const day = allDays.find((d: any) => d.id === firstSelectedDayId);
+                if (day && onAddWorkout) {
+                  onAddWorkout(day);
+                }
+              } else {
+                alert('Please select a day first by checking its checkbox.');
+              }
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-medium flex items-center gap-1 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            title="Add workout to selected day"
+            disabled={selectedDays.size === 0}
           >
             🏋️ Add Workout
           </button>
           <button
-            onClick={onAddMoveframeClick}
-            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm font-medium flex items-center gap-1"
-            title="Add moveframe to selected workout (click a workout row first)"
+            onClick={() => {
+              if (selectedDays.size > 0) {
+                const firstSelectedDayId = Array.from(selectedDays)[0];
+                const day = allDays.find((d: any) => d.id === firstSelectedDayId);
+                if (day) {
+                  // Check if day has workouts
+                  if (day.workouts && day.workouts.length > 0) {
+                    // If only one workout, select it automatically
+                    if (day.workouts.length === 1) {
+                      if (onAddMoveframe) {
+                        onAddMoveframe(day.workouts[0], day);
+                      }
+                    } else {
+                      // Multiple workouts - show selector modal
+                      setWorkoutSelectorDay(day);
+                      setShowWorkoutSelector(true);
+                    }
+                  } else {
+                    alert('Please add a workout to this day first before adding moveframes.');
+                  }
+                }
+              } else {
+                alert('Please select a day first by checking its checkbox.');
+              }
+            }}
+            className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-sm font-medium flex items-center gap-1 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            title="Add moveframe to workout in selected day"
+            disabled={selectedDays.size === 0}
           >
             📋 Add Moveframe
           </button>
           <button
-            onClick={onAddMovelapClick}
+            onClick={() => {
+              alert('Movelaps management: Expand a moveframe to see and manage its movelaps. Click the "+ Add new row" button at the bottom of the movelap list.');
+            }}
             className="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 text-sm font-medium flex items-center gap-1"
-            title="Add movelap to selected moveframe (click a moveframe row first)"
+            title="Movelaps information"
           >
-            🔄 Add Movelap
+            🔄 Movelaps
           </button>
         </div>
         
@@ -1378,7 +1261,7 @@ export default function WorkoutTableView({
               K
             </th>
             
-            <th className="border border-gray-400 px-1 py-1 text-center font-bold sticky right-0 z-50 bg-gray-200" style={{width: '80px', boxShadow: '-4px 0 8px rgba(0,0,0,0.15)'}} rowSpan={2}>Options</th>
+            <th className="border border-gray-400 px-1 py-1 text-center font-bold sticky right-0 z-50 bg-gray-200 shadow-lg" style={{width: '80px'}} rowSpan={2}>Options</th>
           </tr>
           <tr className="bg-gray-100 border-b border-gray-400">
             {/* Sub-headers for each sport S1-S4 */}
@@ -1491,7 +1374,7 @@ export default function WorkoutTableView({
                   <td className="border border-gray-300 text-center bg-green-50">-</td>
                   <td className="border border-gray-300 text-center bg-green-50">-</td>
                   <td className="border border-gray-300 text-center bg-green-50">-</td>
-                  <td className="border border-gray-300 px-1 py-1 text-center sticky right-0 z-10 bg-white" style={{boxShadow: '-4px 0 8px rgba(0,0,0,0.1)'}}>
+                  <td className="border border-gray-300 px-1 py-1 text-center sticky right-0 z-10 bg-white shadow-lg">
                     <div className="relative">
                       <button 
                         onClick={(e) => {
@@ -1623,11 +1506,6 @@ export default function WorkoutTableView({
                     // Only toggle if not clicking on interactive elements
                     const target = e.target as HTMLElement;
                     if (!target.closest('input, button, select, textarea, a')) {
-                      // Set active selections for hierarchy
-                      setActiveDay?.(day);
-                      setActiveWorkout?.(workout);
-                      setActiveMoveframe?.(null); // Clear lower levels
-                      setActiveMovelap?.(null);
                       toggleDayDetails(day.id);
                     }
                   }}
@@ -1635,7 +1513,7 @@ export default function WorkoutTableView({
                     e.stopPropagation();
                     onEditWorkout?.(workout, day);
                   }}
-                  title="Click to select day + workout | Double-click to edit workout | Drag to move"
+                  title="Click to expand/collapse details | Double-click to edit workout | Drag to move"
                 >
                   {isFirstWorkout && (
                     <>
@@ -1775,7 +1653,7 @@ export default function WorkoutTableView({
                   
                   {/* Options column - sticky on the right */}
                   {isFirstWorkout ? (
-                    <td className={`border border-gray-300 px-1 py-1 text-center sticky right-0 z-10 ${stickyBg}`} style={{boxShadow: '-4px 0 8px rgba(0,0,0,0.1)'}} rowSpan={dayWorkouts.length}>
+                    <td className={`border border-gray-300 px-1 py-1 text-center sticky right-0 z-10 shadow-lg ${stickyBg}`} rowSpan={dayWorkouts.length}>
                       <div className="relative flex flex-col gap-1">
                         {/* Day Options Button */}
                         <button 
@@ -1901,23 +1779,12 @@ export default function WorkoutTableView({
                   workoutRows.push(
                     <tr 
                       key={`mf-${moveframe.id}`}
-                      className={`bg-blue-50 hover:bg-blue-100 cursor-pointer ${dragOverMoveframe === moveframe.id ? 'ring-2 ring-purple-500' : ''}`}
+                      className={`bg-blue-50 hover:bg-blue-100 ${dragOverMoveframe === moveframe.id ? 'ring-2 ring-purple-500' : ''}`}
                       draggable
                       onDragStart={(e) => handleMoveframeDragStart(e, moveframe, workout, day)}
                       onDragOver={(e) => handleMoveframeDragOver(e, moveframe)}
                       onDragLeave={handleMoveframeDragLeave}
                       onDrop={(e) => handleMoveframeDrop(e, moveframe, workout, day)}
-                      onClick={(e) => {
-                        const target = e.target as HTMLElement;
-                        if (!target.closest('button, select, textarea, a')) {
-                          // Set active selections for hierarchy
-                          setActiveDay?.(day);
-                          setActiveWorkout?.(workout);
-                          setActiveMoveframe?.(moveframe);
-                          setActiveMovelap?.(null); // Clear lower level
-                        }
-                      }}
-                      title="Click to select moveframe | Drag to move"
                     >
                       {/* First 6 columns - merged cell with moveframe details */}
                       <td colSpan={6} className="border border-gray-300 px-4 py-1 text-xs sticky left-0 z-10 bg-blue-50">
@@ -2051,26 +1918,25 @@ export default function WorkoutTableView({
                     const sortedMovelaps = getSortedMovelaps(moveframe);
                     
                     // Add header row for movelaps
-                    const movelapBorderStyle = { border: getBorderStyle('movelap') };
                     workoutRows.push(
                       <tr key={`${moveframe.id}-lap-header`} style={{ backgroundColor: colorSettings.movelapHeader, color: colorSettings.movelapHeaderText }}>
-                        <td colSpan={6} className="px-8 py-1 text-xs font-bold sticky left-0 z-10" style={{ backgroundColor: colorSettings.movelapHeader, color: colorSettings.movelapHeaderText, ...movelapBorderStyle }}>
+                        <td colSpan={6} className="px-8 py-1 text-xs font-bold sticky left-0 z-10" style={{ backgroundColor: colorSettings.movelapHeader, color: colorSettings.movelapHeaderText, ...getBorderStyle() }}>
                           Movelaps for {moveframe.letter}
                         </td>
-                        <td className="px-1 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>MF</td>
-                        <td className="px-1 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Color</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Workout type</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Sport</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Distance</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Style</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Speed</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Time</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Pace</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Rec</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Rest To</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center" style={movelapBorderStyle}>Alm Sound</td>
-                        <td colSpan={11} className="px-2 py-1 text-xs font-bold" style={movelapBorderStyle}>Annotation</td>
-                        <td className="px-2 py-1 text-xs font-bold text-center sticky right-0 z-10" style={{ backgroundColor: colorSettings.movelapHeader, color: colorSettings.movelapHeaderText, ...movelapBorderStyle }}>Actions</td>
+                        <td className="px-1 py-1 text-xs font-bold text-center" style={getBorderStyle()}>MF</td>
+                        <td className="px-1 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Color</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Workout type</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Sport</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Distance</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Style</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Speed</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Time</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Pace</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Rec</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Rest To</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center" style={getBorderStyle()}>Alm Sound</td>
+                        <td colSpan={11} className="px-2 py-1 text-xs font-bold" style={getBorderStyle()}>Annotation</td>
+                        <td className="px-2 py-1 text-xs font-bold text-center sticky right-0 z-10" style={{ backgroundColor: colorSettings.movelapHeader, color: colorSettings.movelapHeaderText, ...getBorderStyle() }}>Actions</td>
                       </tr>
                     );
                     
@@ -2080,19 +1946,8 @@ export default function WorkoutTableView({
                       workoutRows.push(
                         <tr 
                           key={`lap-${movelap.id}`}
-                          className="hover:opacity-90 cursor-pointer"
+                          className="hover:opacity-90"
                           style={rowStyle}
-                          onClick={(e) => {
-                            const target = e.target as HTMLElement;
-                            if (!target.closest('button, select, textarea, a')) {
-                              // Set active selections for full hierarchy
-                              setActiveDay?.(day);
-                              setActiveWorkout?.(workout);
-                              setActiveMoveframe?.(moveframe);
-                              setActiveMovelap?.(movelap);
-                            }
-                          }}
-                          title="Click to select movelap"
                         >
                           <td colSpan={6} className="px-8 py-1 text-xs sticky left-0 z-10" style={rowStyle}>
                             <div className="flex items-center gap-2">
@@ -2238,16 +2093,9 @@ export default function WorkoutTableView({
                         <td colSpan={33} className="border border-gray-300 px-8 py-2 text-center">
                           <button 
                             className="px-4 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium"
-                            onClick={() => {
-                              // Set active selections for the hierarchy
-                              setActiveDay?.(day);
-                              setActiveWorkout?.(workout);
-                              setActiveMoveframe?.(moveframe);
-                              // Call the smart Add Movelap handler
-                              onAddMovelapClick?.();
-                            }}
+                            onClick={() => alert(`Add new movelap to moveframe ${moveframe.letter}`)}
                           >
-                            + Add new row to {moveframe.letter}
+                            + Add new row
                           </button>
                         </td>
                       </tr>
@@ -2257,420 +2105,182 @@ export default function WorkoutTableView({
               }
             });
 
-            // Add expanded day details row if day details are expanded - LIVE PREVIEW STYLED LAYOUT
+            // Add expanded day details row if day details are expanded
             if (expandedDayDetails.has(day.id) && hasWorkouts) {
-              // ==================== DAY HEADER - 100% width ====================
               workoutRows.push(
-                <tr 
-                  key={`${day.id}-workouts-header`} 
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    if (draggedMoveframe) {
-                      setDragOverDay(day.id);
-                    }
-                  }}
-                  onDragLeave={() => setDragOverDay(null)}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (draggedMoveframe) {
-                      setDragContext({
-                        ...draggedMoveframe,
-                        targetDay: day,
-                        targetWorkout: day.workouts?.[0],
-                        dropPosition: 'append'
-                      });
-                      setShowMoveframePositionModal(true);
-                    }
-                    setDragOverDay(null);
-                  }}
-                >
-                  <td colSpan={37} className={`px-0 py-1 ${dragOverDay === day.id && draggedMoveframe ? 'ring-2 ring-yellow-400' : ''}`}>
-                    <div 
-                      className="p-3 rounded-lg font-bold flex items-center justify-between cursor-pointer hover:opacity-90"
-                      style={{
-                        backgroundColor: colorSettings.dayHeader,
-                        color: colorSettings.dayHeaderText,
-                        border: getBorderStyle('day'),
-                        boxSizing: 'border-box'
-                      }}
-                      onDoubleClick={() => onEditDay?.(day)}
-                      title="Double-click to edit day"
-                    >
-                      <span>📋 {getDayName(day.dayOfWeek)} - {formatDate(day.date)} - Week {day.weekNumber || 1}</span>
-                      <div className="flex gap-1">
-                        <button 
-                          className="px-2 py-1 rounded text-xs font-semibold transition-colors"
-                          style={getButtonStyle('edit', true)}
-                          onClick={() => onEditDay?.(day)}
-                        >Edit</button>
-                        <button 
-                          className="px-2 py-1 rounded text-xs font-semibold transition-colors"
-                          style={getButtonStyle('delete', true)}
-                        >Delete</button>
-                        <button 
-                          className="px-2 py-1 rounded text-xs font-semibold transition-colors"
-                          style={getButtonStyle('print', true)}
-                        >Print</button>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              );
-              
-              // ==================== WORKOUT ROWS - 92% width, right-sided ====================
-              dayWorkouts.forEach((workout: any, wkIdx: number) => {
-                const workoutSports = getWorkoutSports(workout);
-                const isWorkoutExpanded = expandedWorkouts.has(workout.id);
-                
-                // Choose workout color based on index (1, 2, or 3)
-                const workoutBgColor = wkIdx === 0 ? colorSettings.workoutHeader :
-                                       wkIdx === 1 ? colorSettings.workout2Header :
-                                       colorSettings.workout3Header;
-                const workoutTextColor = wkIdx === 0 ? colorSettings.workoutHeaderText :
-                                         wkIdx === 1 ? colorSettings.workout2HeaderText :
-                                         colorSettings.workout3HeaderText;
-                
-                workoutRows.push(
-                  <tr 
-                    key={`${day.id}-workout-${workout.id}`} 
-                    className={`cursor-pointer ${dragOverWorkout === workout.id ? 'ring-2 ring-blue-500' : ''}`}
-                    draggable
-                    onDragStart={(e) => {
-                      e.stopPropagation();
-                      setDraggedWorkout({ workout, sourceDay: day });
-                      e.dataTransfer.effectAllowed = 'copyMove';
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      if (draggedWorkout && draggedWorkout.workout.id !== workout.id) {
-                        setDragOverWorkout(workout.id);
-                      }
-                      if (draggedMoveframe) {
-                        setDragOverWorkout(workout.id);
-                      }
-                    }}
-                    onDragLeave={() => setDragOverWorkout(null)}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (draggedWorkout && draggedWorkout.workout.id !== workout.id) {
-                        setDragContext({
-                          sourceWorkout: draggedWorkout.workout,
-                          sourceDay: draggedWorkout.sourceDay,
-                          targetWorkout: workout,
-                          targetDay: day
-                        });
-                        setShowWorkoutActionModal(true);
-                      }
-                      if (draggedMoveframe) {
-                        setDragContext({
-                          ...draggedMoveframe,
-                          targetDay: day,
-                          targetWorkout: workout,
-                          dropPosition: 'append'
-                        });
-                        setShowMoveframePositionModal(true);
-                      }
-                      setDragOverWorkout(null);
-                      setDraggedWorkout(null);
-                    }}
-                    onClick={() => {
-                      setActiveDay?.(day);
-                      setActiveWorkout?.(workout);
-                      toggleWorkoutExpansion(workout.id);
-                    }}
-                  >
-                    <td colSpan={37} className="px-0 py-1">
-                      <div className="flex justify-end">
-                        <div 
-                          className="p-3 rounded-lg hover:opacity-90"
-                          style={{
-                            width: '92%',
-                            backgroundColor: workoutBgColor,
-                            color: workoutTextColor,
-                            border: getBorderStyle('workout'),
-                            boxSizing: 'border-box'
-                          }}
-                          onDoubleClick={(e) => { e.stopPropagation(); onEditWorkout?.(workout, day); }}
-                          title="Double-click to edit workout"
-                        >
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <span className="cursor-move text-white/70" title="Drag to move workout">⋮⋮</span>
-                              <button className="hover:bg-white/20 rounded p-0.5">
-                                {isWorkoutExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                              </button>
-                              <span className="font-bold">Workout #{wkIdx + 1}</span>
-                              <span className="text-lg">{workoutSports[0] && getSportIcon(workoutSports[0])}</span>
-                              <span>{workoutSports.join(', ') || '-'}</span>
-                              <span className="opacity-70">|</span>
-                              <span className="text-sm">Dist: {getTotalDistance(day)}</span>
-                              <span className="opacity-70">|</span>
-                              <span className="text-sm">Time: {workout.time || '-'}</span>
-                            </div>
-                            <div className="flex gap-1">
-                              <button 
-                                className="px-2 py-1 rounded text-xs font-semibold transition-colors"
-                                style={getButtonStyle('add', true)}
-                                onClick={(e) => { e.stopPropagation(); onAddMoveframe?.(workout, day); }}
-                              >Add</button>
-                              <button 
-                                className="px-2 py-1 rounded text-xs font-semibold transition-colors"
-                                style={getButtonStyle('edit', true)}
-                                onClick={(e) => { e.stopPropagation(); onEditWorkout?.(workout, day); }}
-                              >Edit</button>
-                              <button 
-                                className="px-2 py-1 rounded text-xs font-semibold transition-colors"
-                                style={getButtonStyle('delete', true)}
-                                onClick={(e) => e.stopPropagation()}
-                              >Delete</button>
-                              <button 
-                                className="px-2 py-1 rounded text-xs font-semibold transition-colors"
-                                style={getButtonStyle('print', true)}
-                                onClick={(e) => e.stopPropagation()}
-                              >Print</button>
-                            </div>
-                          </div>
+                <tr key={`${day.id}-details`} className="bg-gray-50">
+                  <td colSpan={37} className="border border-gray-300 px-2 py-1.5">
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between pb-1 border-b border-gray-300">
+                        <div className="font-bold text-sm text-gray-700 flex items-center gap-2">
+                          📋 Day Details for {getDayName(day.dayOfWeek)}
+                          <span className="text-xs text-gray-600 font-normal">
+                            <span className="font-medium">Feeling:</span> {day.feeling || 'N/A'}
+                          </span>
+                        </div>
+                        <div className="flex gap-3 text-xs text-gray-600">
+                          <span><span className="font-medium text-gray-700">Week:</span> {day.weekNumber}</span>
+                          <span><span className="font-medium text-gray-700">Date:</span> {formatDate(day.date)}</span>
+                          <span><span className="font-medium text-gray-700">Period:</span> 
+                            <span className="ml-1 px-1.5 py-0.5 rounded text-white text-xs" style={{ backgroundColor: day.period?.color || '#3b82f6' }}>
+                              {day.period?.name || 'N/A'}
+                            </span>
+                          </span>
                         </div>
                       </div>
-                    </td>
-                  </tr>
-                );
-                
-                // ==================== MOVEFRAMES - 84% width, right-sided ====================
-                if (isWorkoutExpanded && workout.moveframes && workout.moveframes.length > 0) {
-                  const sortedMoveframes = getSortedMoveframes(workout);
-                  
-                  sortedMoveframes.forEach((mf: any, mfIdx: number) => {
-                    const isMoveframeExpanded = expandedMoveframes.has(mf.id);
-                    const isAlternateMf = mfIdx % 2 === 1;
-                    
-                    workoutRows.push(
-                      <tr 
-                        key={`mf-detail-${mf.id}`} 
-                        className={`cursor-pointer ${dragOverMoveframe === mf.id ? 'ring-2 ring-purple-500' : ''}`}
-                        draggable
-                        onDragStart={(e) => {
-                          e.stopPropagation();
-                          setDraggedMoveframe({ moveframe: mf, sourceWorkout: workout, sourceDay: day });
-                          e.dataTransfer.effectAllowed = 'copyMove';
-                        }}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          if (draggedMoveframe && draggedMoveframe.moveframe.id !== mf.id) {
-                            setDragOverMoveframe(mf.id);
-                          }
-                        }}
-                        onDragLeave={() => setDragOverMoveframe(null)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          if (draggedMoveframe && draggedMoveframe.moveframe.id !== mf.id) {
-                            setDragContext({
-                              ...draggedMoveframe,
-                              targetMoveframe: mf,
-                              targetWorkout: workout,
-                              targetDay: day,
-                              dropPosition: 'onMoveframe'
-                            });
-                            setShowMoveframePositionModal(true);
-                          }
-                          setDragOverMoveframe(null);
-                        }}
-                        onClick={() => {
-                          setActiveDay?.(day);
-                          setActiveWorkout?.(workout);
-                          setActiveMoveframe?.(mf);
-                          toggleMoveframeExpansion(mf.id);
-                        }}
-                      >
-                        <td colSpan={37} className="px-0 py-0.5">
-                          <div className="flex justify-end">
-                            <div 
-                              className="p-2.5 rounded font-semibold text-sm flex items-center justify-between hover:opacity-90"
-                              style={{
-                                width: '84%',
-                                backgroundColor: isAlternateMf ? colorSettings.alternateRowMoveframe : colorSettings.moveframeHeader,
-                                color: isAlternateMf ? colorSettings.alternateRowTextMoveframe : colorSettings.moveframeHeaderText,
-                                border: getBorderStyle('moveframe'),
-                                boxSizing: 'border-box'
-                              }}
-                              onDoubleClick={(e) => { e.stopPropagation(); onEditMoveframe?.(mf, workout, day); }}
-                              title="Double-click to edit moveframe"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="cursor-move opacity-50" title="Drag to move moveframe">⋮⋮</span>
-                                <button className="hover:bg-black/10 rounded p-0.5">
-                                  {isMoveframeExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                                </button>
-                                <span className="font-bold text-blue-700">{mf.letter || mf.code}</span>
-                                <span className="w-4 h-4 rounded" style={{ backgroundColor: mf.sectionColor || mf.color || '#FDE047' }}></span>
-                                <span className="text-lg">{getSportIcon(mf.sport)}</span>
-                                <span>{mf.sport}</span>
-                                <span className="opacity-50">|</span>
-                                <span>{mf.type || mf.sectionName || 'Warm up'}</span>
-                                <span className="opacity-50">|</span>
-                                <span>{mf.description || `${mf.distance || ''}m × ${mf.repetitions || ''}`}</span>
-                                {mf.pause && <><span className="opacity-50">|</span><span>R: {mf.pause}</span></>}
+                      {day.notes && (
+                        <div className="text-xs text-gray-600 italic p-1.5 bg-yellow-50 border-l-2 border-yellow-400">
+                          <span className="font-medium">Day Notes:</span> {day.notes}
+                        </div>
+                      )}
+                      <div className="font-semibold text-xs text-blue-700 mt-1">🏋️ Workouts ({dayWorkouts.length}):</div>
+                      {dayWorkouts.map((workout: any, idx: number) => (
+                        <div key={workout.id} className="bg-white border border-gray-200 rounded p-1.5 shadow-sm">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap justify-between">
+                            <div className="flex items-center gap-2 flex-wrap flex-1 text-xs">
+                              <div className="font-semibold text-blue-600">
+                                Workout #{idx + 1}: {workout.name || 'Unnamed Workout'}
                               </div>
-                              <div className="flex gap-1">
-                                <button 
-                                  className="px-2 py-0.5 rounded text-xs font-semibold"
-                                  style={getButtonStyle('edit', true)}
-                                  onClick={(e) => { e.stopPropagation(); onEditMoveframe?.(mf, workout, day); }}
-                                >Edit</button>
-                                <button 
-                                  className="px-2 py-0.5 rounded text-xs font-semibold"
-                                  style={getButtonStyle('delete', true)}
+                              <span className="text-gray-600">
+                                <span className="font-medium text-gray-700">Code:</span> {workout.code || 'N/A'}
+                              </span>
+                              <span className="text-gray-600">
+                                <span className="font-medium text-gray-700">Status:</span> 
+                                <span className="ml-1 px-1.5 py-0.5 rounded text-xs font-medium" style={{ 
+                                  backgroundColor: workout.status === 'COMPLETED' ? '#10b981' : workout.status === 'IN_PROGRESS' ? '#fbbf24' : '#6b7280', 
+                                  color: 'white' 
+                                }}>
+                                  {workout.status || 'PLANNED'}
+                                </span>
+                              </span>
+                            </div>
+                            
+                            {/* Workout Options */}
+                            <div className="relative">
+                              <button 
+                                className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setWorkoutOptionsOpen(workoutOptionsOpen === workout.id ? null : workout.id);
+                                }}
+                                title="Workout options"
+                              >
+                                Options
+                              </button>
+                              
+                              {workoutOptionsOpen === workout.id && (
+                                <div 
+                                  className="absolute right-0 top-full mt-1 bg-white border-2 border-gray-400 rounded shadow-2xl z-[9999] min-w-[140px]"
                                   onClick={(e) => e.stopPropagation()}
-                                >Delete</button>
-                              </div>
+                                >
+                                  <button 
+                                    onClick={() => { onEditWorkout?.(workout, day); setWorkoutOptionsOpen(null); }}
+                                    className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 font-medium"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button 
+                                    onClick={() => { alert(`Copy workout ${workout.name}`); setWorkoutOptionsOpen(null); }}
+                                    className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 border-t"
+                                  >
+                                    Copy
+                                  </button>
+                                  <button 
+                                    onClick={() => { alert(`Move workout ${workout.name}`); setWorkoutOptionsOpen(null); }}
+                                    className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50"
+                                  >
+                                    Move
+                                  </button>
+                                  <button 
+                                    onClick={() => { alert(`Duplicate workout ${workout.name}`); setWorkoutOptionsOpen(null); }}
+                                    className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 border-t"
+                                  >
+                                    Duplicate
+                                  </button>
+                                  <button 
+                                    onClick={() => { onAddMoveframe?.(workout, day); setWorkoutOptionsOpen(null); }}
+                                    className="w-full px-3 py-2 text-left text-xs hover:bg-green-50 border-t"
+                                  >
+                                    Add Moveframe
+                                  </button>
+                                  <button 
+                                    onClick={() => { if(confirm(`Delete workout ${workout.name}?`)) alert('Deleted'); setWorkoutOptionsOpen(null); }}
+                                    className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 text-red-600 border-t"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        </td>
-                      </tr>
-                    );
-                    
-                    // ==================== MOVELAPS - 60% width, right-sided ====================
-                    if (isMoveframeExpanded && mf.movelaps && mf.movelaps.length > 0) {
-                      const sortedLaps = getSortedMovelaps(mf);
-                      
-                      sortedLaps.forEach((lap: any, lapIdx: number) => {
-                        const isAlternateLap = lapIdx % 2 === 1;
-                        
-                        workoutRows.push(
-                          <tr 
-                            key={`lap-detail-${lap.id}`} 
-                            className="cursor-pointer"
-                            onClick={() => {
-                              setActiveDay?.(day);
-                              setActiveWorkout?.(workout);
-                              setActiveMoveframe?.(mf);
-                              setActiveMovelap?.(lap);
-                            }}
-                          >
-                            <td colSpan={37} className="px-0 py-0.5">
-                              <div className="flex justify-end">
-                                <div 
-                                  className="p-2 rounded text-xs flex items-center justify-between hover:opacity-90"
-                                  style={{
-                                    width: '60%',
-                                    backgroundColor: isAlternateLap ? colorSettings.alternateRowMovelap : colorSettings.movelapHeader,
-                                    color: colorSettings.movelapHeaderText,
-                                    border: getBorderStyle('movelap'),
-                                    boxSizing: 'border-box'
-                                  }}
-                                  onDoubleClick={(e) => { e.stopPropagation(); onEditMovelap?.(lap, mf, workout, day); }}
-                                  title="Double-click to edit movelap"
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold w-6">#{lapIdx + 1}</span>
-                                    <span className="w-3 h-3 rounded" style={{ backgroundColor: lap.color || mf.sectionColor || '#FCA5A5' }}></span>
-                                    <span>{getSportIcon(mf.sport)}</span>
-                                    <span className="font-medium">{lap.distance || '-'}m</span>
-                                    <span className="opacity-50">|</span>
-                                    <span>{lap.style || '-'}</span>
-                                    <span className="opacity-50">|</span>
-                                    <span>{lap.speed || lap.speedCode || '-'}</span>
-                                    <span className="opacity-50">|</span>
-                                    <span>⏱ {lap.time || '-'}</span>
-                                    <span className="opacity-50">|</span>
-                                    <span>R: {lap.pause || '-'}</span>
-                                    {lap.notes && <span className="opacity-70 italic ml-2">{lap.notes}</span>}
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <button 
-                                      className="px-2 py-0.5 rounded text-xs font-semibold"
-                                      style={getButtonStyle('edit', true)}
-                                      onClick={(e) => { e.stopPropagation(); onEditMovelap?.(lap, mf, workout, day); }}
-                                    >Edit</button>
-                                    <button 
-                                      className="px-2 py-0.5 rounded text-xs font-semibold"
-                                      style={getButtonStyle('delete', true)}
-                                      onClick={(e) => e.stopPropagation()}
-                                    >Delete</button>
+                          <div className="text-xs text-gray-600 flex gap-3 flex-wrap">
+                            <span><span className="font-medium">Time:</span> {workout.time || 'N/A'}</span>
+                            <span><span className="font-medium">Location:</span> {workout.location || 'N/A'}</span>
+                            {activeSection === 'C' && (
+                              <>
+                                <span><span className="font-medium">Weather:</span> {day.weather || 'N/A'}</span>
+                                <span><span className="font-medium">Surface:</span> {workout.surface || 'N/A'}</span>
+                              </>
+                            )}
+                          </div>
+                          {workout.notes && (
+                            <div className="text-xs text-gray-500 mt-1 p-1 bg-blue-50 rounded">
+                              <span className="font-medium">Notes:</span> {workout.notes}
+                            </div>
+                          )}
+                          {workout.moveframes && workout.moveframes.length > 0 && (
+                            <div className="mt-1 pl-2 border-l-2 border-blue-300">
+                              <div className="text-xs font-medium text-gray-700 mb-0.5">📋 Moveframes ({workout.moveframes.length}):</div>
+                              {getSortedMoveframes(workout).map((mf: any, mfIdx: number) => (
+                                <div key={mf.id} className="bg-blue-50 rounded p-1 mb-1 text-xs">
+                                  <div className="flex items-start gap-1">
+                                    <span className="font-bold text-blue-700">{mf.letter}.</span>
+                                    <div className="flex-1">
+                                      <div className="font-semibold text-gray-800 inline">
+                                        {mf.sport} - <span className="text-blue-600">{mf.type || 'STANDARD'}</span>
+                                      </div>
+                                      {mf.description && (
+                                        <span className="text-gray-600 italic ml-2">{mf.description}</span>
+                                      )}
+                                      <div className="flex gap-2 flex-wrap mt-0.5 text-gray-600">
+                                        {mf.distance && <span><span className="font-medium">Distance:</span> {mf.distance}</span>}
+                                        {mf.repetitions && <span><span className="font-medium">Reps:</span> {mf.repetitions}</span>}
+                                        {mf.speed && <span><span className="font-medium">Speed:</span> {mf.speed}</span>}
+                                        {mf.pause && <span><span className="font-medium">Pause:</span> {mf.pause}</span>}
+                                        {mf.duration && <span><span className="font-medium">Duration:</span> {mf.duration}</span>}
+                                        {mf.intensity && <span><span className="font-medium">Intensity:</span> {mf.intensity}</span>}
+                                        {mf.equipment && <span><span className="font-medium">Equipment:</span> {mf.equipment}</span>}
+                                      </div>
+                                      {mf.notes && (
+                                        <div className="text-gray-500 italic mt-0.5 text-xs bg-white p-0.5 rounded">
+                                          💬 {mf.notes}
+                                        </div>
+                                      )}
+                                      {mf.movelaps && mf.movelaps.length > 0 && (
+                                        <div className="mt-0.5 ml-2">
+                                          <div className="text-xs font-medium text-green-700">🔄 Movelaps ({mf.movelaps.length}):</div>
+                                          {mf.movelaps.map((lap: any, lapIdx: number) => (
+                                            <div key={lap.id} className="bg-white p-0.5 text-xs border-l-2 border-green-200">
+                                              <span className="font-semibold text-green-600">Lap {lapIdx + 1}:</span>
+                                              <span className="ml-1 text-gray-600">
+                                                {lap.distance && `${lap.distance} `}
+                                                {lap.speed && `@ ${lap.speed} `}
+                                                {lap.reps && `× ${lap.reps} `}
+                                                {lap.pause && `▣ ${lap.pause}`}
+                                              </span>
+                                              {lap.notes && <span className="text-gray-500 italic text-xs ml-1">💬 {lap.notes}</span>}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      });
-                      
-                      // Add New Movelap Row Button - 60% width, right-sided
-                      workoutRows.push(
-                        <tr key={`${mf.id}-add-lap-btn`}>
-                          <td colSpan={37} className="px-0 py-0.5">
-                            <div className="flex justify-end">
-                              <div style={{ width: '60%' }} className="flex justify-end">
-                                <button 
-                                  className="px-4 py-1 rounded text-xs font-semibold transition-colors"
-                                  style={getButtonStyle('add', true)}
-                                  onClick={() => {
-                                    setActiveDay?.(day);
-                                    setActiveWorkout?.(workout);
-                                    setActiveMoveframe?.(mf);
-                                    if (onAddMovelap) {
-                                      onAddMovelap(mf, workout, day);
-                                    } else {
-                                      setTimeout(() => {
-                                        onAddMovelapClick?.();
-                                      }, 50);
-                                    }
-                                  }}
-                                >
-                                  + Add movelap to {mf.letter || mf.code}
-                                </button>
-                              </div>
+                              ))}
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    }
-                  });
-                  
-                  // Add New Moveframe Button - 84% width, right-sided
-                  workoutRows.push(
-                    <tr key={`${workout.id}-add-mf-btn`}>
-                      <td colSpan={37} className="px-0 py-0.5">
-                        <div className="flex justify-end">
-                          <div style={{ width: '84%' }} className="flex justify-end">
-                            <button 
-                              className="px-4 py-1 rounded text-xs font-semibold transition-colors"
-                              style={getButtonStyle('add', true)}
-                              onClick={() => {
-                                setActiveDay?.(day);
-                                setActiveWorkout?.(workout);
-                                onAddMoveframe?.(workout, day);
-                              }}
-                            >
-                              + Add moveframe to Workout #{wkIdx + 1}
-                            </button>
-                          </div>
+                          )}
                         </div>
-                      </td>
-                    </tr>
-                  );
-                }
-              });
-              
-              // Add New Workout Button - 92% width, right-sided
-              workoutRows.push(
-                <tr key={`${day.id}-add-workout-btn`}>
-                  <td colSpan={37} className="px-0 py-1">
-                    <div className="flex justify-end">
-                      <div style={{ width: '92%' }} className="flex justify-end">
-                        <button 
-                          className="px-4 py-1.5 rounded text-xs font-semibold transition-colors"
-                          style={getButtonStyle('add', true)}
-                          onClick={() => {
-                            setActiveDay?.(day);
-                            onAddWorkout?.(day);
-                          }}
-                        >
-                          + Add workout to {getDayName(day.dayOfWeek)}
-                        </button>
-                      </div>
+                      ))}
                     </div>
                   </td>
                 </tr>
@@ -2725,14 +2335,9 @@ export default function WorkoutTableView({
             setShowMoveframePositionModal(false);
             setDragContext(null);
           }}
-          onAction={handleMoveframeAction}
-          sourceMoveframe={dragContext.moveframe}
-          sourceWorkout={dragContext.sourceWorkout}
-          sourceDay={dragContext.sourceDay}
+          onPosition={handleMoveframePosition}
+          sourceMoveframe={dragContext.sourceMoveframe}
           targetMoveframe={dragContext.targetMoveframe}
-          targetWorkout={dragContext.targetWorkout}
-          targetDay={dragContext.targetDay}
-          dropPosition={dragContext.dropPosition || 'append'}
         />
 
         <ConfirmRemovalModal
