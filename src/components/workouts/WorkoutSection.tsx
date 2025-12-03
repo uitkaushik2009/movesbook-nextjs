@@ -334,20 +334,26 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
    * Creates a workout inside the selected day (max 3 per day)
    */
   const handleAddWorkout = () => {
+    console.log('🏋️ handleAddWorkout called. activeDay:', activeDay);
+    
     // Check if day is selected
     if (!activeDay) {
+      console.log('⚠️ No activeDay selected');
       showMessage('warning', 'Please select a day first to add a workout');
       return;
     }
     
     // Check max 3 workouts per day
     const existingWorkouts = activeDay.workouts || [];
+    console.log(`✓ activeDay found. Existing workouts: ${existingWorkouts.length}/3`);
+    
     if (existingWorkouts.length >= 3) {
       showMessage('warning', 'This day already has 3 workouts (max)');
       return;
     }
     
     // All checks passed - open modal
+    console.log('✅ Opening Add Workout modal');
     setAddWorkoutDay(activeDay);
     setWorkoutModalMode('add');
     setEditingWorkout(null);
@@ -359,19 +365,24 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
    * Creates a moveframe inside the selected workout
    */
   const handleAddMoveframe = () => {
+    console.log('📋 handleAddMoveframe called. activeDay:', activeDay, 'activeWorkout:', activeWorkout);
+    
     // Check if day is selected
     if (!activeDay) {
+      console.log('⚠️ No activeDay selected');
       showMessage('warning', 'Please select a day first');
       return;
     }
     
     // Check if workout is selected
     if (!activeWorkout) {
+      console.log('⚠️ No activeWorkout selected');
       showMessage('warning', 'Please select a workout first to add a moveframe');
       return;
     }
     
     // All checks passed - open modal
+    console.log('✅ Opening Add Moveframe modal');
     setSelectedWorkout(activeWorkout.id);
     setSelectedDay(activeDay);
     setShowAddMoveframeModal(true);
@@ -382,13 +393,17 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
    * Creates a movelap (microlap/repetition) inside the selected moveframe
    */
   const handleAddMovelap = () => {
+    console.log('🔄 handleAddMovelap called. activeMoveframe:', activeMoveframe);
+    
     // Check if moveframe is selected
     if (!activeMoveframe) {
+      console.log('⚠️ No activeMoveframe selected');
       showMessage('warning', 'Please select a moveframe first to add a movelap');
       return;
     }
     
     // Show Add Movelap modal
+    console.log('✅ Opening Add Movelap modal');
     setShowAddMovelapModal(true);
   };
   
