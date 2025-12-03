@@ -100,12 +100,42 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // If plan doesn't exist OR has no weeks (old empty plan), delete and recreate it
-    if (plan && plan.weeks && plan.weeks.length === 0) {
-      console.log('⚠️ Plan has no weeks! Deleting old plan to recreate with weeks...');
+    // Check if plan is empty (no weeks OR weeks with no days)
+    let isPlanEmpty = false;
+    if (plan) {
+      if (plan.weeks.length === 0) {
+        isPlanEmpty = true;
+        console.log('⚠️ Plan has no weeks!');
+      } else {
+        const totalDays = plan.weeks.reduce((sum, week) => sum + (week.days?.length || 0), 0);
+        if (totalDays === 0) {
+          isPlanEmpty = true;
+          console.log('⚠️ Plan has weeks but no days!');
+        }
+      }
+    }
+
+    // If plan is empty, delete and recreate it
+    if (plan && isPlanEmpty) {
+      console.log('🗑️ Deleting empty plan to recreate with data...');
+      
+      // First, delete all workout days for this user that might be orphaned
+      const deletedDays = await prisma.workoutDay.deleteMany({
+        where: {
+          userId: decoded.userId,
+          workoutWeek: {
+            workoutPlan: {
+              type: type as any
+            }
+          }
+        }
+      });
+      console.log(`   ✓ Deleted ${deletedDays.count} orphaned workout days`);
+      
+      // Then delete the plan (which should cascade delete weeks)
       await prisma.workoutPlan.delete({ where: { id: plan.id } });
       plan = null; // Force recreation
-      console.log('✅ Old plan deleted, will create new one');
+      console.log('   ✓ Old plan deleted, will create new one');
     }
 
     // If plan doesn't exist, create it
