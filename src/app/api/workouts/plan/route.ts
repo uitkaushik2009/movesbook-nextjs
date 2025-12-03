@@ -26,26 +26,30 @@ export async function GET(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const twoWeeksAhead = new Date(today);
-    twoWeeksAhead.setDate(twoWeeksAhead.getDate() + 13); // 14 days total (0-13)
+    console.log('📅 Today (server time):', today.toISOString(), '/', today.toLocaleDateString());
+    
+    const threeWeeksAhead = new Date(today);
+    threeWeeksAhead.setDate(threeWeeksAhead.getDate() + 20); // 21 days total (0-20)
+    
+    console.log('📅 Three weeks ahead:', threeWeeksAhead.toISOString(), '/', threeWeeksAhead.toLocaleDateString());
     
     // Date filter based on section type
     let dateFilter: any = {};
     if (type === 'CURRENT_WEEKS') {
-      // Section A: Only current 2 weeks (today to +13 days)
+      // Section A: Current 3 weeks (today to +20 days = 21 days total)
       dateFilter = {
         gte: today,
-        lte: twoWeeksAhead
+        lte: threeWeeksAhead
       };
-      console.log(`Section A date range: ${today.toISOString()} to ${twoWeeksAhead.toISOString()}`);
+      console.log(`Section A date range: ${today.toISOString()} to ${threeWeeksAhead.toISOString()}`);
     } else if (type === 'YEARLY_PLAN') {
-      // Section B: Future dates beyond 2-week window
-      const dayAfterTwoWeeks = new Date(twoWeeksAhead);
-      dayAfterTwoWeeks.setDate(dayAfterTwoWeeks.getDate() + 1);
+      // Section B: Future dates beyond 3-week window (day 22 onwards)
+      const dayAfterThreeWeeks = new Date(threeWeeksAhead);
+      dayAfterThreeWeeks.setDate(dayAfterThreeWeeks.getDate() + 1);
       dateFilter = {
-        gte: dayAfterTwoWeeks
+        gte: dayAfterThreeWeeks
       };
-      console.log(`Section B date range: from ${dayAfterTwoWeeks.toISOString()} onwards`);
+      console.log(`Section B date range: from ${dayAfterThreeWeeks.toISOString()} onwards`);
     }
 
     // Get or create workout plan - ORDER BY NEWEST FIRST!
@@ -85,12 +89,23 @@ export async function GET(request: NextRequest) {
     });
 
     console.log('GET - Found plan:', plan?.id, 'with', plan?.weeks?.length || 0, 'weeks');
+    
+    if (plan) {
+      console.log('📊 Existing plan details:', {
+        id: plan.id,
+        startDate: plan.startDate,
+        endDate: plan.endDate,
+        weeksCount: plan.weeks?.length || 0,
+        createdAt: plan.createdAt
+      });
+    }
 
     // If plan doesn't exist OR has no weeks (old empty plan), delete and recreate it
     if (plan && plan.weeks && plan.weeks.length === 0) {
       console.log('⚠️ Plan has no weeks! Deleting old plan to recreate with weeks...');
       await prisma.workoutPlan.delete({ where: { id: plan.id } });
       plan = null; // Force recreation
+      console.log('✅ Old plan deleted, will create new one');
     }
 
     // If plan doesn't exist, create it
@@ -100,21 +115,29 @@ export async function GET(request: NextRequest) {
       let numberOfWeeks = 0;
       
       if (type === 'CURRENT_WEEKS') {
-        // Section A: Start today, 2 weeks (14 days) = 2 weeks
+        // Section A: Start today, 3 weeks (21 days)
         startDate = new Date(today);
-        endDate = new Date(twoWeeksAhead);
-        numberOfWeeks = 2; // 2 weeks for current period
+        endDate = new Date(today);
+        endDate.setDate(endDate.getDate() + 20); // 21 days total (0-20)
+        numberOfWeeks = 3; // 3 weeks for current 2-3 weeks section
       } else if (type === 'YEARLY_PLAN') {
-        // Section B: Start after 2-week window, extend to 10 weeks ahead
-        const dayAfterTwoWeeks = new Date(twoWeeksAhead);
-        dayAfterTwoWeeks.setDate(dayAfterTwoWeeks.getDate() + 1);
-        startDate = dayAfterTwoWeeks;
+        // Section B: Start after 3-week window, 52 weeks for full year
+        const dayAfterThreeWeeks = new Date(today);
+        dayAfterThreeWeeks.setDate(dayAfterThreeWeeks.getDate() + 21); // Start from day 22
+        startDate = dayAfterThreeWeeks;
         endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 70); // 10 weeks
-        numberOfWeeks = 10; // Create first 10 weeks for yearly plan
+        endDate.setDate(endDate.getDate() + 364); // 52 weeks = 364 days
+        numberOfWeeks = 52; // Create all 52 weeks for yearly plan
       }
 
-      console.log(`Creating new ${type} plan with ${numberOfWeeks} weeks from ${startDate.toISOString()} to ${endDate.toISOString()}`);
+      console.log(`📝 Creating new ${type} plan:`, {
+        numberOfWeeks,
+        startDate: startDate.toISOString(),
+        startDateLocal: startDate.toLocaleDateString(),
+        endDate: endDate.toISOString(),
+        endDateLocal: endDate.toLocaleDateString(),
+        todayWas: today.toISOString()
+      });
 
       // Get or create default period
       let defaultPeriod = await prisma.period.findFirst({

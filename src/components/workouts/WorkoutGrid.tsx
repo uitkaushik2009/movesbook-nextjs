@@ -201,12 +201,27 @@ export default function WorkoutGrid({
     return (
       <div className="text-center py-12">
         <p className="text-gray-500 text-lg mb-4">No weeks in workout plan</p>
-        <button 
-          onClick={onCreatePlan}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-        >
-          Reload Workout Plan
-        </button>
+        <p className="text-sm text-gray-600 mb-4">
+          Plan created: {new Date(workoutPlan.createdAt).toLocaleString()}<br/>
+          Start date: {new Date(workoutPlan.startDate).toLocaleDateString()}
+        </p>
+        <div className="flex gap-3 justify-center">
+          <button 
+            onClick={() => {
+              // Force hard refresh
+              window.location.reload();
+            }}
+            className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+          >
+            🔄 Hard Refresh Page
+          </button>
+          <button 
+            onClick={onCreatePlan}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            ➕ Create New Plan
+          </button>
+        </div>
       </div>
     );
   }
