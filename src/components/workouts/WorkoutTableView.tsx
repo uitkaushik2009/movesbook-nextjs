@@ -1389,81 +1389,94 @@ export default function WorkoutTableView({
                   <td className="border border-gray-300 text-center bg-green-50">-</td>
                   <td className="border border-gray-300 text-center bg-green-50">-</td>
                   <td className="border border-gray-300 px-1 py-1 text-center sticky right-0 z-10 bg-white shadow-lg">
-                    <div className="relative">
+                    <div className="flex items-center justify-center gap-1">
+                      {/* Edit Button */}
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleOptions(day.id);
+                          handleEdit(day);
                         }}
-                        className="px-2 py-1 hover:bg-gray-200 rounded text-gray-700 text-xs font-medium"
-                        title="Click for options"
+                        className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs font-medium"
+                        title="Edit day"
                       >
-                        Options
+                        Edit
                       </button>
                       
-                      {expandedOptions === day.id && (
-                        <div 
-                          className="absolute right-0 top-full mt-1 bg-white border-2 border-gray-400 rounded shadow-2xl z-[9999] min-w-[140px]"
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ marginRight: '-1px' }}
+                      {/* Options Dropdown */}
+                      <div className="relative">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleOptions(day.id);
+                          }}
+                          className="px-2 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs font-medium"
+                          title="More options"
                         >
-                          <button 
-                            onClick={() => handleEdit(day)}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-blue-50 font-medium"
-                            title="Edit"
+                          Options
+                        </button>
+                        
+                        {expandedOptions === day.id && (
+                          <div 
+                            className="absolute right-0 top-full mt-1 bg-white border-2 border-gray-400 rounded shadow-2xl z-[9999] min-w-[140px]"
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ marginRight: '-1px' }}
                           >
-                            Edit
-                          </button>
-                          <button 
-                            onClick={handleCopy}
-                            disabled={selectedDays.size === 0}
-                            className={`w-full px-3 py-2 text-left text-xs border-t ${
-                              selectedDays.size > 0 ? 'hover:bg-blue-50' : 'text-gray-400 cursor-not-allowed'
-                            }`}
-                            title={selectedDays.size > 0 ? `Copy ${selectedDays.size} selected day(s)` : 'Select days first'}
-                          >
-                            Copy
-                          </button>
-                          <button 
-                            onClick={handleMove}
-                            disabled={selectedDays.size === 0}
-                            className={`w-full px-3 py-2 text-left text-xs ${
-                              selectedDays.size > 0 ? 'hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'
-                            }`}
-                            title={selectedDays.size > 0 ? `Move ${selectedDays.size} selected day(s)` : 'Select days first'}
-                          >
-                            Move
-                          </button>
-                          <button 
-                            onClick={() => handleExport(day)}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 border-t"
-                            title="Export"
-                          >
-                            Export
-                          </button>
-                          <button 
-                            onClick={() => handleShare(day)}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-green-50"
-                            title="Share"
-                          >
-                            Share
-                          </button>
-                          <button 
-                            onClick={() => handleDelete(day)}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-red-50 text-red-600 border-t"
-                            title="Delete"
-                          >
-                            Delete
-                          </button>
-                          <button 
-                            onClick={() => handlePrint(day)}
-                            className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50"
-                            title="Print"
-                          >
-                            Print
-                          </button>
-                        </div>
-                      )}
+                            <button 
+                              onClick={handleCopy}
+                              disabled={selectedDays.size === 0}
+                              className={`w-full px-3 py-2 text-left text-xs ${
+                                selectedDays.size > 0 ? 'hover:bg-blue-50' : 'text-gray-400 cursor-not-allowed'
+                              }`}
+                              title={selectedDays.size > 0 ? `Copy ${selectedDays.size} selected day(s)` : 'Select days first'}
+                            >
+                              Copy
+                            </button>
+                            <button 
+                              onClick={handleMove}
+                              disabled={selectedDays.size === 0}
+                              className={`w-full px-3 py-2 text-left text-xs border-t ${
+                                selectedDays.size > 0 ? 'hover:bg-gray-50' : 'text-gray-400 cursor-not-allowed'
+                              }`}
+                              title={selectedDays.size > 0 ? `Move ${selectedDays.size} selected day(s)` : 'Select days first'}
+                            >
+                              Move
+                            </button>
+                            <button 
+                              onClick={() => handleExport(day)}
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-purple-50 border-t"
+                              title="Export"
+                            >
+                              Export
+                            </button>
+                            <button 
+                              onClick={() => handleShare(day)}
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-green-50"
+                              title="Share"
+                            >
+                              Share
+                            </button>
+                            <button 
+                              onClick={() => handlePrint(day)}
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50 border-t"
+                              title="Print"
+                            >
+                              Print
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Delete Button */}
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(day);
+                        }}
+                        className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium"
+                        title="Delete day"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
