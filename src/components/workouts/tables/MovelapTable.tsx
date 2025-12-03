@@ -82,21 +82,21 @@ export default function MovelapTable({
                   width: '16px',
                   height: '16px',
                   borderRadius: '50%',
-                  backgroundColor: movelap.color || moveframe.color || '#10b981',
+                  backgroundColor: moveframe.section?.color || moveframe.color || '#10b981',
                   border: '1px solid #666'
                 }}></span>
               </td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs">{movelap.workoutType || moveframe.workoutType || 'Warm up'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs">{movelap.sport || moveframe.sport || 'Swim'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-right">{movelap.distance || '50'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.style || 'SI'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.speed || 'A3'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-right">{movelap.time || '45.5'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-right">{movelap.pace || '1\'34.0'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.rec || '15"'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.restTo || '—'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.aimSound || '—'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs">{movelap.annotation || ''}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs">{moveframe.section?.name || moveframe.type || 'Warm up'}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs">{moveframe.sport || 'Swim'}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs text-right">{movelap.distance || '0'}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.style || '—'}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.speed || '—'}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs text-right">{movelap.time || '—'}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs text-right">{movelap.pace || '—'}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.pause || '—'}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.restType || '—'}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.alarm ? `Alarm ${movelap.alarm}` : movelap.sound || '—'}</td>
+              <td className="border border-gray-300 px-2 py-1.5 text-xs">{movelap.notes || ''}</td>
               
               {/* Sticky Options Column */}
               <td className="border border-gray-300 px-1 py-1.5 sticky right-0 bg-white z-10 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">

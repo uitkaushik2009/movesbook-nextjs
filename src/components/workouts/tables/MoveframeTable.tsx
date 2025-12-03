@@ -73,22 +73,24 @@ export default function MoveframeTable({
         </thead>
         <tbody>
           <tr className="hover:bg-purple-100">
-            <td className="border border-gray-300 px-2 py-2 text-sm font-bold text-center">{moveframe.code || 'A'}</td>
+            <td className="border border-gray-300 px-2 py-2 text-sm font-bold text-center">{moveframe.letter || moveframe.code || 'A'}</td>
             <td className="border border-gray-300 px-2 py-2 text-sm text-center">
               <span style={{
                 display: 'inline-block',
                 width: '20px',
                 height: '20px',
                 borderRadius: '50%',
-                backgroundColor: moveframe.color || '#10b981',
+                backgroundColor: moveframe.section?.color || moveframe.color || '#10b981',
                 border: '1px solid #666'
               }}></span>
             </td>
-            <td className="border border-gray-300 px-2 py-2 text-sm">{moveframe.workoutType || 'Warm up'}</td>
+            <td className="border border-gray-300 px-2 py-2 text-sm">{moveframe.section?.name || moveframe.type || 'Warm up'}</td>
             <td className="border border-gray-300 px-2 py-2 text-sm">{moveframe.sport || 'Swim'}</td>
             <td className="border border-gray-300 px-2 py-2 text-sm">{moveframe.description || '100s * 10 A2 R20*'}</td>
-            <td className="border border-gray-300 px-2 py-2 text-sm text-center">{moveframe.reps || '10'}</td>
-            <td className="border border-gray-300 px-2 py-2 text-sm text-right">{moveframe.distance || '2'}</td>
+            <td className="border border-gray-300 px-2 py-2 text-sm text-center">{moveframe.movelaps?.length || '0'}</td>
+            <td className="border border-gray-300 px-2 py-2 text-sm text-right">
+              {(moveframe.movelaps || []).reduce((sum: number, lap: any) => sum + (parseInt(lap.distance) || 0), 0)}
+            </td>
             
             {/* Sticky Options Column */}
             <td className="border border-gray-300 px-1 py-2 sticky right-0 bg-purple-50 z-10 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
