@@ -80,7 +80,7 @@ export const API_ENDPOINTS = {
     SETTINGS: '/api/user/settings',
     PROFILE: '/api/user/profile'
   },
-  PERIODS: '/api/periods',
+  PERIODS: '/api/workouts/periods',
   COACH: {
     ATHLETES: '/api/coach/athletes'
   }

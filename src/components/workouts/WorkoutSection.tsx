@@ -503,7 +503,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                      if (response.ok) {
                        const result = await response.json();
                        console.log('Plan created:', result);
-                       await loadWorkoutData(); // Reload to show new plan
+                       await loadWorkoutData(activeSection); // Reload to show new plan
                      } else {
                        const error = await response.json();
                        console.error('Failed to create plan:', error);
@@ -553,7 +553,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setSelectedDay(day);
                    setShowAddMoveframeModal(true);
                  }}
-                 onDataChanged={loadWorkoutData}
+                 onDataChanged={() => loadWorkoutData(activeSection)}
                  onEditMoveframe={(moveframe, workout, day) => {
                    setEditingMoveframe(moveframe);
                    setActiveDay(day);
@@ -638,7 +638,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             
             setShowAddWorkoutModal(false);
             setAddWorkoutDay(null);
-            await loadWorkoutData();
+            await loadWorkoutData(activeSection);
             
             // Auto-expand the day to show the new workout
             if (addWorkoutDay && !isEdit) {
@@ -722,7 +722,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 }
                 
                 setShowAddMoveframeModal(false);
-                await loadWorkoutData();
+                await loadWorkoutData(activeSection);
                 
                 // Auto-expand the day and workout to show the new moveframe
                 if (selectedDay && selectedWorkout) {
@@ -772,7 +772,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                
                if (response.ok) {
                  setShowImportModal(false);
-                 loadWorkoutData();
+                 loadWorkoutData(activeSection);
                  alert(`Successfully imported ${workouts.length} workout(s)!`);
                } else {
                  alert('Failed to import workouts');
@@ -878,7 +878,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                     onClick={() => {
                       setSelectedAthlete(athlete);
                       setShowAthleteSelector(false);
-                      loadWorkoutData(); // Reload data for selected athlete
+                      loadWorkoutData(activeSection); // Reload data for selected athlete
                     }}
                     className="w-full text-left px-4 py-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors flex items-center justify-between"
                   >
@@ -899,7 +899,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 onClick={() => {
                   setSelectedAthlete(null);
                   setShowAthleteSelector(false);
-                  loadWorkoutData(); // Reload own data
+                  loadWorkoutData(activeSection); // Reload own data
                 }}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
