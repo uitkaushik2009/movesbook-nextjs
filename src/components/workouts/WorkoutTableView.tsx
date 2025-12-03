@@ -1817,12 +1817,23 @@ export default function WorkoutTableView({
                   workoutRows.push(
                     <tr 
                       key={`mf-${moveframe.id}`}
-                      className={`bg-blue-50 hover:bg-blue-100 ${dragOverMoveframe === moveframe.id ? 'ring-2 ring-purple-500' : ''}`}
+                      className={`bg-blue-50 hover:bg-blue-100 cursor-pointer ${dragOverMoveframe === moveframe.id ? 'ring-2 ring-purple-500' : ''}`}
                       draggable
                       onDragStart={(e) => handleMoveframeDragStart(e, moveframe, workout, day)}
                       onDragOver={(e) => handleMoveframeDragOver(e, moveframe)}
                       onDragLeave={handleMoveframeDragLeave}
                       onDrop={(e) => handleMoveframeDrop(e, moveframe, workout, day)}
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        if (!target.closest('input, button, select, textarea, a')) {
+                          toggleMoveframeExpansion(moveframe.id);
+                        }
+                      }}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        onEditMoveframe?.(moveframe, workout, day);
+                      }}
+                      title="Click to expand/collapse movelaps | Double-click to edit moveframe | Drag to move"
                     >
                       {/* First 6 columns - merged cell with moveframe details */}
                       <td colSpan={6} className="border border-gray-300 px-4 py-1 text-xs sticky left-0 z-10 bg-blue-50">
@@ -1984,8 +1995,13 @@ export default function WorkoutTableView({
                       workoutRows.push(
                         <tr 
                           key={`lap-${movelap.id}`}
-                          className="hover:opacity-90"
+                          className="hover:opacity-90 cursor-pointer"
                           style={rowStyle}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            onEditMovelap?.(movelap, moveframe, workout, day);
+                          }}
+                          title="Double-click to edit movelap"
                         >
                           <td colSpan={6} className="px-8 py-1 text-xs sticky left-0 z-10" style={rowStyle}>
                             <div className="flex items-center gap-2">

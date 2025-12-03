@@ -47,10 +47,18 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    if (!workoutDay || workoutDay.workoutWeek.workoutPlan.userId !== decoded.userId) {
+    if (!workoutDay) {
       return NextResponse.json(
-        { error: 'Workout day not found or unauthorized' },
+        { error: 'Workout day not found' },
         { status: 404 }
+      );
+    }
+
+    // Check authorization
+    if (workoutDay.userId !== decoded.userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized - this day belongs to another user' },
+        { status: 403 }
       );
     }
 

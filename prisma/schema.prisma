@@ -25,6 +25,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   workoutPlans WorkoutPlan[]
+  workoutDays  WorkoutDay[]
   periods      Period[]
   sections     WorkoutSection[]
   settings     UserSettings?
@@ -139,6 +140,7 @@ model WorkoutWeek {
 
 model WorkoutDay {
   id           String   @id @default(cuid())
+  userId       String   // Add userId field for direct user ownership
   workoutWeekId String
   date         DateTime
   weekNumber   Int
@@ -146,7 +148,6 @@ model WorkoutDay {
   periodId     String
   weather      String?
   feelingStatus String?
-<<<<<<< HEAD
   notes        String?  @db.Text
   
   // Section A/B/C/D classification
@@ -156,21 +157,16 @@ model WorkoutDay {
   originalSenderId String?  // If received from coach/team/club
   assignedToUserId String?  // Final athlete who owns this
   
-=======
-  notes        String?
->>>>>>> parent of 51565ec (database confirmation)
   createdAt    DateTime @default(now())
 
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   workoutWeek WorkoutWeek  @relation(fields: [workoutWeekId], references: [id], onDelete: Cascade)
   period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
   workouts    WorkoutSession[]
 
-<<<<<<< HEAD
   @@unique([userId, date]) // Ensure one day per date per user
   @@index([userId, date])
   @@index([userId, storageZone, date]) // Query by section
-=======
->>>>>>> parent of 51565ec (database confirmation)
   @@map("workout_days")
 }
 
