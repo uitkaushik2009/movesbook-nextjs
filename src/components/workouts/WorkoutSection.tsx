@@ -50,6 +50,12 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [excludeStretchingFromTotals, setExcludeStretchingFromTotals] = useState(false);
   const [showAddMovelapModal, setShowAddMovelapModal] = useState(false);
   
+  // Active selections for hierarchical context
+  const [activeDay, setActiveDay] = useState<any>(null);
+  const [activeWorkout, setActiveWorkout] = useState<any>(null);
+  const [activeMoveframe, setActiveMoveframe] = useState<any>(null);
+  const [activeMovelap, setActiveMovelap] = useState<any>(null);
+  
   // Edit modal states for moveframe and movelap
   const [editingMoveframe, setEditingMoveframe] = useState<any>(null);
   const [editingMovelap, setEditingMovelap] = useState<any>(null);
@@ -742,20 +748,31 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setShowAddMoveframeModal(true);
                  }}
                  onDataChanged={loadWorkoutData}
-<<<<<<< HEAD
+                 onEditMoveframe={(moveframe, workout, day) => {
+                   setEditingMoveframe(moveframe);
+                   setActiveDay(day);
+                   setActiveWorkout(workout);
+                   setActiveMoveframe(moveframe);
+                   setShowEditMoveframeModal(true);
+                 }}
+                 onEditMovelap={(movelap, moveframe, workout, day) => {
+                   setEditingMovelap(movelap);
+                   setActiveDay(day);
+                   setActiveWorkout(workout);
+                   setActiveMoveframe(moveframe);
+                   setActiveMovelap(movelap);
+                   setShowEditMovelapModal(true);
+                 }}
+                 onAddMovelap={(moveframe, workout, day) => {
+                   setActiveDay(day);
+                   setActiveWorkout(workout);
+                   setActiveMoveframe(moveframe);
+                   setShowAddMovelapModal(true);
+                 }}
                  setActiveDay={setActiveDay}
                  setActiveWorkout={setActiveWorkout}
                  setActiveMoveframe={setActiveMoveframe}
                  setActiveMovelap={setActiveMovelap}
-                 onEditDayClick={handleEditDay}
-                 onAddWorkoutClick={handleAddWorkout}
-                 onAddMoveframeClick={handleAddMoveframe}
-                 onAddMovelapClick={handleAddMovelap}
-                 autoExpandDayId={autoExpandDayId}
-                 autoExpandWorkoutId={autoExpandWorkoutId}
-                 autoExpandMoveframeId={autoExpandMoveframeId}
-=======
->>>>>>> parent of 51565ec (database confirmation)
                />
             )}
           </div>

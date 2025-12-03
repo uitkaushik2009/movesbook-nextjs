@@ -13,9 +13,16 @@ interface WorkoutTableViewProps {
   setExcludeStretchingFromTotals: (value: boolean) => void;
   onEditWorkout?: (workout: any, day: any) => void;
   onEditDay?: (day: any) => void;
+  onEditMoveframe?: (moveframe: any, workout: any, day: any) => void;
+  onEditMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
   onAddWorkout?: (day: any) => void;
   onAddMoveframe?: (workout: any, day: any) => void;
-  onDataChanged?: () => void; // New prop to refresh data without full reload
+  onAddMovelap?: (moveframe: any, workout: any, day: any) => void;
+  onDataChanged?: () => void;
+  setActiveDay?: (day: any) => void;
+  setActiveWorkout?: (workout: any) => void;
+  setActiveMoveframe?: (moveframe: any) => void;
+  setActiveMovelap?: (movelap: any) => void;
 }
 
 export default function WorkoutTableView({
@@ -26,9 +33,16 @@ export default function WorkoutTableView({
   setExcludeStretchingFromTotals,
   onEditWorkout,
   onEditDay,
+  onEditMoveframe,
+  onEditMovelap,
   onAddWorkout,
   onAddMoveframe,
-  onDataChanged
+  onAddMovelap,
+  onDataChanged,
+  setActiveDay,
+  setActiveWorkout,
+  setActiveMoveframe,
+  setActiveMovelap
 }: WorkoutTableViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scrollbarStyle, setScrollbarStyle] = useState({ left: 0, width: '100%' });
