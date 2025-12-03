@@ -86,6 +86,13 @@ export async function GET(request: NextRequest) {
 
     console.log('GET - Found plan:', plan?.id, 'with', plan?.weeks?.length || 0, 'weeks');
 
+    // If plan doesn't exist OR has no weeks (old empty plan), delete and recreate it
+    if (plan && plan.weeks && plan.weeks.length === 0) {
+      console.log('⚠️ Plan has no weeks! Deleting old plan to recreate with weeks...');
+      await prisma.workoutPlan.delete({ where: { id: plan.id } });
+      plan = null; // Force recreation
+    }
+
     // If plan doesn't exist, create it
     if (!plan) {
       let startDate = new Date();
