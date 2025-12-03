@@ -1294,7 +1294,7 @@ export default function WorkoutTableView({
 
         {/* Body - Scrollable */}
         <tbody>
-          {allDays.map((day: any) => {
+          {allDays.map((day: any, dayIndex: number) => {
             const dayWorkouts = (day.workouts || []).slice(0, 3); // Max 3 workouts
             const daySports = getDaySports(day);
             const hasWorkouts = dayWorkouts.length > 0;
@@ -1314,6 +1314,9 @@ export default function WorkoutTableView({
                 <tr 
                   key={day.id} 
                   className={`${rowBgClass} cursor-pointer ${dayStatus.border} ${getWeekEndBorder(day.dayOfWeek)}`}
+                  style={{
+                    borderTop: dayIndex > 0 ? '4px solid #374151' : undefined // Strong gap between days
+                  }}
                   onClick={() => {
                     // Set as active day for add buttons
                     setActiveDay?.(day);
@@ -1522,12 +1525,15 @@ export default function WorkoutTableView({
               // Check if this is the last workout of the day
               const isLastWorkout = workoutIndex === dayWorkouts.length - 1;
               
-              // Workout row
+              // Workout row with visual separation
               workoutRows.push(
                 <tr 
                   key={`${day.id}-${workout.id}`} 
                   className={`${rowBgClass} cursor-pointer ${isFirstWorkout && dayStatus ? dayStatus.border : ''} ${isLastWorkout ? getWeekEndBorder(day.dayOfWeek) : ''}`}
-                  style={rowBgStyle}
+                  style={{
+                    ...rowBgStyle,
+                    borderTop: isFirstWorkout && dayIndex > 0 ? '4px solid #374151' : isFirstWorkout ? '2px solid #9ca3af' : undefined // Strong gap between days
+                  }}
                   draggable
                   onDragStart={(e) => handleWorkoutDragStart(e, workout, day)}
                   onClick={(e) => {
@@ -1765,11 +1771,14 @@ export default function WorkoutTableView({
                     ? `${Math.floor(mfDurationMinutes / 60)}:${(mfDurationMinutes % 60).toString().padStart(2, '0')}`
                     : '-';
                   
-                  // Moveframe row with structured columns
+                  // Moveframe row with structured columns and visual separation
                   workoutRows.push(
                     <tr 
                       key={`mf-${moveframe.id}`}
-                      className={`bg-blue-50 hover:bg-blue-100 cursor-pointer ${dragOverMoveframe === moveframe.id ? 'ring-2 ring-purple-500' : ''}`}
+                      className={`bg-purple-50 hover:bg-purple-100 cursor-pointer ${dragOverMoveframe === moveframe.id ? 'ring-2 ring-purple-500' : ''}`}
+                      style={{
+                        borderTop: mfIndex === 0 ? '2px solid #9333ea' : '1px solid #d8b4fe' // Purple gap before first moveframe
+                      }}
                       draggable
                       onDragStart={(e) => handleMoveframeDragStart(e, moveframe, workout, day)}
                       onDragOver={(e) => handleMoveframeDragOver(e, moveframe)}
@@ -1886,9 +1895,13 @@ export default function WorkoutTableView({
                   if (isMoveframeExpanded) {
                     const sortedMovelaps = getSortedMovelaps(moveframe);
                     
-                    // Add header row for movelaps
+                    // Add header row for movelaps with visual separation
                     workoutRows.push(
-                      <tr key={`${moveframe.id}-lap-header`} style={{ backgroundColor: colorSettings.movelapHeader, color: colorSettings.movelapHeaderText }}>
+                      <tr key={`${moveframe.id}-lap-header`} style={{ 
+                        backgroundColor: colorSettings.movelapHeader, 
+                        color: colorSettings.movelapHeaderText,
+                        borderTop: '2px solid #60a5fa' // Blue gap before movelaps section
+                      }}>
                         <td colSpan={6} className="px-8 py-1 text-xs font-bold sticky left-0 z-10" style={{ backgroundColor: colorSettings.movelapHeader, color: colorSettings.movelapHeaderText, ...getBorderStyle() }}>
                           Movelaps for {moveframe.letter}
                         </td>
@@ -1916,7 +1929,10 @@ export default function WorkoutTableView({
                         <tr 
                           key={`lap-${movelap.id}`}
                           className="hover:opacity-90 cursor-pointer"
-                          style={rowStyle}
+                          style={{
+                            ...rowStyle,
+                            borderTop: lapIndex === 0 ? '1px solid #93c5fd' : undefined // Light gap before first movelap
+                          }}
                           onDoubleClick={(e) => {
                             e.stopPropagation();
                             onEditMovelap?.(movelap, moveframe, workout, day);
