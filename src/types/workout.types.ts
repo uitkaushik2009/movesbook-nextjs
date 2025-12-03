@@ -3,7 +3,16 @@
  * Replaces 'any' types with proper type safety
  */
 
-import { SectionId, WorkoutStatus, StatusColor, RestType, Sport } from '@/config/workout.constants';
+import type { Sport } from '@/config/workout.constants';
+
+// Re-export types from constants for convenience
+export type { WorkoutStatus, StatusColor, RestType, Sport } from '@/config/workout.constants';
+
+// View mode type
+export type ViewMode = 'tree' | 'table' | 'calendar';
+
+// Section ID type
+export type SectionId = 'A' | 'B' | 'C' | 'D';
 
 // ==================== BASE TYPES ====================
 export interface BaseEntity {
