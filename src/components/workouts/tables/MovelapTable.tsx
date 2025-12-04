@@ -111,17 +111,16 @@ export default function MovelapTable({
                       <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
                         Clear All
                       </button>
+                      <button
+                        onClick={() => setIsConfigModalOpen(true)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-300 hover:bg-yellow-400 rounded"
+                        title="Configure columns"
+                      >
+                        <Settings size={14} />
+                        Columns
+                      </button>
                     </div>
                   </div>
-                </div>
-                  <button
-                    onClick={() => setIsConfigModalOpen(true)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-300 hover:bg-yellow-400 rounded"
-                    title="Configure columns"
-                  >
-                    <Settings size={14} />
-                    Columns
-                  </button>
                 </div>
               </th>
             </tr>
