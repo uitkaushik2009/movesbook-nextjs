@@ -10,20 +10,22 @@ interface WorkoutTableProps {
   day: any;
   workout: any;
   workoutIndex: number;
+  isExpanded?: boolean;
+  onToggleExpand?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onAddMoveframe: () => void;
-  onAddWorkout: () => void;
 }
 
 export default function WorkoutTable({
   day,
   workout,
   workoutIndex,
+  isExpanded = true,
+  onToggleExpand,
   onEdit,
   onDelete,
-  onAddMoveframe,
-  onAddWorkout
+  onAddMoveframe
 }: WorkoutTableProps) {
   const {
     visibleColumns,
@@ -115,10 +117,17 @@ export default function WorkoutTable({
         <table className="w-full border-collapse bg-white shadow-sm">
           <thead className="bg-cyan-400 text-white">
             {/* Title Row with Workout Options */}
-            <tr>
+            <tr 
+              onClick={() => onToggleExpand?.()}
+              className="cursor-pointer hover:bg-cyan-500 transition-colors"
+              title="Click to expand/collapse workout"
+            >
               <th colSpan={visibleColumnCount + 1} className="border border-gray-400 px-3 py-2 text-left text-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold">
+                      {isExpanded ? '▼' : '▶'}
+                    </span>
                     <span className="font-bold">
                       Workout #{workoutIndex + 1}
                     </span>
@@ -146,11 +155,11 @@ export default function WorkoutTable({
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          onAddWorkout();
+                          onAddMoveframe();
                         }}
                         className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
                       >
-                        Add Workout
+                        Add Moveframe
                       </button>
                       <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
                         Copy

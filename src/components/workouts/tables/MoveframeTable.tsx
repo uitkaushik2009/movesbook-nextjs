@@ -13,6 +13,7 @@ interface MoveframeTableProps {
   onEdit: () => void;
   onDelete: () => void;
   onAddMovelap: () => void;
+  onAddMoveframe: () => void;
   onToggleExpand: () => void;
   isExpanded: boolean;
 }
@@ -25,6 +26,7 @@ export default function MoveframeTable({
   onEdit,
   onDelete,
   onAddMovelap,
+  onAddMoveframe,
   onToggleExpand,
   isExpanded
 }: MoveframeTableProps) {
@@ -101,30 +103,39 @@ export default function MoveframeTable({
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-xs">Moveframe options:</span>
                   <div className="flex gap-1">
-                    <button 
-                      onClick={() => onEdit()}
-                      className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                    >
-                      Edit Moveframe
-                    </button>
-                    <button 
-                      onClick={() => onAddMovelap()}
-                      className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                    >
-                      Add Moveframe
-                    </button>
-                    <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
-                      Copy
-                    </button>
-                    <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
-                      Move
-                    </button>
-                    <button 
-                      onClick={() => onDelete()}
-                      className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit();
+                        }}
+                        className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        Edit Moveframe
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddMoveframe();
+                        }}
+                        className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                        Add Moveframe
+                      </button>
+                      <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                        Copy
+                      </button>
+                      <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                        Move
+                      </button>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete();
+                        }}
+                        className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
                   </div>
                 </div>
                   <button

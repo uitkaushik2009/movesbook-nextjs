@@ -107,6 +107,51 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
   const [excludeStretchingFromTotals, setExcludeStretchingFromTotals] = useState(false);
+
+  // Toggle functions for expand/collapse
+  const toggleDayExpansion = (dayId: string) => {
+    setExpandedDays(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(dayId)) {
+        newSet.delete(dayId);
+      } else {
+        newSet.add(dayId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleWorkoutExpansion = (workoutId: string) => {
+    setExpandedWorkouts(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(workoutId)) {
+        newSet.delete(workoutId);
+      } else {
+        newSet.add(workoutId);
+      }
+      return newSet;
+    });
+  };
+
+  // Auto-expand all days and workouts when plan loads
+  useEffect(() => {
+    if (workoutPlan && workoutPlan.weeks) {
+      const dayIds = new Set<string>();
+      const workoutIds = new Set<string>();
+      
+      workoutPlan.weeks.forEach((week: any) => {
+        week.days?.forEach((day: any) => {
+          dayIds.add(day.id);
+          day.workouts?.forEach((workout: any) => {
+            workoutIds.add(workout.id);
+          });
+        });
+      });
+      
+      setExpandedDays(dayIds);
+      setExpandedWorkouts(workoutIds);
+    }
+  }, [workoutPlan]);
   const [virtualStartDate, setVirtualStartDate] = useState<Date | null>(null);
   const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
   const [showWorkoutSelector, setShowWorkoutSelector] = useState(false);
@@ -530,6 +575,10 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        }
                      : workoutPlan
                  }
+                 expandedDays={expandedDays}
+                 expandedWorkouts={expandedWorkouts}
+                 onToggleDay={toggleDayExpansion}
+                 onToggleWorkout={toggleWorkoutExpansion}
                  onEditDay={(day) => {
                    setEditingDay(day);
                    setShowEditDayModal(true);
@@ -571,29 +620,88 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setActiveDay(day);
                    setShowAddMovelapModal(true);
                  }}
-                 onDeleteDay={(day) => {
-                   if (confirm(`Are you sure you want to delete this day (${new Date(day.date).toLocaleDateString()})?`)) {
-                     // TODO: Implement delete day API call
-                     console.log('Delete day:', day.id);
-                     loadWorkoutData(activeSection);
+                 onDeleteDay={async (day) => {
+                   if (confirm(`Are you sure you want to delete this day (${new Date(day.date).toLocaleDateString()})? This will also delete all workouts, moveframes, and movelaps for this day.`)) {
+                     try {
+                       const token = localStorage.getItem('token');
+                       const response = await fetch(`/api/workouts/days/${day.id}`, {
+                         method: 'DELETE',
+                         headers: { 'Authorization': `Bearer ${token}` }
+                       });
+                       
+                       if (response.ok) {
+                         showMessage('success', 'Day deleted successfully');
+                         loadWorkoutData(activeSection);
+                       } else {
+                         showMessage('error', 'Failed to delete day');
+                       }
+                     } catch (error) {
+                       console.error('Error deleting day:', error);
+                       showMessage('error', 'Error deleting day');
+                     }
                    }
                  }}
-                 onDeleteWorkout={(workout, day) => {
+                 onDeleteWorkout={async (workout, day) => {
                    if (confirm('Are you sure you want to delete this workout?')) {
-                     // TODO: Implement delete workout API call
-                     loadWorkoutData(activeSection);
+                     try {
+                       const token = localStorage.getItem('token');
+                       const response = await fetch(`/api/workouts/sessions/${workout.id}`, {
+                         method: 'DELETE',
+                         headers: { 'Authorization': `Bearer ${token}` }
+                       });
+                       
+                       if (response.ok) {
+                         showMessage('success', 'Workout deleted successfully');
+                         loadWorkoutData(activeSection);
+                       } else {
+                         showMessage('error', 'Failed to delete workout');
+                       }
+                     } catch (error) {
+                       console.error('Error deleting workout:', error);
+                       showMessage('error', 'Error deleting workout');
+                     }
                    }
                  }}
-                 onDeleteMoveframe={(moveframe, workout, day) => {
-                   if (confirm('Are you sure you want to delete this moveframe?')) {
-                     // TODO: Implement delete moveframe API call
-                     loadWorkoutData(activeSection);
+                 onDeleteMoveframe={async (moveframe, workout, day) => {
+                   if (confirm(`Are you sure you want to delete moveframe ${moveframe.letter || moveframe.code}?`)) {
+                     try {
+                       const token = localStorage.getItem('token');
+                       const response = await fetch(`/api/workouts/moveframes/${moveframe.id}`, {
+                         method: 'DELETE',
+                         headers: { 'Authorization': `Bearer ${token}` }
+                       });
+                       
+                       if (response.ok) {
+                         showMessage('success', 'Moveframe deleted successfully');
+                         loadWorkoutData(activeSection);
+                       } else {
+                         showMessage('error', 'Failed to delete moveframe');
+                       }
+                     } catch (error) {
+                       console.error('Error deleting moveframe:', error);
+                       showMessage('error', 'Error deleting moveframe');
+                     }
                    }
                  }}
-                 onDeleteMovelap={(movelap, moveframe, workout, day) => {
+                 onDeleteMovelap={async (movelap, moveframe, workout, day) => {
                    if (confirm('Are you sure you want to delete this movelap?')) {
-                     // TODO: Implement delete movelap API call
-                     loadWorkoutData(activeSection);
+                     try {
+                       const token = localStorage.getItem('token');
+                       const response = await fetch(`/api/workouts/movelaps/${movelap.id}`, {
+                         method: 'DELETE',
+                         headers: { 'Authorization': `Bearer ${token}` }
+                       });
+                       
+                       if (response.ok) {
+                         showMessage('success', 'Movelap deleted successfully');
+                         loadWorkoutData(activeSection);
+                       } else {
+                         showMessage('error', 'Failed to delete movelap');
+                       }
+                     } catch (error) {
+                       console.error('Error deleting movelap:', error);
+                       showMessage('error', 'Error deleting movelap');
+                     }
                    }
                  }}
                />

@@ -6,6 +6,10 @@ import WorkoutHierarchyView from './WorkoutHierarchyView';
 
 interface DayWorkoutHierarchyProps {
   workoutPlan: any;
+  expandedDays?: Set<string>;
+  expandedWorkouts?: Set<string>;
+  onToggleDay?: (dayId: string) => void;
+  onToggleWorkout?: (workoutId: string) => void;
   onEditDay?: (day: any) => void;
   onAddWorkout?: (day: any) => void;
   onEditWorkout?: (workout: any, day: any) => void;
@@ -21,6 +25,10 @@ interface DayWorkoutHierarchyProps {
 
 export default function DayWorkoutHierarchy({
   workoutPlan,
+  expandedDays,
+  expandedWorkouts,
+  onToggleDay,
+  onToggleWorkout,
   onEditDay,
   onAddWorkout,
   onEditWorkout,
@@ -34,6 +42,10 @@ export default function DayWorkoutHierarchy({
   onDeleteMovelap
 }: DayWorkoutHierarchyProps) {
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+  
+  // Use empty Set if not provided
+  const expandedDaysSet = expandedDays || new Set<string>();
+  const expandedWorkoutsSet = expandedWorkouts || new Set<string>();
 
   if (!workoutPlan || !workoutPlan.weeks) {
     return (
@@ -119,13 +131,20 @@ export default function DayWorkoutHierarchy({
         return (
           <div key={day.id} className="mb-8">
             {/* Day Header */}
-            <div className={`px-4 py-3 rounded-t-lg shadow-md mb-2 ${
-              hasWorkouts 
-                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white' 
-                : 'bg-gradient-to-r from-gray-400 to-gray-300 text-white'
-            }`}>
+            <div 
+              className={`px-4 py-3 rounded-t-lg shadow-md mb-2 cursor-pointer hover:opacity-90 transition-all ${
+                hasWorkouts 
+                  ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white' 
+                  : 'bg-gradient-to-r from-gray-400 to-gray-300 text-white'
+              }`}
+              onClick={() => onToggleDay?.(day.id)}
+              title="Click to expand/collapse day"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
+                  <span className="text-lg font-bold">
+                    {expandedDaysSet.has(day.id) ? '▼' : '▶'}
+                  </span>
                   <h3 className="text-lg font-bold">
                     {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })} - {new Date(day.date).toLocaleDateString()}
                   </h3>
@@ -166,43 +185,62 @@ export default function DayWorkoutHierarchy({
               )}
             </div>
 
-            {/* Day Options Header */}
-            <div className="bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700">
-              <div className="flex items-center justify-between">
-                <div>
-                  Workouts of <span className="text-blue-600">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span> 
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">Day options:</span> 
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => onEditDay?.(dayWithWeek)}
-                      className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                    >
-                      Edit Day Info
-                    </button>
-                    <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
-                      Copy
-                    </button>
-                    <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
-                      Move
-                    </button>
-                    <button 
-                      onClick={() => onDeleteDay?.(dayWithWeek)}
-                      className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
+            {/* Day Options Header - Only show when expanded */}
+            {expandedDaysSet.has(day.id) && (
+              <>
+                <div className="bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      Workouts of <span className="text-blue-600">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span> 
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">Day options:</span> 
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddWorkout?.(dayWithWeek);
+                          }}
+                          className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                        >
+                          Add Workout
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditDay?.(dayWithWeek);
+                          }}
+                          className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                        >
+                          Edit Day Info
+                        </button>
+                        <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                          Copy
+                        </button>
+                        <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                          Move
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteDay?.(dayWithWeek);
+                          }}
+                          className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Workout Hierarchy (separate tables with gaps) */}
-            <div className="bg-white rounded-b-lg shadow-md p-4">
+                {/* Workout Hierarchy (separate tables with gaps) */}
+                <div className="bg-white rounded-b-lg shadow-md p-4">
               {hasWorkouts ? (
                 <WorkoutHierarchyView
                   day={dayWithWeek}
+                  expandedWorkouts={expandedWorkoutsSet}
+                  onToggleWorkout={onToggleWorkout}
                   onAddWorkout={onAddWorkout}
                   onEditWorkout={onEditWorkout}
                   onEditMoveframe={onEditMoveframe}
@@ -219,7 +257,9 @@ export default function DayWorkoutHierarchy({
                   <p className="text-xs mt-1">Click "Add Workout" to create one</p>
                 </div>
               )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         );
       })}

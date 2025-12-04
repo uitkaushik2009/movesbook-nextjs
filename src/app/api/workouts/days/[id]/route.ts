@@ -95,3 +95,66 @@ export async function PUT(
   }
 }
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Get all workouts for this day
+    const workouts = await prisma.workoutSession.findMany({
+      where: { workoutDayId: params.id },
+      select: { id: true }
+    });
+
+    // Delete all moveframes and movelaps for all workouts
+    for (const workout of workouts) {
+      // Get all moveframes
+      const moveframes = await prisma.moveframe.findMany({
+        where: { workoutSessionId: workout.id },
+        select: { id: true }
+      });
+
+      // Delete movelaps for each moveframe
+      for (const moveframe of moveframes) {
+        await prisma.movelap.deleteMany({
+          where: { moveframeId: moveframe.id }
+        });
+      }
+
+      // Delete moveframes
+      await prisma.moveframe.deleteMany({
+        where: { workoutSessionId: workout.id }
+      });
+    }
+
+    // Delete all workouts for this day
+    await prisma.workoutSession.deleteMany({
+      where: { workoutDayId: params.id }
+    });
+
+    // Delete the day
+    await prisma.workoutDay.delete({
+      where: { id: params.id }
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting workout day:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete workout day' },
+      { status: 500 }
+    );
+  }
+}
+
