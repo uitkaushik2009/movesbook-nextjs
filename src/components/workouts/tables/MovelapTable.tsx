@@ -99,13 +99,21 @@ export default function MovelapTable({
                       Movelaps of the moveframe {moveframeCode} of workout #{workoutIndex + 1}
                     </span>
                     <span className="text-yellow-700">
-                      {workout.dayName || 'Monday'}
-                    </span>
-                    <span className="font-bold ml-4">Movelaps options:</span>
-                    <span className="text-yellow-700">
-                      &lt; put here the text buttons of the movelaps options, I will send later &gt;
+                      {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs">Movelaps options:</span>
+                    <div className="flex gap-1">
+                      <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                        Copy All
+                      </button>
+                      <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                        Clear All
+                      </button>
+                    </div>
+                  </div>
+                </div>
                   <button
                     onClick={() => setIsConfigModalOpen(true)}
                     className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-300 hover:bg-yellow-400 rounded"

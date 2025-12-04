@@ -112,6 +112,53 @@ export default function WorkoutTable({
       <div className="mb-4">
         <table className="w-full border-collapse bg-white shadow-sm">
           <thead className="bg-cyan-400 text-white">
+            {/* Title Row with Workout Options */}
+            <tr>
+              <th colSpan={visibleColumnCount + 1} className="border border-gray-400 px-3 py-2 text-left text-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold">
+                      Workout #{workoutIndex + 1}
+                    </span>
+                    <span className="text-cyan-200">
+                      {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </span>
+                    {workout.name && (
+                      <span className="text-cyan-200">
+                        - {workout.name}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs">Workout options:</span>
+                    <div className="flex gap-1">
+                      <button 
+                        onClick={onEdit}
+                        className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      >
+                        Edit Workout
+                      </button>
+                      <button className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
+                        Add Workout
+                      </button>
+                      <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                        Copy
+                      </button>
+                      <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                        Move
+                      </button>
+                      <button 
+                        onClick={onDelete}
+                        className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </th>
+            </tr>
+            {/* Column Headers */}
             <tr className="border-b border-gray-400">
               {visibleColumns.map((column) => (
                 <th

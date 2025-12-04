@@ -160,12 +160,30 @@ export default function DayWorkoutHierarchy({
               )}
             </div>
 
-            {/* Day Options Header (matches screenshot) */}
+            {/* Day Options Header */}
             <div className="bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700">
-              Workouts of the <span className="text-blue-600">&lt; put here the name of the day selected &gt;</span> 
-              <span className="mx-2">•</span>
-              <span className="font-bold">Day options:</span> 
-              <span className="text-blue-600"> &lt; put here the text button of the day options, I will send later &gt;</span>
+              <div className="flex items-center justify-between">
+                <div>
+                  Workouts of <span className="text-blue-600">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span> 
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">Day options:</span> 
+                  <div className="flex gap-2">
+                    <button className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
+                      Edit Day Info
+                    </button>
+                    <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                      Copy
+                    </button>
+                    <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                      Move
+                    </button>
+                    <button className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Workout Hierarchy (separate tables with gaps) */}
