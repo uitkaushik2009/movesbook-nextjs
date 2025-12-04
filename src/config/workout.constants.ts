@@ -68,9 +68,9 @@ export const API_ENDPOINTS = {
     DELETE: (id: string) => `/api/moveframes/${id}`
   },
   MOVELAPS: {
-    CREATE: (moveframeId: string) => `/api/moveframes/${moveframeId}/movelaps`,
-    UPDATE: (id: string) => `/api/movelaps/${id}`,
-    DELETE: (id: string) => `/api/movelaps/${id}`
+    CREATE: '/api/workouts/movelaps',
+    UPDATE: (id: string) => `/api/workouts/movelaps/${id}`,
+    DELETE: (id: string) => `/api/workouts/movelaps/${id}`
   },
   DAYS: {
     UPDATE: (id: string) => `/api/workouts/days/${id}`,

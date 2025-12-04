@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import WorkoutHierarchyView from './WorkoutHierarchyView';
 
 interface DayWorkoutHierarchyProps {
@@ -26,6 +27,8 @@ export default function DayWorkoutHierarchy({
   onDeleteMoveframe,
   onDeleteMovelap
 }: DayWorkoutHierarchyProps) {
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+
   if (!workoutPlan || !workoutPlan.weeks) {
     return (
       <div className="p-8 text-center text-gray-500">
@@ -34,21 +37,78 @@ export default function DayWorkoutHierarchy({
     );
   }
 
-  // Flatten all days from all weeks
-  const allDays: any[] = [];
-  workoutPlan.weeks.forEach((week: any) => {
-    week.days?.forEach((day: any) => {
-      allDays.push({ ...day, weekNumber: week.weekNumber });
-    });
-  });
+  // Get all weeks sorted
+  const sortedWeeks = [...workoutPlan.weeks].sort((a: any, b: any) => a.weekNumber - b.weekNumber);
+  const totalWeeks = sortedWeeks.length;
 
-  // Sort by date
-  allDays.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Get current week's days
+  const currentWeek = sortedWeeks[currentWeekIndex];
+  const weekDays = currentWeek?.days || [];
+  
+  // Sort days by date
+  const sortedDays = [...weekDays].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // Week navigation handlers
+  const goToPreviousWeek = () => {
+    if (currentWeekIndex > 0) {
+      setCurrentWeekIndex(currentWeekIndex - 1);
+    }
+  };
+
+  const goToNextWeek = () => {
+    if (currentWeekIndex < totalWeeks - 1) {
+      setCurrentWeekIndex(currentWeekIndex + 1);
+    }
+  };
 
   return (
     <div className="p-4 bg-gray-100">
-      {allDays.map((day, dayIndex) => {
+      {/* Week Navigation */}
+      {totalWeeks > 1 && (
+        <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={goToPreviousWeek}
+              disabled={currentWeekIndex === 0}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                currentWeekIndex === 0
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
+            >
+              <ChevronLeft size={20} />
+              Previous Week
+            </button>
+
+            <div className="text-center">
+              <div className="text-lg font-bold text-gray-900">
+                Week {currentWeek?.weekNumber || currentWeekIndex + 1}
+              </div>
+              <div className="text-sm text-gray-500">
+                {currentWeekIndex + 1} of {totalWeeks}
+              </div>
+            </div>
+
+            <button
+              onClick={goToNextWeek}
+              disabled={currentWeekIndex >= totalWeeks - 1}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                currentWeekIndex >= totalWeeks - 1
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-500 text-white hover:bg-blue-600'
+              }`}
+            >
+              Next Week
+              <ChevronRight size={20} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Days for Current Week */}
+      {sortedDays.map((day, dayIndex) => {
         const hasWorkouts = day.workouts && day.workouts.length > 0;
+        const dayWithWeek = { ...day, weekNumber: currentWeek.weekNumber };
 
         return (
           <div key={day.id} className="mb-8">
@@ -64,7 +124,7 @@ export default function DayWorkoutHierarchy({
                     {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })} - {new Date(day.date).toLocaleDateString()}
                   </h3>
                   <span className="text-sm opacity-90">
-                    Week {day.weekNumber}
+                    Week {currentWeek.weekNumber}
                   </span>
                   {day.period && (
                     <span 
@@ -112,7 +172,7 @@ export default function DayWorkoutHierarchy({
             <div className="bg-white rounded-b-lg shadow-md p-4">
               {hasWorkouts ? (
                 <WorkoutHierarchyView
-                  day={day}
+                  day={dayWithWeek}
                   onEditWorkout={onEditWorkout}
                   onEditMoveframe={onEditMoveframe}
                   onEditMovelap={onEditMovelap}

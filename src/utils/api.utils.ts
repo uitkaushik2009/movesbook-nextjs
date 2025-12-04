@@ -163,9 +163,9 @@ export const moveframeApi = {
 // ==================== MOVELAP API ====================
 export const movelapApi = {
   async create(moveframeId: string, data: any) {
-    return apiFetch(API_ENDPOINTS.MOVELAPS.CREATE(moveframeId), {
+    return apiFetch(API_ENDPOINTS.MOVELAPS.CREATE, {
       method: 'POST',
-      body: JSON.stringify(data)
+      body: JSON.stringify({ moveframeId, ...data })
     });
   },
 
