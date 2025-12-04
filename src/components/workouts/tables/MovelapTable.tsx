@@ -1,6 +1,9 @@
 'use client';
 
 import React from 'react';
+import { Settings } from 'lucide-react';
+import { useTableColumns } from '@/hooks/useTableColumns';
+import TableColumnConfig from '../TableColumnConfig';
 
 interface MovelapTableProps {
   day: any;
@@ -25,122 +28,194 @@ export default function MovelapTable({
   onDeleteMovelap,
   onAddMovelap
 }: MovelapTableProps) {
+  const {
+    visibleColumns,
+    visibleColumnCount,
+    toggleColumn,
+    resetToDefault,
+    isConfigModalOpen,
+    setIsConfigModalOpen,
+    columns
+  } = useTableColumns('movelap');
+
+  // Helper function to get cell value
+  const getCellValue = (column: any, movelap: any) => {
+    switch (column.id) {
+      case 'mf':
+        return moveframeCode;
+      case 'color':
+        return (
+          <span style={{
+            display: 'inline-block',
+            width: '16px',
+            height: '16px',
+            borderRadius: '50%',
+            backgroundColor: moveframe.section?.color || moveframe.color || '#10b981',
+            border: '1px solid #666'
+          }}></span>
+        );
+      case 'workout_type':
+        return moveframe.section?.name || moveframe.type || 'Warm up';
+      case 'sport':
+        return moveframe.sport || 'Swim';
+      case 'distance':
+        return movelap.distance || '0';
+      case 'style':
+        return movelap.style || '—';
+      case 'speed':
+        return movelap.speed || '—';
+      case 'time':
+        return movelap.time || '—';
+      case 'pace':
+        return movelap.pace || '—';
+      case 'rec':
+        return movelap.pause || '—';
+      case 'rest_to':
+        return movelap.restType || '—';
+      case 'aim_sound':
+        return movelap.alarm ? `Alarm ${movelap.alarm}` : movelap.sound || '—';
+      case 'annotation':
+        return movelap.notes || '';
+      case 'heartrate':
+        return movelap.heartRate || '—';
+      case 'calories':
+        return movelap.calories || '—';
+      default:
+        return '—';
+    }
+  };
+
   return (
-    <div className="mb-4 ml-16">
-      <table className="w-full border-collapse bg-white shadow-sm">
-        {/* Title Row */}
-        <thead className="bg-yellow-200">
-          <tr>
-            <th colSpan={14} className="border border-gray-400 px-3 py-2 text-left text-sm">
-              <div className="flex items-center gap-2">
-                <span className="font-bold">
-                  Movelaps of the moveframe {moveframeCode} of workout #{workoutIndex + 1}
-                </span>
-                <span className="text-yellow-700">
-                  {workout.dayName || 'Monday'}
-                </span>
-                <span className="font-bold ml-4">Movelaps options:</span>
-                <span className="text-yellow-700">
-                  &lt; put here the text buttons of the movelaps options, I will send later &gt;
-                </span>
-              </div>
-            </th>
-          </tr>
-          {/* Column Headers */}
-          <tr className="bg-yellow-300">
-            <th className="border border-gray-400 px-2 py-1 text-center text-xs font-bold" style={{width: '40px'}}>MF</th>
-            <th className="border border-gray-400 px-2 py-1 text-center text-xs font-bold" style={{width: '60px'}}>Color</th>
-            <th className="border border-gray-400 px-2 py-1 text-left text-xs font-bold" style={{width: '100px'}}>Workout type</th>
-            <th className="border border-gray-400 px-2 py-1 text-left text-xs font-bold" style={{width: '80px'}}>Sport</th>
-            <th className="border border-gray-400 px-2 py-1 text-center text-xs font-bold" style={{width: '80px'}}>Distance</th>
-            <th className="border border-gray-400 px-2 py-1 text-center text-xs font-bold" style={{width: '80px'}}>Style</th>
-            <th className="border border-gray-400 px-2 py-1 text-center text-xs font-bold" style={{width: '60px'}}>Speed</th>
-            <th className="border border-gray-400 px-2 py-1 text-center text-xs font-bold" style={{width: '60px'}}>Time</th>
-            <th className="border border-gray-400 px-2 py-1 text-center text-xs font-bold" style={{width: '60px'}}>Pace</th>
-            <th className="border border-gray-400 px-2 py-1 text-center text-xs font-bold" style={{width: '60px'}}>Rec</th>
-            <th className="border border-gray-400 px-2 py-1 text-center text-xs font-bold" style={{width: '80px'}}>Rest To</th>
-            <th className="border border-gray-400 px-2 py-1 text-center text-xs font-bold" style={{width: '100px'}}>Aim Sound</th>
-            <th className="border border-gray-400 px-2 py-1 text-left text-xs font-bold" style={{minWidth: '150px'}}>Annotation</th>
-            <th 
-              className="border border-gray-400 px-2 py-1 text-center text-xs font-bold sticky right-0 bg-yellow-300 z-20"
-              style={{minWidth: '120px'}}
-            >
-              Option
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {movelaps.map((movelap, index) => (
-            <tr 
-              key={movelap.id || index} 
-              className={`hover:bg-blue-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
-            >
-              <td className="border border-gray-300 px-2 py-1.5 text-sm font-bold text-center">{moveframeCode}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-sm text-center">
-                <span style={{
-                  display: 'inline-block',
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '50%',
-                  backgroundColor: moveframe.section?.color || moveframe.color || '#10b981',
-                  border: '1px solid #666'
-                }}></span>
-              </td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs">{moveframe.section?.name || moveframe.type || 'Warm up'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs">{moveframe.sport || 'Swim'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-right">{movelap.distance || '0'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.style || '—'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.speed || '—'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-right">{movelap.time || '—'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-right">{movelap.pace || '—'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.pause || '—'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.restType || '—'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs text-center">{movelap.alarm ? `Alarm ${movelap.alarm}` : movelap.sound || '—'}</td>
-              <td className="border border-gray-300 px-2 py-1.5 text-xs">{movelap.notes || ''}</td>
-              
-              {/* Sticky Options Column */}
-              <td className="border border-gray-300 px-1 py-1.5 sticky right-0 bg-white z-10 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
-                <div className="flex gap-1 justify-center items-center">
+    <>
+      <div className="mb-4 ml-16">
+        <table className="w-full border-collapse bg-white shadow-sm">
+          {/* Title Row */}
+          <thead className="bg-yellow-200">
+            <tr>
+              <th colSpan={visibleColumnCount + 1} className="border border-gray-400 px-3 py-2 text-left text-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold">
+                      Movelaps of the moveframe {moveframeCode} of workout #{workoutIndex + 1}
+                    </span>
+                    <span className="text-yellow-700">
+                      {workout.dayName || 'Monday'}
+                    </span>
+                    <span className="font-bold ml-4">Movelaps options:</span>
+                    <span className="text-yellow-700">
+                      &lt; put here the text buttons of the movelaps options, I will send later &gt;
+                    </span>
+                  </div>
                   <button
-                    onClick={() => onEditMovelap(movelap)}
-                    className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                    title="Edit movelap"
+                    onClick={() => setIsConfigModalOpen(true)}
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-300 hover:bg-yellow-400 rounded"
+                    title="Configure columns"
                   >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {/* Show options dropdown */}}
-                    className="px-2 py-0.5 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-                    title="Options"
-                  >
-                    Option
-                  </button>
-                  <button
-                    onClick={() => onDeleteMovelap(movelap)}
-                    className="px-2 py-0.5 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                    title="Delete movelap"
-                  >
-                    Delete
+                    <Settings size={14} />
+                    Columns
                   </button>
                 </div>
+              </th>
+            </tr>
+            {/* Column Headers */}
+            <tr className="bg-yellow-300">
+              {visibleColumns.map((column) => (
+                <th
+                  key={column.id}
+                  className={`border border-gray-400 px-2 py-1 text-xs font-bold ${
+                    column.align === 'center' ? 'text-center' : 
+                    column.align === 'right' ? 'text-right' : 'text-left'
+                  }`}
+                  style={{
+                    width: column.width,
+                    minWidth: column.minWidth
+                  }}
+                >
+                  {column.label}
+                </th>
+              ))}
+              <th 
+                className="border border-gray-400 px-2 py-1 text-center text-xs font-bold sticky right-0 bg-yellow-300 z-20"
+                style={{minWidth: '120px'}}
+              >
+                Option
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {movelaps.map((movelap, index) => (
+              <tr 
+                key={movelap.id || index} 
+                className={`hover:bg-blue-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+              >
+                {visibleColumns.map((column) => (
+                  <td
+                    key={column.id}
+                    className={`border border-gray-300 px-2 py-1.5 text-xs ${
+                      column.id === 'mf' ? 'font-bold' : ''
+                    } ${
+                      column.align === 'center' ? 'text-center' : 
+                      column.align === 'right' ? 'text-right' : 'text-left'
+                    }`}
+                  >
+                    {getCellValue(column, movelap)}
+                  </td>
+                ))}
+                
+                {/* Sticky Options Column */}
+                <td className="border border-gray-300 px-1 py-1.5 sticky right-0 bg-white z-10 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
+                  <div className="flex gap-1 justify-center items-center">
+                    <button
+                      onClick={() => onEditMovelap(movelap)}
+                      className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      title="Edit movelap"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {/* Show options dropdown */}}
+                      className="px-2 py-0.5 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+                      title="Options"
+                    >
+                      Option
+                    </button>
+                    <button
+                      onClick={() => onDeleteMovelap(movelap)}
+                      className="px-2 py-0.5 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                      title="Delete movelap"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={visibleColumnCount + 1} className="border-t-2 border-gray-400 px-2 py-2">
+                <button
+                  onClick={onAddMovelap}
+                  className="px-3 py-1.5 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                >
+                  + Add new row
+                </button>
               </td>
             </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan={14} className="border-t-2 border-gray-400 px-2 py-2">
-              <button
-                onClick={onAddMovelap}
-                className="px-3 py-1.5 text-sm bg-green-500 text-white rounded hover:bg-green-600"
-              >
-                + Add new row
-              </button>
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+          </tfoot>
+        </table>
+      </div>
+
+      {/* Column Configuration Modal */}
+      <TableColumnConfig
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        columns={columns}
+        onToggleColumn={toggleColumn}
+        onResetToDefault={resetToDefault}
+        tableTitle="Movelap"
+      />
+    </>
   );
 }
 
