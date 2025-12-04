@@ -13,6 +13,7 @@ interface WorkoutTableProps {
   onEdit: () => void;
   onDelete: () => void;
   onAddMoveframe: () => void;
+  onAddWorkout: () => void;
 }
 
 export default function WorkoutTable({
@@ -21,7 +22,8 @@ export default function WorkoutTable({
   workoutIndex,
   onEdit,
   onDelete,
-  onAddMoveframe
+  onAddMoveframe,
+  onAddWorkout
 }: WorkoutTableProps) {
   const {
     visibleColumns,
@@ -133,12 +135,21 @@ export default function WorkoutTable({
                     <span className="font-bold text-xs">Workout options:</span>
                     <div className="flex gap-1">
                       <button 
-                        onClick={onEdit}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit();
+                        }}
                         className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
                         Edit Workout
                       </button>
-                      <button className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddWorkout();
+                        }}
+                        className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                      >
                         Add Workout
                       </button>
                       <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
@@ -148,7 +159,10 @@ export default function WorkoutTable({
                         Move
                       </button>
                       <button 
-                        onClick={onDelete}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete();
+                        }}
                         className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
                       >
                         Delete

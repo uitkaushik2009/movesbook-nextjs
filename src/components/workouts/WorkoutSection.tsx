@@ -530,6 +530,15 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        }
                      : workoutPlan
                  }
+                 onEditDay={(day) => {
+                   setEditingDay(day);
+                   setShowEditDayModal(true);
+                 }}
+                 onAddWorkout={(day) => {
+                   setAddWorkoutDay(day);
+                   setWorkoutModalMode('add');
+                   setShowAddWorkoutModal(true);
+                 }}
                  onEditWorkout={(workout, day) => {
                    setEditingWorkout(workout);
                    setAddWorkoutDay(day);
@@ -561,6 +570,13 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setActiveWorkout(workout);
                    setActiveDay(day);
                    setShowAddMovelapModal(true);
+                 }}
+                 onDeleteDay={(day) => {
+                   if (confirm(`Are you sure you want to delete this day (${new Date(day.date).toLocaleDateString()})?`)) {
+                     // TODO: Implement delete day API call
+                     console.log('Delete day:', day.id);
+                     loadWorkoutData(activeSection);
+                   }
                  }}
                  onDeleteWorkout={(workout, day) => {
                    if (confirm('Are you sure you want to delete this workout?')) {

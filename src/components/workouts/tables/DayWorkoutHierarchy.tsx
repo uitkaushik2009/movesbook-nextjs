@@ -6,11 +6,14 @@ import WorkoutHierarchyView from './WorkoutHierarchyView';
 
 interface DayWorkoutHierarchyProps {
   workoutPlan: any;
+  onEditDay?: (day: any) => void;
+  onAddWorkout?: (day: any) => void;
   onEditWorkout?: (workout: any, day: any) => void;
   onEditMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onEditMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
   onAddMoveframe?: (workout: any, day: any) => void;
   onAddMovelap?: (moveframe: any, workout: any, day: any) => void;
+  onDeleteDay?: (day: any) => void;
   onDeleteWorkout?: (workout: any, day: any) => void;
   onDeleteMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
@@ -18,11 +21,14 @@ interface DayWorkoutHierarchyProps {
 
 export default function DayWorkoutHierarchy({
   workoutPlan,
+  onEditDay,
+  onAddWorkout,
   onEditWorkout,
   onEditMoveframe,
   onEditMovelap,
   onAddMoveframe,
   onAddMovelap,
+  onDeleteDay,
   onDeleteWorkout,
   onDeleteMoveframe,
   onDeleteMovelap
@@ -169,7 +175,10 @@ export default function DayWorkoutHierarchy({
                 <div className="flex items-center gap-2">
                   <span className="font-bold">Day options:</span> 
                   <div className="flex gap-2">
-                    <button className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
+                    <button 
+                      onClick={() => onEditDay?.(dayWithWeek)}
+                      className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                    >
                       Edit Day Info
                     </button>
                     <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
@@ -178,7 +187,10 @@ export default function DayWorkoutHierarchy({
                     <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
                       Move
                     </button>
-                    <button className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">
+                    <button 
+                      onClick={() => onDeleteDay?.(dayWithWeek)}
+                      className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                    >
                       Delete
                     </button>
                   </div>
@@ -191,6 +203,7 @@ export default function DayWorkoutHierarchy({
               {hasWorkouts ? (
                 <WorkoutHierarchyView
                   day={dayWithWeek}
+                  onAddWorkout={onAddWorkout}
                   onEditWorkout={onEditWorkout}
                   onEditMoveframe={onEditMoveframe}
                   onEditMovelap={onEditMovelap}

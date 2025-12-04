@@ -7,6 +7,7 @@ import MovelapTable from './MovelapTable';
 
 interface WorkoutHierarchyViewProps {
   day: any;
+  onAddWorkout?: (day: any) => void;
   onEditWorkout?: (workout: any, day: any) => void;
   onEditMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onEditMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
@@ -19,6 +20,7 @@ interface WorkoutHierarchyViewProps {
 
 export default function WorkoutHierarchyView({
   day,
+  onAddWorkout,
   onEditWorkout,
   onEditMoveframe,
   onEditMovelap,
@@ -56,6 +58,7 @@ export default function WorkoutHierarchyView({
             onEdit={() => onEditWorkout?.(workout, day)}
             onDelete={() => onDeleteWorkout?.(workout, day)}
             onAddMoveframe={() => onAddMoveframe?.(workout, day)}
+            onAddWorkout={() => onAddWorkout?.(day)}
           />
 
           {/* MOVEFRAMES AND MOVELAPS */}
