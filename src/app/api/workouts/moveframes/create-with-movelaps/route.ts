@@ -1,0 +1,131 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { verifyToken } from '@/lib/auth';
+
+/**
+ * POST /api/workouts/moveframes/create-with-movelaps
+ * Create a moveframe with its movelaps in one transaction
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const {
+      workoutSessionId,
+      sectionId,
+      letter,
+      sport,
+      type,
+      description,
+      movelaps
+    } = body;
+
+    // Validation
+    if (!workoutSessionId || !sectionId || !letter || !sport || !description) {
+      return NextResponse.json(
+        { error: 'Missing required fields: workoutSessionId, sectionId, letter, sport, description' },
+        { status: 400 }
+      );
+    }
+
+    if (!movelaps || !Array.isArray(movelaps) || movelaps.length === 0) {
+      return NextResponse.json(
+        { error: 'Movelaps array is required and must have at least one movelap' },
+        { status: 400 }
+      );
+    }
+
+    // Verify workout session exists
+    const workoutSession = await prisma.workoutSession.findUnique({
+      where: { id: workoutSessionId }
+    });
+
+    if (!workoutSession) {
+      return NextResponse.json({ error: 'Workout session not found' }, { status: 404 });
+    }
+
+    // Verify section exists
+    const section = await prisma.workoutSection.findUnique({
+      where: { id: sectionId }
+    });
+
+    if (!section) {
+      return NextResponse.json({ error: 'Section not found' }, { status: 404 });
+    }
+
+    // Create moveframe with movelaps in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create the moveframe
+      const moveframe = await tx.moveframe.create({
+        data: {
+          workoutSessionId,
+          sectionId,
+          letter,
+          sport,
+          type: type || 'STANDARD',
+          description
+        }
+      });
+
+      // Create all movelaps
+      const createdMovelaps = await Promise.all(
+        movelaps.map((movelap: any) =>
+          tx.movelap.create({
+            data: {
+              moveframeId: moveframe.id,
+              repetitionNumber: movelap.repetitionNumber,
+              distance: movelap.distance || null,
+              speed: movelap.speed || null,
+              style: movelap.style || null,
+              pace: movelap.pace || null,
+              time: movelap.time || null,
+              reps: movelap.reps || null,
+              restType: movelap.restType || null,
+              pause: movelap.pause || null,
+              alarm: movelap.alarm || null,
+              sound: movelap.sound || null,
+              notes: movelap.notes || null,
+              status: movelap.status || 'PENDING',
+              isSkipped: movelap.isSkipped || false,
+              isDisabled: movelap.isDisabled || false
+            }
+          })
+        )
+      );
+
+      return {
+        moveframe,
+        movelaps: createdMovelaps
+      };
+    });
+
+    console.log(`✅ Moveframe created with ${result.movelaps.length} movelaps:`, result.moveframe.id);
+
+    return NextResponse.json({
+      success: true,
+      moveframe: result.moveframe,
+      movelaps: result.movelaps
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('❌ Error creating moveframe with movelaps:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to create moveframe',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
+  }
+}
+

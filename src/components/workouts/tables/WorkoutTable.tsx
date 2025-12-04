@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, GripVertical } from 'lucide-react';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import RowActionButtons from '../RowActionButtons';
 import { useTableColumns } from '@/hooks/useTableColumns';
 import TableColumnConfig from '../TableColumnConfig';
@@ -36,6 +37,39 @@ export default function WorkoutTable({
     setIsConfigModalOpen,
     columns
   } = useTableColumns('workout');
+
+  // Draggable hook for workout dragging
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    isDragging,
+    transform
+  } = useDraggable({
+    id: `workout-${workout.id}`,
+    data: {
+      type: 'workout',
+      workout: workout,
+      day: day
+    }
+  });
+
+  // Droppable hook for moveframe drops
+  const {
+    setNodeRef: setDropNodeRef,
+    isOver: isDropOver
+  } = useDroppable({
+    id: `workout-drop-${workout.id}`,
+    data: {
+      type: 'workout',
+      workout: workout,
+      day: day
+    }
+  });
+
+  const dragStyle = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined;
 
   // Calculate sport totals from moveframes
   const calculateSportTotals = () => {
@@ -113,7 +147,10 @@ export default function WorkoutTable({
 
   return (
     <>
-      <div className="mb-4">
+      <div 
+        ref={setDropNodeRef}
+        className={`mb-4 ${isDropOver ? 'ring-4 ring-yellow-400 ring-opacity-75 rounded' : ''}`}
+      >
         <table className="w-full border-collapse bg-white shadow-sm">
           <thead className="bg-cyan-400 text-white">
             {/* Title Row with Workout Options */}
@@ -122,9 +159,20 @@ export default function WorkoutTable({
               className="cursor-pointer hover:bg-cyan-500 transition-colors"
               title="Click to expand/collapse workout"
             >
-              <th colSpan={visibleColumnCount + 1} className="border border-gray-400 px-3 py-2 text-left text-sm">
+              <th colSpan={visibleColumnCount + 1} className={`border border-gray-400 px-3 py-2 text-left text-sm ${isDragging ? 'opacity-50 bg-cyan-200' : ''}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
+                    {/* Drag Handle */}
+                    <span
+                      ref={setNodeRef}
+                      {...attributes}
+                      {...listeners}
+                      className="cursor-move text-cyan-200 hover:text-white transition-colors"
+                      title="Drag to move workout"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <GripVertical size={18} />
+                    </span>
                     <span className="text-lg font-bold">
                       {isExpanded ? '▼' : '▶'}
                     </span>
@@ -186,10 +234,7 @@ export default function WorkoutTable({
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
-                  className={`border border-gray-400 px-2 py-2 text-sm font-bold ${
-                    column.align === 'center' ? 'text-center' : 
-                    column.align === 'right' ? 'text-right' : 'text-left'
-                  }`}
+                  className="border border-gray-400 px-2 py-2 text-sm font-bold text-center"
                   style={{
                     width: column.width,
                     minWidth: column.minWidth
@@ -198,21 +243,6 @@ export default function WorkoutTable({
                   {column.label}
                 </th>
               ))}
-              <th 
-                className="border border-gray-400 px-2 py-2 text-center text-sm font-bold sticky right-0 bg-cyan-400 z-20"
-                style={{ minWidth: '150px' }}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <span>Option</span>
-                  <button
-                    onClick={() => setIsConfigModalOpen(true)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-cyan-500 hover:bg-cyan-600 rounded"
-                    title="Configure columns"
-                  >
-                    <Settings size={12} />
-                  </button>
-                </div>
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -220,41 +250,11 @@ export default function WorkoutTable({
               {visibleColumns.map((column) => (
                 <td
                   key={column.id}
-                  className={`border border-gray-300 px-2 py-2 text-sm ${
-                    column.align === 'center' ? 'text-center' : 
-                    column.align === 'right' ? 'text-right' : 'text-left'
-                  }`}
+                  className="border border-gray-300 px-2 py-2 text-sm text-center"
                 >
                   {getCellValue(column)}
                 </td>
               ))}
-              
-              {/* Sticky Options Column */}
-              <td className="border border-gray-300 px-1 py-2 sticky right-0 bg-white z-10 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
-                <div className="flex gap-1 justify-center items-center">
-                  <button
-                    onClick={onEdit}
-                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                    title="Edit workout"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {/* Show options dropdown */}}
-                    className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-                    title="Options"
-                  >
-                    Option
-                  </button>
-                  <button
-                    onClick={onDelete}
-                    className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                    title="Delete workout"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </td>
             </tr>
           </tbody>
         </table>

@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { ChevronRight, ChevronDown, Plus, Edit, Trash2 } from 'lucide-react';
 import WorkoutLegend from './WorkoutLegend';
+import { DroppableDay } from './grid/DroppableDay';
+import { DraggableWorkout } from './grid/DraggableWorkout';
+import { DraggableMoveframe } from './grid/DraggableMoveframe';
 
 interface WorkoutGridProps {
   workoutPlan: any;

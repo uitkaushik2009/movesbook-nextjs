@@ -2,6 +2,19 @@
 
 import { useState, useEffect } from 'react';
 
+// Drag and Drop
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent
+} from '@dnd-kit/core';
+
 // Configuration and Types
 import { 
   WORKOUT_SECTIONS, 
@@ -42,6 +55,7 @@ import EditDayModal from '@/components/workouts/modals/EditDayModal';
 import AddMovelapModal from '@/components/workouts/modals/AddMovelapModal';
 import EditMoveframeModal from '@/components/workouts/modals/EditMoveframeModal';
 import EditMovelapModal from '@/components/workouts/modals/EditMovelapModal';
+import DragDropConfirmModal, { DragAction, DropPosition } from '@/components/workouts/modals/DragDropConfirmModal';
 
 // Icons
 import { X, Download, Plus, List, Table, Calendar } from 'lucide-react';
@@ -152,6 +166,32 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       setExpandedWorkouts(workoutIds);
     }
   }, [workoutPlan]);
+
+  // ==================== DRAG & DROP STATE ====================
+  // Note: activeWorkout and activeMoveframe already defined above for hierarchical context
+  const [draggedWorkout, setDraggedWorkout] = useState<any>(null);
+  const [draggedMoveframe, setDraggedMoveframe] = useState<any>(null);
+  const [dropTarget, setDropTarget] = useState<any>(null);
+  const [showDragModal, setShowDragModal] = useState(false);
+  const [dragModalConfig, setDragModalConfig] = useState<{
+    dragType: 'workout' | 'moveframe';
+    hasConflict: boolean;
+    conflictMessage?: string;
+    showPositionChoice?: boolean;
+    sourceData: any;
+    targetData: any;
+  } | null>(null);
+
+  // DnD Sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Drag starts after 8px movement
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
+
   const [virtualStartDate, setVirtualStartDate] = useState<Date | null>(null);
   const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
   const [showWorkoutSelector, setShowWorkoutSelector] = useState(false);
@@ -315,8 +355,259 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     }
   };
 
+  // ==================== DRAG & DROP HANDLERS ====================
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    
+    if (active.data.current?.type === 'workout') {
+      setDraggedWorkout(active.data.current.workout);
+    } else if (active.data.current?.type === 'moveframe') {
+      setDraggedMoveframe(active.data.current.moveframe);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over) {
+      setDraggedWorkout(null);
+      setDraggedMoveframe(null);
+      return;
+    }
+    
+    const dragType = active.data.current?.type;
+    const dropType = over.data.current?.type;
+    
+    if (dragType === 'workout' && dropType === 'day') {
+      // Check for conflicts
+      const sourceWorkout = active.data.current.workout;
+      const targetDay = over.data.current.day;
+      const existingWorkout = targetDay.workouts?.[0]; // Days can have max 3 workouts
+      
+      setDragModalConfig({
+        dragType: 'workout',
+        hasConflict: !!existingWorkout,
+        conflictMessage: existingWorkout ? 'This day already has a workout. Choose an action:' : undefined,
+        sourceData: { workout: sourceWorkout, sourceDay: active.data.current.day },
+        targetData: { targetDay, existingWorkout }
+      });
+      setShowDragModal(true);
+    } else if (dragType === 'moveframe') {
+      // Handle moveframe drops
+      const showPosition = dropType === 'moveframe';
+      
+      setDragModalConfig({
+        dragType: 'moveframe',
+        hasConflict: false,
+        showPositionChoice: showPosition,
+        sourceData: active.data.current,
+        targetData: over.data.current
+      });
+      setShowDragModal(true);
+    }
+    
+    setDraggedWorkout(null);
+    setDraggedMoveframe(null);
+  };
+
+  const handleDragConfirm = async (action: DragAction, position?: DropPosition) => {
+    if (!dragModalConfig) return;
+    
+    try {
+      if (dragModalConfig.dragType === 'workout') {
+        await handleWorkoutDragAction(action, dragModalConfig.sourceData, dragModalConfig.targetData);
+      } else {
+        await handleMoveframeDragAction(action, position, dragModalConfig.sourceData, dragModalConfig.targetData);
+      }
+      
+      await loadWorkoutData(activeSection);
+      
+      // Better success messages
+      const actionPastTense = action === 'copy' ? 'copied' : action === 'move' ? 'moved' : 'switched';
+      const itemType = dragModalConfig.dragType === 'workout' ? 'Workout' : 'Moveframe';
+      showMessage('success', `${itemType} ${actionPastTense} successfully!`);
+    } catch (error) {
+      console.error('Drag action failed:', error);
+      const errorMsg = error instanceof Error ? error.message : `Failed to ${action} ${dragModalConfig.dragType}`;
+      showMessage('error', errorMsg);
+    }
+    
+    setDragModalConfig(null);
+  };
+
+  const handleWorkoutDragAction = async (action: DragAction, sourceData: any, targetData: any) => {
+    const { workout, sourceDay } = sourceData;
+    const { targetDay, existingWorkout } = targetData;
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    
+    if (action === 'copy') {
+      // Duplicate workout
+      const response = await fetch('/api/workouts/sessions/duplicate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          workoutId: workout.id,
+          targetDayId: targetDay.id
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to copy workout');
+      }
+      
+      console.log('✅ Workout copied:', workout.id, '→', targetDay.id);
+    } else if (action === 'move') {
+      // Move workout
+      const response = await fetch('/api/workouts/sessions/move', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          workoutId: workout.id,
+          targetDayId: targetDay.id
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to move workout');
+      }
+      
+      console.log('✅ Workout moved:', workout.id, '→', targetDay.id);
+    } else if (action === 'switch' && existingWorkout) {
+      // Switch workouts
+      const response = await fetch('/api/workouts/sessions/switch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          workout1Id: workout.id,
+          workout2Id: existingWorkout.id
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to switch workouts');
+      }
+      
+      console.log('✅ Workouts switched:', workout.id, '↔', existingWorkout.id);
+    }
+  };
+
+  const handleMoveframeDragAction = async (action: DragAction, position: DropPosition | undefined, sourceData: any, targetData: any) => {
+    const { moveframe, workout: sourceWorkout, day: sourceDay } = sourceData;
+    const dropType = targetData.type;
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+
+    // Determine target workout based on drop type
+    let targetWorkoutId: string;
+    let insertBeforeId: string | undefined;
+    let finalPosition: string = 'append';
+
+    if (dropType === 'day') {
+      // Dropped on day header → append to last workout of that day
+      const targetDay = targetData.day;
+      const lastWorkout = targetDay.workouts?.[targetDay.workouts.length - 1];
+      if (!lastWorkout) {
+        throw new Error('Target day has no workouts');
+      }
+      targetWorkoutId = lastWorkout.id;
+      finalPosition = 'append';
+    } else if (dropType === 'workout') {
+      // Dropped on workout → append to moveframes
+      targetWorkoutId = targetData.workout.id;
+      finalPosition = 'append';
+    } else if (dropType === 'moveframe') {
+      // Dropped on specific moveframe → use position (before/after)
+      targetWorkoutId = targetData.workout.id;
+      if (position === 'before') {
+        insertBeforeId = targetData.moveframe.id;
+      } else {
+        // After: insert before the next moveframe
+        const currentIndex = targetData.workout.moveframes.findIndex((mf: any) => mf.id === targetData.moveframe.id);
+        const nextMoveframe = targetData.workout.moveframes[currentIndex + 1];
+        if (nextMoveframe) {
+          insertBeforeId = nextMoveframe.id;
+        } else {
+          finalPosition = 'append';
+        }
+      }
+    } else {
+      throw new Error('Invalid drop target');
+    }
+
+    if (action === 'copy') {
+      // Duplicate moveframe
+      const response = await fetch('/api/workouts/moveframes/duplicate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          moveframeId: moveframe.id,
+          targetWorkoutId,
+          position: finalPosition,
+          insertBeforeId
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to copy moveframe');
+      }
+      
+      console.log('✅ Moveframe copied:', moveframe.id, '→', targetWorkoutId);
+    } else if (action === 'move') {
+      // Move moveframe
+      const response = await fetch('/api/workouts/moveframes/move', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          moveframeId: moveframe.id,
+          targetWorkoutId,
+          position: finalPosition,
+          insertBeforeId
+        })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to move moveframe');
+      }
+      
+      console.log('✅ Moveframe moved:', moveframe.id, '→', targetWorkoutId);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full bg-white">
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="flex flex-col h-full bg-white">
       {/* Small header bar with close button */}
       <div className="bg-blue-600 text-white px-2 py-2 flex items-center justify-between border-b">
         <h3 className="text-lg font-semibold">Workout Planning</h3>
@@ -563,7 +854,28 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  }}
                />
             ) : (
-               <DayWorkoutHierarchy
+              <>
+                {/* Exclude Stretching Checkbox */}
+                <div className="mb-4 flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                  <input
+                    type="checkbox"
+                    id="exclude-stretching"
+                    checked={excludeStretchingFromTotals}
+                    onChange={(e) => setExcludeStretchingFromTotals(e.target.checked)}
+                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                  />
+                  <label 
+                    htmlFor="exclude-stretching"
+                    className="text-sm font-medium text-gray-700 cursor-pointer select-none"
+                  >
+                    Exclude stretching from the totals
+                  </label>
+                  <span className="text-xs text-gray-500 ml-2">
+                    ⚠️ Note: Stretching is auto-excluded when 4+ sports are selected in a day
+                  </span>
+                </div>
+                
+                <DayWorkoutHierarchy
                  workoutPlan={
                    selectedWeekForTable && workoutPlan
                      ? {
@@ -705,6 +1017,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    }
                  }}
                />
+              </>
             )}
           </div>
         </main>
@@ -1273,5 +1586,36 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         />
       )}
      </div>
+
+      {/* Drag Overlay - Shows preview while dragging */}
+      <DragOverlay>
+        {draggedWorkout && (
+          <div className="bg-cyan-400 text-white px-4 py-2 rounded shadow-lg opacity-90">
+            🏃 Dragging Workout...
+          </div>
+        )}
+        {draggedMoveframe && (
+          <div className="bg-purple-400 text-white px-4 py-2 rounded shadow-lg opacity-90">
+            💪 Dragging Moveframe...
+          </div>
+        )}
+      </DragOverlay>
+
+      {/* Drag & Drop Confirmation Modal */}
+      {dragModalConfig && (
+        <DragDropConfirmModal
+          isOpen={showDragModal}
+          onClose={() => {
+            setShowDragModal(false);
+            setDragModalConfig(null);
+          }}
+          onConfirm={handleDragConfirm}
+          dragType={dragModalConfig.dragType}
+          hasConflict={dragModalConfig.hasConflict}
+          conflictMessage={dragModalConfig.conflictMessage}
+          showPositionChoice={dragModalConfig.showPositionChoice}
+        />
+      )}
+    </DndContext>
    );
 }

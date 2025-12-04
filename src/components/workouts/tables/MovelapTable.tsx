@@ -129,10 +129,7 @@ export default function MovelapTable({
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
-                  className={`border border-gray-400 px-2 py-1 text-xs font-bold ${
-                    column.align === 'center' ? 'text-center' : 
-                    column.align === 'right' ? 'text-right' : 'text-left'
-                  }`}
+                  className="border border-gray-400 px-2 py-1 text-xs font-bold text-center"
                   style={{
                     width: column.width,
                     minWidth: column.minWidth
@@ -141,12 +138,6 @@ export default function MovelapTable({
                   {column.label}
                 </th>
               ))}
-              <th 
-                className="border border-gray-400 px-2 py-1 text-center text-xs font-bold sticky right-0 bg-yellow-300 z-20"
-                style={{minWidth: '120px'}}
-              >
-                Option
-              </th>
             </tr>
           </thead>
           <tbody>
@@ -158,43 +149,13 @@ export default function MovelapTable({
                 {visibleColumns.map((column) => (
                   <td
                     key={column.id}
-                    className={`border border-gray-300 px-2 py-1.5 text-xs ${
+                    className={`border border-gray-300 px-2 py-1.5 text-xs text-center ${
                       column.id === 'mf' ? 'font-bold' : ''
-                    } ${
-                      column.align === 'center' ? 'text-center' : 
-                      column.align === 'right' ? 'text-right' : 'text-left'
                     }`}
                   >
                     {getCellValue(column, movelap)}
                   </td>
                 ))}
-                
-                {/* Sticky Options Column */}
-                <td className="border border-gray-300 px-1 py-1.5 sticky right-0 bg-white z-10 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
-                  <div className="flex gap-1 justify-center items-center">
-                    <button
-                      onClick={() => onEditMovelap(movelap)}
-                      className="px-2 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                      title="Edit movelap"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {/* Show options dropdown */}}
-                      className="px-2 py-0.5 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-                      title="Options"
-                    >
-                      Option
-                    </button>
-                    <button
-                      onClick={() => onDeleteMovelap(movelap)}
-                      className="px-2 py-0.5 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                      title="Delete movelap"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
               </tr>
             ))}
           </tbody>

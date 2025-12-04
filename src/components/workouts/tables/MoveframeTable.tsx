@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Settings } from 'lucide-react';
+import { Settings, GripVertical } from 'lucide-react';
+import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useTableColumns } from '@/hooks/useTableColumns';
 import TableColumnConfig from '../TableColumnConfig';
 
@@ -39,6 +40,37 @@ export default function MoveframeTable({
     setIsConfigModalOpen,
     columns
   } = useTableColumns('moveframe');
+
+  // Draggable hook for moveframe dragging
+  const {
+    attributes: dragAttributes,
+    listeners: dragListeners,
+    setNodeRef: setDragNodeRef,
+    isDragging,
+    transform: dragTransform
+  } = useDraggable({
+    id: `moveframe-${moveframe.id}`,
+    data: {
+      type: 'moveframe',
+      moveframe: moveframe,
+      workout: workout,
+      day: day
+    }
+  });
+
+  // Droppable hook for dropping other moveframes before/after this one
+  const {
+    setNodeRef: setDropNodeRef,
+    isOver: isDropOver
+  } = useDroppable({
+    id: `moveframe-drop-${moveframe.id}`,
+    data: {
+      type: 'moveframe',
+      moveframe: moveframe,
+      workout: workout,
+      day: day
+    }
+  });
 
   // Helper function to get cell value
   const getCellValue = (column: any) => {
@@ -151,13 +183,18 @@ export default function MoveframeTable({
             </tr>
             {/* Column Headers */}
             <tr className="bg-purple-300">
+              {/* Drag Handle Header */}
+              <th 
+                className="border border-gray-400 px-1 py-1 text-center text-xs font-bold w-8"
+                title="Drag handle"
+              >
+                ⋮⋮
+              </th>
+              
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
-                  className={`border border-gray-400 px-2 py-1 text-xs font-bold ${
-                    column.align === 'center' ? 'text-center' : 
-                    column.align === 'right' ? 'text-right' : 'text-left'
-                  }`}
+                  className="border border-gray-400 px-2 py-1 text-xs font-bold text-center"
                   style={{
                     width: column.width,
                     minWidth: column.minWidth
@@ -166,72 +203,43 @@ export default function MoveframeTable({
                   {column.label}
                 </th>
               ))}
-              <th 
-                className="border border-gray-400 px-2 py-1 text-center text-xs font-bold sticky right-0 bg-purple-300 z-20"
-                style={{minWidth: '120px'}}
-              >
-                Option
-              </th>
             </tr>
           </thead>
           <tbody>
             <tr 
-              className="hover:bg-purple-100 cursor-pointer"
+              ref={setDropNodeRef}
+              className={`hover:bg-purple-100 cursor-pointer ${
+                isDragging ? 'opacity-50 bg-purple-200' : ''
+              } ${
+                isDropOver ? 'ring-2 ring-yellow-400 bg-yellow-50' : ''
+              }`}
               onClick={onToggleExpand}
-              title={isExpanded ? "Click to collapse movelaps" : "Click to expand movelaps"}
+              title={isExpanded ? "Click to collapse movelaps" : "Click to expand movelaps | Drop moveframe here"}
             >
+              {/* Drag Handle Cell */}
+              <td className="border border-gray-300 px-1 py-2 text-center w-8">
+                <span
+                  ref={setDragNodeRef}
+                  {...dragAttributes}
+                  {...dragListeners}
+                  className="cursor-move text-purple-600 hover:text-purple-800 transition-colors inline-block"
+                  title="Drag to move moveframe"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <GripVertical size={16} />
+                </span>
+              </td>
+              
               {visibleColumns.map((column) => (
                 <td
                   key={column.id}
-                  className={`border border-gray-300 px-2 py-2 text-sm ${
+                  className={`border border-gray-300 px-2 py-2 text-sm text-center ${
                     column.id === 'mf' ? 'font-bold' : ''
-                  } ${
-                    column.align === 'center' ? 'text-center' : 
-                    column.align === 'right' ? 'text-right' : 'text-left'
                   }`}
                 >
                   {getCellValue(column)}
                 </td>
               ))}
-              
-              {/* Sticky Options Column */}
-              <td 
-                className="border border-gray-300 px-1 py-2 sticky right-0 bg-purple-50 z-10 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex gap-1 justify-center items-center">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit();
-                    }}
-                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                    title="Edit moveframe"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      /* Show options dropdown */
-                    }}
-                    className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-                    title="Options"
-                  >
-                    Option
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete();
-                    }}
-                    className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                    title="Delete moveframe"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </td>
             </tr>
           </tbody>
         </table>

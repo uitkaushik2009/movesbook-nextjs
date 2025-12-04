@@ -62,10 +62,18 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string) => `/api/workouts/${id}`,
     DELETE: (id: string) => `/api/workouts/${id}`
   },
+  SESSIONS: {
+    DUPLICATE: '/api/workouts/sessions/duplicate',
+    MOVE: '/api/workouts/sessions/move',
+    SWITCH: '/api/workouts/sessions/switch'
+  },
   MOVEFRAMES: {
     CREATE: (workoutId: string) => `/api/workouts/${workoutId}/moveframes`,
+    CREATE_WITH_MOVELAPS: '/api/workouts/moveframes/create-with-movelaps',
     UPDATE: (id: string) => `/api/moveframes/${id}`,
-    DELETE: (id: string) => `/api/moveframes/${id}`
+    DELETE: (id: string) => `/api/moveframes/${id}`,
+    DUPLICATE: '/api/workouts/moveframes/duplicate',
+    MOVE: '/api/workouts/moveframes/move'
   },
   MOVELAPS: {
     CREATE: '/api/workouts/movelaps',
@@ -75,6 +83,10 @@ export const API_ENDPOINTS = {
   DAYS: {
     UPDATE: (id: string) => `/api/workouts/days/${id}`,
     DELETE: (id: string) => `/api/workouts/days/${id}`
+  },
+  SECTIONS: {
+    LIST: '/api/workouts/sections',
+    CREATE: '/api/workouts/sections'
   },
   USER: {
     SETTINGS: '/api/user/settings',
