@@ -37,6 +37,7 @@ interface UseWorkoutDataReturn {
   loadPeriods: () => Promise<void>;
   loadUserProfile: () => Promise<void>;
   loadAthleteList: () => Promise<void>;
+  updateWorkoutPlan: (plan: WorkoutPlan | null) => void;
   
   // Feedback
   feedbackMessage: FeedbackMessage | null;
@@ -183,6 +184,13 @@ export function useWorkoutData({
     }
   }, []);
 
+  /**
+   * Update workout plan (for local state updates without reloading)
+   */
+  const updateWorkoutPlan = useCallback((plan: WorkoutPlan | null) => {
+    setWorkoutPlan(plan);
+  }, []);
+
   return {
     // Data
     workoutPlan,
@@ -200,6 +208,7 @@ export function useWorkoutData({
     loadPeriods,
     loadUserProfile,
     loadAthleteList,
+    updateWorkoutPlan,
     
     // Feedback
     feedbackMessage,

@@ -16,7 +16,7 @@ interface AddMovelapModalProps {
   workout: Workout;
   day: WorkoutDay;
   onClose: () => void;
-  onSave: (moveframeId: string) => void;
+  onSave: (moveframeId: string, newMovelap?: any) => void;
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }
@@ -54,9 +54,10 @@ export default function AddMovelapModal({
     try {
       const response = await movelapApi.create(moveframe.id, movelapData);
 
-      if (response.success) {
+      if (response.success && response.data) {
         onSuccess(`Movelap added to ${moveframe.letter || moveframe.code}`);
-        onSave(moveframe.id);
+        // Pass the new movelap data to parent for local state update
+        onSave(moveframe.id, response.data.movelap);
         onClose();
       } else {
         onError(response.error || 'Failed to add movelap');

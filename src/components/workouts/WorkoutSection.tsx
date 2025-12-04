@@ -67,6 +67,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     loadPeriods,
     loadUserProfile,
     loadAthleteList,
+    updateWorkoutPlan,
     feedbackMessage,
     showMessage
   } = useWorkoutData({ initialSection: activeSection });
@@ -1075,19 +1076,40 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           workout={activeWorkout}
           day={activeDay}
           onClose={() => setShowAddMovelapModal(false)}
-          onSave={(moveframeId) => {
-            // Auto-expand to show the new movelap
-            if (activeDay && activeWorkout) {
+          onSave={(moveframeId, newMovelap) => {
+            // Update local state without full page reload
+            if (workoutPlan && newMovelap) {
+              const updatedPlan = { ...workoutPlan };
+              
+              // Find and update the specific moveframe with the new movelap
+              updatedPlan.weeks = workoutPlan.weeks.map((week: any) => ({
+                ...week,
+                days: week.days.map((day: any) => ({
+                  ...day,
+                  workouts: day.workouts?.map((workout: any) => ({
+                    ...workout,
+                    moveframes: workout.moveframes?.map((mf: any) => {
+                      if (mf.id === moveframeId) {
+                        return {
+                          ...mf,
+                          movelaps: [...(mf.movelaps || []), newMovelap]
+                        };
+                      }
+                      return mf;
+                    })
+                  }))
+                }))
+              }));
+              
+              updateWorkoutPlan(updatedPlan);
+            }
+            
+            // Keep moveframe expanded so user can see the new movelap
+            if (activeDay && activeWorkout && moveframeId) {
               setAutoExpandDayId(activeDay.id);
               setAutoExpandWorkoutId(activeWorkout.id);
               setAutoExpandMoveframeId(moveframeId);
-              setTimeout(() => {
-                setAutoExpandDayId(null);
-                setAutoExpandWorkoutId(null);
-                setAutoExpandMoveframeId(null);
-              }, UI_CONFIG.AUTO_EXPAND_DELAY);
             }
-            loadWorkoutData(activeSection);
           }}
           onError={(msg) => showMessage('error', msg)}
           onSuccess={(msg) => showMessage('success', msg)}
