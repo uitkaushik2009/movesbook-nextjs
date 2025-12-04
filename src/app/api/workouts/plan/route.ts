@@ -187,7 +187,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Create plan with weeks and days
-      plan = await prisma.workoutPlan.create({
+      const newPlan = await prisma.workoutPlan.create({
         data: {
           userId: decoded.userId,
           name: type === 'CURRENT_WEEKS' ? 'Current 3 Weeks' : 'Yearly Plan',
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest) {
       for (let i = 0; i < numberOfWeeks; i++) {
         const week = await prisma.workoutWeek.create({
           data: {
-            workoutPlanId: plan.id,
+            workoutPlanId: newPlan.id,
             weekNumber: i + 1
           }
         });
@@ -234,7 +234,7 @@ export async function GET(request: NextRequest) {
 
       // Fetch the complete plan with all includes and date filter
       plan = await prisma.workoutPlan.findUnique({
-        where: { id: plan.id },
+        where: { id: newPlan.id },
         include: {
           weeks: {
             include: {

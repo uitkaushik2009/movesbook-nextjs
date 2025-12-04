@@ -270,7 +270,7 @@ export default function BackgroundsColorsSettings() {
       setSaveStatus('saving');
       
       // Save to database with a special "isDefault" flag in workoutPreferences
-      await updateDbSetting('workoutPreferences', {
+      await updateDbSetting('workoutPreferences' as any, {
         defaultColorSettings: colors
       });
       

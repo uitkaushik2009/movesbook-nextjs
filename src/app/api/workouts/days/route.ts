@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
     // Create the day
     const day = await prisma.workoutDay.create({
       data: {
+        userId: decoded.userId,
         workoutWeekId: week.id,
         date: dayDate,
         weekNumber,

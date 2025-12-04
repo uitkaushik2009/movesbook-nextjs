@@ -3,7 +3,7 @@
  * Replaces 'any' types with proper type safety
  */
 
-import type { Sport } from '@/config/workout.constants';
+import type { Sport, StatusColor, WorkoutStatus, RestType } from '@/config/workout.constants';
 
 // Re-export types from constants for convenience
 export type { WorkoutStatus, StatusColor, RestType, Sport } from '@/config/workout.constants';
