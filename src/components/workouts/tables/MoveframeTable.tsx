@@ -139,7 +139,11 @@ export default function MoveframeTable({
             </tr>
           </thead>
           <tbody>
-            <tr className="hover:bg-purple-100">
+            <tr 
+              className="hover:bg-purple-100 cursor-pointer"
+              onClick={onToggleExpand}
+              title={isExpanded ? "Click to collapse movelaps" : "Click to expand movelaps"}
+            >
               {visibleColumns.map((column) => (
                 <td
                   key={column.id}
@@ -155,24 +159,36 @@ export default function MoveframeTable({
               ))}
               
               {/* Sticky Options Column */}
-              <td className="border border-gray-300 px-1 py-2 sticky right-0 bg-purple-50 z-10 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]">
+              <td 
+                className="border border-gray-300 px-1 py-2 sticky right-0 bg-purple-50 z-10 shadow-[-2px_0_4px_rgba(0,0,0,0.1)]"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <div className="flex gap-1 justify-center items-center">
                   <button
-                    onClick={onEdit}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit();
+                    }}
                     className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                     title="Edit moveframe"
                   >
                     Edit
                   </button>
                   <button
-                    onClick={() => {/* Show options dropdown */}}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      /* Show options dropdown */
+                    }}
                     className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
                     title="Options"
                   >
                     Option
                   </button>
                   <button
-                    onClick={onDelete}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete();
+                    }}
                     className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
                     title="Delete moveframe"
                   >

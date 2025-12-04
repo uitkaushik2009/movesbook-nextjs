@@ -48,15 +48,16 @@ export default function DayWorkoutHierarchy({
   return (
     <div className="p-4 bg-gray-100">
       {allDays.map((day, dayIndex) => {
-        // Only show days that have workouts
-        if (!day.workouts || day.workouts.length === 0) {
-          return null;
-        }
+        const hasWorkouts = day.workouts && day.workouts.length > 0;
 
         return (
           <div key={day.id} className="mb-8">
             {/* Day Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-4 py-3 rounded-t-lg shadow-md mb-2">
+            <div className={`px-4 py-3 rounded-t-lg shadow-md mb-2 ${
+              hasWorkouts 
+                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white' 
+                : 'bg-gradient-to-r from-gray-400 to-gray-300 text-white'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <h3 className="text-lg font-bold">
@@ -71,6 +72,11 @@ export default function DayWorkoutHierarchy({
                       style={{ backgroundColor: day.period.color || '#3b82f6' }}
                     >
                       {day.period.name}
+                    </span>
+                  )}
+                  {!hasWorkouts && (
+                    <span className="text-xs italic opacity-75">
+                      (No workouts)
                     </span>
                   )}
                 </div>
@@ -104,17 +110,24 @@ export default function DayWorkoutHierarchy({
 
             {/* Workout Hierarchy (separate tables with gaps) */}
             <div className="bg-white rounded-b-lg shadow-md p-4">
-              <WorkoutHierarchyView
-                day={day}
-                onEditWorkout={onEditWorkout}
-                onEditMoveframe={onEditMoveframe}
-                onEditMovelap={onEditMovelap}
-                onAddMoveframe={onAddMoveframe}
-                onAddMovelap={onAddMovelap}
-                onDeleteWorkout={onDeleteWorkout}
-                onDeleteMoveframe={onDeleteMoveframe}
-                onDeleteMovelap={onDeleteMovelap}
-              />
+              {hasWorkouts ? (
+                <WorkoutHierarchyView
+                  day={day}
+                  onEditWorkout={onEditWorkout}
+                  onEditMoveframe={onEditMoveframe}
+                  onEditMovelap={onEditMovelap}
+                  onAddMoveframe={onAddMoveframe}
+                  onAddMovelap={onAddMovelap}
+                  onDeleteWorkout={onDeleteWorkout}
+                  onDeleteMoveframe={onDeleteMoveframe}
+                  onDeleteMovelap={onDeleteMovelap}
+                />
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">No workouts scheduled for this day</p>
+                  <p className="text-xs mt-1">Click "Add Workout" to create one</p>
+                </div>
+              )}
             </div>
           </div>
         );
