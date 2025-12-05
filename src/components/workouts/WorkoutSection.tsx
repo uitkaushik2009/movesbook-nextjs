@@ -47,6 +47,7 @@ import WorkoutGrid from '@/components/workouts/WorkoutGrid';
 import WorkoutTableView from '@/components/workouts/WorkoutTableView';
 import WorkoutCalendarView from '@/components/workouts/WorkoutCalendarView';
 import DayWorkoutHierarchy from '@/components/workouts/tables/DayWorkoutHierarchy';
+import DayTableView from '@/components/workouts/tables/DayTableView';
 import AddWorkoutModal from '@/components/workouts/AddWorkoutModal';
 import AddMoveframeModal from '@/components/workouts/AddMoveframeModal';
 import ImportWorkoutsModal from '@/components/workouts/ImportWorkoutsModal';
@@ -875,7 +876,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   </span>
                 </div>
                 
-                <DayWorkoutHierarchy
+                <DayTableView
                  workoutPlan={
                    selectedWeekForTable && workoutPlan
                      ? {
@@ -899,6 +900,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setAddWorkoutDay(day);
                    setWorkoutModalMode('add');
                    setShowAddWorkoutModal(true);
+                 }}
+                 onCopyDay={(day) => {
+                   // TODO: Implement copy day functionality
+                   alert(`Copy day functionality for ${new Date(day.date).toLocaleDateString()} will be implemented soon.`);
+                 }}
+                 onMoveDay={(day) => {
+                   // TODO: Implement move day functionality
+                   alert(`Move day functionality for ${new Date(day.date).toLocaleDateString()} will be implemented soon.`);
                  }}
                  onEditWorkout={(workout, day) => {
                    setEditingWorkout(workout);

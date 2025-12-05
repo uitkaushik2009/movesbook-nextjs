@@ -1,0 +1,158 @@
+/* Sticky Table Columns - Global Styles */
+
+/* Use separate borders with zero spacing - works better with sticky */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+/* Ensure all table cells have light grey borders */
+td, th {
+  border: 1px solid #d1d5db !important;
+}
+
+/* Prevent blue background from bleeding into borders */
+th {
+  background-clip: padding-box !important;
+}
+
+/* Sticky columns need solid backgrounds */
+td.sticky-col-1,
+td.sticky-col-2,
+td.sticky-col-3,
+td.sticky-col-4,
+td.sticky-col-5,
+td.sticky-col-6,
+td.sticky-col-7,
+td.sticky-options-col {
+  background-clip: padding-box !important;
+}
+
+/* Hide default scrollbar on table container */
+.table-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.table-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Sticky bottom scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  height: 16px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+  border-radius: 6px;
+  border: 3px solid #e5e7eb;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+/* Frozen LEFT columns - Sticky positioning */
+td.sticky-col-1,
+td.sticky-col-2,
+td.sticky-col-3,
+td.sticky-col-4,
+td.sticky-col-5,
+td.sticky-col-6,
+td.sticky-col-7,
+th.sticky-header-1,
+th.sticky-header-2,
+th.sticky-header-3,
+th.sticky-header-4,
+th.sticky-header-5,
+th.sticky-header-6,
+th.sticky-header-7 {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  z-index: 15 !important;
+}
+
+/* Column 1 - No workouts (0px) */
+td.sticky-col-1,
+th.sticky-header-1 { 
+  left: 0px !important;
+}
+
+/* Column 2 - Color cycle (50px) */
+td.sticky-col-2,
+th.sticky-header-2 { 
+  left: 50px !important;
+}
+
+/* Column 3 - Name cycle (100px = 50 + 50) */
+td.sticky-col-3,
+th.sticky-header-3 { 
+  left: 100px !important;
+}
+
+/* Column 4 - Dayname (190px = 50 + 50 + 90) */
+td.sticky-col-4,
+th.sticky-header-4 { 
+  left: 190px !important;
+}
+
+/* Column 5 - Date (270px = 50 + 50 + 90 + 80) */
+td.sticky-col-5,
+th.sticky-header-5 { 
+  left: 270px !important;
+}
+
+/* Column 6 - Match done (350px = 50 + 50 + 90 + 80 + 80) */
+td.sticky-col-6,
+th.sticky-header-6 { 
+  left: 350px !important;
+}
+
+/* Column 7 - Workouts (410px = 50 + 50 + 90 + 80 + 80 + 60) */
+td.sticky-col-7,
+th.sticky-header-7 { 
+  left: 410px !important;
+}
+
+/* Headers - Higher z-index and blue background */
+th.sticky-header-1,
+th.sticky-header-2,
+th.sticky-header-3,
+th.sticky-header-4,
+th.sticky-header-5,
+th.sticky-header-6,
+th.sticky-header-7 {
+  z-index: 30 !important;
+  background-color: #2563eb !important;
+}
+
+/* Data cells - Inherit row background color */
+td.sticky-col-1,
+td.sticky-col-2,
+td.sticky-col-3,
+td.sticky-col-4,
+td.sticky-col-5,
+td.sticky-col-6,
+td.sticky-col-7 {
+  background-color: inherit !important;
+}
+
+/* Frozen RIGHT column (Options) */
+td.sticky-options-col,
+th.sticky-options-header {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  right: 0 !important;
+  z-index: 10 !important;
+}
+
+td.sticky-options-col {
+  background-color: inherit !important;
+}
+
+th.sticky-options-header {
+  z-index: 25 !important;
+  background-color: #2563eb !important;
+}

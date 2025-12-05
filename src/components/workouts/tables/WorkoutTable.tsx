@@ -151,7 +151,7 @@ export default function WorkoutTable({
         ref={setDropNodeRef}
         className={`mb-4 ${isDropOver ? 'ring-4 ring-yellow-400 ring-opacity-75 rounded' : ''}`}
       >
-        <table className="w-full border-collapse bg-white shadow-sm">
+        <table className="w-full border-collapse bg-white shadow-sm text-xs">
           <thead className="bg-cyan-400 text-white">
             {/* Title Row with Workout Options */}
             <tr 
@@ -159,7 +159,7 @@ export default function WorkoutTable({
               className="cursor-pointer hover:bg-cyan-500 transition-colors"
               title="Click to expand/collapse workout"
             >
-              <th colSpan={visibleColumnCount + 1} className={`border border-gray-400 px-3 py-2 text-left text-sm ${isDragging ? 'opacity-50 bg-cyan-200' : ''}`}>
+              <th colSpan={visibleColumnCount + 1} className={`border border-gray-300 px-2 py-1 text-left text-xs ${isDragging ? 'opacity-50 bg-cyan-200' : ''}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {/* Drag Handle */}
@@ -173,23 +173,23 @@ export default function WorkoutTable({
                     >
                       <GripVertical size={18} />
                     </span>
-                    <span className="text-lg font-bold">
+                    <span className="text-sm font-bold">
                       {isExpanded ? '▼' : '▶'}
                     </span>
-                    <span className="font-bold">
+                    <span className="font-bold text-xs">
                       Workout #{workoutIndex + 1}
                     </span>
-                    <span className="text-cyan-200">
+                    <span className="text-cyan-200 text-xs">
                       {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                     {workout.name && (
-                      <span className="text-cyan-200">
+                      <span className="text-cyan-200 text-xs">
                         - {workout.name}
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-xs">Workout options:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold text-xs">Options:</span>
                     <div className="flex gap-1">
                       <button 
                         onClick={(e) => {
@@ -198,7 +198,7 @@ export default function WorkoutTable({
                         }}
                         className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
-                        Edit Workout
+                        Edit Workout Info
                       </button>
                       <button 
                         onClick={(e) => {
@@ -230,11 +230,11 @@ export default function WorkoutTable({
               </th>
             </tr>
             {/* Column Headers */}
-            <tr className="border-b border-gray-400">
+            <tr className="border-b border-gray-300">
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
-                  className="border border-gray-400 px-2 py-2 text-sm font-bold text-center"
+                  className="border border-gray-300 px-1 py-1 text-xs font-bold text-center"
                   style={{
                     width: column.width,
                     minWidth: column.minWidth
@@ -250,7 +250,7 @@ export default function WorkoutTable({
               {visibleColumns.map((column) => (
                 <td
                   key={column.id}
-                  className="border border-gray-300 px-2 py-2 text-sm text-center"
+                  className="border border-gray-300 px-1 py-1 text-xs text-center"
                 >
                   {getCellValue(column)}
                 </td>

@@ -301,12 +301,12 @@ export const DEFAULT_MOVELAP_COLUMNS: ColumnConfig[] = [
     dataKey: 'color'
   },
   {
-    id: 'workout_type',
-    label: 'Workout type',
+    id: 'section_name',
+    label: 'Name',
     width: '100px',
     align: 'left',
     visible: true,
-    dataKey: 'workoutType'
+    dataKey: 'section.name'
   },
   {
     id: 'sport',

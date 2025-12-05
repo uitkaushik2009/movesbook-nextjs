@@ -56,6 +56,8 @@ export default function MovelapTable({
         );
       case 'workout_type':
         return moveframe.section?.name || moveframe.type || 'Warm up';
+      case 'section_name':
+        return moveframe.section?.name || 'No Section';
       case 'sport':
         return moveframe.sport || 'Swim';
       case 'distance':
@@ -87,23 +89,23 @@ export default function MovelapTable({
 
   return (
     <>
-      <div className="mb-4 ml-16">
-        <table className="w-full border-collapse bg-white shadow-sm">
+      <div className="mb-2 ml-8">
+        <table className="w-full border-collapse bg-white shadow-sm text-xs">
           {/* Title Row */}
           <thead className="bg-yellow-200">
             <tr>
-              <th colSpan={visibleColumnCount + 1} className="border border-gray-400 px-3 py-2 text-left text-sm">
+              <th colSpan={visibleColumnCount + 1} className="border border-gray-300 px-2 py-1 text-left text-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold">
+                    <span className="font-bold text-xs">
                       Movelaps of the moveframe {moveframeCode} of workout #{workoutIndex + 1}
                     </span>
-                    <span className="text-yellow-700">
+                    <span className="text-yellow-700 text-xs">
                       {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-xs">Movelaps options:</span>
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold text-xs">Options:</span>
                     <div className="flex gap-1">
                       <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
                         Copy All
@@ -129,7 +131,7 @@ export default function MovelapTable({
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
-                  className="border border-gray-400 px-2 py-1 text-xs font-bold text-center"
+                  className="border border-gray-300 px-1 py-1 text-xs font-bold text-center"
                   style={{
                     width: column.width,
                     minWidth: column.minWidth
@@ -149,7 +151,7 @@ export default function MovelapTable({
                 {visibleColumns.map((column) => (
                   <td
                     key={column.id}
-                    className={`border border-gray-300 px-2 py-1.5 text-xs text-center ${
+                    className={`border border-gray-300 px-1 py-1 text-xs text-center ${
                       column.id === 'mf' ? 'font-bold' : ''
                     }`}
                   >
@@ -161,10 +163,10 @@ export default function MovelapTable({
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={visibleColumnCount + 1} className="border-t-2 border-gray-400 px-2 py-2">
+              <td colSpan={visibleColumnCount + 1} className="border-t border-gray-300 px-2 py-1">
                 <button
                   onClick={onAddMovelap}
-                  className="px-3 py-1.5 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                  className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
                 >
                   + Add new row
                 </button>

@@ -88,6 +88,10 @@ export const API_ENDPOINTS = {
     LIST: '/api/workouts/sections',
     CREATE: '/api/workouts/sections'
   },
+  PERIODS: {
+    LIST: '/api/workouts/periods',
+    CREATE: '/api/workouts/periods'
+  },
   USER: {
     SETTINGS: '/api/user/settings',
     PROFILE: '/api/user/profile'

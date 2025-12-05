@@ -111,12 +111,12 @@ export default function MoveframeTable({
 
   return (
     <>
-      <div className="mb-4 ml-8">
-        <table className="w-full border-collapse bg-purple-50 shadow-sm">
+      <div className="mb-2 ml-4">
+        <table className="w-full border-collapse bg-purple-50 shadow-sm text-xs">
           {/* Title Row */}
           <thead className="bg-purple-200">
             <tr>
-              <th colSpan={visibleColumnCount + 1} className="border border-gray-400 px-3 py-2 text-left text-sm">
+              <th colSpan={visibleColumnCount + 1} className="border border-gray-300 px-2 py-1 text-left text-xs">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button
@@ -125,15 +125,15 @@ export default function MoveframeTable({
                     >
                       {isExpanded ? '▼' : '►'}
                     </button>
-                  <span className="font-bold">
+                  <span className="font-bold text-xs">
                     Moveframes of workout #{workoutIndex + 1}
                   </span>
-                  <span className="text-purple-700 ml-2">
+                  <span className="text-purple-700 ml-2 text-xs">
                     {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-xs">Moveframe options:</span>
+                <div className="flex items-center gap-1">
+                  <span className="font-bold text-xs">Options:</span>
                   <div className="flex gap-1">
                       <button 
                         onClick={(e) => {
@@ -142,7 +142,7 @@ export default function MoveframeTable({
                         }}
                         className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                       >
-                        Edit Moveframe
+                        Moveframe info
                       </button>
                       <button 
                         onClick={(e) => {
@@ -185,7 +185,7 @@ export default function MoveframeTable({
             <tr className="bg-purple-300">
               {/* Drag Handle Header */}
               <th 
-                className="border border-gray-400 px-1 py-1 text-center text-xs font-bold w-8"
+                className="border border-gray-300 px-1 py-1 text-center text-xs font-bold w-6"
                 title="Drag handle"
               >
                 ⋮⋮
@@ -194,7 +194,7 @@ export default function MoveframeTable({
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
-                  className="border border-gray-400 px-2 py-1 text-xs font-bold text-center"
+                  className="border border-gray-300 px-1 py-1 text-xs font-bold text-center"
                   style={{
                     width: column.width,
                     minWidth: column.minWidth
@@ -217,7 +217,7 @@ export default function MoveframeTable({
               title={isExpanded ? "Click to collapse movelaps" : "Click to expand movelaps | Drop moveframe here"}
             >
               {/* Drag Handle Cell */}
-              <td className="border border-gray-300 px-1 py-2 text-center w-8">
+              <td className="border border-gray-300 px-1 py-1 text-center w-6">
                 <span
                   ref={setDragNodeRef}
                   {...dragAttributes}
@@ -226,14 +226,14 @@ export default function MoveframeTable({
                   title="Drag to move moveframe"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <GripVertical size={16} />
+                  <GripVertical size={14} />
                 </span>
               </td>
               
               {visibleColumns.map((column) => (
                 <td
                   key={column.id}
-                  className={`border border-gray-300 px-2 py-2 text-sm text-center ${
+                  className={`border border-gray-300 px-1 py-1 text-xs text-center ${
                     column.id === 'mf' ? 'font-bold' : ''
                   }`}
                 >
