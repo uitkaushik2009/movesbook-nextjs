@@ -5,9 +5,9 @@
         "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed-translations.ts"
     },
     "scripts": {
-        "dev": "next dev",
+        "dev": "next dev -p 8000",
         "build": "next build",
-        "start": "next start",
+        "start": "next start -p 8000",
         "lint": "next lint",
         "db:push": "prisma db push",
         "db:studio": "prisma studio",
@@ -47,7 +47,8 @@
         "@types/node": "^20.0.0",
         "@types/react": "^18.0.0",
         "@types/react-dom": "^18.0.0",
-        "autoprefixer": "^10.4.0",
+        "autoprefixer": "^10.4.22",
+        "caniuse-lite": "^1.0.30001760",
         "eslint": "^8.0.0",
         "eslint-config-next": "14.0.0",
         "postcss": "^8.4.0",

@@ -4,6 +4,55 @@ import { verifyToken } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
+// Helper function to get the Monday of the current week
+function getMondayOfWeek(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  
+  console.log(`📅 getMondayOfWeek input: ${d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} (day ${day})`);
+  
+  // Calculate days to subtract to get to Monday of this week
+  // Sunday (0) → go back 6 days to reach Monday
+  // Monday (1) → stay (0 days back)
+  // Tuesday (2) → go back 1 day
+  // Wednesday (3) → go back 2 days
+  // Thursday (4) → go back 3 days
+  // Friday (5) → go back 4 days
+  // Saturday (6) → go back 5 days
+  const daysToSubtract = day === 0 ? 6 : day - 1;
+  
+  d.setDate(d.getDate() - daysToSubtract);
+  
+  console.log(`📅 getMondayOfWeek output: ${d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} (went back ${daysToSubtract} days)`);
+  
+  return d;
+}
+
+// Helper function to get the next Monday (or current day if it's Monday)
+function getNextMonday(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  
+  // If today is Monday, return today
+  if (day === 1) {
+    return d;
+  }
+  
+  // Calculate days to add to get to next Monday
+  // Sunday (0) -> add 1 day
+  // Tuesday (2) -> add 6 days
+  // Wednesday (3) -> add 5 days
+  // Thursday (4) -> add 4 days
+  // Friday (5) -> add 3 days
+  // Saturday (6) -> add 2 days
+  const daysToAdd = day === 0 ? 1 : 8 - day;
+  
+  d.setDate(d.getDate() + daysToAdd);
+  return d;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -19,37 +68,35 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'CURRENT_WEEKS';
-
-    console.log('GET - Finding NEWEST plan for type:', type);
+    const forceRecreate = searchParams.get('forceRecreate') === 'true';
+    
+    console.log('GET - Finding NEWEST plan for type:', type, '| Force recreate:', forceRecreate);
 
     // Calculate date ranges for sections
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    console.log('📅 Today (server time):', today.toISOString(), '/', today.toLocaleDateString());
+    console.log('📅 Today (server time):', today.toISOString(), '/', today.toLocaleDateString(), 'Day of week:', today.getDay());
     
-    const threeWeeksAhead = new Date(today);
-    threeWeeksAhead.setDate(threeWeeksAhead.getDate() + 20); // 21 days total (0-20)
-    
-    console.log('📅 Three weeks ahead:', threeWeeksAhead.toISOString(), '/', threeWeeksAhead.toLocaleDateString());
+    // Calculate Monday of current week for proper date alignment
+    const mondayOfThisWeek = getMondayOfWeek(today);
+    console.log('📅 Monday of this week:', mondayOfThisWeek.toLocaleDateString());
     
     // Date filter based on section type
+    // NOTE: For Section A (CURRENT_WEEKS), we don't filter by date because
+    // the plan itself is created with exactly 3 weeks starting from Monday
     let dateFilter: any = {};
-    if (type === 'CURRENT_WEEKS') {
-      // Section A: Current 3 weeks (today to +20 days = 21 days total)
+    
+    if (type === 'YEARLY_PLAN') {
+      // Section B: Only show future dates beyond the current 3-week window
+      const threeWeeksFromMonday = new Date(mondayOfThisWeek);
+      threeWeeksFromMonday.setDate(threeWeeksFromMonday.getDate() + 21); // Day 22 onwards
       dateFilter = {
-        gte: today,
-        lte: threeWeeksAhead
+        gte: threeWeeksFromMonday
       };
-      console.log(`Section A date range: ${today.toISOString()} to ${threeWeeksAhead.toISOString()}`);
-    } else if (type === 'YEARLY_PLAN') {
-      // Section B: Future dates beyond 3-week window (day 22 onwards)
-      const dayAfterThreeWeeks = new Date(threeWeeksAhead);
-      dayAfterThreeWeeks.setDate(dayAfterThreeWeeks.getDate() + 1);
-      dateFilter = {
-        gte: dayAfterThreeWeeks
-      };
-      console.log(`Section B date range: from ${dayAfterThreeWeeks.toISOString()} onwards`);
+      console.log(`Section B date filter: from ${threeWeeksFromMonday.toISOString()} onwards`);
+    } else {
+      console.log(`Section ${type}: No date filter, showing all days in plan`);
     }
 
     // Get or create workout plan - ORDER BY NEWEST FIRST!
@@ -100,9 +147,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Check if plan is empty (no weeks OR weeks with no days)
+    // Check if plan is empty or doesn't start on Monday
     let isPlanEmpty = false;
+    let needsRecreation = false;
+    
     if (plan) {
+      // Check if empty
       if (plan.weeks.length === 0) {
         isPlanEmpty = true;
         console.log('⚠️ Plan has no weeks!');
@@ -113,29 +163,60 @@ export async function GET(request: NextRequest) {
           console.log('⚠️ Plan has weeks but no days!');
         }
       }
+      
+      // Check if plan starts on Monday
+      if (!isPlanEmpty && plan.startDate) {
+        const planStart = new Date(plan.startDate);
+        const dayOfWeek = planStart.getDay(); // 0 = Sunday, 1 = Monday
+        if (dayOfWeek !== 1) {
+          needsRecreation = true;
+          console.log(`⚠️ Plan does not start on Monday! It starts on day ${dayOfWeek} (${planStart.toLocaleDateString('en-US', { weekday: 'long' })})`);
+        }
+      }
     }
 
-    // If plan is empty, delete and recreate it
-    if (plan && isPlanEmpty) {
-      console.log('🗑️ Deleting empty plan to recreate with data...');
+    // If plan is empty, doesn't start on Monday, or force recreate is requested, delete and recreate it
+    if (plan && (isPlanEmpty || needsRecreation || forceRecreate)) {
+      const reason = forceRecreate ? 'force recreate requested' : 
+                     isPlanEmpty ? 'empty plan' : 
+                     'plan does not start on Monday';
+      console.log(`🗑️ Deleting plan (${reason}) to recreate with correct data...`);
       
-      // First, delete all workout days for this user that might be orphaned
-      const deletedDays = await prisma.workoutDay.deleteMany({
+      // Calculate the date range for cleanup
+      const cleanupStartDate = type === 'CURRENT_WEEKS' ? mondayOfThisWeek : mondayOfThisWeek;
+      const cleanupEndDate = new Date(cleanupStartDate);
+      if (type === 'CURRENT_WEEKS') {
+        cleanupEndDate.setDate(cleanupEndDate.getDate() + 20); // 3 weeks
+      } else {
+        cleanupEndDate.setDate(cleanupEndDate.getDate() + 400); // Yearly plan range
+      }
+      
+      console.log(`   Date range cleanup: ${cleanupStartDate.toLocaleDateString()} to ${cleanupEndDate.toLocaleDateString()}`);
+      
+      // Step 1: Delete ALL workout days for this user in the date range (including orphaned ones)
+      const deletedDaysInRange = await prisma.workoutDay.deleteMany({
         where: {
           userId: decoded.userId,
-          workoutWeek: {
-            workoutPlan: {
-              type: type as any
-            }
+          date: {
+            gte: cleanupStartDate,
+            lte: cleanupEndDate
           }
         }
       });
-      console.log(`   ✓ Deleted ${deletedDays.count} orphaned workout days`);
+      console.log(`   ✓ Deleted ${deletedDaysInRange.count} workout days in date range`);
       
-      // Then delete the plan (which should cascade delete weeks)
+      // Step 2: Delete all weeks from this plan
+      const deletedWeeks = await prisma.workoutWeek.deleteMany({
+        where: {
+          workoutPlanId: plan.id
+        }
+      });
+      console.log(`   ✓ Deleted ${deletedWeeks.count} workout weeks`);
+      
+      // Step 3: Delete the plan itself
       await prisma.workoutPlan.delete({ where: { id: plan.id } });
       plan = null; // Force recreation
-      console.log('   ✓ Old plan deleted, will create new one');
+      console.log('   ✓ Old plan deleted, will create new one starting on Monday');
     }
 
     // If plan doesn't exist, create it
@@ -145,19 +226,21 @@ export async function GET(request: NextRequest) {
       let numberOfWeeks = 0;
       
       if (type === 'CURRENT_WEEKS') {
-        // Section A: Start today, 3 weeks (21 days)
-        startDate = new Date(today);
-        endDate = new Date(today);
+        // Section A: Start from the Monday of current week, 3 weeks (21 days)
+        startDate = mondayOfThisWeek;
+        endDate = new Date(startDate);
         endDate.setDate(endDate.getDate() + 20); // 21 days total (0-20)
         numberOfWeeks = 3; // 3 weeks for current 2-3 weeks section
+        console.log(`✓ Section A will start on Monday: ${startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`);
       } else if (type === 'YEARLY_PLAN') {
-        // Section B: Start after 3-week window, 52 weeks for full year
-        const dayAfterThreeWeeks = new Date(today);
-        dayAfterThreeWeeks.setDate(dayAfterThreeWeeks.getDate() + 21); // Start from day 22
-        startDate = dayAfterThreeWeeks;
+        // Section B: Start from Monday after 3-week window, 52 weeks for full year
+        const threeWeeksFromMonday = new Date(mondayOfThisWeek);
+        threeWeeksFromMonday.setDate(threeWeeksFromMonday.getDate() + 21); // 21 days from Monday
+        startDate = getMondayOfWeek(threeWeeksFromMonday); // Get Monday of that week (should already be Monday in this case)
         endDate = new Date(startDate);
         endDate.setDate(endDate.getDate() + 364); // 52 weeks = 364 days
         numberOfWeeks = 52; // Create all 52 weeks for yearly plan
+        console.log(`✓ Section B will start on Monday: ${startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`);
       }
 
       console.log(`📝 Creating new ${type} plan:`, {
@@ -299,9 +382,13 @@ export async function POST(request: NextRequest) {
     console.log('POST /api/workouts/plan - Request received');
     
     const body = await request.json();
-    const { name, type, startDate, numberOfWeeks, autoCreateDays } = body;
+    const { name, type, startDate: requestedStartDate, numberOfWeeks, autoCreateDays } = body;
     
-    console.log('Request body:', { name, type, numberOfWeeks, autoCreateDays });
+    console.log('Request body:', { name, type, numberOfWeeks, autoCreateDays, requestedStartDate });
+
+    // Ensure startDate is always a Monday
+    const startDate = getMondayOfWeek(new Date(requestedStartDate));
+    console.log(`✓ Adjusted start date to Monday: ${startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`);
 
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + (numberOfWeeks * 7));
@@ -334,11 +421,11 @@ export async function POST(request: NextRequest) {
         userId: decoded.userId,
         name,
         type: type as any,
-        startDate: new Date(startDate),
+        startDate: startDate, // Already a Date object adjusted to Monday
         endDate
       }
     });
-    console.log('Plan created with ID:', plan.id);
+    console.log('Plan created with ID:', plan.id, 'starting on', startDate.toLocaleDateString('en-US', { weekday: 'long' }));
 
     // Generate weeks - For Section A (CURRENT_WEEKS), create all 3 weeks immediately
     // For others, create first 10 weeks (or all if <= 10)

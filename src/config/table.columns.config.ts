@@ -20,7 +20,6 @@ export const DEFAULT_WORKOUT_COLUMNS: ColumnConfig[] = [
   {
     id: 'no',
     label: 'No',
-    width: '50px',
     align: 'left',
     visible: true,
     required: true,
@@ -29,119 +28,104 @@ export const DEFAULT_WORKOUT_COLUMNS: ColumnConfig[] = [
   {
     id: 'match',
     label: 'Match',
-    width: '80px',
     align: 'left',
-    visible: true,
+    visible: false,
     dataKey: 'completionRate'
   },
   {
     id: 'sport1_name',
-    label: 'Sport 1',
-    width: '80px',
+    label: 'Sport',
     align: 'left',
     visible: true,
     dataKey: 'sport1.name'
   },
   {
     id: 'sport1_icon',
-    label: 'Icon',
-    width: '50px',
+    label: 'Ico',
     align: 'center',
     visible: true,
     dataKey: 'sport1.icon'
   },
   {
     id: 'sport1_distance',
-    label: 'Distance',
-    width: '80px',
+    label: 'Dist',
     align: 'right',
     visible: true,
     dataKey: 'sport1.distance'
   },
   {
     id: 'sport1_duration',
-    label: 'Duration',
-    width: '80px',
+    label: 'Dur',
     align: 'right',
-    visible: true,
+    visible: false,
     dataKey: 'sport1.duration'
   },
   {
     id: 'sport1_k',
     label: 'K',
-    width: '50px',
     align: 'center',
-    visible: true,
+    visible: false,
     dataKey: 'sport1.k'
   },
   {
     id: 'sport2_name',
-    label: 'Sport 2',
-    width: '80px',
+    label: 'Sport',
     align: 'left',
     visible: true,
     dataKey: 'sport2.name'
   },
   {
     id: 'sport2_icon',
-    label: 'Icon',
-    width: '50px',
+    label: 'Ico',
     align: 'center',
     visible: true,
     dataKey: 'sport2.icon'
   },
   {
     id: 'sport2_distance',
-    label: 'Distance',
-    width: '80px',
+    label: 'Dist',
     align: 'right',
     visible: true,
     dataKey: 'sport2.distance'
   },
   {
     id: 'sport2_duration',
-    label: 'Duration',
-    width: '80px',
+    label: 'Dur',
     align: 'right',
-    visible: true,
+    visible: false,
     dataKey: 'sport2.duration'
   },
   {
     id: 'sport2_k',
     label: 'K',
-    width: '50px',
     align: 'center',
-    visible: true,
+    visible: false,
     dataKey: 'sport2.k'
   },
   {
     id: 'sport3_name',
-    label: 'Sport 3',
-    width: '80px',
+    label: 'Sport',
     align: 'left',
-    visible: false, // Hidden by default
+    visible: false,
     dataKey: 'sport3.name'
   },
   {
     id: 'sport3_icon',
-    label: 'Icon',
-    width: '50px',
+    label: 'Ico',
     align: 'center',
     visible: false,
     dataKey: 'sport3.icon'
   },
   {
     id: 'sport3_distance',
-    label: 'Distance',
-    width: '80px',
+    label: 'Dist',
     align: 'right',
     visible: false,
     dataKey: 'sport3.distance'
   },
   {
     id: 'sport3_duration',
-    label: 'Duration',
-    width: '80px',
+    label: 'Dur',
     align: 'right',
     visible: false,
     dataKey: 'sport3.duration'
@@ -149,39 +133,34 @@ export const DEFAULT_WORKOUT_COLUMNS: ColumnConfig[] = [
   {
     id: 'sport3_k',
     label: 'K',
-    width: '50px',
     align: 'center',
     visible: false,
     dataKey: 'sport3.k'
   },
   {
     id: 'sport4_name',
-    label: 'Sport 4',
-    width: '80px',
+    label: 'Sport',
     align: 'left',
-    visible: false, // Hidden by default
+    visible: false,
     dataKey: 'sport4.name'
   },
   {
     id: 'sport4_icon',
-    label: 'Icon',
-    width: '50px',
+    label: 'Ico',
     align: 'center',
     visible: false,
     dataKey: 'sport4.icon'
   },
   {
     id: 'sport4_distance',
-    label: 'Distance',
-    width: '80px',
+    label: 'Dist',
     align: 'right',
     visible: false,
     dataKey: 'sport4.distance'
   },
   {
     id: 'sport4_duration',
-    label: 'Duration',
-    width: '80px',
+    label: 'Dur',
     align: 'right',
     visible: false,
     dataKey: 'sport4.duration'
@@ -189,7 +168,6 @@ export const DEFAULT_WORKOUT_COLUMNS: ColumnConfig[] = [
   {
     id: 'sport4_k',
     label: 'K',
-    width: '50px',
     align: 'center',
     visible: false,
     dataKey: 'sport4.k'
@@ -201,7 +179,6 @@ export const DEFAULT_MOVEFRAME_COLUMNS: ColumnConfig[] = [
   {
     id: 'mf',
     label: 'MF',
-    width: '40px',
     align: 'center',
     visible: true,
     required: true,
@@ -209,16 +186,14 @@ export const DEFAULT_MOVEFRAME_COLUMNS: ColumnConfig[] = [
   },
   {
     id: 'color',
-    label: 'Color',
-    width: '60px',
+    label: 'Col',
     align: 'center',
-    visible: true,
+    visible: false,
     dataKey: 'section.color'
   },
   {
     id: 'type',
-    label: 'Workout type',
-    width: '120px',
+    label: 'Type',
     align: 'left',
     visible: true,
     dataKey: 'section.name'
@@ -226,15 +201,13 @@ export const DEFAULT_MOVEFRAME_COLUMNS: ColumnConfig[] = [
   {
     id: 'sport',
     label: 'Sport',
-    width: '80px',
     align: 'left',
     visible: true,
     dataKey: 'sport'
   },
   {
     id: 'description',
-    label: 'Moveframe description',
-    minWidth: '300px',
+    label: 'Description',
     align: 'left',
     visible: true,
     dataKey: 'description'
@@ -242,15 +215,13 @@ export const DEFAULT_MOVEFRAME_COLUMNS: ColumnConfig[] = [
   {
     id: 'repetitions',
     label: 'Rip',
-    width: '60px',
     align: 'center',
     visible: true,
     dataKey: 'movelaps.length'
   },
   {
     id: 'total_distance',
-    label: 'Metri',
-    width: '60px',
+    label: 'Dist',
     align: 'right',
     visible: true,
     dataKey: 'totalDistance'
@@ -258,15 +229,13 @@ export const DEFAULT_MOVEFRAME_COLUMNS: ColumnConfig[] = [
   {
     id: 'macro',
     label: 'Macro',
-    width: '80px',
     align: 'center',
-    visible: false, // Hidden by default
+    visible: false,
     dataKey: 'macro'
   },
   {
     id: 'alarm',
     label: 'Alarm',
-    width: '80px',
     align: 'center',
     visible: false,
     dataKey: 'alarm'
@@ -274,7 +243,6 @@ export const DEFAULT_MOVEFRAME_COLUMNS: ColumnConfig[] = [
   {
     id: 'notes',
     label: 'Notes',
-    minWidth: '150px',
     align: 'left',
     visible: false,
     dataKey: 'notes'
@@ -286,7 +254,6 @@ export const DEFAULT_MOVELAP_COLUMNS: ColumnConfig[] = [
   {
     id: 'mf',
     label: 'MF',
-    width: '40px',
     align: 'center',
     visible: true,
     required: true,
@@ -294,32 +261,28 @@ export const DEFAULT_MOVELAP_COLUMNS: ColumnConfig[] = [
   },
   {
     id: 'color',
-    label: 'Color',
-    width: '60px',
+    label: 'Col',
     align: 'center',
-    visible: true,
+    visible: false,
     dataKey: 'color'
   },
   {
     id: 'section_name',
-    label: 'Name',
-    width: '100px',
+    label: 'Sec',
     align: 'left',
-    visible: true,
+    visible: false,
     dataKey: 'section.name'
   },
   {
     id: 'sport',
     label: 'Sport',
-    width: '80px',
     align: 'left',
     visible: true,
     dataKey: 'sport'
   },
   {
     id: 'distance',
-    label: 'Distance',
-    width: '80px',
+    label: 'Dist',
     align: 'right',
     visible: true,
     dataKey: 'distance'
@@ -327,15 +290,13 @@ export const DEFAULT_MOVELAP_COLUMNS: ColumnConfig[] = [
   {
     id: 'style',
     label: 'Style',
-    width: '80px',
     align: 'center',
     visible: true,
     dataKey: 'style'
   },
   {
     id: 'speed',
-    label: 'Speed',
-    width: '60px',
+    label: 'Spd',
     align: 'center',
     visible: true,
     dataKey: 'speed'
@@ -343,7 +304,6 @@ export const DEFAULT_MOVELAP_COLUMNS: ColumnConfig[] = [
   {
     id: 'time',
     label: 'Time',
-    width: '60px',
     align: 'center',
     visible: true,
     dataKey: 'time'
@@ -351,39 +311,34 @@ export const DEFAULT_MOVELAP_COLUMNS: ColumnConfig[] = [
   {
     id: 'pace',
     label: 'Pace',
-    width: '60px',
     align: 'center',
-    visible: true,
+    visible: false,
     dataKey: 'pace'
   },
   {
     id: 'rec',
     label: 'Rec',
-    width: '60px',
     align: 'center',
     visible: true,
     dataKey: 'pause'
   },
   {
     id: 'rest_to',
-    label: 'Rest To',
-    width: '80px',
+    label: 'Rest',
     align: 'center',
-    visible: true,
+    visible: false,
     dataKey: 'restType'
   },
   {
     id: 'aim_sound',
-    label: 'Aim Sound',
-    width: '100px',
+    label: 'Snd',
     align: 'center',
-    visible: true,
+    visible: false,
     dataKey: 'alarm'
   },
   {
     id: 'annotation',
-    label: 'Annotation',
-    minWidth: '150px',
+    label: 'Note',
     align: 'left',
     visible: true,
     dataKey: 'notes'
@@ -391,15 +346,13 @@ export const DEFAULT_MOVELAP_COLUMNS: ColumnConfig[] = [
   {
     id: 'heartrate',
     label: 'HR',
-    width: '60px',
     align: 'center',
-    visible: false, // Hidden by default
+    visible: false,
     dataKey: 'heartRate'
   },
   {
     id: 'calories',
     label: 'Cal',
-    width: '60px',
     align: 'center',
     visible: false,
     dataKey: 'calories'

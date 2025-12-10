@@ -9,7 +9,7 @@ import type { Sport, StatusColor, WorkoutStatus, RestType } from '@/config/worko
 export type { WorkoutStatus, StatusColor, RestType, Sport } from '@/config/workout.constants';
 
 // View mode type
-export type ViewMode = 'tree' | 'table' | 'calendar';
+export type ViewMode = 'table' | 'calendar';
 
 // Section ID type
 export type SectionId = 'A' | 'B' | 'C' | 'D';
@@ -152,7 +152,7 @@ export interface UserSettings extends BaseEntity {
 
 export interface WorkoutPreferences {
   excludeStretchingFromTotals?: boolean;
-  defaultViewMode?: 'tree' | 'table' | 'calendar';
+  defaultViewMode?: 'table' | 'calendar';
   autoExpandNew?: boolean;
 }
 

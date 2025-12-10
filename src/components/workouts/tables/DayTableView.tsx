@@ -17,6 +17,7 @@ interface DayTableViewProps {
   onAddWorkout?: (day: any) => void;
   onCopyDay?: (day: any) => void;
   onMoveDay?: (day: any) => void;
+  onPasteDay?: (day: any) => void;
   onEditWorkout?: (workout: any, day: any) => void;
   onEditMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onEditMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
@@ -26,6 +27,12 @@ interface DayTableViewProps {
   onDeleteWorkout?: (workout: any, day: any) => void;
   onDeleteMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
+  onCopyWorkout?: (workout: any, day: any) => void;
+  onMoveWorkout?: (workout: any, day: any) => void;
+  onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
+  onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
+  onOpenColumnSettings?: (tableType: 'day' | 'workout' | 'moveframe' | 'movelap') => void;
+  columnSettings?: any;
 }
 
 export default function DayTableView({
@@ -38,6 +45,7 @@ export default function DayTableView({
   onAddWorkout,
   onCopyDay,
   onMoveDay,
+  onPasteDay,
   onEditWorkout,
   onEditMoveframe,
   onEditMovelap,
@@ -46,11 +54,18 @@ export default function DayTableView({
   onDeleteDay,
   onDeleteWorkout,
   onDeleteMoveframe,
-  onDeleteMovelap
+  onDeleteMovelap,
+  onCopyWorkout,
+  onMoveWorkout,
+  onCopyMoveframe,
+  onMoveMoveframe,
+  onOpenColumnSettings,
+  columnSettings
 }: DayTableViewProps) {
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [isWeeklyInfoModalOpen, setIsWeeklyInfoModalOpen] = useState(false);
   const [weeklyNotes, setWeeklyNotes] = useState<Record<number, string[]>>({});
+  const [dayInfoOpenForDay, setDayInfoOpenForDay] = useState<string | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const scrollbarRef = useRef<HTMLDivElement>(null);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
@@ -156,6 +171,11 @@ export default function DayTableView({
     }));
   };
 
+  const handleShowDayInfo = (day: any) => {
+    // Toggle day info: if already open for this day, close it; otherwise, open it
+    setDayInfoOpenForDay(prev => prev === day.id ? null : day.id);
+  };
+
   const currentWeekNotes = weeklyNotes[currentWeek?.weekNumber || currentWeekIndex + 1] || [];
   const firstNote = currentWeekNotes[0] || '';
 
@@ -178,33 +198,27 @@ export default function DayTableView({
               Previous Week
             </button>
 
-            <div className="text-center flex-1">
+            <div className="flex-1 flex items-center justify-center gap-6">
               <div className="text-lg font-bold text-gray-900">
                 Week {currentWeek?.weekNumber || currentWeekIndex + 1}
               </div>
-              <div className="text-sm text-gray-500">
-                {currentWeekIndex + 1} of {totalWeeks}
-              </div>
-              {/* Weekly Info Display */}
+              
+              {/* Weekly Information - Right side of week number */}
               {firstNote && (
-                <div 
-                  className="mt-2 text-xs text-gray-700 bg-blue-50 px-3 py-1 rounded cursor-pointer hover:bg-blue-100 transition-colors"
-                  onClick={() => setIsWeeklyInfoModalOpen(true)}
-                  title="Click to view/edit all weekly notes"
-                >
+                <div className="text-sm text-gray-700 max-w-md px-4 border-l-2 border-gray-200">
                   {firstNote}
                 </div>
               )}
-              {/* Weekly Info Button */}
-              <div className="mt-2">
+              
+              {/* Edit Weekly Info Button - Right side of information */}
                 <button
                   onClick={() => setIsWeeklyInfoModalOpen(true)}
-                  className="flex items-center gap-1 px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors mx-auto"
+                className="flex items-center gap-1 px-4 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex-shrink-0"
+                title="Edit Weekly Information"
                 >
-                  <FileText size={14} />
-                  {firstNote ? 'Edit Weekly Info' : 'Add Weekly Info'}
+                <FileText size={16} />
+                Edit Weekly Info
                 </button>
-              </div>
             </div>
 
             <button
@@ -281,7 +295,7 @@ export default function DayTableView({
               </th>
               
               <th 
-                className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-options-header bg-blue-600 w-[500px] min-w-[500px]" 
+                className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-options-header bg-blue-600 w-[250px] min-w-[250px]" 
                 rowSpan={2}
               >
                 Options
@@ -337,8 +351,10 @@ export default function DayTableView({
                   onToggleDay={onToggleDay!}
                   onEditDay={onEditDay}
                   onAddWorkout={onAddWorkout}
+                  onShowDayInfo={handleShowDayInfo}
                   onCopyDay={onCopyDay}
                   onMoveDay={onMoveDay}
+                  onPasteDay={onPasteDay}
                   onDeleteDay={onDeleteDay}
                 />
                 
@@ -364,10 +380,105 @@ export default function DayTableView({
                             onDeleteWorkout={onDeleteWorkout}
                             onDeleteMoveframe={onDeleteMoveframe}
                             onDeleteMovelap={onDeleteMovelap}
+                            onCopyWorkout={onCopyWorkout}
+                            onMoveWorkout={onMoveWorkout}
+                            onCopyMoveframe={onCopyMoveframe}
+                            onMoveMoveframe={onMoveMoveframe}
+                            onOpenColumnSettings={onOpenColumnSettings}
+                            columnSettings={columnSettings}
                           />
                         ) : (
                           <div className="text-center py-4 text-gray-500 text-xs">
                             No workouts scheduled for this day
+                          </div>
+                        )}
+                        
+                        {/* Day Info Panel - Shows below workouts when toggled */}
+                        {dayInfoOpenForDay === day.id && (
+                          <div className="mt-4 border-t-2 border-cyan-400 pt-4">
+                            <div className="bg-white rounded-lg shadow-md p-4">
+                              <h3 className="text-base font-bold text-cyan-700 mb-3 flex items-center gap-2">
+                                <span>ℹ️</span>
+                                <span>Day Information</span>
+                              </h3>
+                              <div className="grid grid-cols-2 gap-4">
+                                {/* Left Column */}
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Week Number</label>
+                                    <div className="text-sm text-gray-800">{currentWeek?.weekNumber || '—'}</div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Day of Week</label>
+                                    <div className="text-sm text-gray-800">
+                                      {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Date</label>
+                                    <div className="text-sm text-gray-800">
+                                      {new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Number of Workouts</label>
+                                    <div className="text-sm text-gray-800">
+                                      {day.workouts?.length || 0} / 3 
+                                      <span className="text-xs text-gray-500 ml-2">(max 3 workouts per day)</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Right Column */}
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Period Name</label>
+                                    <div className="flex items-center gap-2">
+                                      <div
+                                        className="w-4 h-4 rounded-full border border-gray-400"
+                                        style={{ backgroundColor: day.period?.color || '#9CA3AF' }}
+                                      />
+                                      <span className="text-sm text-gray-800">{day.period?.name || 'No Period'}</span>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Weather</label>
+                                    <div className="text-sm text-gray-800">{day.weather || '—'}</div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Feeling Status</label>
+                                    <div className="text-sm text-gray-800">{day.feelingStatus || '—'}</div>
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
+                                    <div className="text-sm text-gray-800">{day.notes || 'No notes'}</div>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Workout Summary */}
+                              {day.workouts && day.workouts.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Workouts Summary</h4>
+                                  <div className="space-y-2">
+                                    {day.workouts.map((workout: any, idx: number) => (
+                                      <div key={workout.id} className="text-xs bg-gray-50 p-2 rounded flex items-center gap-2">
+                                        <span className="font-bold text-blue-600">#{idx + 1}</span>
+                                        <span>{workout.name || `Workout ${idx + 1}`}</span>
+                                        <span className="text-gray-500">
+                                          ({workout.moveframes?.length || 0} moveframe{workout.moveframes?.length !== 1 ? 's' : ''})
+                                        </span>
+                                        {workout.moveframes && workout.moveframes.slice(0, 4).map((mf: any, mfIdx: number) => (
+                                          <span key={mfIdx} className="text-base" title={mf.sport}>
+                                            {mf.sport === 'SWIM' ? '🏊' : mf.sport === 'BIKE' ? '🚴' : mf.sport === 'RUN' ? '🏃' : '🏋️'}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -382,15 +493,14 @@ export default function DayTableView({
         </div>
       </div>
       
-      {/* Fixed Horizontal Scrollbar - Always visible at bottom */}
+      {/* Horizontal Scrollbar - Synced with table */}
       <div 
         ref={scrollbarRef}
-        className="overflow-x-auto custom-scrollbar bg-gradient-to-b from-gray-300 to-gray-200 border-t-2 border-blue-400 shadow-lg"
+        className="overflow-x-auto custom-scrollbar bg-gradient-to-b from-gray-300 to-gray-200 border-t-2 border-blue-400 shadow-sm"
         style={{ 
-          position: 'fixed',
-          bottom: 0,
           height: '22px',
-          zIndex: 1000
+          position: 'relative',
+          zIndex: 10
         }}
         title="Horizontal scroll - Drag to navigate table"
       >

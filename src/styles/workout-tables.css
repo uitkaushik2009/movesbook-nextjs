@@ -1,0 +1,136 @@
+/* Workout Tables - Custom Color Settings */
+
+/* Apply background to the workout section */
+.workout-tables-container {
+  background-color: var(--page-bg);
+  opacity: var(--page-bg-opacity, 0.89);
+}
+
+/* Day Row Styles */
+.day-row-table tr {
+  background-color: var(--day-header-bg);
+  color: var(--day-header-text);
+  border-width: var(--day-border-width, 1px);
+  border-style: var(--day-border-style, solid);
+  border-color: var(--day-border-color, #e5e7eb);
+}
+
+.day-row-table tr:nth-child(even) {
+  background-color: var(--day-alt-bg);
+  color: var(--day-alt-text);
+}
+
+.day-row-table td {
+  border-width: var(--day-border-width, 1px);
+  border-style: var(--day-border-style, solid);
+  border-color: var(--day-border-color, #e5e7eb);
+}
+
+/* Workout Row Styles */
+.workout-row-table {
+  background-color: var(--workout-1-bg);
+  color: var(--workout-1-text);
+  border-width: var(--workout-border-width, 1px);
+  border-style: var(--workout-border-style, solid);
+  border-color: var(--workout-border-color, #e5e7eb);
+}
+
+.workout-row-table:nth-of-type(2) {
+  background-color: var(--workout-2-bg);
+  color: var(--workout-2-text);
+}
+
+.workout-row-table:nth-of-type(3) {
+  background-color: var(--workout-3-bg);
+  color: var(--workout-3-text);
+}
+
+.workout-row-table td {
+  border-width: var(--workout-border-width, 1px);
+  border-style: var(--workout-border-style, solid);
+  border-color: var(--workout-border-color, #e5e7eb);
+}
+
+/* Moveframe Row Styles */
+.moveframe-row-table tr {
+  background-color: var(--moveframe-header-bg);
+  color: var(--moveframe-header-text);
+  border-width: var(--moveframe-border-width, 1px);
+  border-style: var(--moveframe-border-style, solid);
+  border-color: var(--moveframe-border-color, #e5e7eb);
+}
+
+.moveframe-row-table tr:nth-child(even) {
+  background-color: var(--moveframe-alt-bg);
+  color: var(--moveframe-alt-text);
+}
+
+.moveframe-row-table td {
+  border-width: var(--moveframe-border-width, 1px);
+  border-style: var(--moveframe-border-style, solid);
+  border-color: var(--moveframe-border-color, #e5e7eb);
+}
+
+/* Movelap Row Styles */
+.movelap-row-table tr {
+  background-color: var(--movelap-header-bg);
+  color: var(--movelap-header-text);
+  border-width: var(--movelap-border-width, 1px);
+  border-style: var(--movelap-border-style, solid);
+  border-color: var(--movelap-border-color, #e5e7eb);
+}
+
+.movelap-row-table tr:nth-child(even) {
+  background-color: var(--movelap-alt-bg);
+  color: var(--movelap-alt-text);
+}
+
+.movelap-row-table td {
+  border-width: var(--movelap-border-width, 1px);
+  border-style: var(--movelap-border-style, solid);
+  border-color: var(--movelap-border-color, #e5e7eb);
+}
+
+/* Selected/Hover States */
+.workout-tables-container tr:hover {
+  background-color: var(--selected-bg) !important;
+  color: var(--selected-text) !important;
+}
+
+/* Button Styles */
+.workout-tables-container button[data-btn="add"] {
+  background-color: var(--btn-add-bg);
+  color: var(--btn-add-text);
+}
+
+.workout-tables-container button[data-btn="add"]:hover {
+  background-color: var(--btn-add-hover);
+}
+
+.workout-tables-container button[data-btn="edit"] {
+  background-color: var(--btn-edit-bg);
+  color: var(--btn-edit-text);
+}
+
+.workout-tables-container button[data-btn="edit"]:hover {
+  background-color: var(--btn-edit-hover);
+}
+
+.workout-tables-container button[data-btn="delete"] {
+  background-color: var(--btn-delete-bg);
+  color: var(--btn-delete-text);
+}
+
+.workout-tables-container button[data-btn="delete"]:hover {
+  background-color: var(--btn-delete-hover);
+}
+
+.workout-tables-container button[data-btn="print"] {
+  background-color: var(--btn-print-bg);
+  color: var(--btn-print-text);
+}
+
+.workout-tables-container button[data-btn="print"]:hover {
+  background-color: var(--btn-print-hover);
+}
+

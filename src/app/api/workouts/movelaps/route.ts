@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-const prisma = new PrismaClient();
-
-/**
- * POST /api/workouts/movelaps
- * Create a new movelap for an existing moveframe
- */
+// POST /api/workouts/movelaps - Create a new movelap
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -21,100 +16,161 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    console.log('POST /api/workouts/movelaps - Request received');
-    
     const body = await request.json();
-    console.log('Request body:', JSON.stringify(body, null, 2));
-    
     const {
       moveframeId,
-      mode = 'APPEND',
+      repetitionNumber,
       distance,
-      speedCode,
+      speed,
       style,
       pace,
       time,
       pause,
-      restType,
       alarm,
-      notes
+      sound,
+      notes,
+      reps,
+      weight,
+      status = 'PENDING'
     } = body;
-    
+
+    console.log('📥 Creating movelap:', body);
+
     // Validate required fields
     if (!moveframeId) {
-      console.error('Missing moveframeId');
       return NextResponse.json({ error: 'moveframeId is required' }, { status: 400 });
     }
-    
-    // Verify moveframe exists and user has access
-    const moveframe = await prisma.moveframe.findUnique({
-      where: { id: moveframeId },
-      include: {
-        workoutSession: {
-          include: {
-            workoutDay: true
-          }
-        },
-        movelaps: {
-          orderBy: { repetitionNumber: 'desc' },
-          take: 1
-        }
+
+    if (!repetitionNumber) {
+      return NextResponse.json({ error: 'repetitionNumber is required' }, { status: 400 });
+    }
+
+    // Create movelap
+    const movelap = await prisma.movelap.create({
+      data: {
+        moveframeId,
+        repetitionNumber,
+        distance: distance ? parseInt(distance) : null,
+        speed: speed || null,
+        style: style || null,
+        pace: pace || null,
+        time: time || null,
+        pause: pause || null,
+        alarm: alarm ? parseInt(alarm) : null,
+        sound: sound || null,
+        notes: notes || null,
+        reps: reps ? parseInt(reps) : null,
+        status: status as any,
+        isSkipped: false,
+        isDisabled: false
       }
     });
-    
-    if (!moveframe) {
-      return NextResponse.json({ error: 'Moveframe not found' }, { status: 404 });
-    }
-    
-    // Get the next repetition number
-    const lastMovelap = moveframe.movelaps[0];
-    const nextRepNumber = lastMovelap ? lastMovelap.repetitionNumber + 1 : 1;
-    
-    console.log('Creating movelap for moveframe:', moveframeId);
-    console.log('Next repetition number:', nextRepNumber);
-    
-    // Create the movelap
-    const movelapData = {
-      moveframeId,
-      repetitionNumber: nextRepNumber,
-      distance: distance ? parseInt(distance.toString()) : null,
-      speed: speedCode || null,
-      style: style || null,
-      pace: pace || null,
-      time: time || null,
-      pause: pause || null,
-      restType: restType || 'SET_TIME',
-      alarm: alarm ? parseInt(alarm.toString()) : null,
-      notes: notes || null,
-      status: 'PENDING' as any,
-      isSkipped: false,
-      isDisabled: false
-    };
-    
-    console.log('Movelap data:', JSON.stringify(movelapData, null, 2));
-    
-    const movelap = await prisma.movelap.create({
-      data: movelapData
-    });
-    
-    console.log('✅ Movelap created successfully:', movelap.id);
-    
-    return NextResponse.json({ movelap });
+
+    console.log('✅ Movelap created:', movelap.id);
+
+    return NextResponse.json(movelap, { status: 201 });
   } catch (error: any) {
     console.error('❌ Error creating movelap:', error);
-    console.error('Error name:', error.name);
-    console.error('Error message:', error.message);
-    console.error('Error code:', error.code);
-    
+    console.error('❌ Error details:', error.message);
     return NextResponse.json(
-      { 
-        error: 'Failed to create movelap',
-        details: error.message,
-        code: error.code,
-        name: error.name
-      },
+      { error: 'Failed to create movelap', details: error.message },
       { status: 500 }
     );
   }
 }
 
+// PATCH /api/workouts/movelaps?id=<movelapId> - Update a movelap
+export async function PATCH(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const movelapId = searchParams.get('id');
+
+    if (!movelapId) {
+      return NextResponse.json({ error: 'Movelap ID is required' }, { status: 400 });
+    }
+
+    const body = await request.json();
+    console.log('📝 Updating movelap:', movelapId, body);
+
+    // Update movelap
+    const movelap = await prisma.movelap.update({
+      where: { id: movelapId },
+      data: {
+        repetitionNumber: body.repetitionNumber,
+        distance: body.distance ? parseInt(body.distance) : null,
+        speed: body.speed || null,
+        style: body.style || null,
+        pace: body.pace || null,
+        time: body.time || null,
+        pause: body.pause || null,
+        alarm: body.alarm ? parseInt(body.alarm) : null,
+        sound: body.sound || null,
+        notes: body.notes || null,
+        reps: body.reps ? parseInt(body.reps) : null,
+        status: body.status as any
+      }
+    });
+
+    console.log('✅ Movelap updated:', movelap.id);
+
+    return NextResponse.json(movelap);
+  } catch (error: any) {
+    console.error('❌ Error updating movelap:', error);
+    console.error('❌ Error details:', error.message);
+    console.error('❌ Stack trace:', error.stack);
+    return NextResponse.json(
+      { error: 'Failed to update movelap', details: error.message },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/workouts/movelaps?id=<movelapId> - Delete a movelap
+export async function DELETE(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const movelapId = searchParams.get('id');
+
+    if (!movelapId) {
+      return NextResponse.json({ error: 'Movelap ID is required' }, { status: 400 });
+    }
+
+    console.log('🗑️ Deleting movelap:', movelapId);
+
+    await prisma.movelap.delete({
+      where: { id: movelapId }
+    });
+
+    console.log('✅ Movelap deleted');
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('❌ Error deleting movelap:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete movelap', details: error.message },
+      { status: 500 }
+    );
+  }
+}

@@ -24,13 +24,43 @@ export async function POST(request: NextRequest) {
       name,
       code,
       time,
-      status
+      location,
+      notes,
+      status,
+      sports,
+      symbol,
+      includeStretching
     } = body;
+
+    console.log('📝 Creating workout session with data:', { 
+      workoutDayId, 
+      sessionNumber, 
+      name, 
+      code,
+      sports,
+      symbol,
+      includeStretching
+    });
 
     // Validate required fields
     if (!workoutDayId || !sessionNumber) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Validate sports array
+    if (!sports || !Array.isArray(sports) || sports.length === 0) {
+      return NextResponse.json(
+        { error: 'At least one sport is required' },
+        { status: 400 }
+      );
+    }
+
+    if (sports.length > 4) {
+      return NextResponse.json(
+        { error: 'Maximum 4 sports allowed per workout' },
         { status: 400 }
       );
     }
@@ -89,7 +119,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create workout session
+    // Create workout session with sports
     const session = await prisma.workoutSession.create({
       data: {
         workoutDayId,
@@ -97,7 +127,14 @@ export async function POST(request: NextRequest) {
         name: name || `Workout ${sessionNumber}`,
         code: code || '',
         time: time || '',
-        status: status as any || 'PLANNED_FUTURE'
+        location: location || '',
+        notes: notes || (includeStretching ? `${symbol || ''} Includes stretching` : symbol || ''),
+        status: status as any || 'PLANNED_FUTURE',
+        sports: {
+          create: sports.map((sport: string) => ({
+            sport: sport as any
+          }))
+        }
       },
       include: {
         moveframes: {
@@ -110,6 +147,7 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log('✅ Workout session created successfully:', session.id);
     return NextResponse.json({ session });
   } catch (error) {
     console.error('Error creating workout session:', error);

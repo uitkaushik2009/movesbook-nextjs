@@ -18,6 +18,12 @@ interface WorkoutHierarchyViewProps {
   onDeleteWorkout?: (workout: any, day: any) => void;
   onDeleteMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
+  onCopyWorkout?: (workout: any, day: any) => void;
+  onMoveWorkout?: (workout: any, day: any) => void;
+  onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
+  onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
+  onOpenColumnSettings?: (tableType: 'day' | 'workout' | 'moveframe' | 'movelap') => void;
+  columnSettings?: any;
 }
 
 export default function WorkoutHierarchyView({
@@ -32,7 +38,13 @@ export default function WorkoutHierarchyView({
   onAddMovelap,
   onDeleteWorkout,
   onDeleteMoveframe,
-  onDeleteMovelap
+  onDeleteMovelap,
+  onCopyWorkout,
+  onMoveWorkout,
+  onCopyMoveframe,
+  onMoveMoveframe,
+  onOpenColumnSettings,
+  columnSettings
 }: WorkoutHierarchyViewProps) {
   const [expandedMoveframes, setExpandedMoveframes] = useState<Set<string>>(new Set());
   
@@ -60,53 +72,30 @@ export default function WorkoutHierarchyView({
         
         return (
           <div key={workout.id} className="space-y-4">
-            {/* WORKOUT TABLE */}
+            {/* WORKOUT TABLE - includes moveframes inside */}
             <WorkoutTable
               day={day}
               workout={workout}
               workoutIndex={workoutIndex}
+              weekNumber={day.weekNumber}
+              periodName={day.period?.name}
               isExpanded={isWorkoutExpanded}
               onToggleExpand={() => onToggleWorkout?.(workout.id)}
               onEdit={() => onEditWorkout?.(workout, day)}
               onDelete={() => onDeleteWorkout?.(workout, day)}
               onAddMoveframe={() => onAddMoveframe?.(workout, day)}
+              onEditMoveframe={(moveframe) => onEditMoveframe?.(moveframe, workout, day)}
+              onDeleteMoveframe={(moveframe) => onDeleteMoveframe?.(moveframe, workout, day)}
+              onEditMovelap={(movelap, moveframe) => onEditMovelap?.(movelap, moveframe, workout, day)}
+              onDeleteMovelap={(movelap, moveframe) => onDeleteMovelap?.(movelap, moveframe, workout, day)}
+              onAddMovelap={(moveframe) => onAddMovelap?.(moveframe, workout, day)}
+              onCopyWorkout={() => onCopyWorkout?.(workout, day)}
+              onMoveWorkout={() => onMoveWorkout?.(workout, day)}
+              onCopyMoveframe={(moveframe) => onCopyMoveframe?.(moveframe, workout, day)}
+              onMoveMoveframe={(moveframe) => onMoveMoveframe?.(moveframe, workout, day)}
+              onOpenColumnSettings={onOpenColumnSettings}
+              columnSettings={columnSettings}
             />
-
-            {/* MOVEFRAMES AND MOVELAPS - Only show when expanded */}
-            {isWorkoutExpanded && (workout.moveframes || []).map((moveframe: any) => {
-              return (
-                <div key={moveframe.id} className="space-y-3">
-                  {/* MOVEFRAME TABLE */}
-                  <MoveframeTable
-                    day={day}
-                    workout={workout}
-                    moveframe={moveframe}
-                    workoutIndex={workoutIndex}
-                    onEdit={() => onEditMoveframe?.(moveframe, workout, day)}
-                    onDelete={() => onDeleteMoveframe?.(moveframe, workout, day)}
-                    onAddMovelap={() => onAddMovelap?.(moveframe, workout, day)}
-                    onAddMoveframe={() => onAddMoveframe?.(workout, day)}
-                    onToggleExpand={() => toggleMoveframeExpansion(moveframe.id)}
-                    isExpanded={expandedMoveframes.has(moveframe.id)}
-                  />
-
-                  {/* MOVELAP TABLE (only if expanded) */}
-                  {expandedMoveframes.has(moveframe.id) && (
-                    <MovelapTable
-                      day={day}
-                      workout={workout}
-                      moveframe={moveframe}
-                      movelaps={moveframe.movelaps || []}
-                      workoutIndex={workoutIndex}
-                      moveframeCode={moveframe.code || 'A'}
-                      onEditMovelap={(movelap) => onEditMovelap?.(movelap, moveframe, workout, day)}
-                      onDeleteMovelap={(movelap) => onDeleteMovelap?.(movelap, moveframe, workout, day)}
-                      onAddMovelap={() => onAddMovelap?.(moveframe, workout, day)}
-                    />
-                  )}
-                </div>
-              );
-            })}
           </div>
         );
       })}

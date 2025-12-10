@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 import { verifyToken } from '@/lib/auth';
 
-/**
- * PATCH /api/workouts/sessions/move
- * Move a workout to another day
- */
-export async function PATCH(request: NextRequest) {
+const prisma = new PrismaClient();
+
+// POST /api/workouts/sessions/move - Move a workout session to another day
+export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
@@ -20,8 +19,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { workoutId, targetDayId } = body;
+    const { workoutId, targetDayId, sessionNumber } = body;
 
+    console.log('🚚 Moving workout:', { workoutId, targetDayId, sessionNumber });
+
+    // Validate required fields
     if (!workoutId || !targetDayId) {
       return NextResponse.json(
         { error: 'workoutId and targetDayId are required' },
@@ -29,63 +31,42 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Verify workout exists
-    const workout = await prisma.workoutSession.findUnique({
-      where: { id: workoutId }
-    });
-
-    if (!workout) {
-      return NextResponse.json({ error: 'Workout not found' }, { status: 404 });
+    // Determine session number if not provided
+    let newSessionNumber = sessionNumber;
+    if (!newSessionNumber) {
+      const existingWorkouts = await prisma.workoutSession.findMany({
+        where: { workoutDayId: targetDayId },
+        select: { sessionNumber: true }
+      });
+      newSessionNumber = Math.max(0, ...existingWorkouts.map(w => w.sessionNumber)) + 1;
     }
 
-    // Verify target day exists and get existing workouts to calculate sessionNumber
-    const targetDay = await prisma.workoutDay.findUnique({
-      where: { id: targetDayId },
-      include: {
-        workouts: {
-          orderBy: { sessionNumber: 'desc' },
-          take: 1
-        }
-      }
-    });
-
-    if (!targetDay) {
-      return NextResponse.json({ error: 'Target day not found' }, { status: 404 });
-    }
-
-    // Calculate next session number for target day
-    const nextSessionNumber = targetDay.workouts.length > 0 
-      ? (targetDay.workouts[0].sessionNumber + 1) 
-      : 1;
-
-    // Move workout to new day with new session number
-    const updatedWorkout = await prisma.workoutSession.update({
+    // Update the workout with new day and session number
+    const movedWorkout = await prisma.workoutSession.update({
       where: { id: workoutId },
       data: {
         workoutDayId: targetDayId,
-        sessionNumber: nextSessionNumber
+        sessionNumber: newSessionNumber
       },
       include: {
+        sports: true,
         moveframes: {
           include: {
-            movelaps: true
+            movelaps: true,
+            section: true
           }
         }
       }
     });
 
-    console.log('✅ Workout moved:', workoutId, '→', targetDayId);
+    console.log('✅ Workout moved successfully:', movedWorkout.id);
 
-    return NextResponse.json({
-      success: true,
-      workout: updatedWorkout
-    });
-  } catch (error) {
+    return NextResponse.json({ workout: movedWorkout });
+  } catch (error: any) {
     console.error('❌ Error moving workout:', error);
     return NextResponse.json(
-      { error: 'Failed to move workout', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to move workout', details: error.message },
       { status: 500 }
     );
   }
 }
-

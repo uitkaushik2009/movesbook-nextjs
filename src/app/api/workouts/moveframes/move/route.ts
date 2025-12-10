@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { PrismaClient } from '@prisma/client';
 import { verifyToken } from '@/lib/auth';
 
-/**
- * PATCH /api/workouts/moveframes/move
- * Move a moveframe to another workout (or reorder within same workout)
- */
-export async function PATCH(request: NextRequest) {
+const prisma = new PrismaClient();
+
+// POST /api/workouts/moveframes/move - Move a moveframe to another workout
+export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
@@ -20,105 +19,94 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { moveframeId, targetWorkoutId, position, insertBeforeId } = body;
+    const {
+      moveframeId,
+      targetWorkoutId,
+      position = 'after',
+      targetMoveframeId
+    } = body;
 
+    console.log('📝 Moving moveframe:', { 
+      moveframeId, 
+      targetWorkoutId, 
+      position, 
+      targetMoveframeId 
+    });
+
+    // Validate required fields
     if (!moveframeId || !targetWorkoutId) {
       return NextResponse.json(
-        { error: 'moveframeId and targetWorkoutId are required' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Get the source moveframe
+    // Get source moveframe
     const moveframe = await prisma.moveframe.findUnique({
       where: { id: moveframeId },
-      select: { id: true, workoutSessionId: true, orderIndex: true }
+      include: {
+        movelaps: true,
+        section: true
+      }
     });
 
     if (!moveframe) {
-      return NextResponse.json({ error: 'Moveframe not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Moveframe not found' },
+        { status: 404 }
+      );
     }
 
-    // Verify target workout exists
-    const targetWorkout = await prisma.workoutSession.findUnique({
-      where: { id: targetWorkoutId }
-    });
-
-    if (!targetWorkout) {
-      return NextResponse.json({ error: 'Target workout not found' }, { status: 404 });
-    }
-
-    const sourceWorkoutId = moveframe.workoutSessionId;
-    const isSameWorkout = sourceWorkoutId === targetWorkoutId;
-
-    // Determine new order index
-    let newOrderIndex = 0;
-    if (position === 'append') {
-      // Get max order index and add 1
-      const maxOrder = await prisma.moveframe.findFirst({
-        where: { workoutSessionId: targetWorkoutId },
-        orderBy: { orderIndex: 'desc' },
-        select: { orderIndex: true }
+    // Handle position-based operations
+    let newLetter = moveframe.letter;
+    
+    if (position === 'replace' && targetMoveframeId) {
+      // Delete the target moveframe first
+      const targetMoveframe = await prisma.moveframe.findUnique({
+        where: { id: targetMoveframeId },
+        select: { letter: true }
       });
-      newOrderIndex = (maxOrder?.orderIndex || 0) + 1;
-    } else if (insertBeforeId) {
-      // Get order index of the moveframe to insert before
-      const beforeMoveframe = await prisma.moveframe.findUnique({
-        where: { id: insertBeforeId },
-        select: { orderIndex: true }
-      });
-      newOrderIndex = beforeMoveframe?.orderIndex || 0;
       
-      // Shift other moveframes down in target workout
-      await prisma.moveframe.updateMany({
-        where: {
-          workoutSessionId: targetWorkoutId,
-          orderIndex: { gte: newOrderIndex },
-          id: { not: moveframeId } // Don't shift the moving one
-        },
-        data: {
-          orderIndex: { increment: 1 }
-        }
+      await prisma.moveframe.delete({
+        where: { id: targetMoveframeId }
       });
+      
+      newLetter = targetMoveframe?.letter || moveframe.letter;
+    } else if (targetWorkoutId !== moveframe.workoutSessionId) {
+      // Moving to a different workout - get next available letter
+      const existingMoveframes = await prisma.moveframe.findMany({
+        where: { workoutSessionId: targetWorkoutId },
+        select: { letter: true }
+      });
+      
+      const usedLetters = new Set(existingMoveframes.map(mf => mf.letter));
+      const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      newLetter = letters.split('').find(l => !usedLetters.has(l)) || moveframe.letter;
     }
 
-    // If moving to different workout, clean up gaps in source workout
-    if (!isSameWorkout) {
-      await prisma.moveframe.updateMany({
-        where: {
-          workoutSessionId: sourceWorkoutId,
-          orderIndex: { gt: moveframe.orderIndex }
-        },
-        data: {
-          orderIndex: { decrement: 1 }
-        }
-      });
-    }
-
-    // Move the moveframe
+    // Update moveframe with new workout and letter
     const updatedMoveframe = await prisma.moveframe.update({
       where: { id: moveframeId },
       data: {
         workoutSessionId: targetWorkoutId,
-        orderIndex: newOrderIndex
+        letter: newLetter
       },
       include: {
-        movelaps: true
+        movelaps: {
+          orderBy: { repetitionNumber: 'asc' }
+        },
+        section: true
       }
     });
 
-    console.log('✅ Moveframe moved:', moveframeId, '→', targetWorkoutId);
+    console.log('✅ Moveframe moved successfully:', updatedMoveframe.id);
 
-    return NextResponse.json({
-      success: true,
-      moveframe: updatedMoveframe
-    });
-  } catch (error) {
+    return NextResponse.json(updatedMoveframe);
+  } catch (error: any) {
     console.error('❌ Error moving moveframe:', error);
     return NextResponse.json(
-      { error: 'Failed to move moveframe', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to move moveframe', details: error.message },
       { status: 500 }
     );
   }
 }
-

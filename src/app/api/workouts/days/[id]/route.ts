@@ -95,6 +95,50 @@ export async function PUT(
   }
 }
 
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const {
+      periodId,
+      weather,
+      feelingStatus,
+      notes
+    } = body;
+
+    const day = await prisma.workoutDay.update({
+      where: { id: params.id },
+      data: {
+        periodId,
+        weather,
+        feelingStatus,
+        notes
+      }
+    });
+
+    return NextResponse.json({ day });
+  } catch (error) {
+    console.error('Error updating workout day:', error);
+    return NextResponse.json(
+      { error: 'Failed to update workout day' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }

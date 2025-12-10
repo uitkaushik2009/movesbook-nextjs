@@ -116,7 +116,6 @@ export const UI_CONFIG = {
 
 // ==================== VIEW MODES ====================
 export const VIEW_MODES = {
-  TREE: 'tree',
   TABLE: 'table',
   CALENDAR: 'calendar'
 } as const;

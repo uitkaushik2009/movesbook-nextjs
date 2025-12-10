@@ -4,7 +4,7 @@ import { verifyToken } from '@/lib/auth';
 
 const prisma = new PrismaClient();
 
-// GET /api/workouts/export - Export workouts as JSON/CSV
+// GET /api/workouts/export - Export workouts as JSON, CSV, or PDF
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -19,172 +19,176 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const format = searchParams.get('format') || 'json';
-    const weekNumber = searchParams.get('weekNumber');
-    const dayId = searchParams.get('dayId');
+    const format = searchParams.get('format') || 'json'; // json, csv, pdf
+    const type = searchParams.get('type'); // day, week, month, plan
+    const id = searchParams.get('id'); // ID of the item to export
 
-    // Build where clause
-    let workoutPlan;
-    
-    if (dayId) {
-      // Export single day
-      const day = await prisma.workoutDay.findUnique({
-        where: { id: dayId },
-        include: {
-          period: true,
-          workouts: {
-            include: {
-              moveframes: {
-                include: {
-                  section: true,
-                  movelaps: {
-                    orderBy: { repetitionNumber: 'asc' }
+    console.log('📤 Exporting workouts:', { format, type, id });
+
+    let data: any = null;
+
+    // Fetch data based on type
+    switch (type) {
+      case 'day':
+        data = await prisma.workoutDay.findUnique({
+          where: { id: id! },
+          include: {
+            workouts: {
+              include: {
+                sports: true,
+                moveframes: {
+                  include: {
+                    movelaps: true,
+                    section: true
                   }
-                },
-                orderBy: { letter: 'asc' }
+                }
               }
             },
-            orderBy: { sessionNumber: 'asc' }
-          },
-          workoutWeek: {
-            include: {
-              workoutPlan: true
+            period: true
+          }
+        });
+        break;
+
+      case 'week':
+        data = await prisma.workoutWeek.findUnique({
+          where: { id: id! },
+          include: {
+            days: {
+              include: {
+                workouts: {
+                  include: {
+                    sports: true,
+                    moveframes: {
+                      include: {
+                        movelaps: true,
+                        section: true
+                      }
+                    }
+                  }
+                },
+                period: true
+              }
             }
           }
-        }
-      });
+        });
+        break;
 
-      if (!day || day.workoutWeek.workoutPlan.userId !== decoded.userId) {
-        return NextResponse.json({ error: 'Day not found or unauthorized' }, { status: 404 });
-      }
-
-      workoutPlan = { days: [day] };
-    } else if (weekNumber) {
-      // Export single week
-      const week = await prisma.workoutWeek.findFirst({
-        where: {
-          weekNumber: parseInt(weekNumber),
-          workoutPlan: {
-            userId: decoded.userId
-          }
-        },
-        include: {
-          days: {
-            include: {
-              period: true,
-              workouts: {
-                include: {
-                  moveframes: {
-                    include: {
-                      section: true,
-                      movelaps: {
-                        orderBy: { repetitionNumber: 'asc' }
-                      }
-                    },
-                    orderBy: { letter: 'asc' }
-                  }
-                },
-                orderBy: { sessionNumber: 'asc' }
-              }
-            },
-            orderBy: { dayOfWeek: 'asc' }
-          }
-        }
-      });
-
-      if (!week) {
-        return NextResponse.json({ error: 'Week not found' }, { status: 404 });
-      }
-
-      workoutPlan = { weeks: [week] };
-    } else {
-      // Export entire plan
-      workoutPlan = await prisma.workoutPlan.findFirst({
-        where: { userId: decoded.userId },
-        include: {
-          weeks: {
-            include: {
-              days: {
-                include: {
-                  period: true,
-                  workouts: {
-                    include: {
-                      moveframes: {
-                        include: {
-                          section: true,
-                          movelaps: {
-                            orderBy: { repetitionNumber: 'asc' }
+      case 'plan':
+        data = await prisma.workoutPlan.findFirst({
+          where: { 
+            userId: decoded.userId,
+            type: 'CURRENT_WEEKS'
+          },
+          include: {
+            weeks: {
+              include: {
+                days: {
+                  include: {
+                    workouts: {
+                      include: {
+                        sports: true,
+                        moveframes: {
+                          include: {
+                            movelaps: true,
+                            section: true
                           }
-                        },
-                        orderBy: { letter: 'asc' }
+                        }
                       }
                     },
-                    orderBy: { sessionNumber: 'asc' }
+                    period: true
                   }
-                },
-                orderBy: { dayOfWeek: 'asc' }
+                }
               }
-            },
-            orderBy: { weekNumber: 'asc' }
+            }
           }
-        }
-      });
-    }
-
-    if (!workoutPlan) {
-      return NextResponse.json({ error: 'Workout plan not found' }, { status: 404 });
-    }
-
-    if (format === 'csv') {
-      // Convert to CSV
-      const csvLines = ['Week,Day,Workout,Sport,Exercise,Distance,Reps,Pace,Notes'];
-      
-      const processWorkouts = (day: any, weekNumber: number) => {
-        day.workouts?.forEach((workout: any) => {
-          workout.moveframes?.forEach((mf: any) => {
-            mf.movelaps?.forEach((lap: any) => {
-              csvLines.push([
-                weekNumber,
-                day.dayOfWeek,
-                workout.sessionNumber,
-                mf.sport,
-                mf.letter,
-                lap.distance || '',
-                mf.movelaps?.length || '',
-                lap.pace || '',
-                lap.notes || ''
-              ].map(v => `"${v}"`).join(','));
-            });
-          });
         });
-      };
+        break;
 
-      if ((workoutPlan as any).weeks) {
-        (workoutPlan as any).weeks.forEach((week: any) => {
-          week.days?.forEach((day: any) => processWorkouts(day, week.weekNumber));
-        });
-      } else if ((workoutPlan as any).days) {
-        (workoutPlan as any).days.forEach((day: any) => processWorkouts(day, day.weekNumber));
-      }
-
-      const csv = csvLines.join('\n');
-      
-      return new NextResponse(csv, {
-        headers: {
-          'Content-Type': 'text/csv',
-          'Content-Disposition': 'attachment; filename="workouts.csv"'
-        }
-      });
+      default:
+        return NextResponse.json({ error: 'Invalid export type' }, { status: 400 });
     }
 
-    // Return as JSON
-    return NextResponse.json({ workoutPlan });
-  } catch (error) {
-    console.error('Error exporting workouts:', error);
+    if (!data) {
+      return NextResponse.json({ error: 'Data not found' }, { status: 404 });
+    }
+
+    // Format data based on requested format
+    switch (format) {
+      case 'json':
+        return NextResponse.json(data, {
+          headers: {
+            'Content-Disposition': `attachment; filename="workout-${type}-${id}.json"`
+          }
+        });
+
+      case 'csv':
+        const csv = convertToCSV(data, type);
+        return new NextResponse(csv, {
+          headers: {
+            'Content-Type': 'text/csv',
+            'Content-Disposition': `attachment; filename="workout-${type}-${id}.csv"`
+          }
+        });
+
+      case 'pdf':
+        // For PDF, we'll return JSON with a special flag
+        // The frontend can use a library like jsPDF to generate the PDF
+        return NextResponse.json({ 
+          data,
+          format: 'pdf',
+          message: 'Use frontend PDF library to generate PDF from this data'
+        });
+
+      default:
+        return NextResponse.json({ error: 'Invalid format' }, { status: 400 });
+    }
+  } catch (error: any) {
+    console.error('❌ Error exporting workouts:', error);
     return NextResponse.json(
-      { error: 'Failed to export workouts' },
+      { error: 'Failed to export workouts', details: error.message },
       { status: 500 }
     );
   }
 }
 
+// Helper function to convert data to CSV
+function convertToCSV(data: any, type: string): string {
+  const rows: string[] = [];
+
+  if (type === 'day') {
+    rows.push('Date,Workout,Moveframe,Distance,Speed,Pace,Reps');
+    
+    data.workouts?.forEach((workout: any) => {
+      workout.moveframes?.forEach((mf: any) => {
+        rows.push([
+          new Date(data.date).toLocaleDateString(),
+          workout.name || 'Workout',
+          mf.description || '',
+          mf.distance || '',
+          mf.speed || '',
+          mf.pace || '',
+          mf.movelaps?.length || 0
+        ].join(','));
+      });
+    });
+  } else if (type === 'week') {
+    rows.push('Date,Day,Workout,Moveframes,Total Distance');
+    
+    data.days?.forEach((day: any) => {
+      const totalMoveframes = day.workouts?.reduce((sum: number, w: any) => 
+        sum + (w.moveframes?.length || 0), 0);
+      const totalDistance = day.workouts?.reduce((sum: number, w: any) =>
+        sum + (w.moveframes?.reduce((s: number, mf: any) => s + (mf.distance || 0), 0) || 0), 0);
+      
+      rows.push([
+        new Date(day.date).toLocaleDateString(),
+        new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' }),
+        day.workouts?.length || 0,
+        totalMoveframes,
+        totalDistance
+      ].join(','));
+    });
+  }
+
+  return rows.join('\n');
+}

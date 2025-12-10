@@ -109,10 +109,6 @@ export default function WorkoutLeftSidebar({
         </h3>
         <div className="space-y-1 text-sm">
           <button className="w-full text-left px-3 py-2 hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-2">
-            <span>📊</span>
-            <span>Tree View</span>
-          </button>
-          <button className="w-full text-left px-3 py-2 hover:bg-gray-800 rounded-lg transition-colors flex items-center gap-2">
             <span>📋</span>
             <span>Table View</span>
           </button>

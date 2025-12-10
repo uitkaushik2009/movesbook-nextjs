@@ -90,17 +90,17 @@ export default function MovelapTable({
   return (
     <>
       <div className="mb-2 ml-8">
-        <table className="w-full border-collapse bg-white shadow-sm text-xs">
+        <table className="border-collapse bg-white shadow-sm text-sm" style={{ tableLayout: 'fixed', width: '1000px' }}>
           {/* Title Row */}
           <thead className="bg-yellow-200">
             <tr>
-              <th colSpan={visibleColumnCount + 1} className="border border-gray-300 px-2 py-1 text-left text-xs">
+              <th colSpan={visibleColumnCount + 1} className="border border-gray-200 px-2 py-1 text-left text-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-xs">
+                    <span className="font-bold text-sm">
                       Movelaps of the moveframe {moveframeCode} of workout #{workoutIndex + 1}
                     </span>
-                    <span className="text-yellow-700 text-xs">
+                    <span className="text-yellow-700 text-sm">
                       {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                   </div>
@@ -108,19 +108,19 @@ export default function MovelapTable({
                     <span className="font-bold text-xs">Options:</span>
                     <div className="flex gap-1">
                       <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
-                        Copy All
+                        Copy
                       </button>
                       <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
-                        Clear All
+                        Clear
                       </button>
-                      <button
-                        onClick={() => setIsConfigModalOpen(true)}
-                        className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-300 hover:bg-yellow-400 rounded"
-                        title="Configure columns"
-                      >
-                        <Settings size={14} />
-                        Columns
-                      </button>
+                  <button
+                    onClick={() => setIsConfigModalOpen(true)}
+                    className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-300 hover:bg-yellow-400 rounded"
+                    title="Configure columns"
+                  >
+                    <Settings size={14} />
+                    Columns
+                  </button>
                     </div>
                   </div>
                 </div>
@@ -131,10 +131,9 @@ export default function MovelapTable({
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
-                  className="border border-gray-300 px-1 py-1 text-xs font-bold text-center"
-                  style={{
-                    width: column.width,
-                    minWidth: column.minWidth
+                  className="border border-gray-200 px-1 py-1 text-xs font-bold text-center"
+                  style={{ 
+                    width: column.id === 'annotation' ? '150px' : column.id === 'mf' ? '40px' : '65px'
                   }}
                 >
                   {column.label}
@@ -151,11 +150,16 @@ export default function MovelapTable({
                 {visibleColumns.map((column) => (
                   <td
                     key={column.id}
-                    className={`border border-gray-300 px-1 py-1 text-xs text-center ${
+                    className={`border border-gray-200 px-1 py-1 text-xs text-center overflow-hidden ${
                       column.id === 'mf' ? 'font-bold' : ''
                     }`}
+                    style={{ 
+                      width: column.id === 'annotation' ? '150px' : column.id === 'mf' ? '40px' : '65px'
+                    }}
                   >
-                    {getCellValue(column, movelap)}
+                    <div className={column.id === 'annotation' ? 'truncate' : ''} title={String(getCellValue(column, movelap))}>
+                      {getCellValue(column, movelap)}
+                    </div>
                   </td>
                 ))}
               </tr>
@@ -168,7 +172,7 @@ export default function MovelapTable({
                   onClick={onAddMovelap}
                   className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
                 >
-                  + Add new row
+                  + Add row
                 </button>
               </td>
             </tr>

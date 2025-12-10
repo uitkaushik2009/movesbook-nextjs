@@ -1,7 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useDroppable } from '@dnd-kit/core';
+import { ChevronDown } from 'lucide-react';
+import EditableCell from './EditableCell';
+import { useColorSettings } from '@/hooks/useColorSettings';
 
 interface SportSummary {
   sport: string;
@@ -19,8 +22,10 @@ interface DayRowTableProps {
   onToggleDay: (dayId: string) => void;
   onEditDay?: (day: any) => void;
   onAddWorkout?: (day: any) => void;
+  onShowDayInfo?: (day: any) => void;
   onCopyDay?: (day: any) => void;
   onMoveDay?: (day: any) => void;
+  onPasteDay?: (day: any) => void;
   onDeleteDay?: (day: any) => void;
 }
 
@@ -87,35 +92,6 @@ const calculateSportSummaries = (day: any): SportSummary[] => {
   return Array.from(sportMap.values()).slice(0, 4);
 };
 
-// Calculate day totals (sum of all sports)
-const calculateDayTotals = (day: any) => {
-  if (!day.workouts || day.workouts.length === 0) {
-    return { totalDistance: 0, totalDuration: '0:00', totalK: 0 };
-  }
-
-  let totalDistance = 0;
-
-  day.workouts.forEach((workout: any) => {
-    if (workout.moveframes) {
-      workout.moveframes.forEach((moveframe: any) => {
-        if (moveframe.movelaps) {
-          moveframe.movelaps.forEach((movelap: any) => {
-            if (movelap.distance) {
-              totalDistance += Number(movelap.distance);
-            }
-          });
-        }
-      });
-    }
-  });
-
-  return {
-    totalDistance,
-    totalDuration: '0:00', // TODO: Calculate actual duration
-    totalK: Math.round(totalDistance / 1000)
-  };
-};
-
 export default function DayRowTable({
   day,
   currentWeek,
@@ -123,14 +99,20 @@ export default function DayRowTable({
   onToggleDay,
   onEditDay,
   onAddWorkout,
+  onShowDayInfo,
   onCopyDay,
   onMoveDay,
+  onPasteDay,
   onDeleteDay
 }: DayRowTableProps) {
+  const { colors, getBorderStyle } = useColorSettings();
   const hasWorkouts = day.workouts && day.workouts.length > 0;
   const dayWithWeek = { ...day, weekNumber: currentWeek?.weekNumber };
   const sportSummaries = calculateSportSummaries(day);
-  const dayTotals = calculateDayTotals(day);
+  
+  // Dropdown state
+  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Make day row a drop zone
   const { setNodeRef, isOver } = useDroppable({
@@ -140,22 +122,55 @@ export default function DayRowTable({
       day: dayWithWeek
     }
   });
+  
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOptionsOpen(false);
+      }
+    };
+    
+    if (isOptionsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOptionsOpen]);
 
   // Format date
   const dayDate = new Date(day.date);
   const dayName = dayDate.toLocaleDateString('en-US', { weekday: 'short' });
   const dateFormatted = dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-  const rowBgColor = isOver ? 'bg-yellow-100' : hasWorkouts ? 'bg-white' : 'bg-gray-50';
-  const bgStyle = isOver ? '#fef3c7' : (hasWorkouts ? 'white' : '#f9fafb');
+  // Determine if this is an even day (for alternate row coloring)
+  const dayOfWeek = dayDate.getDay();
+  const isEvenDay = dayOfWeek % 2 === 0;
+  
+  // Use custom colors from settings
+  const rowBgColor = isOver 
+    ? colors.selectedRow 
+    : (isEvenDay ? colors.dayAlternateRow : colors.dayHeader);
+  const rowTextColor = isOver 
+    ? colors.selectedRowText 
+    : (isEvenDay ? colors.dayAlternateRowText : colors.dayHeaderText);
+  const bgStyle = rowBgColor;
+  const borderStyle = getBorderStyle('day');
   
   return (
     <tr
       ref={setNodeRef}
-      className={`border-b border-gray-300 hover:bg-blue-50 transition-colors ${rowBgColor}`}
+      className="day-row-table border-b transition-colors hover:opacity-90"
+      style={{
+        backgroundColor: bgStyle,
+        color: rowTextColor,
+        border: borderStyle
+      }}
     >
       {/* No Workouts Checkbox */}
-      <td className="border border-gray-300 px-1 py-2 text-center sticky-col-1 w-[50px] min-w-[50px]" style={{ backgroundColor: bgStyle }}>
+      <td className="px-1 py-2 text-center sticky-col-1 w-[50px] min-w-[50px]" style={{ backgroundColor: bgStyle, color: rowTextColor, border: borderStyle }}>
         <input
           type="checkbox"
           checked={!hasWorkouts}
@@ -166,7 +181,7 @@ export default function DayRowTable({
       </td>
 
       {/* Color Cycle (Period Color) */}
-      <td className="border border-gray-300 px-1 py-2 text-center sticky-col-2 w-[50px] min-w-[50px]" style={{ backgroundColor: bgStyle }}>
+      <td className="px-1 py-2 text-center sticky-col-2 w-[50px] min-w-[50px]" style={{ backgroundColor: bgStyle, color: rowTextColor, border: borderStyle }}>
         <div
           className="w-6 h-6 rounded-full mx-auto border border-gray-400"
           style={{ backgroundColor: day.period?.color || '#9CA3AF' }}
@@ -175,13 +190,13 @@ export default function DayRowTable({
       </td>
 
       {/* Name Cycle (Period Name) */}
-      <td className="border border-gray-300 px-2 py-2 text-xs font-medium sticky-col-3 w-[90px] min-w-[90px]" style={{ backgroundColor: bgStyle }}>
+      <td className="px-2 py-2 text-xs font-medium sticky-col-3 w-[90px] min-w-[90px]" style={{ backgroundColor: bgStyle, color: rowTextColor, border: borderStyle || 'none' }}>
         {day.period?.name || '—'}
       </td>
 
       {/* Dayname */}
       <td 
-        className="border border-gray-300 px-2 py-2 text-xs font-bold cursor-pointer hover:bg-blue-100 sticky-col-4 w-[80px] min-w-[80px]"
+        className="border border-gray-200 px-2 py-2 text-xs font-bold cursor-pointer hover:bg-blue-100 sticky-col-4 w-[80px] min-w-[80px]"
         style={{ backgroundColor: bgStyle }}
         onClick={() => onToggleDay(day.id)}
         title="Click to expand/collapse"
@@ -193,12 +208,12 @@ export default function DayRowTable({
       </td>
 
       {/* Date */}
-      <td className="border border-gray-300 px-2 py-2 text-xs sticky-col-5 w-[80px] min-w-[80px]" style={{ backgroundColor: bgStyle }}>
+      <td className="border border-gray-200 px-2 py-2 text-xs sticky-col-5 w-[80px] min-w-[80px]" style={{ backgroundColor: bgStyle }}>
         {dateFormatted}
       </td>
 
       {/* Match Done (Workout Completion Status) */}
-      <td className="border border-gray-300 px-1 py-2 text-center sticky-col-6 w-[60px] min-w-[60px]" style={{ backgroundColor: bgStyle }}>
+      <td className="border border-gray-200 px-1 py-2 text-center sticky-col-6 w-[60px] min-w-[60px]" style={{ backgroundColor: bgStyle }}>
         <input
           type="checkbox"
           checked={hasWorkouts}
@@ -209,7 +224,7 @@ export default function DayRowTable({
       </td>
 
       {/* Workout Sessions - Show numbers with symbols for each workout */}
-      <td className="border border-gray-300 px-1 py-2 text-center sticky-col-7 w-[120px] min-w-[120px]" style={{ backgroundColor: bgStyle }}>
+      <td className="border border-gray-200 px-1 py-2 text-center sticky-col-7" style={{ backgroundColor: bgStyle }}>
         <div className="flex items-center justify-center gap-1">
           {[1, 2, 3].map((num) => {
             const workout = day.workouts?.[num - 1];
@@ -232,7 +247,7 @@ export default function DayRowTable({
       </td>
 
       {/* S1 - Sport 1 */}
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[40px] min-w-[40px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[0] ? (
           <div className="flex items-center justify-center">
             <span className="text-base">{sportSummaries[0].icon}</span>
@@ -241,10 +256,10 @@ export default function DayRowTable({
           <span className="text-gray-400">—</span>
         )}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[80px] min-w-[80px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[0]?.sport?.replace('_', ' ') || '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[90px] min-w-[90px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         <div className="flex items-center gap-1">
           <div
             className="w-3 h-3 rounded-full border border-gray-400"
@@ -254,18 +269,18 @@ export default function DayRowTable({
           <span className="truncate">{sportSummaries[0]?.name || '—'}</span>
         </div>
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-right w-[70px] min-w-[70px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-right">
         {sportSummaries[0] ? `${sportSummaries[0].distance}m` : '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-center w-[70px] min-w-[70px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center">
         {sportSummaries[0]?.duration || '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-center w-[40px] min-w-[40px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center">
         {sportSummaries[0] ? Math.round(sportSummaries[0].distance / 1000) : '—'}
       </td>
 
       {/* S2 - Sport 2 */}
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[40px] min-w-[40px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[1] ? (
           <div className="flex items-center justify-center">
             <span className="text-base">{sportSummaries[1].icon}</span>
@@ -274,10 +289,10 @@ export default function DayRowTable({
           <span className="text-gray-400">—</span>
         )}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[80px] min-w-[80px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[1]?.sport?.replace('_', ' ') || '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[90px] min-w-[90px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         <div className="flex items-center gap-1">
           <div
             className="w-3 h-3 rounded-full border border-gray-400"
@@ -287,18 +302,18 @@ export default function DayRowTable({
           <span className="truncate">{sportSummaries[1]?.name || '—'}</span>
         </div>
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-right w-[70px] min-w-[70px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-right">
         {sportSummaries[1] ? `${sportSummaries[1].distance}m` : '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-center w-[70px] min-w-[70px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center">
         {sportSummaries[1]?.duration || '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-center w-[40px] min-w-[40px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center">
         {sportSummaries[1] ? Math.round(sportSummaries[1].distance / 1000) : '—'}
       </td>
 
       {/* S3 - Sport 3 */}
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[40px] min-w-[40px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[2] ? (
           <div className="flex items-center justify-center">
             <span className="text-base">{sportSummaries[2].icon}</span>
@@ -307,10 +322,10 @@ export default function DayRowTable({
           <span className="text-gray-400">—</span>
         )}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[80px] min-w-[80px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[2]?.sport?.replace('_', ' ') || '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[90px] min-w-[90px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         <div className="flex items-center gap-1">
           <div
             className="w-3 h-3 rounded-full border border-gray-400"
@@ -320,18 +335,18 @@ export default function DayRowTable({
           <span className="truncate">{sportSummaries[2]?.name || '—'}</span>
         </div>
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-right w-[70px] min-w-[70px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-right">
         {sportSummaries[2] ? `${sportSummaries[2].distance}m` : '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-center w-[70px] min-w-[70px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center">
         {sportSummaries[2]?.duration || '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-center w-[40px] min-w-[40px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center">
         {sportSummaries[2] ? Math.round(sportSummaries[2].distance / 1000) : '—'}
       </td>
 
       {/* S4 - Sport 4 */}
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[40px] min-w-[40px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[3] ? (
           <div className="flex items-center justify-center">
             <span className="text-base">{sportSummaries[3].icon}</span>
@@ -340,10 +355,10 @@ export default function DayRowTable({
           <span className="text-gray-400">—</span>
         )}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[80px] min-w-[80px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[3]?.sport?.replace('_', ' ') || '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs w-[90px] min-w-[90px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs">
         <div className="flex items-center gap-1">
           <div
             className="w-3 h-3 rounded-full border border-gray-400"
@@ -353,79 +368,117 @@ export default function DayRowTable({
           <span className="truncate">{sportSummaries[3]?.name || '—'}</span>
         </div>
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-right w-[70px] min-w-[70px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-right">
         {sportSummaries[3] ? `${sportSummaries[3].distance}m` : '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-center w-[70px] min-w-[70px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center">
         {sportSummaries[3]?.duration || '—'}
       </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-center w-[40px] min-w-[40px]">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center">
         {sportSummaries[3] ? Math.round(sportSummaries[3].distance / 1000) : '—'}
-      </td>
-
-      {/* Day Totals */}
-      <td className="border border-gray-300 px-1 py-1 text-xs text-right font-bold bg-green-50 w-[80px] min-w-[80px]">
-        {dayTotals.totalDistance > 0 ? `${dayTotals.totalDistance}m` : '—'}
-      </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-center font-bold bg-green-50 w-[70px] min-w-[70px]">
-        {dayTotals.totalDuration}
-      </td>
-      <td className="border border-gray-300 px-1 py-1 text-xs text-center font-bold bg-green-50 w-[50px] min-w-[50px]">
-        {dayTotals.totalK > 0 ? dayTotals.totalK : '—'}
       </td>
 
       {/* Options */}
       <td 
-        className="border border-gray-300 px-2 py-1 sticky-options-col w-[500px] min-w-[500px]"
+        className="border border-gray-200 px-1 py-1 sticky-options-col"
         style={{ backgroundColor: bgStyle }}
       >
-        <div className="flex gap-1 flex-wrap justify-center items-center">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddWorkout?.(dayWithWeek);
-            }}
-            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-            title="Add Workout"
-          >
-            Add Workout
-          </button>
+        <div className="flex gap-1 justify-center items-center relative" ref={dropdownRef}>
+          {/* Edit Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               onEditDay?.(dayWithWeek);
             }}
-            className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            className="px-2 py-1 text-[11px] bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors font-medium"
             title="Edit Day Info"
           >
-            Edit Day Info
+            Edit
           </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onCopyDay?.(dayWithWeek);
-            }}
-            className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors"
-            title="Copy Day"
-          >
-            Copy
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoveDay?.(dayWithWeek);
-            }}
-            className="px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
-            title="Move Day"
-          >
-            Move
-          </button>
+          
+          {/* Option Button with Dropdown */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsOptionsOpen(!isOptionsOpen);
+              }}
+              className="px-2 py-1 text-[11px] bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium flex items-center gap-1"
+              title="More Options"
+            >
+              Option
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            
+            {/* Dropdown Menu */}
+            {isOptionsOpen && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[120px]">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOptionsOpen(false);
+                    onAddWorkout?.(dayWithWeek);
+                  }}
+                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-50 transition-colors flex items-center gap-2"
+                >
+                  <span className="text-blue-600">➕</span>
+                  <span>Add a Workout</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOptionsOpen(false);
+                    onShowDayInfo?.(dayWithWeek);
+                  }}
+                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-cyan-50 transition-colors flex items-center gap-2 border-t border-gray-200"
+                >
+                  <span className="text-cyan-600">ℹ️</span>
+                  <span>Day info</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOptionsOpen(false);
+                    onCopyDay?.(dayWithWeek);
+                  }}
+                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-purple-50 transition-colors flex items-center gap-2 border-t border-gray-200"
+                >
+                  <span className="text-purple-600">📋</span>
+                  <span>Copy</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOptionsOpen(false);
+                    onMoveDay?.(dayWithWeek);
+                  }}
+                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-orange-50 transition-colors flex items-center gap-2 border-t border-gray-200"
+                >
+                  <span className="text-orange-600">➜</span>
+                  <span>Move</span>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsOptionsOpen(false);
+                    onPasteDay?.(dayWithWeek);
+                  }}
+                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-green-50 transition-colors flex items-center gap-2 border-t border-gray-200"
+                >
+                  <span className="text-green-600">📄</span>
+                  <span>Paste</span>
+                </button>
+              </div>
+            )}
+          </div>
+          
+          {/* Delete Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               onDeleteDay?.(dayWithWeek);
             }}
-            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+            className="px-2 py-1 text-[11px] bg-red-500 text-white rounded hover:bg-red-600 transition-colors font-medium"
             title="Delete Day"
           >
             Delete
@@ -435,4 +488,7 @@ export default function DayRowTable({
     </tr>
   );
 }
+
+
+
 
