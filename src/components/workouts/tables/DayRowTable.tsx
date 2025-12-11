@@ -113,6 +113,7 @@ export default function DayRowTable({
   // Dropdown state
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   
   // Make day row a drop zone
   const { setNodeRef, isOver } = useDroppable({
@@ -399,6 +400,7 @@ export default function DayRowTable({
           {/* Option Button with Dropdown */}
           <div className="relative">
             <button
+              ref={buttonRef}
               onClick={(e) => {
                 e.stopPropagation();
                 setIsOptionsOpen(!isOptionsOpen);
@@ -412,7 +414,11 @@ export default function DayRowTable({
             
             {/* Dropdown Menu */}
             {isOptionsOpen && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[120px]">
+              <div className="fixed mt-1 bg-white border border-gray-200 rounded shadow-xl z-[9999] min-w-[140px]" 
+                style={{
+                  top: `${(buttonRef.current?.getBoundingClientRect().bottom || 0) + 4}px`,
+                  left: `${(buttonRef.current?.getBoundingClientRect().left || 0)}px`
+                }}>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
