@@ -220,25 +220,25 @@ export const userApi = {
 // ==================== PERIODS API ====================
 export const periodsApi = {
   async getAll() {
-    return apiFetch(API_ENDPOINTS.PERIODS);
+    return apiFetch(API_ENDPOINTS.PERIODS.LIST);
   },
 
   async create(data: any) {
-    return apiFetch(API_ENDPOINTS.PERIODS, {
+    return apiFetch(API_ENDPOINTS.PERIODS.CREATE, {
       method: 'POST',
       body: JSON.stringify(data)
     });
   },
 
   async update(id: string, data: any) {
-    return apiFetch(`${API_ENDPOINTS.PERIODS}/${id}`, {
+    return apiFetch(`${API_ENDPOINTS.PERIODS.LIST}/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(data)
     });
   },
 
   async delete(id: string) {
-    return apiFetch(`${API_ENDPOINTS.PERIODS}/${id}`, {
+    return apiFetch(`${API_ENDPOINTS.PERIODS.LIST}/${id}`, {
       method: 'DELETE'
     });
   }

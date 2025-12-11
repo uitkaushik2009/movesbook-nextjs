@@ -50,85 +50,33 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Target workout not found' }, { status: 404 });
     }
 
-    // Determine order index
-    let orderIndex = 0;
-    if (position === 'append') {
-      // Get max order index and add 1
-      const maxOrder = await prisma.moveframe.findFirst({
-        where: { workoutSessionId: targetWorkoutId },
-        orderBy: { orderIndex: 'desc' },
-        select: { orderIndex: true }
-      });
-      orderIndex = (maxOrder?.orderIndex || 0) + 1;
-    } else if (insertBeforeId) {
-      // Get order index of the moveframe to insert before
-      const beforeMoveframe = await prisma.moveframe.findUnique({
-        where: { id: insertBeforeId },
-        select: { orderIndex: true }
-      });
-      orderIndex = beforeMoveframe?.orderIndex || 0;
-      
-      // Shift other moveframes down
-      await prisma.moveframe.updateMany({
-        where: {
-          workoutSessionId: targetWorkoutId,
-          orderIndex: { gte: orderIndex }
-        },
-        data: {
-          orderIndex: { increment: 1 }
-        }
-      });
-    }
-
-    // Create duplicate moveframe
+    // Create duplicate moveframe (ordering handled by createdAt timestamp)
+    // Only include fields that exist in the Moveframe model
     const duplicatedMoveframe = await prisma.moveframe.create({
       data: {
         workoutSessionId: targetWorkoutId,
         letter: sourceMoveframe.letter,
-        code: sourceMoveframe.code,
         sport: sourceMoveframe.sport,
         type: sourceMoveframe.type,
         description: sourceMoveframe.description,
-        repetitions: sourceMoveframe.repetitions,
-        distance: sourceMoveframe.distance,
-        duration: sourceMoveframe.duration,
-        intensity: sourceMoveframe.intensity,
-        heartRate: sourceMoveframe.heartRate,
-        pace: sourceMoveframe.pace,
-        speed: sourceMoveframe.speed,
-        calories: sourceMoveframe.calories,
-        elevationGain: sourceMoveframe.elevationGain,
-        cadence: sourceMoveframe.cadence,
-        power: sourceMoveframe.power,
-        temperature: sourceMoveframe.temperature,
-        gear: sourceMoveframe.gear,
-        terrain: sourceMoveframe.terrain,
-        weather: sourceMoveframe.weather,
-        equipment: sourceMoveframe.equipment,
-        macro: sourceMoveframe.macro,
-        alarm: sourceMoveframe.alarm,
-        notes: sourceMoveframe.notes,
-        orderIndex: orderIndex,
         sectionId: sourceMoveframe.sectionId,
         movelaps: {
           create: sourceMoveframe.movelaps.map((lap) => ({
             repetitionNumber: lap.repetitionNumber,
             distance: lap.distance,
-            duration: lap.duration,
-            style: lap.style,
             speed: lap.speed,
-            time: lap.time,
+            style: lap.style,
             pace: lap.pace,
-            pause: lap.pause,
-            restType: lap.restType,
+            time: lap.time,
             reps: lap.reps,
+            restType: lap.restType,
+            pause: lap.pause,
             alarm: lap.alarm,
             sound: lap.sound,
             notes: lap.notes,
             status: lap.status || 'PENDING',
             isSkipped: lap.isSkipped || false,
-            isDisabled: lap.isDisabled || false,
-            orderIndex: lap.orderIndex
+            isDisabled: lap.isDisabled || false
           }))
         }
       },

@@ -57,6 +57,9 @@ export async function GET(request: NextRequest) {
         data = await prisma.workoutWeek.findUnique({
           where: { id: id! },
           include: {
+            workoutPlan: {
+              select: { userId: true }
+            },
             days: {
               include: {
                 workouts: {
@@ -75,12 +78,12 @@ export async function GET(request: NextRequest) {
             }
           }
         });
-        // Verify user ownership - check that all days belong to the user
-        if (data && data.days && data.days.length > 0) {
-          const isOwner = data.days.every((day: any) => day.userId === decoded.userId);
-          if (!isOwner) {
-            return NextResponse.json({ error: 'Unauthorized - not your workout week' }, { status: 403 });
-          }
+        // Verify user ownership through workoutPlan (works even if no days exist)
+        if (!data) {
+          return NextResponse.json({ error: 'Week not found' }, { status: 404 });
+        }
+        if (data.workoutPlan?.userId !== decoded.userId) {
+          return NextResponse.json({ error: 'Unauthorized - not your workout week' }, { status: 403 });
         }
         break;
 

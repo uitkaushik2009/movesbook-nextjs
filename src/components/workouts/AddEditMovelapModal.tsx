@@ -227,22 +227,24 @@ export default function AddEditMovelapModal({
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Distance: <span className="text-red-500">*</span>
                       </label>
-                      <select
-                        value={distance}
-                        onChange={(e) => setDistance(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select...</option>
-                        {config.distances?.map((d) => (
-                          <option key={d} value={d}>
-                            {d}m
-                          </option>
-                        ))}
-                      </select>
+                      {'distances' in config && (
+                        <select
+                          value={distance}
+                          onChange={(e) => setDistance(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select...</option>
+                          {config.distances.map((d) => (
+                            <option key={d} value={d}>
+                              {d}m
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       {errors.distance && <p className="mt-1 text-xs text-red-500">{errors.distance}</p>}
                     </div>
 
-                    {config.styles && (
+                    {'styles' in config && (
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">Style:</label>
                         <select

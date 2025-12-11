@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       where: { id: sourceDayId },
       data: {
         date: new Date(targetDate),
-        weekId: targetWeekId,
+        workoutWeekId: targetWeekId,
         notes: {
           set: undefined // Keep existing notes
         }

@@ -73,8 +73,10 @@ export async function POST(request: NextRequest) {
     const newDay = await prisma.workoutDay.create({
       data: {
         userId: decoded.userId,
-        weekId: targetWeekId,
+        workoutWeekId: targetWeekId,
         date: new Date(targetDate),
+        weekNumber: sourceDay.weekNumber,
+        dayOfWeek: sourceDay.dayOfWeek,
         periodId: sourceDay.periodId,
         weather: sourceDay.weather,
         feelingStatus: sourceDay.feelingStatus,
@@ -88,13 +90,13 @@ export async function POST(request: NextRequest) {
             time: workout.time,
             location: workout.location,
             notes: workout.notes,
-            status: 'PENDING', // Reset status for copied workout
+            status: 'NOT_PLANNED', // Reset status for copied workout
             symbol: workout.symbol,
             includeStretching: workout.includeStretching,
             // Copy sports
             sports: {
               create: workout.sports.map((sport: any) => ({
-                sportType: sport.sportType
+                sport: sport.sport
               }))
             },
             // Copy moveframes

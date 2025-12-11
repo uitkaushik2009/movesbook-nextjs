@@ -70,8 +70,8 @@ export const API_ENDPOINTS = {
   MOVEFRAMES: {
     CREATE: (workoutId: string) => `/api/workouts/${workoutId}/moveframes`,
     CREATE_WITH_MOVELAPS: '/api/workouts/moveframes/create-with-movelaps',
-    UPDATE: (id: string) => `/api/moveframes/${id}`,
-    DELETE: (id: string) => `/api/moveframes/${id}`,
+    UPDATE: (id: string) => `/api/workouts/moveframes/${id}`,
+    DELETE: (id: string) => `/api/workouts/moveframes/${id}`,
     DUPLICATE: '/api/workouts/moveframes/duplicate',
     MOVE: '/api/workouts/moveframes/move'
   },
@@ -96,7 +96,6 @@ export const API_ENDPOINTS = {
     SETTINGS: '/api/user/settings',
     PROFILE: '/api/user/profile'
   },
-  PERIODS: '/api/workouts/periods',
   COACH: {
     ATHLETES: '/api/coach/athletes'
   }

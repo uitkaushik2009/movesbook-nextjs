@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new workout with copied data
+    // Only include fields that exist in the WorkoutSession model
     const newWorkout = await prisma.workoutSession.create({
       data: {
         workoutDayId: targetDayId,
@@ -67,33 +68,28 @@ export async function POST(request: NextRequest) {
         name: sourceWorkout.name,
         code: sourceWorkout.code,
         time: sourceWorkout.time,
+        weather: sourceWorkout.weather,
         location: sourceWorkout.location,
+        surface: sourceWorkout.surface,
+        heartRateMax: sourceWorkout.heartRateMax,
+        heartRateAvg: sourceWorkout.heartRateAvg,
+        calories: sourceWorkout.calories,
+        feelingStatus: sourceWorkout.feelingStatus,
         notes: `${sourceWorkout.notes || ''} (Copied)`,
-        status: 'PENDING', // Reset status
-        symbol: sourceWorkout.symbol,
-        includeStretching: sourceWorkout.includeStretching,
+        status: 'NOT_PLANNED', // Reset status for copied workout
         // Copy sports
         sports: {
           create: sourceWorkout.sports.map((sport: any) => ({
-            sportType: sport.sportType
+            sport: sport.sport
           }))
         },
         // Copy moveframes
         moveframes: {
           create: sourceWorkout.moveframes.map((mf: any) => ({
             letter: mf.letter,
-            code: mf.code,
+            sport: mf.sport,
             type: mf.type,
             description: mf.description,
-            sport: mf.sport,
-            distance: mf.distance,
-            distanceUnit: mf.distanceUnit,
-            speed: mf.speed,
-            pace: mf.pace,
-            pause: mf.pause,
-            repetitions: mf.repetitions,
-            style: mf.style,
-            notes: mf.notes,
             sectionId: mf.sectionId,
             // Copy movelaps
             movelaps: {
@@ -104,12 +100,12 @@ export async function POST(request: NextRequest) {
                 style: lap.style,
                 pace: lap.pace,
                 time: lap.time,
+                reps: lap.reps,
+                restType: lap.restType,
                 pause: lap.pause,
                 alarm: lap.alarm,
                 sound: lap.sound,
                 notes: lap.notes,
-                reps: lap.reps,
-                weight: lap.weight,
                 status: 'PENDING',
                 isSkipped: false,
                 isDisabled: false

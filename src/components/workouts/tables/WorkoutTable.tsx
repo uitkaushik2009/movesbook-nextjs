@@ -21,6 +21,14 @@ interface WorkoutTableProps {
   onEditMovelap?: (movelap: any, moveframe: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any) => void;
   onAddMovelap?: (moveframe: any) => void;
+  onCopyWorkout?: (workout: any, day: any) => void;
+  onMoveWorkout?: (workout: any, day: any) => void;
+  onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
+  onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
+  onShowMoveframeInfoPanel?: (moveframe: any) => void;
+  onOpenColumnSettings?: (tableType: 'day' | 'workout' | 'moveframe' | 'movelap') => void;
+  onBulkAddMovelap?: (moveframe: any) => void;
+  columnSettings?: any;
 }
 
 // Sport icon mapping
@@ -322,17 +330,17 @@ export default function WorkoutTable({
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      onCopyWorkout?.();
+                      onCopyWorkout?.(workout, day);
                     }}
                     className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
                     title="Copy Workout"
                   >
-                        Copy
-                      </button>
-                  <button 
+                    Copy
+                  </button>
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onMoveWorkout?.();
+                      onMoveWorkout?.(workout, day);
                     }}
                     className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
                     title="Move Workout"
@@ -376,6 +384,7 @@ export default function WorkoutTable({
           onAddMovelap={onAddMovelap}
           onCopyMoveframe={onCopyMoveframe}
           onMoveMoveframe={onMoveMoveframe}
+          onOpenColumnSettings={onOpenColumnSettings}
         />
       )}
     </div>
@@ -394,6 +403,9 @@ interface MoveframesSectionProps {
   onEditMovelap?: (movelap: any, moveframe: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any) => void;
   onAddMovelap?: (moveframe: any) => void;
+  onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
+  onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
+  onOpenColumnSettings?: (tableType: 'day' | 'workout' | 'moveframe' | 'movelap') => void;
 }
 
 function MoveframesSection({ 
@@ -408,7 +420,8 @@ function MoveframesSection({
   onDeleteMovelap,
   onAddMovelap,
   onCopyMoveframe,
-  onMoveMoveframe
+  onMoveMoveframe,
+  onOpenColumnSettings
 }: MoveframesSectionProps) {
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [expandedMoveframe, setExpandedMoveframe] = React.useState<string | null>(null);
@@ -469,7 +482,7 @@ function MoveframesSection({
               if (moveframes.length > 0 && onCopyMoveframe) {
                 // For now, copy the first moveframe as example
                 // In a full implementation, you'd select which one
-                onCopyMoveframe(moveframes[0]);
+                onCopyMoveframe(moveframes[0], workout, day);
               } else {
                 alert('No moveframes to copy');
               }
@@ -485,7 +498,7 @@ function MoveframesSection({
               if (moveframes.length > 0 && onMoveMoveframe) {
                 // For now, move the first moveframe as example
                 // In a full implementation, you'd select which one
-                onMoveMoveframe(moveframes[0]);
+                onMoveMoveframe(moveframes[0], workout, day);
               } else {
                 alert('No moveframes to move');
               }
@@ -606,7 +619,7 @@ function MoveframesSection({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (onCopyMoveframe) onCopyMoveframe(moveframe);
+                              if (onCopyMoveframe) onCopyMoveframe(moveframe, workout, day);
                             }}
                             className="px-1 py-0.5 text-[9px] bg-green-500 text-white rounded hover:bg-green-600"
                             title="Copy this moveframe"
@@ -616,7 +629,7 @@ function MoveframesSection({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              if (onMoveMoveframe) onMoveMoveframe(moveframe);
+                              if (onMoveMoveframe) onMoveMoveframe(moveframe, workout, day);
                             }}
                             className="px-1 py-0.5 text-[9px] bg-orange-500 text-white rounded hover:bg-orange-600"
                             title="Move this moveframe"
@@ -680,11 +693,11 @@ function MoveframesSection({
           }}
           onCopy={() => {
             setShowInfoPanel(false);
-            if (onCopyMoveframe) onCopyMoveframe(selectedMoveframe);
+            if (onCopyMoveframe) onCopyMoveframe(selectedMoveframe, workout, day);
           }}
           onMove={() => {
             setShowInfoPanel(false);
-            if (onMoveMoveframe) onMoveMoveframe(selectedMoveframe);
+            if (onMoveMoveframe) onMoveMoveframe(selectedMoveframe, workout, day);
           }}
           onDelete={() => {
             setShowInfoPanel(false);

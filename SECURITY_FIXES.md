@@ -1,7 +1,7 @@
 # Security Fixes - Database & Authorization
 
 ## Summary
-Fixed 7 critical security and database consistency bugs related to user authorization and data integrity.
+Fixed 8 critical security and database consistency bugs related to user authorization and data integrity.
 
 ---
 
@@ -192,7 +192,49 @@ if (existingMoveframe.workoutSession.workoutDay.userId !== decoded.userId) {
 
 ---
 
-## Bug 7: PATCH/DELETE /api/workouts/sessions/[id] - Missing User Ownership Verification ✅ FIXED
+## Bug 7: GET /api/workouts/export (Week) - Conditional Ownership Check Bypass ✅ FIXED
+
+### **Issue:**
+The ownership verification for workout week exports only ran if the week contained days (`data.days.length > 0`). If a week had no associated days (e.g., newly created week), the check was skipped entirely, allowing any authenticated user to export an empty week they didn't own.
+
+### **Fix:**
+**File:** `src/app/api/workouts/export/route.ts`
+
+**Changes:**
+- Added `workoutPlan` relation to the query to fetch `userId`
+- Changed ownership verification to check `workoutPlan.userId` instead of checking days
+- Verification now runs regardless of whether days exist
+- Added explicit 404 check before ownership verification
+
+```typescript
+// Fetch week with workoutPlan
+data = await prisma.workoutWeek.findUnique({
+  where: { id: id! },
+  include: {
+    workoutPlan: {
+      select: { userId: true }
+    },
+    days: {
+      // ... existing includes
+    }
+  }
+});
+
+// Verify ownership through workoutPlan (works even if no days exist)
+if (!data) {
+  return NextResponse.json({ error: 'Week not found' }, { status: 404 });
+}
+if (data.workoutPlan?.userId !== decoded.userId) {
+  return NextResponse.json({ error: 'Unauthorized - not your workout week' }, { status: 403 });
+}
+```
+
+**Before:** Users could export empty workout weeks owned by other users  
+**After:** Ownership verified through parent workoutPlan regardless of day count
+
+---
+
+## Bug 8: PATCH/DELETE /api/workouts/sessions/[id] - Missing User Ownership Verification ✅ FIXED
 
 ### **Issue:**
 The PATCH and DELETE endpoints modified workout sessions without verifying the authenticated user owned them. Any authenticated user could modify or delete another user's workout sessions.
@@ -254,7 +296,8 @@ Operation Allowed
 - ✅ DELETE /api/workouts/sessions/[id]
 - ✅ PATCH /api/workouts/moveframes/[id]
 - ✅ DELETE /api/workouts/moveframes/[id]
-- ✅ GET /api/workouts/export (day, week types)
+- ✅ GET /api/workouts/export (day type - direct userId check)
+- ✅ GET /api/workouts/export (week type - workoutPlan ownership)
 
 ### **Data Integrity:**
 - ✅ `userId` column properly migrated
@@ -319,5 +362,5 @@ npx prisma db push
 
 ## Status: ✅ ALL BUGS FIXED
 
-All 7 security and database bugs have been identified, verified, and fixed with comprehensive authorization checks and data integrity improvements.
+All 8 security and database bugs have been identified, verified, and fixed with comprehensive authorization checks and data integrity improvements.
 

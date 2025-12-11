@@ -855,11 +855,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                          'Content-Type': 'application/json',
                          'Authorization': `Bearer ${token}`
                        },
-                       body: JSON.stringify({
-                         sourceDayId: copiedDay.id,
-                         targetDate: targetDay.date,
-                         targetWeekId: targetDay.weekId
-                       })
+                      body: JSON.stringify({
+                        sourceDayId: copiedDay.id,
+                        targetDate: targetDay.date,
+                        targetWeekId: targetDay.workoutWeekId
+                      })
                      });
                      
                      if (!response.ok) {
