@@ -350,28 +350,28 @@ model UserSettings {
   // All user preferences and configurations stored as JSON for flexibility
   
   // Color & Background Settings
-  colorSettings String @default("{}") @db.Text // Page backgrounds, row colors, schemes
+  colorSettings String @db.Text // Page backgrounds, row colors, schemes
   
   // Tools Settings (periods, sections, sports, equipment, exercises, devices)
-  toolsSettings String @default("{}") @db.Text
+  toolsSettings String @db.Text
   
   // Favourites Settings (saved workout templates, favorite exercises, quick access items)
-  favouritesSettings String @default("{}") @db.Text
+  favouritesSettings String @db.Text
   
   // My Best Settings (personal records, achievements, milestones)
-  myBestSettings String @default("{}") @db.Text
+  myBestSettings String @db.Text
   
   // Admin Management Settings (admin-specific configurations)
-  adminSettings String @default("{}") @db.Text
+  adminSettings String @db.Text
   
   // Workout Preferences (display options, default values, quick settings)
-  workoutPreferences String @default("{}") @db.Text
+  workoutPreferences String @db.Text
   
   // Social Settings (privacy, notifications, sharing preferences)
-  socialSettings String @default("{}") @db.Text
+  socialSettings String @db.Text
   
   // Notification Settings (email, push, in-app notifications)
-  notificationSettings String @default("{}") @db.Text
+  notificationSettings String @db.Text
   
   // Display Settings
   gridSize      String @default("comfortable") // "compact", "comfortable", "spacious"
