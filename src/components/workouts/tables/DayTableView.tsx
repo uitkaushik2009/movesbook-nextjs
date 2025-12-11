@@ -73,6 +73,40 @@ export default function DayTableView({
   const expandedDaysSet = expandedDays || new Set<string>();
   const expandedWorkoutsSet = expandedWorkouts || new Set<string>();
   
+  // Constants for UI dimensions
+  const SCROLLBAR_HEIGHT = 24; // px
+  
+  // Column width constants (for consistent sizing across the table)
+  const COL_WIDTHS = {
+    noWorkouts: 50,
+    colorCycle: 50,
+    nameCycle: 90,
+    dayname: 80,
+    date: 80,
+    matchDone: 60,
+    workouts: 80,
+    sportIco: 40,
+    sport: 80,
+    sportName: 90,
+    distance: 70,
+    duration: 70,
+    k: 40,
+    options: 250
+  };
+  
+  // Calculate minimum table width dynamically based on column widths
+  // 7 sticky columns + 4 sport sections (6 cols each) + 1 options column
+  const TABLE_MIN_WIDTH = 
+    COL_WIDTHS.noWorkouts + 
+    COL_WIDTHS.colorCycle + 
+    COL_WIDTHS.nameCycle + 
+    COL_WIDTHS.dayname + 
+    COL_WIDTHS.date + 
+    COL_WIDTHS.matchDone + 
+    COL_WIDTHS.workouts + 
+    (COL_WIDTHS.sportIco + COL_WIDTHS.sport + COL_WIDTHS.sportName + COL_WIDTHS.distance + COL_WIDTHS.duration + COL_WIDTHS.k) * 4 + // 4 sport sections
+    COL_WIDTHS.options;
+  
   // Synchronize scrollbars and position
   useEffect(() => {
     const tableContainer = tableContainerRef.current;
@@ -244,28 +278,28 @@ export default function DayTableView({
             ref={tableContainerRef}
             className="overflow-x-auto overflow-y-visible table-scrollbar" 
           >
-            <table className="text-sm" style={{ minWidth: '2200px', width: '100%' }}>
+            <table className="text-sm" style={{ minWidth: `${TABLE_MIN_WIDTH}px`, width: '100%' }}>
             <thead className="bg-blue-600 text-white sticky top-0 z-20 shadow-md">
              <tr>
-               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1 w-[50px] min-w-[50px]" rowSpan={2}>
+               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts }} rowSpan={2}>
                  No<br/>workouts
                </th>
-               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-2 w-[50px] min-w-[50px]" rowSpan={2}>
+               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-2" style={{ width: COL_WIDTHS.colorCycle, minWidth: COL_WIDTHS.colorCycle }} rowSpan={2}>
                  Color<br/>cycle
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-3 w-[90px] min-w-[90px]" rowSpan={2}>
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-3" style={{ width: COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.nameCycle }} rowSpan={2}>
                  Name<br/>cycle
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-4 w-[80px] min-w-[80px]" rowSpan={2}>
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-4" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname }} rowSpan={2}>
                  Dayname
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5 w-[80px] min-w-[80px]" rowSpan={2}>
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.date, minWidth: COL_WIDTHS.date }} rowSpan={2}>
                  Date
                </th>
-               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6 w-[60px] min-w-[60px]" rowSpan={2}>
+               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.matchDone, minWidth: COL_WIDTHS.matchDone }} rowSpan={2}>
                  Match<br/>done
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-7 w-[80px] min-w-[80px]" rowSpan={2}>
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-7" style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts }} rowSpan={2}>
                  Workouts
                </th>
               
@@ -289,13 +323,9 @@ export default function DayTableView({
                 S4
               </th>
               
-              {/* Day Totals */}
-              <th className="border border-gray-400 px-2 py-1 text-xs font-bold bg-green-100" colSpan={3}>
-                Day Totals
-              </th>
-              
               <th 
-                className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-options-header bg-blue-600 w-[250px] min-w-[250px]" 
+                className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-options-header bg-blue-600" 
+                style={{ width: COL_WIDTHS.options, minWidth: COL_WIDTHS.options }}
                 rowSpan={2}
               >
                 Options
@@ -303,41 +333,36 @@ export default function DayTableView({
             </tr>
             <tr>
               {/* S1 sub-headers */}
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[40px] min-w-[40px]">ico</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[80px] min-w-[80px]">Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[90px] min-w-[90px]">name</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[70px] min-w-[70px]">Distance</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[70px] min-w-[70px]">Duration</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[40px] min-w-[40px]">K</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportIco, minWidth: COL_WIDTHS.sportIco }}>ico</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sport, minWidth: COL_WIDTHS.sport }}>Sport</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportName, minWidth: COL_WIDTHS.sportName }}>name</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.distance, minWidth: COL_WIDTHS.distance }}>Distance</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.duration, minWidth: COL_WIDTHS.duration }}>Duration</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.k, minWidth: COL_WIDTHS.k }}>K</th>
               
               {/* S2 sub-headers */}
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[40px] min-w-[40px]">ico</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[80px] min-w-[80px]">Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[90px] min-w-[90px]">name</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[70px] min-w-[70px]">Distance</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[70px] min-w-[70px]">Duration</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[40px] min-w-[40px]">K</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportIco, minWidth: COL_WIDTHS.sportIco }}>ico</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sport, minWidth: COL_WIDTHS.sport }}>Sport</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportName, minWidth: COL_WIDTHS.sportName }}>name</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.distance, minWidth: COL_WIDTHS.distance }}>Distance</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.duration, minWidth: COL_WIDTHS.duration }}>Duration</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.k, minWidth: COL_WIDTHS.k }}>K</th>
               
               {/* S3 sub-headers */}
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[40px] min-w-[40px]">ico</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[80px] min-w-[80px]">Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[90px] min-w-[90px]">name</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[70px] min-w-[70px]">Distance</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[70px] min-w-[70px]">Duration</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[40px] min-w-[40px]">K</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportIco, minWidth: COL_WIDTHS.sportIco }}>ico</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sport, minWidth: COL_WIDTHS.sport }}>Sport</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportName, minWidth: COL_WIDTHS.sportName }}>name</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.distance, minWidth: COL_WIDTHS.distance }}>Distance</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.duration, minWidth: COL_WIDTHS.duration }}>Duration</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.k, minWidth: COL_WIDTHS.k }}>K</th>
               
               {/* S4 sub-headers */}
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[40px] min-w-[40px]">ico</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[80px] min-w-[80px]">Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[90px] min-w-[90px]">name</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[70px] min-w-[70px]">Distance</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[70px] min-w-[70px]">Duration</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold w-[40px] min-w-[40px]">K</th>
-              
-              {/* Day Totals sub-headers */}
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-100 w-[80px] min-w-[80px]">Distance</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-100 w-[70px] min-w-[70px]">Duration</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-100 w-[50px] min-w-[50px]">K</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportIco, minWidth: COL_WIDTHS.sportIco }}>ico</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sport, minWidth: COL_WIDTHS.sport }}>Sport</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportName, minWidth: COL_WIDTHS.sportName }}>name</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.distance, minWidth: COL_WIDTHS.distance }}>Distance</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.duration, minWidth: COL_WIDTHS.duration }}>Duration</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.k, minWidth: COL_WIDTHS.k }}>K</th>
             </tr>
           </thead>
           <tbody>
@@ -492,19 +517,22 @@ export default function DayTableView({
           </div>
         </div>
       </div>
-      
-      {/* Horizontal Scrollbar - Synced with table */}
+
+      {/* Horizontal Scrollbar - Fixed at bottom of viewport */}
       <div 
         ref={scrollbarRef}
-        className="overflow-x-auto custom-scrollbar bg-gradient-to-b from-gray-300 to-gray-200 border-t-2 border-blue-400 shadow-sm"
+        className="overflow-x-auto custom-scrollbar bg-gradient-to-b from-gray-300 to-gray-200 border-t-2 border-blue-400 shadow-lg"
         style={{ 
-          height: '22px',
-          position: 'relative',
-          zIndex: 10
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: `${SCROLLBAR_HEIGHT}px`,
+          zIndex: 50,
         }}
         title="Horizontal scroll - Drag to navigate table"
       >
-        <div style={{ height: '1px', minWidth: '2200px', width: '2200px' }}></div>
+        <div style={{ height: '1px', width: '100%' }}></div>
       </div>
 
       {/* Weekly Info Modal */}
