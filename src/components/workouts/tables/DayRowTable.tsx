@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useDroppable } from '@dnd-kit/core';
 import { ChevronDown } from 'lucide-react';
 import EditableCell from './EditableCell';
@@ -112,8 +113,13 @@ export default function DayRowTable({
   
   // Dropdown state
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
   
   // Make day row a drop zone
   const { setNodeRef, isOver } = useDroppable({
@@ -412,9 +418,9 @@ export default function DayRowTable({
               <ChevronDown className="w-3 h-3" />
             </button>
             
-            {/* Dropdown Menu */}
-            {isOptionsOpen && (
-              <div className="fixed mt-1 bg-white border border-gray-200 rounded shadow-xl z-[9999] min-w-[140px]" 
+            {/* Dropdown Menu - Rendered via Portal */}
+            {isOptionsOpen && isMounted && ReactDOM.createPortal(
+              <div className="fixed bg-white border border-gray-300 rounded-lg shadow-2xl z-[99999] min-w-[160px]" 
                 style={{
                   top: `${(buttonRef.current?.getBoundingClientRect().bottom || 0) + 4}px`,
                   left: `${(buttonRef.current?.getBoundingClientRect().left || 0)}px`
@@ -474,7 +480,8 @@ export default function DayRowTable({
                   <span className="text-green-600">📄</span>
                   <span>Paste</span>
                 </button>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
           
