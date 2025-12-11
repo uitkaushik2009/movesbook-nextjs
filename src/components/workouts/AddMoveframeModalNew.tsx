@@ -233,8 +233,8 @@ export default function AddMoveframeModalNew({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl my-8 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b bg-white">
           <h2 className="text-xl font-bold text-gray-900">Add Moveframe</h2>
@@ -246,8 +246,8 @@ export default function AddMoveframeModalNew({
           </button>
         </div>
 
-        {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+        {/* Content */}
+        <div className="flex-1 p-6 space-y-4">
           {/* Sport Selector */}
           <div>
             <label className="block text-sm font-semibold mb-2">
