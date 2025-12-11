@@ -247,6 +247,7 @@ export default function WorkoutTable({
               className="border border-gray-200 px-2 py-2 text-xs text-center font-bold cursor-pointer hover:bg-blue-200"
               onClick={(e) => {
                 e.stopPropagation();
+                console.log(`Toggle workout ${workout.id}: ${isExpanded ? 'Collapsing' : 'Expanding'}`);
                 if (onToggleExpand) onToggleExpand();
               }}
               title={`Click to ${isExpanded ? 'collapse' : 'expand'} workout`}
@@ -310,16 +311,10 @@ export default function WorkoutTable({
                       <GripVertical size={18} />
                     </span>
                 
-                {/* Workout Info - Clickable to toggle expand/collapse */}
+                {/* Workout Info - Display only (toggle via No column) */}
                 <span 
-                  className="text-xs text-gray-700 cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-2"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (onToggleExpand) onToggleExpand();
-                  }}
-                  title={`Click to ${isExpanded ? 'collapse' : 'expand'} workout`}
+                  className="text-xs text-gray-700 flex items-center gap-2"
                 >
-                  <span className="text-blue-600 font-bold">{isExpanded ? '▼' : '►'}</span>
                   <strong>Moveframes of the workout #{workoutIndex + 1}</strong> - {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                 
