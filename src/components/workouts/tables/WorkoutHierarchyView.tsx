@@ -64,6 +64,8 @@ export default function WorkoutHierarchyView({
   };
 
   const workouts = day.workouts || [];
+  
+  console.log(`📋 WorkoutHierarchyView rendering for day with ${workouts.length} workouts`);
 
   return (
     <div className="space-y-6 overflow-x-auto">

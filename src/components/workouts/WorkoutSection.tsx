@@ -161,12 +161,16 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
 
   // Toggle functions for expand/collapse
   const toggleDayExpansion = (dayId: string) => {
+    console.log(`📅 toggleDayExpansion called for day: ${dayId}`);
     setExpandedDays(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(dayId)) {
+      const wasExpanded = newSet.has(dayId);
+      if (wasExpanded) {
         newSet.delete(dayId);
+        console.log(`📉 Collapsed DAY ${dayId}. This HIDES ALL WORKOUTS in this day!`);
       } else {
         newSet.add(dayId);
+        console.log(`📈 Expanded DAY ${dayId}. Workouts will be visible.`);
       }
       return newSet;
     });
