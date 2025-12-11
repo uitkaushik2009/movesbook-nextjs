@@ -173,36 +173,55 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   };
 
   const toggleWorkoutExpansion = (workoutId: string) => {
+    console.log(`🔄 toggleWorkoutExpansion called for workout: ${workoutId}`);
     setExpandedWorkouts(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(workoutId)) {
+      const wasExpanded = newSet.has(workoutId);
+      if (wasExpanded) {
         newSet.delete(workoutId);
+        console.log(`📉 Collapsed workout ${workoutId}. Remaining expanded: ${newSet.size}`);
       } else {
         newSet.add(workoutId);
+        console.log(`📈 Expanded workout ${workoutId}. Total expanded: ${newSet.size}`);
       }
+      console.log('Expanded workouts:', Array.from(newSet));
       return newSet;
     });
   };
 
-  // Auto-expand all days and workouts when plan loads
+  // Track if we've done the initial auto-expand for current section/athlete
+  const [lastAutoExpandKey, setLastAutoExpandKey] = useState<string>('');
+
+  // Auto-expand all days and workouts when section/athlete changes
   useEffect(() => {
     if (workoutPlan && workoutPlan.weeks) {
-      const dayIds = new Set<string>();
-      const workoutIds = new Set<string>();
+      // Create a unique key for current section + athlete combo
+      const currentKey = `${activeSection}-${selectedAthlete?.id || 'self'}`;
       
-      workoutPlan.weeks.forEach((week: any) => {
-        week.days?.forEach((day: any) => {
-          dayIds.add(day.id);
-          day.workouts?.forEach((workout: any) => {
-            workoutIds.add(workout.id);
+      // Only auto-expand if this is a new section/athlete combo
+      if (currentKey !== lastAutoExpandKey) {
+        console.log(`🔓 Auto-expanding for new key: ${currentKey} (was: ${lastAutoExpandKey})`);
+        const dayIds = new Set<string>();
+        const workoutIds = new Set<string>();
+        
+        workoutPlan.weeks.forEach((week: any) => {
+          week.days?.forEach((day: any) => {
+            dayIds.add(day.id);
+            day.workouts?.forEach((workout: any) => {
+              workoutIds.add(workout.id);
+            });
           });
         });
-      });
-      
-      setExpandedDays(dayIds);
-      setExpandedWorkouts(workoutIds);
+        
+        console.log(`Auto-expanded ${dayIds.size} days and ${workoutIds.size} workouts`);
+        setExpandedDays(dayIds);
+        setExpandedWorkouts(workoutIds);
+        setLastAutoExpandKey(currentKey);
+      } else {
+        console.log(`✅ Skipping auto-expand, key unchanged: ${currentKey}`);
+      }
     }
-  }, [workoutPlan]);
+  }, [workoutPlan, activeSection, selectedAthlete, lastAutoExpandKey]);
 
   // ==================== DRAG & DROP STATE ====================
   // Note: activeWorkout and activeMoveframe already defined above for workout context
