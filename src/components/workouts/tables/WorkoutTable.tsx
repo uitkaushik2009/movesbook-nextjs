@@ -300,8 +300,15 @@ export default function WorkoutTable({
                       <GripVertical size={18} />
                     </span>
                 
-                {/* Workout Info */}
-                <span className="text-xs text-gray-700">
+                {/* Workout Info - Clickable to toggle expand/collapse */}
+                <span 
+                  className="text-xs text-gray-700 cursor-pointer hover:text-blue-600 transition-colors flex items-center gap-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onToggleExpand) onToggleExpand();
+                  }}
+                  title="Click to collapse workout"
+                >
                   <strong>Moveframes of the workout #{workoutIndex + 1}</strong> - {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                 
@@ -358,11 +365,6 @@ export default function WorkoutTable({
                         Del
                       </button>
                 </div>
-                
-                {/* Moveframe Options Placeholder */}
-                <span className="text-xs text-gray-500 ml-auto">
-                  <strong>Moveframe options:</strong> &lt; buttons will be added later &gt;
-                </span>
                   </div>
                 </td>
             </tr>
@@ -469,16 +471,6 @@ function MoveframesSection({
           <button 
             onClick={(e) => {
               e.stopPropagation();
-              onAddMoveframe();
-            }}
-            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-            title="Add new moveframe"
-          >
-            Add MF
-          </button>
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
               if (moveframes.length > 0 && onCopyMoveframe) {
                 // For now, copy the first moveframe as example
                 // In a full implementation, you'd select which one
@@ -575,8 +567,8 @@ function MoveframesSection({
                       }}
                       title="Click to expand/collapse movelaps, Double-click to edit moveframe"
                     >
-                      <td className="border border-gray-200 px-1 py-1 text-center text-gray-400 text-[10px]">
-                        <span className="cursor-move">::</span>
+                      <td className="border border-gray-200 px-1 py-1 text-center text-gray-600 text-[10px]">
+                        <span className="cursor-pointer font-bold">{isMovelapsExpanded ? '▼' : '►'}</span>
                       </td>
                       <td className="border border-gray-200 px-1 py-1 text-center font-bold text-xs">
                         {moveframe.letter || String.fromCharCode(65 + mfIndex)}

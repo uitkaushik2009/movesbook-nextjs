@@ -1029,49 +1029,82 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         </main>
       </div>
       
-      {showAddWorkoutModal && addWorkoutDay && workoutModalMode === 'add' && (
+      {showAddWorkoutModal && addWorkoutDay && (
         <AddWorkoutModal
           isOpen={showAddWorkoutModal}
           day={addWorkoutDay}
           existingWorkouts={addWorkoutDay.workouts || []}
+          mode={workoutModalMode}
+          existingWorkout={editingWorkout}
           onClose={() => {
             setShowAddWorkoutModal(false);
             setAddWorkoutDay(null);
             setEditingWorkout(null);
+            setWorkoutModalMode('add');
           }}
           onSave={async (workoutData) => {
             const token = localStorage.getItem('token');
             
-            console.log('Creating workout with data:', workoutData);
-            
-            const response = await fetch('/api/workouts/sessions', {
-              method: 'POST',
-              headers: { 
-                'Authorization': `Bearer ${token}`, 
-                'Content-Type': 'application/json' 
-              },
-              body: JSON.stringify({
-                workoutDayId: workoutData.dayId,
-                sessionNumber: workoutData.sessionNumber,
-                name: workoutData.name,
-                code: workoutData.code,
-                sports: workoutData.sports,
-                symbol: workoutData.symbol,
-                includeStretching: workoutData.includeStretching,
-                status: 'PLANNED_FUTURE',
-                time: '',
-                location: '',
-                notes: ''
-              })
-            });
-            
-            if (!response.ok) {
-              const error = await response.json();
-              throw new Error(error.error || 'Failed to create workout');
+            if (workoutModalMode === 'edit' && editingWorkout) {
+              // UPDATE existing workout
+              console.log('Updating workout with data:', workoutData);
+              
+              const response = await fetch(`/api/workouts/sessions/${editingWorkout.id}`, {
+                method: 'PATCH',
+                headers: { 
+                  'Authorization': `Bearer ${token}`, 
+                  'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({
+                  name: workoutData.name,
+                  code: workoutData.code,
+                  sports: workoutData.sports,
+                  symbol: workoutData.symbol,
+                  includeStretching: workoutData.includeStretching
+                })
+              });
+              
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to update workout');
+              }
+              
+              showMessage('success', 'Workout updated successfully');
+            } else {
+              // CREATE new workout
+              console.log('Creating workout with data:', workoutData);
+              
+              const response = await fetch('/api/workouts/sessions', {
+                method: 'POST',
+                headers: { 
+                  'Authorization': `Bearer ${token}`, 
+                  'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({
+                  workoutDayId: workoutData.dayId,
+                  sessionNumber: workoutData.sessionNumber,
+                  name: workoutData.name,
+                  code: workoutData.code,
+                  sports: workoutData.sports,
+                  symbol: workoutData.symbol,
+                  includeStretching: workoutData.includeStretching,
+                  status: 'PLANNED_FUTURE',
+                  time: '',
+                  location: '',
+                  notes: ''
+                })
+              });
+              
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to create workout');
+              }
+              
+              showMessage('success', 'Workout added successfully');
             }
             
-            // Keep day and its parent week expanded
-            if (addWorkoutDay) {
+            // Keep day and its parent week expanded (for new workouts)
+            if (workoutModalMode === 'add' && addWorkoutDay) {
               const newExpandedDays = new Set(expandedDays);
               newExpandedDays.add(addWorkoutDay.id);
               setExpandedDays(newExpandedDays);
@@ -1085,21 +1118,18 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 newExpandedWeeks.add(parentWeek.id);
                 setExpandedWeeks(newExpandedWeeks);
               }
-            }
-            
-            setShowAddWorkoutModal(false);
-            setAddWorkoutDay(null);
-            
-            // Auto-expand the day to show the new workout
-            if (addWorkoutDay) {
+              
+              // Auto-expand the day to show the new workout
               setAutoExpandDayId(addWorkoutDay.id);
               setTimeout(() => setAutoExpandDayId(null), 500); // Clear after expansion
             }
             
-            // Show success message
-            showMessage('success', 'Workout added successfully');
+            setShowAddWorkoutModal(false);
+            setAddWorkoutDay(null);
+            setEditingWorkout(null);
+            setWorkoutModalMode('add');
             
-            // Refresh workout data to show the new workout
+            // Refresh workout data to show the changes
             await loadWorkoutData(activeSection);
           }}
         />

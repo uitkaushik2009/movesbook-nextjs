@@ -144,15 +144,6 @@ export default function MoveframeTable({
                       >
                         MF Info
                       </button>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onAddMoveframe();
-                        }}
-                        className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-                      >
-                        Add MF
-                      </button>
                       <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
                         Copy
                       </button>

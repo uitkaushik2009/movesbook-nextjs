@@ -115,6 +115,7 @@ export default function DayRowTable({
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownContentRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   
   useEffect(() => {
@@ -133,7 +134,12 @@ export default function DayRowTable({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      // Check if click is outside both the button and the dropdown content
+      if (
+        buttonRef.current && !buttonRef.current.contains(target) &&
+        dropdownContentRef.current && !dropdownContentRef.current.contains(target)
+      ) {
         setIsOptionsOpen(false);
       }
     };
@@ -420,7 +426,9 @@ export default function DayRowTable({
             
             {/* Dropdown Menu - Rendered via Portal */}
             {isOptionsOpen && isMounted && ReactDOM.createPortal(
-              <div className="fixed bg-white border border-gray-300 rounded-lg shadow-2xl z-[99999] min-w-[160px]" 
+              <div 
+                ref={dropdownContentRef}
+                className="fixed bg-white border border-gray-300 rounded-lg shadow-2xl z-[99999] min-w-[160px]" 
                 style={{
                   top: `${(buttonRef.current?.getBoundingClientRect().bottom || 0) + 4}px`,
                   left: `${(buttonRef.current?.getBoundingClientRect().left || 0)}px`

@@ -46,6 +46,8 @@ interface AddWorkoutModalProps {
   isOpen: boolean;
   day: any; // Day object with week, date, period info
   existingWorkouts: any[]; // Array of existing workouts in the day
+  mode?: 'add' | 'edit';
+  existingWorkout?: any; // Workout to edit (when mode is 'edit')
   onClose: () => void;
   onSave: (workoutData: any) => Promise<void>;
 }
@@ -54,6 +56,8 @@ export default function AddWorkoutModal({
   isOpen,
   day,
   existingWorkouts,
+  mode = 'add',
+  existingWorkout,
   onClose,
   onSave
 }: AddWorkoutModalProps) {
@@ -89,15 +93,26 @@ export default function AddWorkoutModal({
   // Loading state
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Reset form when modal opens/closes
+  // Reset form when modal opens/closes OR load existing workout data
   useEffect(() => {
     if (isOpen) {
-      setFormData({
-        name: '',
-        code: '',
-        sports: [null, null, null, null],
-        includeStretching: false
-      });
+      if (mode === 'edit' && existingWorkout) {
+        // Load existing workout data
+        setFormData({
+          name: existingWorkout.name || '',
+          code: existingWorkout.code || '',
+          sports: existingWorkout.sports || [null, null, null, null],
+          includeStretching: existingWorkout.includeStretching || false
+        });
+      } else {
+        // Reset for add mode
+        setFormData({
+          name: '',
+          code: '',
+          sports: [null, null, null, null],
+          includeStretching: false
+        });
+      }
       setValidation({
         name: { valid: true, message: '' },
         code: { valid: true, message: '' },
@@ -105,7 +120,7 @@ export default function AddWorkoutModal({
       });
       setIsSubmitting(false);
     }
-  }, [isOpen]);
+  }, [isOpen, mode, existingWorkout]);
 
   // Real-time validation for name
   const validateName = (value: string) => {
@@ -113,9 +128,9 @@ export default function AddWorkoutModal({
       return { valid: false, message: 'Workout name is required' };
     }
     
-    // Check uniqueness (case-insensitive)
+    // Check uniqueness (case-insensitive), excluding current workout in edit mode
     const isDuplicate = existingWorkouts.some(
-      w => w.name?.toLowerCase() === value.toLowerCase()
+      w => w.id !== existingWorkout?.id && w.name?.toLowerCase() === value.toLowerCase()
     );
     
     if (isDuplicate) {
@@ -131,9 +146,9 @@ export default function AddWorkoutModal({
       return { valid: false, message: 'Workout code is required' };
     }
     
-    // Check uniqueness (case-insensitive)
+    // Check uniqueness (case-insensitive), excluding current workout in edit mode
     const isDuplicate = existingWorkouts.some(
-      w => w.code?.toLowerCase() === value.toLowerCase()
+      w => w.id !== existingWorkout?.id && w.code?.toLowerCase() === value.toLowerCase()
     );
     
     if (isDuplicate) {
@@ -292,8 +307,15 @@ export default function AddWorkoutModal({
         <div className="flex items-center justify-between p-6 border-b bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white shadow-lg">
           <div>
             <h2 id="modal-title" className="text-2xl font-bold flex items-center gap-3">
-              <span>ADD WORKOUT #{workoutNumber}</span>
-              <span className="text-4xl animate-pulse" aria-label={`Symbol: ${workoutSymbol.label}`}>{workoutSymbol.symbol}</span>
+              <span>{mode === 'edit' ? 'EDIT WORKOUT' : `ADD WORKOUT #${workoutNumber}`}</span>
+              {mode === 'edit' && existingWorkout && (
+                <span className="text-4xl" aria-label={`Symbol: ${WORKOUT_SYMBOLS[existingWorkout.sessionNumber as 1 | 2 | 3]?.label || 'Circle'}`}>
+                  {WORKOUT_SYMBOLS[existingWorkout.sessionNumber as 1 | 2 | 3]?.symbol || '○'}
+                </span>
+              )}
+              {mode === 'add' && (
+                <span className="text-4xl animate-pulse" aria-label={`Symbol: ${workoutSymbol.label}`}>{workoutSymbol.symbol}</span>
+              )}
             </h2>
             <p id="modal-description" className="text-sm text-blue-50 mt-1.5 flex items-center gap-2">
               <span className="inline-block w-2 h-2 rounded-full bg-white/60"></span>
@@ -510,12 +532,12 @@ export default function AddWorkoutModal({
             {isSubmitting ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Creating...</span>
+                <span>{mode === 'edit' ? 'Saving...' : 'Creating...'}</span>
               </>
             ) : (
               <>
                 <span>✓</span>
-                <span>Create Workout</span>
+                <span>{mode === 'edit' ? 'Save Changes' : 'Create Workout'}</span>
               </>
             )}
           </button>
