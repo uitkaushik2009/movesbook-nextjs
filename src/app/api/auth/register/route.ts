@@ -97,6 +97,13 @@ export async function POST(request: NextRequest) {
           buttonPrint: '#6b7280',
           alternateRow: '#f9fafc'
         }),
+        toolsSettings: '{}',
+        favouritesSettings: '{}',
+        myBestSettings: '{}',
+        adminSettings: '{}',
+        workoutPreferences: '{}',
+        socialSettings: '{}',
+        notificationSettings: '{}',
         language: 'en'
       }
     });
