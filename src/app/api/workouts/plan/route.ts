@@ -297,8 +297,21 @@ export async function GET(request: NextRequest) {
           const dayDate = new Date(weekStartDate);
           dayDate.setDate(weekStartDate.getDate() + (dayOfWeek - 1));
           
-          await prisma.workoutDay.create({
-            data: {
+          // Use upsert to avoid duplicate key violations on userId + date
+          await prisma.workoutDay.upsert({
+            where: {
+              userId_date: {
+                userId: decoded.userId,
+                date: dayDate
+              }
+            },
+            update: {
+              workoutWeekId: week.id,
+              dayOfWeek,
+              weekNumber: i + 1,
+              periodId: defaultPeriod.id
+            },
+            create: {
               workoutWeekId: week.id,
               userId: decoded.userId,
               dayOfWeek,
@@ -458,8 +471,21 @@ export async function POST(request: NextRequest) {
           const dayDate = new Date(weekStartDate);
           dayDate.setDate(weekStartDate.getDate() + (dayOfWeek - 1));
           
-          await prisma.workoutDay.create({
-            data: {
+          // Use upsert to avoid duplicate key violations on userId + date
+          await prisma.workoutDay.upsert({
+            where: {
+              userId_date: {
+                userId: decoded.userId,
+                date: dayDate
+              }
+            },
+            update: {
+              workoutWeekId: week.id,
+              dayOfWeek,
+              weekNumber: i + 1,
+              periodId: defaultPeriod.id
+            },
+            create: {
               workoutWeekId: week.id,
               userId: decoded.userId,
               dayOfWeek,

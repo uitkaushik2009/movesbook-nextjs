@@ -41,6 +41,11 @@ export async function GET(
       return NextResponse.json({ error: 'Day not found' }, { status: 404 });
     }
 
+    // Verify user ownership
+    if (day.userId !== decoded.userId) {
+      return NextResponse.json({ error: 'Unauthorized - not your workout day' }, { status: 403 });
+    }
+
     return NextResponse.json({ day });
   } catch (error) {
     console.error('Error fetching workout day:', error);
@@ -74,6 +79,20 @@ export async function PUT(
       feelingStatus,
       notes
     } = body;
+
+    // First verify user ownership
+    const existingDay = await prisma.workoutDay.findUnique({
+      where: { id: params.id },
+      select: { userId: true }
+    });
+
+    if (!existingDay) {
+      return NextResponse.json({ error: 'Day not found' }, { status: 404 });
+    }
+
+    if (existingDay.userId !== decoded.userId) {
+      return NextResponse.json({ error: 'Unauthorized - not your workout day' }, { status: 403 });
+    }
 
     const day = await prisma.workoutDay.update({
       where: { id: params.id },
@@ -119,6 +138,20 @@ export async function PATCH(
       notes
     } = body;
 
+    // First verify user ownership
+    const existingDay = await prisma.workoutDay.findUnique({
+      where: { id: params.id },
+      select: { userId: true }
+    });
+
+    if (!existingDay) {
+      return NextResponse.json({ error: 'Day not found' }, { status: 404 });
+    }
+
+    if (existingDay.userId !== decoded.userId) {
+      return NextResponse.json({ error: 'Unauthorized - not your workout day' }, { status: 403 });
+    }
+
     const day = await prisma.workoutDay.update({
       where: { id: params.id },
       data: {
@@ -153,6 +186,20 @@ export async function DELETE(
     const decoded = verifyToken(token);
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // First verify user ownership
+    const existingDay = await prisma.workoutDay.findUnique({
+      where: { id: params.id },
+      select: { userId: true }
+    });
+
+    if (!existingDay) {
+      return NextResponse.json({ error: 'Day not found' }, { status: 404 });
+    }
+
+    if (existingDay.userId !== decoded.userId) {
+      return NextResponse.json({ error: 'Unauthorized - not your workout day' }, { status: 403 });
     }
 
     // Get all workouts for this day

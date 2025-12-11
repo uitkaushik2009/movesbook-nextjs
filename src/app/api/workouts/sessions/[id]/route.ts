@@ -39,6 +39,24 @@ export async function PATCH(
 
     console.log('📝 Updating workout session:', params.id, body);
 
+    // First verify user ownership through day
+    const existingSession = await prisma.workoutSession.findUnique({
+      where: { id: params.id },
+      include: {
+        workoutDay: {
+          select: { userId: true }
+        }
+      }
+    });
+
+    if (!existingSession) {
+      return NextResponse.json({ error: 'Workout session not found' }, { status: 404 });
+    }
+
+    if (existingSession.workoutDay.userId !== decoded.userId) {
+      return NextResponse.json({ error: 'Unauthorized - not your workout session' }, { status: 403 });
+    }
+
     // Update workout session
     const session = await prisma.workoutSession.update({
       where: { id: params.id },
@@ -116,6 +134,24 @@ export async function DELETE(
     }
 
     console.log('🗑️ Deleting workout session:', params.id);
+
+    // First verify user ownership through day
+    const existingSession = await prisma.workoutSession.findUnique({
+      where: { id: params.id },
+      include: {
+        workoutDay: {
+          select: { userId: true }
+        }
+      }
+    });
+
+    if (!existingSession) {
+      return NextResponse.json({ error: 'Workout session not found' }, { status: 404 });
+    }
+
+    if (existingSession.workoutDay.userId !== decoded.userId) {
+      return NextResponse.json({ error: 'Unauthorized - not your workout session' }, { status: 403 });
+    }
 
     // Delete workout session (cascade will delete moveframes and movelaps)
     await prisma.workoutSession.delete({

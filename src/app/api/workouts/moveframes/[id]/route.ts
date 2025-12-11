@@ -32,6 +32,28 @@ export async function PATCH(
 
     console.log('📝 Updating moveframe:', params.id, body);
 
+    // First verify user ownership through workout session -> day
+    const existingMoveframe = await prisma.moveframe.findUnique({
+      where: { id: params.id },
+      include: {
+        workoutSession: {
+          include: {
+            workoutDay: {
+              select: { userId: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!existingMoveframe) {
+      return NextResponse.json({ error: 'Moveframe not found' }, { status: 404 });
+    }
+
+    if (existingMoveframe.workoutSession.workoutDay.userId !== decoded.userId) {
+      return NextResponse.json({ error: 'Unauthorized - not your moveframe' }, { status: 403 });
+    }
+
     // Update moveframe
     const moveframe = await prisma.moveframe.update({
       where: { id: params.id },
@@ -78,6 +100,28 @@ export async function DELETE(
     }
 
     console.log('🗑️ Deleting moveframe:', params.id);
+
+    // First verify user ownership through workout session -> day
+    const existingMoveframe = await prisma.moveframe.findUnique({
+      where: { id: params.id },
+      include: {
+        workoutSession: {
+          include: {
+            workoutDay: {
+              select: { userId: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!existingMoveframe) {
+      return NextResponse.json({ error: 'Moveframe not found' }, { status: 404 });
+    }
+
+    if (existingMoveframe.workoutSession.workoutDay.userId !== decoded.userId) {
+      return NextResponse.json({ error: 'Unauthorized - not your moveframe' }, { status: 403 });
+    }
 
     // Delete moveframe (cascade will delete movelaps)
     await prisma.moveframe.delete({

@@ -47,6 +47,10 @@ export async function GET(request: NextRequest) {
             period: true
           }
         });
+        // Verify user ownership
+        if (data && data.userId !== decoded.userId) {
+          return NextResponse.json({ error: 'Unauthorized - not your workout day' }, { status: 403 });
+        }
         break;
 
       case 'week':
@@ -71,6 +75,13 @@ export async function GET(request: NextRequest) {
             }
           }
         });
+        // Verify user ownership - check that all days belong to the user
+        if (data && data.days && data.days.length > 0) {
+          const isOwner = data.days.every((day: any) => day.userId === decoded.userId);
+          if (!isOwner) {
+            return NextResponse.json({ error: 'Unauthorized - not your workout week' }, { status: 403 });
+          }
+        }
         break;
 
       case 'plan':
