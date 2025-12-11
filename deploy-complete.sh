@@ -35,12 +35,11 @@ echo ""
 
 # Step 3: Run WorkoutDay userId migration (if needed)
 echo -e "${BLUE}📊 Step 3/8: Running WorkoutDay userId migration...${NC}"
-if [ -f "migrate-workout-day-userid.sh" ]; then
-    chmod +x migrate-workout-day-userid.sh
-    ./migrate-workout-day-userid.sh
+if [ -f "migrate-workout-day-userid-simple.js" ]; then
+    node migrate-workout-day-userid-simple.js
     echo -e "${GREEN}✅ WorkoutDay migration completed${NC}"
 else
-    echo -e "${YELLOW}⚠️  migrate-workout-day-userid.sh not found, skipping...${NC}"
+    echo -e "${YELLOW}⚠️  migrate-workout-day-userid-simple.js not found, skipping...${NC}"
 fi
 echo ""
 

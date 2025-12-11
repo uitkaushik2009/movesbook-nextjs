@@ -30,16 +30,26 @@ fi
 # Format: mysql://USER:PASSWORD@HOST:PORT/DATABASE
 DB_URL="${DATABASE_URL}"
 
-# Parse DATABASE_URL
-if [[ $DB_URL =~ mysql://([^:]+):([^@]+)@([^:]+):([^/]+)/(.+)(\?.*)?$ ]]; then
+# Try multiple parsing patterns
+if [[ $DB_URL =~ mysql://([^:]+):([^@]+)@([^:]+):([^/]+)/([^\?]+) ]]; then
     DB_USER="${BASH_REMATCH[1]}"
     DB_PASS="${BASH_REMATCH[2]}"
     DB_HOST="${BASH_REMATCH[3]}"
     DB_PORT="${BASH_REMATCH[4]}"
     DB_NAME="${BASH_REMATCH[5]}"
+elif [[ $DB_URL =~ mysql://([^:]+):([^@]+)@([^:]+)/([^\?]+) ]]; then
+    # Format without port (defaults to 3306)
+    DB_USER="${BASH_REMATCH[1]}"
+    DB_PASS="${BASH_REMATCH[2]}"
+    DB_HOST="${BASH_REMATCH[3]}"
+    DB_PORT="3306"
+    DB_NAME="${BASH_REMATCH[4]}"
 else
     echo -e "${RED}❌ Error: Could not parse DATABASE_URL${NC}"
+    echo "Current DATABASE_URL format: ${DB_URL:0:30}..."
     echo "Expected format: mysql://USER:PASSWORD@HOST:PORT/DATABASE"
+    echo ""
+    echo "Please check your .env file"
     exit 1
 fi
 
