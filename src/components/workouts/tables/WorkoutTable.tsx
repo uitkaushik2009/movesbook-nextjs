@@ -322,10 +322,22 @@ export default function WorkoutTable({
                       <GripVertical size={18} />
                     </span>
                 
-                {/* Workout Info - Display only (toggle via No column) */}
+                {/* Workout Info - Also clickable to toggle */}
                 <span 
-                  className="text-xs text-gray-700 flex items-center gap-2"
+                  className="text-xs text-gray-700 flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    console.log(`🖱️ CLICK on "Moveframes" text for workout ${workout.id}`);
+                    console.log(`Current isExpanded: ${isExpanded}`);
+                    if (onToggleExpand) {
+                      onToggleExpand();
+                      console.log('✅ onToggleExpand called from Moveframes text');
+                    }
+                  }}
+                  title={`Click to ${isExpanded ? 'collapse' : 'expand'} moveframes`}
                 >
+                  <span className="text-blue-600 font-bold text-base">{isExpanded ? '▼' : '►'}</span>
                   <strong>Moveframes of the workout #{workoutIndex + 1}</strong> - {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                 
