@@ -198,6 +198,8 @@ export default function WorkoutTable({
     ? `${workout.completionRate}% + ${workout.intensityBonus || 0}%`
     : '85% + 20%';
 
+  console.log(`🏋️ WorkoutTable rendering for workout ${workout.id}, isExpanded: ${isExpanded}`);
+
   return (
       <div 
         ref={setDropNodeRef}
@@ -244,16 +246,25 @@ export default function WorkoutTable({
           {/* ROW 1: WORKOUT SUMMARY */}
           <tr className="bg-blue-50 hover:bg-blue-100">
             <td 
-              className="border border-gray-200 px-2 py-2 text-xs text-center font-bold cursor-pointer hover:bg-blue-200"
+              className="border border-gray-200 px-2 py-2 text-xs text-center font-bold cursor-pointer hover:bg-blue-200 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
+                e.preventDefault();
+                console.log(`🖱️ CLICK DETECTED on workout ${workout.id}`);
+                console.log(`Current isExpanded: ${isExpanded}`);
                 console.log(`Toggle workout ${workout.id}: ${isExpanded ? 'Collapsing' : 'Expanding'}`);
-                if (onToggleExpand) onToggleExpand();
+                if (onToggleExpand) {
+                  onToggleExpand();
+                  console.log('✅ onToggleExpand called');
+                } else {
+                  console.log('❌ onToggleExpand is undefined!');
+                }
               }}
               title={`Click to ${isExpanded ? 'collapse' : 'expand'} workout`}
+              style={{ backgroundColor: isExpanded ? '#DBEAFE' : '#FEE2E2' }}
             >
               <div className="flex items-center justify-center gap-1">
-                <span className="text-blue-600 font-bold text-base">{isExpanded ? '▼' : '►'}</span>
+                <span className="text-blue-600 font-bold text-xl">{isExpanded ? '▼' : '►'}</span>
                 <span>{workoutIndex + 1}</span>
               </div>
             </td>
