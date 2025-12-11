@@ -51,8 +51,9 @@ echo ================================================
 echo ✅ Changes pushed successfully!
 echo ================================================
 echo.
-echo 📝 Next step:
-echo    On your server, run: ./deploy.sh
+echo 📝 Next steps on your Ubuntu server:
+echo    1. git pull origin main
+echo    2. ./deploy-complete.sh
 echo.
 pause
 

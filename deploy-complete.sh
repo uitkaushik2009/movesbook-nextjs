@@ -33,14 +33,25 @@ npx prisma generate
 echo -e "${GREEN}✅ Prisma Client generated${NC}"
 echo ""
 
-# Step 3: Push schema changes to database
-echo -e "${BLUE}📊 Step 3/7: Updating database schema...${NC}"
-npx prisma db push --accept-data-loss --skip-generate
+# Step 3: Run WorkoutDay userId migration (if needed)
+echo -e "${BLUE}📊 Step 3/8: Running WorkoutDay userId migration...${NC}"
+if [ -f "migrate-workout-day-userid.sh" ]; then
+    chmod +x migrate-workout-day-userid.sh
+    ./migrate-workout-day-userid.sh
+    echo -e "${GREEN}✅ WorkoutDay migration completed${NC}"
+else
+    echo -e "${YELLOW}⚠️  migrate-workout-day-userid.sh not found, skipping...${NC}"
+fi
+echo ""
+
+# Step 4: Push schema changes to database
+echo -e "${BLUE}📊 Step 4/8: Updating database schema...${NC}"
+npx prisma db push --skip-generate
 echo -e "${GREEN}✅ Database schema updated${NC}"
 echo ""
 
-# Step 4: Migrate legacy users
-echo -e "${BLUE}👥 Step 4/7: Migrating legacy users...${NC}"
+# Step 5: Migrate legacy users
+echo -e "${BLUE}👥 Step 5/8: Migrating legacy users...${NC}"
 if [ -f "migrate-legacy-users.js" ]; then
     node migrate-legacy-users.js
     echo -e "${GREEN}✅ Legacy users migrated${NC}"
@@ -49,8 +60,8 @@ else
 fi
 echo ""
 
-# Step 5: Seed translations (long texts)
-echo -e "${BLUE}🌱 Step 5/7: Seeding translations...${NC}"
+# Step 6: Seed translations (long texts)
+echo -e "${BLUE}🌱 Step 6/8: Seeding translations...${NC}"
 if npm run db:seed 2>&1 | grep -q "completed"; then
     echo -e "${GREEN}✅ Translations seeded${NC}"
 else
@@ -58,15 +69,15 @@ else
 fi
 echo ""
 
-# Step 6: Build the application
-echo -e "${BLUE}🏗️  Step 6/7: Building application...${NC}"
+# Step 7: Build the application
+echo -e "${BLUE}🏗️  Step 7/8: Building application...${NC}"
 rm -rf .next
 npm run build
 echo -e "${GREEN}✅ Application built${NC}"
 echo ""
 
-# Step 7: Restart the application
-echo -e "${BLUE}♻️  Step 7/7: Restarting application...${NC}"
+# Step 8: Restart the application
+echo -e "${BLUE}♻️  Step 8/8: Restarting application...${NC}"
 if command -v pm2 &> /dev/null; then
     pm2 restart movesbook 2>/dev/null || pm2 start npm --name "movesbook" -- start
     pm2 save
@@ -83,6 +94,7 @@ echo -e "${GREEN}✅ DEPLOYMENT COMPLETE!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo "📋 Summary:"
+echo "  ✅ WorkoutDay userId migration completed"
 echo "  ✅ Database schema updated"
 echo "  ✅ Legacy users migrated (if applicable)"
 echo "  ✅ Long text translations seeded"
