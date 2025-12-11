@@ -198,8 +198,6 @@ export default function WorkoutTable({
     ? `${workout.completionRate}% + ${workout.intensityBonus || 0}%`
     : '85% + 20%';
 
-  if (!isExpanded) return null;
-
   return (
       <div 
         ref={setDropNodeRef}
@@ -245,7 +243,19 @@ export default function WorkoutTable({
         <tbody>
           {/* ROW 1: WORKOUT SUMMARY */}
           <tr className="bg-blue-50 hover:bg-blue-100">
-            <td className="border border-gray-200 px-2 py-2 text-xs text-center font-bold">{workoutIndex + 1}</td>
+            <td 
+              className="border border-gray-200 px-2 py-2 text-xs text-center font-bold cursor-pointer hover:bg-blue-200"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onToggleExpand) onToggleExpand();
+              }}
+              title={`Click to ${isExpanded ? 'collapse' : 'expand'} workout`}
+            >
+              <div className="flex items-center justify-center gap-1">
+                <span className="text-blue-600 font-bold text-base">{isExpanded ? '▼' : '►'}</span>
+                <span>{workoutIndex + 1}</span>
+              </div>
+            </td>
             <td className="border border-gray-200 px-2 py-2 text-xs text-center font-semibold text-red-600">{matchPercentage}</td>
             
             {/* Sport 1 */}
@@ -307,8 +317,9 @@ export default function WorkoutTable({
                     e.stopPropagation();
                     if (onToggleExpand) onToggleExpand();
                   }}
-                  title="Click to collapse workout"
+                  title={`Click to ${isExpanded ? 'collapse' : 'expand'} workout`}
                 >
+                  <span className="text-blue-600 font-bold">{isExpanded ? '▼' : '►'}</span>
                   <strong>Moveframes of the workout #{workoutIndex + 1}</strong> - {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </span>
                 
@@ -371,8 +382,8 @@ export default function WorkoutTable({
           </tbody>
         </table>
         
-      {/* MOVEFRAMES SECTION - Display below workout table */}
-      {(workout.moveframes || []).length > 0 && (
+      {/* MOVEFRAMES SECTION - Display below workout table when expanded */}
+      {isExpanded && (workout.moveframes || []).length > 0 && (
         <MoveframesSection
           moveframes={workout.moveframes}
           workout={workout}
