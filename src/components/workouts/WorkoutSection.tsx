@@ -935,6 +935,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        
                        if (response.ok) {
                          showMessage('success', 'Day deleted successfully');
+                         // Refresh workout data to remove deleted day from view
+                         await loadWorkoutData(activeSection);
                        } else {
                          showMessage('error', 'Failed to delete day');
                        }
@@ -1362,7 +1364,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       {/* Athlete Selector Modal for Section C (Coaches/Teams/Clubs) */}
       {showAthleteSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto scrollbar-hide">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Select Athlete</h2>
               <button onClick={() => setShowAthleteSelector(false)} className="text-gray-400 hover:text-gray-600">
@@ -1428,7 +1430,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       {/* Workout Selector Modal - For Adding Moveframe */}
       {showWorkoutSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto scrollbar-hide">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Select Workout for Moveframe</h2>
               <button onClick={() => setShowWorkoutSelector(false)} className="text-gray-400 hover:text-gray-600">
@@ -1499,7 +1501,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       {/* Day Selector Modal - For Editing Day Notes/Annotations */}
       {showDaySelector && workoutPlan && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto scrollbar-hide">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Select Day to Edit</h2>
               <button onClick={() => setShowDaySelector(false)} className="text-gray-400 hover:text-gray-600">

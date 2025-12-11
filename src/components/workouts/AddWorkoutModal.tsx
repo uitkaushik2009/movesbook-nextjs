@@ -299,7 +299,11 @@ export default function AddWorkoutModal({
       aria-describedby="modal-description"
     >
       <div 
-        className="bg-white rounded-xl shadow-2xl w-full max-w-[500px] max-h-[90vh] overflow-y-auto animate-slideUp mx-auto"
+        className="bg-white rounded-xl shadow-2xl w-full max-w-[500px] max-h-[90vh] overflow-y-auto animate-slideUp mx-auto scrollbar-hide"
+        style={{
+          scrollbarWidth: 'none', /* Firefox */
+          msOverflowStyle: 'none'  /* IE and Edge */
+        }}
         onKeyDown={handleKeyDown}
         role="document"
       >
