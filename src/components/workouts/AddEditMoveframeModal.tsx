@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import { SPORTS_LIST, MACRO_FINAL_OPTIONS } from '@/constants/moveframe.constants';
+import { SPORTS_LIST, MACRO_FINAL_OPTIONS, MUSCULAR_SECTORS } from '@/constants/moveframe.constants';
 import { useMoveframeForm } from '@/hooks/useMoveframeForm';
 
 interface AddEditMoveframeModalProps {
@@ -24,6 +24,83 @@ export default function AddEditMoveframeModal({
   day,
   existingMoveframe
 }: AddEditMoveframeModalProps) {
+  // Format validation helpers
+  const formatPace = (value: string, isKmPace: boolean = false): string => {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    
+    // Determine if we need decimal (all sports except BIKE)
+    const needsDecimal = sport !== 'BIKE';
+    
+    // Pad with zeros if needed
+    const padded = needsDecimal ? digits.padStart(4, '0') : digits.padStart(3, '0');
+    const minutes = padded.slice(0, 1);
+    const seconds = padded.slice(1, 3);
+    const decimals = needsDecimal ? padded.slice(3, 4) : '';
+    
+    const min = parseInt(minutes);
+    const sec = parseInt(seconds);
+    
+    if (sport === 'RUN') {
+      if (isKmPace) {
+        // Pace/km range: 2'00"0 to 9'59"0
+        if (min < 2) return "2'00\"0";
+        if (min > 9) return value;
+        if (sec > 59) return `${minutes}'59"${decimals}`;
+      } else {
+        // Pace/100m range: 0'00"0 to 1'59"0
+        if (min > 1) return "1'59\"0";
+        if (sec > 59) return `${minutes}'59"${decimals}`;
+      }
+      return `${minutes}'${seconds}"${decimals}`;
+    }
+    
+    // BIKE: 0'00" to 9'59" (no decimal)
+    if (sport === 'BIKE') {
+      if (min > 9) return value;
+      if (sec > 59) return `${minutes}'59"`;
+      return `${minutes}'${seconds}"`;
+    }
+    
+    // Other sports: 0'00"0 to 9'59"0
+    if (min > 9) return value;
+    if (sec > 59) return `${minutes}'59"${decimals}`;
+    return `${minutes}'${seconds}"${decimals}`;
+  };
+  
+  const formatTime = (value: string): string => {
+    // Remove all non-digit characters
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    
+    // Pad with zeros if needed
+    const padded = digits.padStart(6, '0');
+    const hours = padded.slice(0, 1);
+    const minutes = padded.slice(1, 3);
+    const seconds = padded.slice(3, 5);
+    const decimals = padded.slice(5, 6);
+    
+    const h = parseInt(hours);
+    const m = parseInt(minutes);
+    const s = parseInt(seconds);
+    
+    // Validate range: 0h00'00"0 to 9h00'00"0 (max 9 hours exactly)
+    if (h > 9) return value;
+    if (h === 9) {
+      // When hours = 9, minutes and seconds must be 00
+      return `9h00'00"0`;
+    }
+    if (m > 59) return `${hours}h59'${seconds}"${decimals}`;
+    if (s > 59) return `${hours}h${minutes}'59"${decimals}`;
+    
+    return `${hours}h${minutes}'${seconds}"${decimals}`;
+  };
+  
+  // R1 and R2 options for BIKE
+  const R1_OPTIONS = ['', '34', '36', '38', '39', '40', '48', '50', '52', '53', '54', '55'];
+  const R2_OPTIONS = ['', ...Array.from({ length: 43 }, (_, i) => (i + 10).toString())]; // 10-52
+
   // Use custom hook for form management
   const {
     formData,
@@ -68,6 +145,8 @@ export default function AddEditMoveframeModal({
     reps,
     r1,
     r2,
+    muscularSector,
+    exercise,
     annotationText,
     annotationBgColor,
     annotationTextColor,
@@ -96,6 +175,8 @@ export default function AddEditMoveframeModal({
     setReps,
     setR1,
     setR2,
+    setMuscularSector,
+    setExercise,
     setAnnotationText,
     setAnnotationBgColor,
     setAnnotationTextColor,
@@ -226,17 +307,55 @@ export default function AddEditMoveframeModal({
                   <h3 className="font-bold text-xs text-gray-700 mb-2">DISTANCE SECTION</h3>
                   
                   {sport === 'BODY_BUILDING' ? (
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Reps:</label>
-                      <input
-                        type="number"
-                        value={reps}
-                        onChange={(e) => setReps(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                        placeholder="12"
-                      />
-                      {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
-                    </div>
+                    <>
+                      <div className="mb-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Muscular Sector: <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={muscularSector}
+                          onChange={(e) => setMuscularSector(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                        >
+                          <option value="">Select muscular sector</option>
+                          {MUSCULAR_SECTORS.map((sector) => (
+                            <option key={sector} value={sector}>
+                              {sector}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.muscularSector && <p className="mt-1 text-xs text-red-500">{errors.muscularSector}</p>}
+                      </div>
+                      
+                      <div className="mb-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Exercise: <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={exercise}
+                          onChange={(e) => setExercise(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                          placeholder="e.g., Bench Press, Bicep Curls..."
+                        />
+                        <p className="mt-1 text-[10px] text-gray-500">
+                          Enter exercise name manually (Exercise archive coming soon)
+                        </p>
+                        {errors.exercise && <p className="mt-1 text-xs text-red-500">{errors.exercise}</p>}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Reps:</label>
+                        <input
+                          type="number"
+                          value={reps}
+                          onChange={(e) => setReps(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                          placeholder="12"
+                        />
+                        {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
+                      </div>
+                    </>
                   ) : (
                     <>
                       {'meters' in sportConfig && (
@@ -370,22 +489,32 @@ export default function AddEditMoveframeModal({
                     <label className="block text-xs font-medium text-gray-700 mb-2">R1\R2 (Range):</label>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <input
-                          type="text"
+                        <label className="block text-[10px] text-gray-600 mb-1">R1:</label>
+                        <select
                           value={r1}
                           onChange={(e) => setR1(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                          placeholder="R1 range"
-                        />
+                        >
+                          {R1_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option || '(blank)'}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                       <div>
-                        <input
-                          type="text"
+                        <label className="block text-[10px] text-gray-600 mb-1">R2:</label>
+                        <select
                           value={r2}
                           onChange={(e) => setR2(e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                          placeholder="R2 range"
-                        />
+                        >
+                          {R2_OPTIONS.map((option) => (
+                            <option key={option} value={option}>
+                              {option || '(blank)'}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     </div>
                   </div>
@@ -394,24 +523,90 @@ export default function AddEditMoveframeModal({
                 {sport !== 'BODY_BUILDING' && (
                   <>
                     <div className="mb-3">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Pace/100m:</label>
-                      <input
-                        type="text"
-                        value={pace}
-                        onChange={(e) => setPace(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                        placeholder="1:30"
-                      />
+                      {(() => {
+                        // Determine pace type for RUN sport
+                        let paceLabel = 'Pace/100m';
+                        let paceRange = "(0'00\"0 to 9'59\"0)";
+                        let pacePlaceholder = "1'30\"0";
+                        let paceFormat = "M'SS\"D (e.g., 1'30\"0)";
+                        let isKmPace = false;
+                        let maxLength = 7;
+                        
+                        if (sport === 'BIKE') {
+                          paceLabel = 'Pace/km';
+                          paceRange = "(0'00\" to 9'59\")";
+                          pacePlaceholder = "1'30\"";
+                          paceFormat = "M'SS\" (e.g., 1'30\")";
+                          maxLength = 5;
+                        } else if (sport === 'RUN') {
+                          const currentDistance = distance === 'custom' ? parseInt(customDistance) || 0 : parseInt(distance) || 0;
+                          if (currentDistance > 401) {
+                            paceLabel = 'Pace/km';
+                            paceRange = "(2'00\"0 to 9'59\"0)";
+                            pacePlaceholder = "4'30\"0";
+                            paceFormat = "M'SS\"D (e.g., 4'30\"0)";
+                            isKmPace = true;
+                          } else {
+                            paceLabel = 'Pace/100m';
+                            paceRange = "(0'00\"0 to 1'59\"0)";
+                            pacePlaceholder = "0'45\"0";
+                            paceFormat = "M'SS\"D (e.g., 0'45\"0)";
+                            isKmPace = false;
+                          }
+                          maxLength = 7;
+                        }
+                        
+                        return (
+                          <>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              {paceLabel}: <span className="text-gray-500 text-[10px]">{paceRange}</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={pace}
+                              onChange={(e) => {
+                                const formatted = formatPace(e.target.value, isKmPace);
+                                setPace(formatted);
+                              }}
+                              onBlur={(e) => {
+                                // Auto-format on blur if user entered raw numbers
+                                if (e.target.value && !e.target.value.includes("'")) {
+                                  const formatted = formatPace(e.target.value, isKmPace);
+                                  setPace(formatted);
+                                }
+                              }}
+                              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                              placeholder={pacePlaceholder}
+                              maxLength={maxLength}
+                            />
+                            <p className="mt-0.5 text-[10px] text-gray-500">Format: {paceFormat}</p>
+                          </>
+                        );
+                      })()}
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Time:</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Time: <span className="text-gray-500 text-[10px]">(0h00'00"0 to 9h00'00"0)</span>
+                      </label>
                       <input
                         type="text"
                         value={time}
-                        onChange={(e) => setTime(e.target.value)}
+                        onChange={(e) => {
+                          const formatted = formatTime(e.target.value);
+                          setTime(formatted);
+                        }}
+                        onBlur={(e) => {
+                          // Auto-format on blur if user entered raw numbers
+                          if (e.target.value && !e.target.value.includes("h")) {
+                            const formatted = formatTime(e.target.value);
+                            setTime(formatted);
+                          }
+                        }}
                         className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                        placeholder="MM:SS"
+                        placeholder="0h05'30&quot;0"
+                        maxLength={11}
                       />
+                      <p className="mt-0.5 text-[10px] text-gray-500">Format: Hh MM'SS"D (e.g., 0h05'30"0) - Max 9 hours</p>
                       {estimatedTime && (
                         <p className="mt-1 text-xs text-blue-600">
                           Estimated: {estimatedTime}
@@ -438,6 +633,9 @@ export default function AddEditMoveframeModal({
                       </option>
                     ))}
                   </select>
+                  {parseInt(repetitions) === 1 && (
+                    <p className="mt-0.5 text-[10px] text-gray-500">Pause can be 0 when repetitions = 1</p>
+                  )}
                 </div>
                 
                 {/* Macro Final - NEW FIELD */}

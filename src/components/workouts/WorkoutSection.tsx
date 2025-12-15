@@ -1048,6 +1048,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                      reps: moveframeData.reps || null,
                      r1: moveframeData.r1 || null,
                      r2: moveframeData.r2 || null,
+                     muscularSector: moveframeData.muscularSector || null,
+                     exercise: moveframeData.exercise || null,
                      restType: null,
                      pause: moveframeData.pause || null,
                      alarm: moveframeData.alarm || null,

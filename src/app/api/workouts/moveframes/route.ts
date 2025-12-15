@@ -106,6 +106,8 @@ export async function POST(request: NextRequest) {
       reps: lap.reps || 1,
       r1: lap.r1 || null,
       r2: lap.r2 || null,
+      muscularSector: lap.muscularSector || null,
+      exercise: lap.exercise || null,
       restType: lap.restType || null,
       pause: lap.pause || null,
       alarm: lap.alarm ? parseInt(lap.alarm) : null,

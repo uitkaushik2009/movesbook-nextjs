@@ -25,6 +25,10 @@ export interface MoveframeFormData {
   r1: string;
   r2: string;
   
+  // Body building specific fields
+  muscularSector: string;
+  exercise: string;
+  
   // Annotation fields
   annotationText: string;
   annotationBgColor: string;
@@ -79,6 +83,10 @@ export function useMoveframeForm({
   const [reps, setReps] = useState('');
   const [r1, setR1] = useState('');
   const [r2, setR2] = useState('');
+  
+  // Body building specific fields
+  const [muscularSector, setMuscularSector] = useState('');
+  const [exercise, setExercise] = useState('');
 
   // Annotation fields
   const [annotationText, setAnnotationText] = useState('');
@@ -124,6 +132,8 @@ export function useMoveframeForm({
     setReps('');
     setR1('');
     setR2('');
+    setMuscularSector('');
+    setExercise('');
     setAnnotationText('');
     setAnnotationBgColor('#5168c2');
     setAnnotationTextColor('#000000');
@@ -168,6 +178,8 @@ export function useMoveframeForm({
 
     if (type === 'STANDARD' && !manualMode) {
       if (sport === 'BODY_BUILDING') {
+        if (!muscularSector) newErrors.muscularSector = 'Muscular sector is required';
+        if (!exercise) newErrors.exercise = 'Exercise is required';
         if (!reps) newErrors.reps = 'Reps is required';
       } else {
         if (!distance && distance !== 'custom') newErrors.distance = 'Distance is required';
@@ -200,7 +212,9 @@ export function useMoveframeForm({
 
     if (sport === 'BODY_BUILDING') {
       const macroFinalText = macroFinal ? ` M${macroFinal}` : '';
-      return `${reps} reps ${speed} ${pause ? `P${pause}` : ''}${macroFinalText}`;
+      const sectorText = muscularSector ? `${muscularSector} - ` : '';
+      const exerciseText = exercise || 'Exercise';
+      return `${sectorText}${exerciseText}: ${reps} reps ${speed} ${pause ? `P${pause}` : ''}${macroFinalText}`;
     }
 
     const dist = distance === 'custom' ? customDistance : distance;
@@ -238,6 +252,8 @@ export function useMoveframeForm({
       reps: sport === 'BODY_BUILDING' ? parseInt(reps) : null,
       r1: sport === 'BIKE' ? r1 : null,
       r2: sport === 'BIKE' ? r2 : null,
+      muscularSector: sport === 'BODY_BUILDING' ? muscularSector : null,
+      exercise: sport === 'BODY_BUILDING' ? exercise : null,
       
       // Annotation fields
       annotationText: type === 'ANNOTATION' ? annotationText : null,
@@ -262,22 +278,70 @@ export function useMoveframeForm({
    */
   useEffect(() => {
     if (mode === 'edit' && existingMoveframe) {
+      console.log('📝 Loading moveframe for editing:', existingMoveframe);
+      
+      // Set sport and type
       setSport(existingMoveframe.sport || 'SWIM');
-      setDistance(existingMoveframe.distance?.toString() || '100');
-      setRepetitions(existingMoveframe.repetitions?.toString() || '1');
-      setSpeed(existingMoveframe.speed || 'A2');
-      setStyle(existingMoveframe.style || '');
-      setPace(existingMoveframe.pace || '');
-      setTime(existingMoveframe.time || '');
-      setNote(existingMoveframe.notes || '');
-      setPause(existingMoveframe.pause || '20"');
-      setMacroFinal(existingMoveframe.macroFinal || "0'");
-      setAlarm(existingMoveframe.alarm?.toString() || '-1');
-      setSound(existingMoveframe.sound || 'Beep');
-      setReps(existingMoveframe.reps?.toString() || '');
-      setR1(existingMoveframe.r1 || '');
-      setR2(existingMoveframe.r2 || '');
-      setManualContent(existingMoveframe.description || '');
+      setType(existingMoveframe.type || 'STANDARD');
+      
+      // Handle ANNOTATION type
+      if (existingMoveframe.type === 'ANNOTATION') {
+        setAnnotationText(existingMoveframe.description || '');
+        // Try to extract colors from the description or use defaults
+        setAnnotationBgColor('#5168c2');
+        setAnnotationTextColor('#000000');
+        console.log('📝 Loaded ANNOTATION type');
+      }
+      // Handle BATTERY type
+      else if (existingMoveframe.type === 'BATTERY') {
+        setBatteryCount(existingMoveframe.movelaps?.length || 3);
+        console.log('📝 Loaded BATTERY type');
+      }
+      // Handle STANDARD type
+      else {
+        // Extract data from first movelap if available
+        const firstMovelap = existingMoveframe.movelaps?.[0];
+        
+        if (firstMovelap) {
+          console.log('📋 Loading data from first movelap:', firstMovelap);
+          
+          // Distance and repetitions
+          setDistance(firstMovelap.distance?.toString() || '100');
+          setRepetitions(existingMoveframe.movelaps?.length?.toString() || '1');
+          
+          // Speed, style, and notes
+          setSpeed(firstMovelap.speed || 'A2');
+          setStyle(firstMovelap.style || '');
+          setPace(firstMovelap.pace || '');
+          setTime(firstMovelap.time || '');
+          setNote(firstMovelap.notes || '');
+          
+          // Rest and alerts
+          setPause(firstMovelap.pause || '20"');
+          setMacroFinal(firstMovelap.macroFinal || "0'");
+          setAlarm(firstMovelap.alarm?.toString() || '-1');
+          setSound(firstMovelap.sound || 'Beep');
+          
+        // Special fields
+        setReps(firstMovelap.reps?.toString() || '');
+        setR1(firstMovelap.r1 || '');
+        setR2(firstMovelap.r2 || '');
+        setMuscularSector(firstMovelap.muscularSector || '');
+        setExercise(firstMovelap.exercise || '');
+        } else {
+          console.log('⚠️ No movelaps found, loading defaults');
+          setDistance('100');
+          setRepetitions('1');
+          setSpeed('A2');
+        }
+        
+        // Manual content
+        setManualContent(existingMoveframe.description || '');
+        
+        // Check if manual mode was used
+        setManualMode(false);
+        setManualPriority(false);
+      }
     } else {
       resetForm();
     }
@@ -306,6 +370,8 @@ export function useMoveframeForm({
       reps,
       r1,
       r2,
+      muscularSector,
+      exercise,
       annotationText,
       annotationBgColor,
       annotationTextColor,
@@ -335,6 +401,8 @@ export function useMoveframeForm({
       setReps,
       setR1,
       setR2,
+      setMuscularSector,
+      setExercise,
       setAnnotationText,
       setAnnotationBgColor,
       setAnnotationTextColor,

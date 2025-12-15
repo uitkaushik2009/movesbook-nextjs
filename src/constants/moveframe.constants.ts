@@ -8,13 +8,31 @@ export const MACRO_FINAL_OPTIONS = [
   "0'", "1'", "2'", "3'", "4'", "5'", "6'", "7'", "8'", "9'"
 ];
 
+// Muscular sectors for BODY_BUILDING
+export const MUSCULAR_SECTORS = [
+  'Shoulders',
+  'Anterior arms',
+  'Rear arms',
+  'Forearms',
+  'Chest',
+  'Abdominals',
+  'Intercostals',
+  'Trapezius',
+  'Lats',
+  'Lumbosacral',
+  'Front thighs',
+  'Hind thighs',
+  'Calves',
+  'Tibials'
+];
+
 // Sport-specific field configurations
 export const SPORT_CONFIGS = {
   SWIM: {
     meters: ['20', '50', '75', '100', '150', '200', '400', '500', '800', '1000', '1200', '1500'],
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
     styles: ['Freestyle', 'Dolphin', 'Backstroke', 'Breaststroke', 'Sliding', 'Apnea'],
-    pauses: ['0"', '5"', '10"', '15"', '20"', '25"', '30"', '35"', '40"', '45"', '50"', "1'", "1'10\"", "1'15\"", "1'30\"", "2'", "2'30\"", "3'"],
+    pauses: ['0', '0"', '5"', '10"', '15"', '20"', '25"', '30"', '35"', '40"', '45"', '50"', "1'", "1'10\"", "1'15\"", "1'30\"", "2'", "2'30\"", "3'"],
     macroFinals: MACRO_FINAL_OPTIONS,
     alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
     sounds: ['Beep', 'Bell', 'Chime', 'None']
@@ -23,7 +41,7 @@ export const SPORT_CONFIGS = {
     meters: ['50', '60', '80', '100', '110', '150', '200', '300', '400', '500', '600', '800', '1000', '1200', '1500', '2000', '3000', '5000', '10000'],
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
     styles: ['Track', 'Road', 'Cross', 'Beach', 'Hill', 'Downhill'],
-    pauses: ['20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+    pauses: ['0', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
     macroFinals: MACRO_FINAL_OPTIONS,
     alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
     sounds: ['Beep', 'Bell', 'Chime', 'None']
@@ -31,14 +49,14 @@ export const SPORT_CONFIGS = {
   BIKE: {
     meters: ['200', '400', '500', '1000', '1500', '2000', '3000', '4000', '5000', '7000', '8000', '10000', 'custom'],
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
-    pauses: ['15"', '30"', '45"', "1'", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'"],
+    pauses: ['0', '15"', '30"', '45"', "1'", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'"],
     macroFinals: MACRO_FINAL_OPTIONS,
     alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
     sounds: ['Beep', 'Bell', 'Chime', 'None']
   },
   BODY_BUILDING: {
     speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive', 'Negative'],
-    pauses: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+    pauses: ['0', '0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
     macroFinals: MACRO_FINAL_OPTIONS,
     alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
     sounds: ['Beep', 'Bell', 'Chime', 'None']
