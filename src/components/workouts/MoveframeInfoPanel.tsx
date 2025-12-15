@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { X, Edit, Copy, Move, Trash2, Plus, CheckCircle, Circle, Clock, MapPin, Zap, PlusCircle } from 'lucide-react';
+import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
+import { useSportIconType } from '@/hooks/useSportIconType';
 
 interface MoveframeInfoPanelProps {
   isOpen: boolean;
@@ -35,6 +37,8 @@ export default function MoveframeInfoPanel({
   onBulkAddMovelaps
 }: MoveframeInfoPanelProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'movelaps' | 'stats'>('overview');
+  const iconType = useSportIconType();
+  const useImageIcons = isImageIcon(iconType);
 
   if (!isOpen) return null;
 
@@ -54,21 +58,6 @@ export default function MoveframeInfoPanel({
     return sum;
   }, 0);
   const totalReps = movelaps.reduce((sum: number, ml: any) => sum + (ml.reps || 0), 0);
-
-  // Get sport icon
-  const getSportIcon = (sport: string): string => {
-    const icons: Record<string, string> = {
-      'SWIM': '🏊',
-      'BIKE': '🚴',
-      'RUN': '🏃',
-      'BODY_BUILDING': '💪',
-      'ROWING': '🚣',
-      'SKATE': '⛸️',
-      'GYMNASTIC': '🤸',
-      'STRETCHING': '🧘',
-    };
-    return icons[sport] || '🏃';
-  };
 
   // Get section color
   const sectionColor = moveframe.section?.color || '#6366f1';
@@ -100,7 +89,15 @@ export default function MoveframeInfoPanel({
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-4xl">{getSportIcon(moveframe.sport)}</span>
+                {useImageIcons ? (
+                  <img 
+                    src={getSportIcon(moveframe.sport, iconType)} 
+                    alt={moveframe.sport} 
+                    className="w-12 h-12 object-cover rounded" 
+                  />
+                ) : (
+                  <span className="text-4xl">{getSportIcon(moveframe.sport, iconType)}</span>
+                )}
                 <div>
                   <h2 className="text-2xl font-bold">
                     Moveframe {moveframe.letter}

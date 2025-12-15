@@ -13,6 +13,7 @@ interface DayTableViewProps {
   expandedWorkouts?: Set<string>;
   onToggleDay?: (dayId: string) => void;
   onToggleWorkout?: (workoutId: string) => void;
+  onExpandDayWithAllWorkouts?: (dayId: string, workouts: any[]) => void;
   onEditDay?: (day: any) => void;
   onAddWorkout?: (day: any) => void;
   onCopyDay?: (day: any) => void;
@@ -41,6 +42,7 @@ export default function DayTableView({
   expandedWorkouts,
   onToggleDay,
   onToggleWorkout,
+  onExpandDayWithAllWorkouts,
   onEditDay,
   onAddWorkout,
   onCopyDay,
@@ -72,6 +74,9 @@ export default function DayTableView({
   
   const expandedDaysSet = expandedDays || new Set<string>();
   const expandedWorkoutsSet = expandedWorkouts || new Set<string>();
+  
+  console.log('📅 DayTableView: expandedDays:', Array.from(expandedDaysSet));
+  console.log('🏋️ DayTableView: expandedWorkouts:', Array.from(expandedWorkoutsSet));
   
   // Constants for UI dimensions
   const SCROLLBAR_HEIGHT = 24; // px
@@ -282,7 +287,7 @@ export default function DayTableView({
             <thead className="bg-blue-600 text-white sticky top-0 z-20 shadow-md">
              <tr>
                <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts }} rowSpan={2}>
-                 No<br/>workouts
+                 Check
                </th>
                <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-2" style={{ width: COL_WIDTHS.colorCycle, minWidth: COL_WIDTHS.colorCycle }} rowSpan={2}>
                  Color<br/>cycle
@@ -374,6 +379,8 @@ export default function DayTableView({
                   currentWeek={currentWeek}
                   isExpanded={expandedDaysSet.has(day.id)}
                   onToggleDay={onToggleDay!}
+                  onToggleWorkout={onToggleWorkout}
+                  onExpandDayWithAllWorkouts={onExpandDayWithAllWorkouts}
                   onEditDay={onEditDay}
                   onAddWorkout={onAddWorkout}
                   onShowDayInfo={handleShowDayInfo}

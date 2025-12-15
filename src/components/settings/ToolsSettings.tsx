@@ -3,72 +3,52 @@
 import { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, GripVertical, ArrowUpAZ, ArrowDownZA, Save, X, Download, Globe, Image as ImageIcon, Smile } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
-
-type IconType = 'emoji' | 'bw_icons';
-
-interface Period {
-  id: string;
-  title: string;
-  description: string;
-  color: string;
-  order: number;
-}
-
-interface WorkoutSection {
-  id: string;
-  title: string;
-  description: string;
-  color: string;
-  order: number;
-}
-
-interface Sport {
-  id: string;
-  name: string;
-  icon: string;
-  order: number;
-  isTop5: boolean;
-}
-
-interface Equipment {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  inStock: boolean;
-}
-
-interface Exercise {
-  id: string;
-  name: string;
-  category: string;
-  description: string;
-  equipment: string[];
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  muscleGroups: string[];
-}
-
-interface Device {
-  id: string;
-  name: string;
-  brand: string;
-  model: string;
-  type: 'Watch' | 'Tracker' | 'Monitor' | 'Scale' | 'Sensor' | 'Other';
-  compatibility: string[];
-  isEnabled: boolean;
-  syncProtocol: string;
-  description: string;
-}
+import { useToolsData } from '@/hooks/useToolsData';
+import {
+  Period,
+  WorkoutSection,
+  Sport,
+  Equipment,
+  Exercise,
+  Device,
+  IconType,
+  ToolsTab,
+  SUPPORTED_LANGUAGES,
+  filterBySearch,
+  filterByCategory,
+  reorderItems
+} from '@/constants/tools.constants';
 
 export default function ToolsSettings() {
   const { t, currentLanguage } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'periods' | 'sections' | 'sports' | 'equipment' | 'exercises' | 'devices'>('periods');
-  const [periods, setPeriods] = useState<Period[]>([]);
-  const [sections, setSections] = useState<WorkoutSection[]>([]);
-  const [sports, setSports] = useState<Sport[]>([]);
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [devices, setDevices] = useState<Device[]>([]);
+  
+  // Use custom hook for data management
+  const {
+    periods,
+    sections,
+    sports,
+    equipment,
+    exercises,
+    devices,
+    iconType,
+    isLoadingIconPreference,
+    isSavingToDatabase,
+    lastSavedTime,
+    setPeriods,
+    setSections,
+    setSports,
+    setEquipment,
+    setExercises,
+    setDevices,
+    setIconType,
+    setIsSavingToDatabase,
+    setLastSavedTime,
+    loadToolsSettingsFromDatabase,
+    saveToLocalStorage,
+    saveToDatabase
+  } = useToolsData();
+  
+  const [activeTab, setActiveTab] = useState<ToolsTab>('periods');
   const [editingItem, setEditingItem] = useState<Period | WorkoutSection | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [newItem, setNewItem] = useState({ title: '', description: '', color: '#3b82f6' });
@@ -91,14 +71,6 @@ export default function ToolsSettings() {
   const [superAdminPassword, setSuperAdminPassword] = useState('');
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   
-  // Icon type preference
-  const [iconType, setIconType] = useState<IconType>('emoji');
-  const [isLoadingIconPreference, setIsLoadingIconPreference] = useState(true);
-  
-  // Save status
-  const [isSavingToDatabase, setIsSavingToDatabase] = useState(false);
-  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
-  
   // Auto-update selected language when user's language changes
   useEffect(() => {
     if (currentLanguage) {
@@ -106,427 +78,16 @@ export default function ToolsSettings() {
     }
   }, [currentLanguage]);
   
-  // Load icon type preference from settings
-  useEffect(() => {
-    const loadIconTypePreference = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setIsLoadingIconPreference(false);
-          return;
-        }
-        
-        const response = await fetch('/api/user/settings', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (response.ok) {
-          const settings = await response.json();
-          setIconType(settings.sportIconType || 'emoji');
-        }
-      } catch (error) {
-        console.error('Error loading icon type preference:', error);
-      } finally {
-        setIsLoadingIconPreference(false);
-      }
-    };
-    
-    loadIconTypePreference();
-  }, []);
-  
-  const supportedLanguages = [
-    { code: 'en', name: 'English' },
-    { code: 'fr', name: 'Français' },
-    { code: 'it', name: 'Italiano' },
-    { code: 'de', name: 'Deutsch' },
-    { code: 'es', name: 'Español' },
-    { code: 'pt', name: 'Português' },
-    { code: 'ru', name: 'Русский' },
-    { code: 'hi', name: 'हिन्दी' },
-    { code: 'ja', name: '日本語' },
-    { code: 'id', name: 'Indonesia' },
-    { code: 'zh', name: '中文' },
-    { code: 'ar', name: 'العربية' },
-  ];
+  // Data loading is now handled by useToolsData hook
+  // All loading functions removed - handled by useToolsData hook
 
-  // Load all tools settings from database first, then fallback to localStorage
-  useEffect(() => {
-    loadToolsSettingsFromDatabase();
-  }, []);
-
-  const loadToolsSettingsFromDatabase = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('/api/user/settings', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (response.ok) {
-        const settings = await response.json();
-        const toolsSettings = settings.toolsSettings || {};
-
-        // Load from database if available
-        if (toolsSettings.periods && toolsSettings.periods.length > 0) {
-          setPeriods(toolsSettings.periods);
-        } else {
-          loadPeriodsFromLocalStorage();
-        }
-
-        if (toolsSettings.sections && toolsSettings.sections.length > 0) {
-          setSections(toolsSettings.sections);
-        } else {
-          loadSectionsFromLocalStorage();
-        }
-
-        if (toolsSettings.sports && toolsSettings.sports.length > 0) {
-          setSports(toolsSettings.sports);
-        } else {
-          loadSportsFromLocalStorage();
-        }
-
-        if (toolsSettings.equipment && toolsSettings.equipment.length > 0) {
-          setEquipment(toolsSettings.equipment);
-        } else {
-          loadEquipmentFromLocalStorage();
-        }
-
-        if (toolsSettings.exercises && toolsSettings.exercises.length > 0) {
-          setExercises(toolsSettings.exercises);
-        } else {
-          loadExercisesFromLocalStorage();
-        }
-
-        if (toolsSettings.devices && toolsSettings.devices.length > 0) {
-          setDevices(toolsSettings.devices);
-        } else {
-          loadDevicesFromLocalStorage();
-        }
-      } else {
-        // Fallback to localStorage if API fails
-        loadAllFromLocalStorage();
-      }
-    } catch (error) {
-      console.error('Error loading tools settings from database:', error);
-      // Fallback to localStorage on error
-      loadAllFromLocalStorage();
-    }
+  // Manual save handler (uses hook)
+  const handleManualSave = async () => {
+    await saveToDatabase();
+    alert('✅ All tools settings saved to database successfully!');
   };
 
-  const loadAllFromLocalStorage = () => {
-    loadPeriodsFromLocalStorage();
-    loadSectionsFromLocalStorage();
-    loadSportsFromLocalStorage();
-    loadEquipmentFromLocalStorage();
-    loadExercisesFromLocalStorage();
-    loadDevicesFromLocalStorage();
-  };
-
-  const loadPeriodsFromLocalStorage = () => {
-    const savedPeriods = localStorage.getItem('workoutPeriods');
-    if (savedPeriods) {
-      try {
-        setPeriods(JSON.parse(savedPeriods));
-      } catch (e) {
-        console.error('Failed to load periods');
-        setDefaultPeriods();
-      }
-    } else {
-      setDefaultPeriods();
-    }
-  };
-
-  const loadSectionsFromLocalStorage = () => {
-    const savedSections = localStorage.getItem('workoutSections');
-    if (savedSections) {
-      try {
-        setSections(JSON.parse(savedSections));
-      } catch (e) {
-        console.error('Failed to load sections');
-        setDefaultSections();
-      }
-    } else {
-      setDefaultSections();
-    }
-  };
-
-  const loadSportsFromLocalStorage = () => {
-    const savedSports = localStorage.getItem('mainSports');
-    if (savedSports) {
-      try {
-        setSports(JSON.parse(savedSports));
-      } catch (e) {
-        console.error('Failed to load sports');
-        setDefaultSports();
-      }
-    } else {
-      setDefaultSports();
-    }
-  };
-
-  const setDefaultPeriods = () => {
-    setPeriods([
-      { id: '1', title: 'Preparation Phase', description: 'Building base fitness', color: '#3b82f6', order: 0 },
-      { id: '2', title: 'Competition Phase', description: 'Peak performance period', color: '#ef4444', order: 1 },
-      { id: '3', title: 'Recovery Phase', description: 'Active recovery and rest', color: '#10b981', order: 2 },
-    ]);
-  };
-
-  const setDefaultSections = () => {
-    setSections([
-      { id: '1', title: 'Warm-up', description: 'Preparation exercises', color: '#f59e0b', order: 0 },
-      { id: '2', title: 'Main Set', description: 'Primary workout', color: '#3b82f6', order: 1 },
-      { id: '3', title: 'Cool-down', description: 'Recovery exercises', color: '#10b981', order: 2 },
-    ]);
-  };
-
-  const setDefaultSports = () => {
-    setSports([
-        { id: '1', name: 'Swimming', icon: '🏊‍♂️', order: 0, isTop5: true },
-        { id: '2', name: 'Running', icon: '🏃‍♂️', order: 1, isTop5: true },
-        { id: '3', name: 'Cycling', icon: '🚴‍♂️', order: 2, isTop5: true },
-        { id: '4', name: 'Weightlifting', icon: '🏋️‍♂️', order: 3, isTop5: true },
-        { id: '5', name: 'Football/Soccer', icon: '⚽', order: 4, isTop5: true },
-        { id: '6', name: 'Basketball', icon: '🏀', order: 5, isTop5: false },
-        { id: '7', name: 'Tennis', icon: '🎾', order: 6, isTop5: false },
-        { id: '8', name: 'Volleyball', icon: '🏐', order: 7, isTop5: false },
-        { id: '9', name: 'Boxing', icon: '🥊', order: 8, isTop5: false },
-        { id: '10', name: 'Martial Arts', icon: '🥋', order: 9, isTop5: false },
-        { id: '11', name: 'Rowing', icon: '🚣‍♂️', order: 10, isTop5: false },
-        { id: '12', name: 'Yoga', icon: '🧘‍♂️', order: 11, isTop5: false },
-        { id: '13', name: 'Gymnastics', icon: '🤸‍♂️', order: 12, isTop5: false },
-        { id: '14', name: 'Skiing', icon: '⛷️', order: 13, isTop5: false },
-        { id: '15', name: 'Surfing', icon: '🏄‍♂️', order: 14, isTop5: false },
-        { id: '16', name: 'Golf', icon: '⛳', order: 15, isTop5: false },
-        { id: '17', name: 'Baseball', icon: '⚾', order: 16, isTop5: false },
-        { id: '18', name: 'Ice Hockey', icon: '🏒', order: 17, isTop5: false },
-        { id: '19', name: 'Rugby', icon: '🏉', order: 18, isTop5: false },
-        { id: '20', name: 'Climbing', icon: '🧗‍♂️', order: 19, isTop5: false },
-      ]);
-  };
-
-  const loadEquipmentFromLocalStorage = () => {
-    const savedEquipment = localStorage.getItem('equipment');
-    if (savedEquipment) {
-      try {
-        setEquipment(JSON.parse(savedEquipment));
-      } catch (e) {
-        console.error('Failed to load equipment');
-        setDefaultEquipment();
-      }
-    } else {
-      setDefaultEquipment();
-    }
-  };
-
-  const loadExercisesFromLocalStorage = () => {
-    const savedExercises = localStorage.getItem('exercises');
-    if (savedExercises) {
-      try {
-        setExercises(JSON.parse(savedExercises));
-      } catch (e) {
-        console.error('Failed to load exercises');
-        setDefaultExercises();
-      }
-    } else {
-      setDefaultExercises();
-    }
-  };
-
-  const loadDevicesFromLocalStorage = () => {
-    const savedDevices = localStorage.getItem('compatibleDevices');
-    if (savedDevices) {
-      try {
-        setDevices(JSON.parse(savedDevices));
-      } catch (e) {
-        console.error('Failed to load devices');
-        setDefaultDevices();
-      }
-    } else {
-      setDefaultDevices();
-    }
-  };
-
-  const setDefaultEquipment = () => {
-    setEquipment([
-      { id: '1', name: 'Treadmill', category: 'Cardio', description: 'Indoor running machine', inStock: true },
-      { id: '2', name: 'Dumbbells', category: 'Weights', description: 'Free weights for strength training', inStock: true },
-      { id: '3', name: 'Barbell', category: 'Weights', description: 'Long bar for heavy lifting', inStock: true },
-      { id: '4', name: 'Rowing Machine', category: 'Cardio', description: 'Full body cardio equipment', inStock: true },
-      { id: '5', name: 'Resistance Bands', category: 'Accessories', description: 'Elastic bands for resistance training', inStock: true },
-    ]);
-  };
-
-  const setDefaultExercises = () => {
-    setExercises([
-      { 
-        id: '1', 
-        name: 'Push-ups', 
-        category: 'Strength', 
-        description: 'Upper body exercise', 
-        equipment: [],
-        difficulty: 'Beginner',
-        muscleGroups: ['Chest', 'Triceps', 'Shoulders']
-      },
-      { 
-        id: '2', 
-        name: 'Squats', 
-        category: 'Strength', 
-        description: 'Lower body compound exercise', 
-        equipment: [],
-        difficulty: 'Beginner',
-        muscleGroups: ['Quadriceps', 'Glutes', 'Hamstrings']
-      },
-      { 
-        id: '3', 
-        name: 'Bench Press', 
-        category: 'Strength', 
-        description: 'Upper body pressing movement', 
-        equipment: ['Barbell', 'Bench'],
-        difficulty: 'Intermediate',
-        muscleGroups: ['Chest', 'Triceps', 'Shoulders']
-      },
-      { 
-        id: '4', 
-        name: 'Running Intervals', 
-        category: 'Cardio', 
-        description: 'High intensity interval training', 
-        equipment: ['Treadmill'],
-        difficulty: 'Intermediate',
-        muscleGroups: ['Legs', 'Core']
-      },
-      { 
-        id: '5', 
-        name: 'Deadlift', 
-        category: 'Strength', 
-        description: 'Full body compound movement', 
-        equipment: ['Barbell'],
-        difficulty: 'Advanced',
-        muscleGroups: ['Back', 'Legs', 'Core']
-      },
-    ]);
-  };
-
-  const setDefaultDevices = () => {
-    setDevices([
-      { 
-        id: '1', 
-        name: 'Apple Watch', 
-        brand: 'Apple',
-        model: 'Series 8, 9, Ultra',
-        type: 'Watch', 
-        compatibility: ['iOS', 'watchOS'],
-        isEnabled: true,
-        syncProtocol: 'HealthKit',
-        description: 'Syncs workout data via HealthKit API'
-      },
-      { 
-        id: '2', 
-        name: 'Garmin Forerunner', 
-        brand: 'Garmin',
-        model: '945, 955, 965',
-        type: 'Watch', 
-        compatibility: ['Garmin Connect'],
-        isEnabled: true,
-        syncProtocol: 'Garmin API',
-        description: 'Advanced GPS running and triathlon watch'
-      },
-      { 
-        id: '3', 
-        name: 'Fitbit Charge', 
-        brand: 'Fitbit',
-        model: 'Charge 5, 6',
-        type: 'Tracker', 
-        compatibility: ['iOS', 'Android'],
-        isEnabled: true,
-        syncProtocol: 'Fitbit API',
-        description: 'Fitness tracker with heart rate monitoring'
-      },
-      { 
-        id: '4', 
-        name: 'Polar H10', 
-        brand: 'Polar',
-        model: 'H10',
-        type: 'Monitor', 
-        compatibility: ['Bluetooth', 'ANT+'],
-        isEnabled: true,
-        syncProtocol: 'Bluetooth LE',
-        description: 'Chest strap heart rate monitor'
-      },
-      { 
-        id: '5', 
-        name: 'Withings Body+', 
-        brand: 'Withings',
-        model: 'Body+',
-        type: 'Scale', 
-        compatibility: ['Wi-Fi', 'Bluetooth'],
-        isEnabled: true,
-        syncProtocol: 'Withings API',
-        description: 'Smart scale with body composition analysis'
-      },
-    ]);
-  };
-
-  // Save all tools settings to database
-  const saveToolsSettingsToDatabase = async (showAlert = false) => {
-    try {
-      setIsSavingToDatabase(true);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No token found - user not logged in');
-        if (showAlert) {
-          alert('❌ Please login first to save settings');
-        }
-        return;
-      }
-      
-      const toolsSettings = {
-        periods,
-        sections,
-        sports,
-        equipment,
-        exercises,
-        devices
-      };
-
-      const response = await fetch('/api/user/settings', {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ toolsSettings })
-      });
-
-      if (response.ok) {
-        setLastSavedTime(new Date());
-        console.log('✅ Tools settings saved to database');
-        if (showAlert) {
-          alert('✅ All tools settings saved to database successfully!');
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('Failed to save tools settings:', response.status, errorData);
-        if (showAlert) {
-          alert(`❌ Failed to save settings: ${errorData.error || response.statusText}`);
-        }
-      }
-    } catch (error) {
-      console.error('Error saving tools settings to database:', error);
-      if (showAlert) {
-        alert('❌ Error saving settings to database: ' + (error as Error).message);
-      }
-    } finally {
-      setIsSavingToDatabase(false);
-    }
-  };
-
-  // Manual save handler (triggered by button click)
-  const handleManualSave = () => {
-    saveToolsSettingsToDatabase(true);
-  };
-
-  // Debounced auto-save to database (prevent spam)
+  // Debounced auto-save (uses hook)
   useEffect(() => {
     // Don't auto-save if data is being loaded initially
     if (periods.length === 0 && sections.length === 0 && sports.length === 0) {
@@ -534,16 +95,11 @@ export default function ToolsSettings() {
     }
     
     // Save to localStorage immediately (backup)
-    if (periods.length > 0) localStorage.setItem('workoutPeriods', JSON.stringify(periods));
-    if (sections.length > 0) localStorage.setItem('workoutSections', JSON.stringify(sections));
-    if (sports.length > 0) localStorage.setItem('mainSports', JSON.stringify(sports));
-    if (equipment.length > 0) localStorage.setItem('equipment', JSON.stringify(equipment));
-    if (exercises.length > 0) localStorage.setItem('exercises', JSON.stringify(exercises));
-    if (devices.length > 0) localStorage.setItem('compatibleDevices', JSON.stringify(devices));
+    saveToLocalStorage(periods, sections, sports, equipment, exercises, devices);
     
     // Debounce database save (wait 1 second after last change)
     const timeoutId = setTimeout(() => {
-      saveToolsSettingsToDatabase(false);
+      saveToDatabase();
     }, 1000);
     
     return () => clearTimeout(timeoutId);
@@ -699,7 +255,7 @@ export default function ToolsSettings() {
       const data = await response.json();
       
       if (response.ok) {
-        alert(`✅ Default tools settings saved for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}!`);
+        alert(`✅ Default tools settings saved for ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}!`);
         setShowPasswordDialog(false);
         setSuperAdminPassword('');
       } else {
@@ -718,7 +274,7 @@ export default function ToolsSettings() {
       const data = await response.json();
 
       if (response.ok && data.toolsData) {
-        const languageName = supportedLanguages.find(l => l.code === selectedLanguage)?.name;
+        const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name;
         
         // Replace current data with loaded language data
         if (data.toolsData.periods) {
@@ -743,7 +299,7 @@ export default function ToolsSettings() {
         alert(`✅ ${languageName} default settings loaded successfully!\n\nYou can now edit these items and click "Save as DEFAULT" to update the ${languageName} defaults.`);
         setShowLoadDialog(false);
       } else {
-        const languageName = supportedLanguages.find(l => l.code === selectedLanguage)?.name;
+        const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name;
         alert(`ℹ️ No default settings found for ${languageName}.\n\nPlease create defaults for this language by:\n1. Loading English defaults if available\n2. Translating the items\n3. Saving them as ${languageName} defaults`);
         setShowLoadDialog(false);
       }
@@ -937,7 +493,7 @@ export default function ToolsSettings() {
               onChange={(e) => setSelectedLanguage(e.target.value)}
               className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {supportedLanguages.map(lang => (
+              {SUPPORTED_LANGUAGES.map(lang => (
                 <option key={lang.code} value={lang.code}>{lang.name}</option>
               ))}
             </select>
@@ -946,15 +502,15 @@ export default function ToolsSettings() {
             <button
               onClick={loadLanguageDefaults}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-              title={`Load ${supportedLanguages.find(l => l.code === selectedLanguage)?.name} defaults`}
+              title={`Load ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} defaults`}
             >
               <Download className="w-3.5 h-3.5" />
-              Load ({supportedLanguages.find(l => l.code === selectedLanguage)?.code.toUpperCase()})
+              Load ({SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.code.toUpperCase()})
             </button>
             <button
               onClick={saveLanguageDefaults}
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition font-semibold"
-              title={`Save current tools as DEFAULT for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name} (requires Super Admin password)`}
+              title={`Save current tools as DEFAULT for ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} (requires Super Admin password)`}
             >
               <Save className="w-3.5 h-3.5" />
               Save as DEFAULT
@@ -2203,10 +1759,10 @@ export default function ToolsSettings() {
           <div className="bg-white rounded-2xl p-8 max-w-md w-full">
             <h3 className="text-xl font-semibold mb-4">🔐 Super Admin Authentication</h3>
             <p className="text-gray-600 mb-4">
-              You are about to save the current tools settings as <strong>DEFAULT</strong> for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>.
+              You are about to save the current tools settings as <strong>DEFAULT</strong> for <strong>{SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}</strong>.
             </p>
             <p className="text-sm text-orange-700 bg-orange-50 p-3 rounded-lg mb-4">
-              📌 <strong>Note:</strong> These settings will be automatically loaded when users select {supportedLanguages.find(l => l.code === selectedLanguage)?.name} as their language for the first time.
+              📌 <strong>Note:</strong> These settings will be automatically loaded when users select {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} as their language for the first time.
             </p>
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2247,22 +1803,22 @@ export default function ToolsSettings() {
       {showLoadDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <h3 className="text-xl font-semibold mb-4">📥 Load {supportedLanguages.find(l => l.code === selectedLanguage)?.name} Defaults</h3>
+            <h3 className="text-xl font-semibold mb-4">📥 Load {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} Defaults</h3>
             <p className="text-gray-600 mb-4">
-              Load default tools settings for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>?
+              Load default tools settings for <strong>{SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}</strong>?
             </p>
             <p className="text-sm text-blue-700 bg-blue-50 p-3 rounded-lg mb-4">
-              📖 <strong>How it works:</strong> This will load the saved {supportedLanguages.find(l => l.code === selectedLanguage)?.name} defaults. You can then edit them and click "Save as DEFAULT" to update them.
+              📖 <strong>How it works:</strong> This will load the saved {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} defaults. You can then edit them and click "Save as DEFAULT" to update them.
             </p>
             <p className="text-sm text-yellow-700 bg-yellow-50 p-3 rounded-lg mb-4">
-              ⚠️ <strong>Note:</strong> This will replace your current unsaved changes with the {supportedLanguages.find(l => l.code === selectedLanguage)?.name} defaults.
+              ⚠️ <strong>Note:</strong> This will replace your current unsaved changes with the {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} defaults.
             </p>
             <div className="flex gap-3">
               <button
                 onClick={handleLoadConfirm}
                 className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
               >
-                Load {supportedLanguages.find(l => l.code === selectedLanguage)?.name}
+                Load {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}
               </button>
               <button
                 onClick={() => setShowLoadDialog(false)}
@@ -2294,7 +1850,7 @@ export default function ToolsSettings() {
                   placeholder="Enter sport name in your language"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Translate the sport name into {supportedLanguages.find(l => l.code === selectedLanguage)?.name}
+                  Translate the sport name into {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}
                 </p>
               </div>
 
@@ -2315,7 +1871,7 @@ export default function ToolsSettings() {
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-xs text-blue-700">
-                  <strong>💡 Tip:</strong> After translating all sports, click "Save as DEFAULT" at the top to save them for {supportedLanguages.find(l => l.code === selectedLanguage)?.name}
+                  <strong>💡 Tip:</strong> After translating all sports, click "Save as DEFAULT" at the top to save them for {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}
                 </p>
               </div>
             </div>

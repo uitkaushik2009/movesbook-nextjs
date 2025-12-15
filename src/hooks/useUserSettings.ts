@@ -21,6 +21,7 @@ export interface UserSettings {
   theme: 'light' | 'dark' | 'auto' | 'time-based';
   fontSize: number;
   iconSize: 'small' | 'medium' | 'large';
+  sportIconType: 'emoji' | 'icon';
   
   // Accessibility
   enableAnimations: boolean;

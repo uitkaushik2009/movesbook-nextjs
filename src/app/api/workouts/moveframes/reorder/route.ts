@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { verifyToken } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
-
-// Helper function to convert index to letter (0=A, 1=B, ... 26=AA, etc.)
-function indexToLetter(index: number): string {
-  let result = '';
-  while (index >= 0) {
-    result = String.fromCharCode(65 + (index % 26)) + result;
-    index = Math.floor(index / 26) - 1;
-  }
-  return result;
-}
-
-// POST /api/workouts/moveframes/reorder - Reorder moveframes within a workout
-export async function POST(request: NextRequest) {
+/**
+ * PATCH /api/workouts/moveframes/reorder
+ * Reorder moveframes and update their letters alphabetically
+ * 
+ * Request Body:
+ * {
+ *   moveframes: [
+ *     { id: string, letter: string },
+ *     ...
+ *   ]
+ * }
+ */
+export async function PATCH(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
@@ -29,50 +28,60 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { workoutSessionId, moveframeOrders } = body;
-    // moveframeOrders: [{ moveframeId: string, newIndex: number }]
+    const { moveframes } = body;
 
-    if (!workoutSessionId || !moveframeOrders || !Array.isArray(moveframeOrders)) {
+    if (!moveframes || !Array.isArray(moveframes)) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Invalid request body. Expected { moveframes: [{ id, letter }] }' },
         { status: 400 }
       );
     }
 
-    // Verify the workout session belongs to user
-    const session = await prisma.workoutSession.findUnique({
-      where: { id: workoutSessionId },
-      include: {
-        workoutDay: {
-          include: {
-            workoutWeek: {
-              include: {
-                workoutPlan: true
-              }
-            }
+    // Validate that all moveframes belong to the user's workouts
+    const moveframeIds = moveframes.map((mf: any) => mf.id);
+    
+    const existingMoveframes = await prisma.moveframe.findMany({
+      where: {
+        id: { in: moveframeIds },
+        workoutSession: {
+          workoutDay: {
+            userId: decoded.userId
           }
         }
-      }
+      },
+      select: { id: true }
     });
 
-    if (!session || session.workoutDay.workoutWeek.workoutPlan.userId !== decoded.userId) {
+    if (existingMoveframes.length !== moveframeIds.length) {
       return NextResponse.json(
-        { error: 'Workout session not found or unauthorized' },
-        { status: 404 }
+        { error: 'Some moveframes do not exist or do not belong to the user' },
+        { status: 403 }
       );
     }
 
-    // Update each moveframe's letter based on new index
-    const updatePromises = moveframeOrders.map((order: any) =>
-      prisma.moveframe.update({
-        where: { id: order.moveframeId },
-        data: { letter: indexToLetter(order.newIndex) }
-      })
+    // Update each moveframe's letter in a transaction
+    await prisma.$transaction(
+      moveframes.map((mf: any) => 
+        prisma.moveframe.update({
+          where: { id: mf.id },
+          data: { letter: mf.letter }
+        })
+      )
     );
 
-    await Promise.all(updatePromises);
+    // Note: Movelap letters are dynamically derived from parent moveframe
+    // No need to update movelaps separately - they will automatically 
+    // display with the correct letter based on their parent moveframe
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      { 
+        success: true, 
+        message: 'Moveframes reordered successfully',
+        updatedCount: moveframes.length
+      },
+      { status: 200 }
+    );
+
   } catch (error) {
     console.error('Error reordering moveframes:', error);
     return NextResponse.json(
@@ -81,4 +90,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

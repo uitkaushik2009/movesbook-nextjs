@@ -5,180 +5,14 @@ import { Palette, Eye, RefreshCw, Download, Upload, Save, AlertCircle, ChevronDo
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserSettings } from '@/hooks/useUserSettings';
-
-interface MovelapRowSettings {
-  codeSection: { color: string; bold: boolean; displayMode: 'always' | 'once' };
-  movaAction: { color: string; bold: boolean; displayMode: 'always' | 'once' };
-  exercise: { color: string; bold: boolean };
-  style: { color: string };
-  speed: { color: string; bold: boolean };
-  time: { color: string; bold: boolean; fontStyle: 'normal' | 'italic' };
-  pace: { color: string; fontStyle: 'normal' | 'italic' };
-  recoverRest: { color: string; bold: boolean; fontStyle: 'normal' | 'italic' };
-  restartTo: { color: string; bold: boolean; fontStyle: 'normal' | 'italic' };
-  annotations: { color: string };
-  aimSound: { color: string };
-}
-
-interface ColorSettings {
-  pageBackground: string;
-  pageBackgroundOpacity: number;
-  weekHeader: string;
-  weekHeaderText: string;
-  dayHeader: string;
-  dayHeaderText: string;
-  dayAlternateRow: string;
-  dayAlternateRowText: string;
-  workoutHeader: string;
-  workoutHeaderText: string;
-  workout2Header: string;
-  workout2HeaderText: string;
-  workout3Header: string;
-  workout3HeaderText: string;
-  moveframeHeader: string;
-  moveframeHeaderText: string;
-  movelapHeader: string;
-  movelapHeaderText: string;
-  microlapBackground: string;
-  microlapText: string;
-  selectedRow: string;
-  selectedRowText: string;
-  alternateRow: string;
-  alternateRowText: string;
-  alternateRowMovelap: string;
-  alternateRowTextMovelap: string;
-  buttonAdd: string;
-  buttonAddHover: string;
-  buttonAddText: string;
-  buttonAddHeaderText: string;
-  buttonEdit: string;
-  buttonEditHover: string;
-  buttonEditText: string;
-  buttonDelete: string;
-  buttonDeleteHover: string;
-  buttonDeleteText: string;
-  buttonPrint: string;
-  buttonPrintHover: string;
-  buttonPrintText: string;
-  buttonEditHeaderText: string;
-  buttonDeleteHeaderText: string;
-  buttonPrintHeaderText: string;
-  selectedRowMovelap: string;
-  selectedRowTextMovelap: string;
-  selectedRowMoveframe: string;
-  selectedRowTextMoveframe: string;
-  alternateRowMoveframe: string;
-  alternateRowTextMoveframe: string;
-  alternateRowmoveframe: string;
-  alternateRowTextmoveframe: string;
-  // Border settings - Separate for each section
-  dayBorderEnabled?: boolean;
-  dayBorderColor?: string;
-  dayBorderWidth?: string;
-  workoutBorderEnabled?: boolean;
-  workoutBorderColor?: string;
-  workoutBorderWidth?: string;
-  moveframeBorderEnabled?: boolean;
-  moveframeBorderColor?: string;
-  moveframeBorderWidth?: string;
-  movelapBorderEnabled?: boolean;
-  movelapBorderColor?: string;
-  movelapBorderWidth?: string;
-  // Movelaps Table settings
-  movelapTextColorSource?: 'table' | 'rows';
-  // Movelaps Rows settings
-  movelapRows?: MovelapRowSettings;
-}
-
-const defaultMovelapRows: MovelapRowSettings = {
-  codeSection: { color: '#1e293b', bold: true, displayMode: 'always' },
-  movaAction: { color: '#1e293b', bold: true, displayMode: 'always' },
-  exercise: { color: '#1e293b', bold: true },
-  style: { color: '#1e293b' },
-  speed: { color: '#1e293b', bold: true },
-  time: { color: '#1e293b', bold: true, fontStyle: 'normal' },
-  pace: { color: '#1e293b', fontStyle: 'normal' },
-  recoverRest: { color: '#1e293b', bold: true, fontStyle: 'normal' },
-  restartTo: { color: '#1e293b', bold: true, fontStyle: 'normal' },
-  annotations: { color: '#1e293b' },
-  aimSound: { color: '#1e293b' },
-};
-
-const defaultColors: ColorSettings = {
-  pageBackground: '#eeefe6',
-  pageBackgroundOpacity: 89,
-  weekHeader: '#6b7cde',
-  weekHeaderText: '#ffffff',
-  dayHeader: '#5168c2',
-  dayHeaderText: '#e6e6ad',
-  dayAlternateRow: '#e0f2fe',
-  dayAlternateRowText: '#0c4a6e',
-  workoutHeader: '#c6f8e2',
-  workoutHeaderText: '#2386d1',
-  workout2Header: '#fed7aa',
-  workout2HeaderText: '#9a3412',
-  workout3Header: '#c6f8e2',
-  workout3HeaderText: '#2386d1',
-  moveframeHeader: '#f7f2bb',
-  moveframeHeaderText: '#f61909',
-  movelapHeader: '#f7f7f7',
-  movelapHeaderText: '#f50a2d',
-  microlapBackground: '#f1f5f9',
-  microlapText: '#334155',
-  selectedRow: '#fef08a',
-  selectedRowText: '#ef4444',
-  alternateRow: '#f1f5f9',
-  alternateRowText: '#1e293b',
-  alternateRowMovelap: '#dbeafe',
-  alternateRowTextMovelap: '#1e293b',
-  buttonAdd: '#10b981',
-  buttonAddHover: '#059669',
-  buttonAddText: '#ffffff',
-  buttonAddHeaderText: '#ffffff',
-  buttonEdit: '#f59e0b',
-  buttonEditHover: '#d97706',
-  buttonEditText: '#ffffff',
-  buttonDelete: '#ef4444',
-  buttonDeleteHover: '#dc2626',
-  buttonDeleteText: '#ffffff',
-  buttonPrint: '#6b7280',
-  buttonPrintHover: '#4b5563',
-  buttonPrintText: '#ffffff',
-  buttonPrintHeaderText: '#ffffff',
-  buttonEditHeaderText: '#ffffff',
-  buttonDeleteHeaderText: '#ffffff',
-  selectedRowMovelap: '#fef08a',
-  selectedRowTextMovelap: '#ef4444',
-  alternateRowMoveframe: '#fef3c7',
-  alternateRowTextMoveframe: '#ef4444',
-  selectedRowMoveframe: '#fef08a',
-  selectedRowTextMoveframe: '#ef4444',
-  alternateRowmoveframe: '#dbeafe',
-  alternateRowTextmoveframe: '#1e293b',
-  movelapTextColorSource: 'table',
-  movelapRows: defaultMovelapRows,
-  // Day border settings
-  dayBorderEnabled: false,
-  dayBorderColor: '#000000',
-  dayBorderWidth: 'normal',
-  // Workout border settings
-  workoutBorderEnabled: false,
-  workoutBorderColor: '#000000',
-  workoutBorderWidth: 'normal',
-  // Moveframe border settings
-  moveframeBorderEnabled: false,
-  moveframeBorderColor: '#000000',
-  moveframeBorderWidth: 'normal',
-  // Movelap border settings
-  movelapBorderEnabled: false,
-  movelapBorderColor: '#000000',
-  movelapBorderWidth: 'normal'
-};
-
-interface ColorScheme {
-  name: string;
-  colors: ColorSettings;
-}
+import {
+  ColorSettings,
+  ColorScheme,
+  MovelapRowSettings,
+  DEFAULT_COLORS as defaultColors,
+  DEFAULT_MOVELAP_ROWS,
+  DEFAULT_EXPANDED_SECTIONS
+} from '@/constants/colors.constants';
 
 export default function BackgroundsColorsSettings() {
   const { t } = useLanguage();
@@ -192,13 +26,7 @@ export default function BackgroundsColorsSettings() {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [exportName, setExportName] = useState('');
   const [hoveredButton, setHoveredButton] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    headers: true,
-    buttons: true,
-    rows: false,
-    movelapsTable: false,
-    movelapsRows: false,
-  });
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(DEFAULT_EXPANDED_SECTIONS);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // Load color settings from database
@@ -1324,13 +1152,13 @@ export default function BackgroundsColorsSettings() {
                 <div className="space-y-3">
                   <ColorPicker
                     label="Text Color"
-                    value={colors.movelapRows?.codeSection.color || defaultMovelapRows.codeSection.color}
+                    value={colors.movelapRows?.codeSection.color || DEFAULT_MOVELAP_ROWS.codeSection.color}
                     onChange={(v) => {
                       const newRows: MovelapRowSettings = { 
-                        ...defaultMovelapRows,
+                        ...DEFAULT_MOVELAP_ROWS,
                         ...colors.movelapRows,
                         codeSection: { 
-                          ...defaultMovelapRows.codeSection,
+                          ...DEFAULT_MOVELAP_ROWS.codeSection,
                           ...(colors.movelapRows?.codeSection || {}), 
                           color: v 
                         }
@@ -1344,10 +1172,10 @@ export default function BackgroundsColorsSettings() {
                       checked={colors.movelapRows?.codeSection.bold ?? true}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           codeSection: { 
-                            ...defaultMovelapRows.codeSection,
+                            ...DEFAULT_MOVELAP_ROWS.codeSection,
                             ...(colors.movelapRows?.codeSection || {}), 
                             bold: e.target.checked 
                           }
@@ -1364,10 +1192,10 @@ export default function BackgroundsColorsSettings() {
                       value={colors.movelapRows?.codeSection.displayMode || 'always'}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           codeSection: { 
-                            ...defaultMovelapRows.codeSection,
+                            ...DEFAULT_MOVELAP_ROWS.codeSection,
                             ...(colors.movelapRows?.codeSection || {}), 
                             displayMode: e.target.value as 'always' | 'once' 
                           }
@@ -1389,13 +1217,13 @@ export default function BackgroundsColorsSettings() {
                 <div className="space-y-3">
                   <ColorPicker
                     label="Text Color"
-                    value={colors.movelapRows?.movaAction.color || defaultMovelapRows.movaAction.color}
+                    value={colors.movelapRows?.movaAction.color || DEFAULT_MOVELAP_ROWS.movaAction.color}
                     onChange={(v) => {
                       const newRows: MovelapRowSettings = { 
-                        ...defaultMovelapRows,
+                        ...DEFAULT_MOVELAP_ROWS,
                         ...colors.movelapRows,
                         movaAction: { 
-                          ...defaultMovelapRows.movaAction,
+                          ...DEFAULT_MOVELAP_ROWS.movaAction,
                           ...(colors.movelapRows?.movaAction || {}), 
                           color: v 
                         }
@@ -1409,10 +1237,10 @@ export default function BackgroundsColorsSettings() {
                       checked={colors.movelapRows?.movaAction.bold ?? true}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           movaAction: { 
-                            ...defaultMovelapRows.movaAction,
+                            ...DEFAULT_MOVELAP_ROWS.movaAction,
                             ...(colors.movelapRows?.movaAction || {}), 
                             bold: e.target.checked 
                           }
@@ -1429,10 +1257,10 @@ export default function BackgroundsColorsSettings() {
                       value={colors.movelapRows?.movaAction.displayMode || 'always'}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           movaAction: { 
-                            ...defaultMovelapRows.movaAction,
+                            ...DEFAULT_MOVELAP_ROWS.movaAction,
                             ...(colors.movelapRows?.movaAction || {}), 
                             displayMode: e.target.value as 'always' | 'once' 
                           }
@@ -1454,13 +1282,13 @@ export default function BackgroundsColorsSettings() {
                 <div className="space-y-3">
                   <ColorPicker
                     label="Text Color"
-                    value={colors.movelapRows?.exercise.color || defaultMovelapRows.exercise.color}
+                    value={colors.movelapRows?.exercise.color || DEFAULT_MOVELAP_ROWS.exercise.color}
                     onChange={(v) => {
                       const newRows: MovelapRowSettings = { 
-                        ...defaultMovelapRows,
+                        ...DEFAULT_MOVELAP_ROWS,
                         ...colors.movelapRows,
                         exercise: { 
-                          ...defaultMovelapRows.exercise,
+                          ...DEFAULT_MOVELAP_ROWS.exercise,
                           ...(colors.movelapRows?.exercise || {}), 
                           color: v 
                         }
@@ -1474,10 +1302,10 @@ export default function BackgroundsColorsSettings() {
                       checked={colors.movelapRows?.exercise.bold ?? true}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           exercise: { 
-                            ...defaultMovelapRows.exercise,
+                            ...DEFAULT_MOVELAP_ROWS.exercise,
                             ...(colors.movelapRows?.exercise || {}), 
                             bold: e.target.checked 
                           }
@@ -1496,13 +1324,13 @@ export default function BackgroundsColorsSettings() {
                 <h4 className="font-semibold text-sm text-gray-900 mb-3">Style</h4>
                 <ColorPicker
                   label="Text Color"
-                  value={colors.movelapRows?.style.color || defaultMovelapRows.style.color}
+                  value={colors.movelapRows?.style.color || DEFAULT_MOVELAP_ROWS.style.color}
                   onChange={(v) => {
                     const newRows: MovelapRowSettings = { 
-                      ...defaultMovelapRows,
+                      ...DEFAULT_MOVELAP_ROWS,
                       ...colors.movelapRows,
                       style: { 
-                        ...defaultMovelapRows.style,
+                        ...DEFAULT_MOVELAP_ROWS.style,
                         ...(colors.movelapRows?.style || {}), 
                         color: v 
                       }
@@ -1518,13 +1346,13 @@ export default function BackgroundsColorsSettings() {
                 <div className="space-y-3">
                   <ColorPicker
                     label="Text Color"
-                    value={colors.movelapRows?.speed.color || defaultMovelapRows.speed.color}
+                    value={colors.movelapRows?.speed.color || DEFAULT_MOVELAP_ROWS.speed.color}
                     onChange={(v) => {
                       const newRows: MovelapRowSettings = { 
-                        ...defaultMovelapRows,
+                        ...DEFAULT_MOVELAP_ROWS,
                         ...colors.movelapRows,
                         speed: { 
-                          ...defaultMovelapRows.speed,
+                          ...DEFAULT_MOVELAP_ROWS.speed,
                           ...(colors.movelapRows?.speed || {}), 
                           color: v 
                         }
@@ -1538,10 +1366,10 @@ export default function BackgroundsColorsSettings() {
                       checked={colors.movelapRows?.speed.bold ?? true}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           speed: { 
-                            ...defaultMovelapRows.speed,
+                            ...DEFAULT_MOVELAP_ROWS.speed,
                             ...(colors.movelapRows?.speed || {}), 
                             bold: e.target.checked 
                           }
@@ -1561,13 +1389,13 @@ export default function BackgroundsColorsSettings() {
                 <div className="space-y-3">
                   <ColorPicker
                     label="Text Color"
-                    value={colors.movelapRows?.time.color || defaultMovelapRows.time.color}
+                    value={colors.movelapRows?.time.color || DEFAULT_MOVELAP_ROWS.time.color}
                     onChange={(v) => {
                       const newRows: MovelapRowSettings = { 
-                        ...defaultMovelapRows,
+                        ...DEFAULT_MOVELAP_ROWS,
                         ...colors.movelapRows,
                         time: { 
-                          ...defaultMovelapRows.time,
+                          ...DEFAULT_MOVELAP_ROWS.time,
                           ...(colors.movelapRows?.time || {}), 
                           color: v 
                         }
@@ -1581,10 +1409,10 @@ export default function BackgroundsColorsSettings() {
                       checked={colors.movelapRows?.time.bold ?? true}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           time: { 
-                            ...defaultMovelapRows.time,
+                            ...DEFAULT_MOVELAP_ROWS.time,
                             ...(colors.movelapRows?.time || {}), 
                             bold: e.target.checked 
                           }
@@ -1601,10 +1429,10 @@ export default function BackgroundsColorsSettings() {
                       value={colors.movelapRows?.time.fontStyle || 'normal'}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           time: { 
-                            ...defaultMovelapRows.time,
+                            ...DEFAULT_MOVELAP_ROWS.time,
                             ...(colors.movelapRows?.time || {}), 
                             fontStyle: e.target.value as 'normal' | 'italic' 
                           }
@@ -1626,13 +1454,13 @@ export default function BackgroundsColorsSettings() {
                 <div className="space-y-3">
                   <ColorPicker
                     label="Text Color"
-                    value={colors.movelapRows?.pace.color || defaultMovelapRows.pace.color}
+                    value={colors.movelapRows?.pace.color || DEFAULT_MOVELAP_ROWS.pace.color}
                     onChange={(v) => {
                       const newRows: MovelapRowSettings = { 
-                        ...defaultMovelapRows,
+                        ...DEFAULT_MOVELAP_ROWS,
                         ...colors.movelapRows,
                         pace: { 
-                          ...defaultMovelapRows.pace,
+                          ...DEFAULT_MOVELAP_ROWS.pace,
                           ...(colors.movelapRows?.pace || {}), 
                           color: v 
                         }
@@ -1646,10 +1474,10 @@ export default function BackgroundsColorsSettings() {
                       value={colors.movelapRows?.pace.fontStyle || 'normal'}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           pace: { 
-                            ...defaultMovelapRows.pace,
+                            ...DEFAULT_MOVELAP_ROWS.pace,
                             ...(colors.movelapRows?.pace || {}), 
                             fontStyle: e.target.value as 'normal' | 'italic' 
                           }
@@ -1671,13 +1499,13 @@ export default function BackgroundsColorsSettings() {
                 <div className="space-y-3">
                   <ColorPicker
                     label="Text Color"
-                    value={colors.movelapRows?.recoverRest.color || defaultMovelapRows.recoverRest.color}
+                    value={colors.movelapRows?.recoverRest.color || DEFAULT_MOVELAP_ROWS.recoverRest.color}
                     onChange={(v) => {
                       const newRows: MovelapRowSettings = { 
-                        ...defaultMovelapRows,
+                        ...DEFAULT_MOVELAP_ROWS,
                         ...colors.movelapRows,
                         recoverRest: { 
-                          ...defaultMovelapRows.recoverRest,
+                          ...DEFAULT_MOVELAP_ROWS.recoverRest,
                           ...(colors.movelapRows?.recoverRest || {}), 
                           color: v 
                         }
@@ -1691,10 +1519,10 @@ export default function BackgroundsColorsSettings() {
                       checked={colors.movelapRows?.recoverRest.bold ?? true}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           recoverRest: { 
-                            ...defaultMovelapRows.recoverRest,
+                            ...DEFAULT_MOVELAP_ROWS.recoverRest,
                             ...(colors.movelapRows?.recoverRest || {}), 
                             bold: e.target.checked 
                           }
@@ -1711,10 +1539,10 @@ export default function BackgroundsColorsSettings() {
                       value={colors.movelapRows?.recoverRest.fontStyle || 'normal'}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           recoverRest: { 
-                            ...defaultMovelapRows.recoverRest,
+                            ...DEFAULT_MOVELAP_ROWS.recoverRest,
                             ...(colors.movelapRows?.recoverRest || {}), 
                             fontStyle: e.target.value as 'normal' | 'italic' 
                           }
@@ -1736,13 +1564,13 @@ export default function BackgroundsColorsSettings() {
                 <div className="space-y-3">
                   <ColorPicker
                     label="Text Color"
-                    value={colors.movelapRows?.restartTo.color || defaultMovelapRows.restartTo.color}
+                    value={colors.movelapRows?.restartTo.color || DEFAULT_MOVELAP_ROWS.restartTo.color}
                     onChange={(v) => {
                       const newRows: MovelapRowSettings = { 
-                        ...defaultMovelapRows,
+                        ...DEFAULT_MOVELAP_ROWS,
                         ...colors.movelapRows,
                         restartTo: { 
-                          ...defaultMovelapRows.restartTo,
+                          ...DEFAULT_MOVELAP_ROWS.restartTo,
                           ...(colors.movelapRows?.restartTo || {}), 
                           color: v 
                         }
@@ -1756,10 +1584,10 @@ export default function BackgroundsColorsSettings() {
                       checked={colors.movelapRows?.restartTo.bold ?? true}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           restartTo: { 
-                            ...defaultMovelapRows.restartTo,
+                            ...DEFAULT_MOVELAP_ROWS.restartTo,
                             ...(colors.movelapRows?.restartTo || {}), 
                             bold: e.target.checked 
                           }
@@ -1776,10 +1604,10 @@ export default function BackgroundsColorsSettings() {
                       value={colors.movelapRows?.restartTo.fontStyle || 'normal'}
                       onChange={(e) => {
                         const newRows: MovelapRowSettings = { 
-                          ...defaultMovelapRows,
+                          ...DEFAULT_MOVELAP_ROWS,
                           ...colors.movelapRows,
                           restartTo: { 
-                            ...defaultMovelapRows.restartTo,
+                            ...DEFAULT_MOVELAP_ROWS.restartTo,
                             ...(colors.movelapRows?.restartTo || {}), 
                             fontStyle: e.target.value as 'normal' | 'italic' 
                           }
@@ -1800,13 +1628,13 @@ export default function BackgroundsColorsSettings() {
                 <h4 className="font-semibold text-sm text-gray-900 mb-3">Annotations</h4>
                 <ColorPicker
                   label="Text Color"
-                  value={colors.movelapRows?.annotations.color || defaultMovelapRows.annotations.color}
+                  value={colors.movelapRows?.annotations.color || DEFAULT_MOVELAP_ROWS.annotations.color}
                   onChange={(v) => {
                     const newRows: MovelapRowSettings = { 
-                      ...defaultMovelapRows,
+                      ...DEFAULT_MOVELAP_ROWS,
                       ...colors.movelapRows,
                       annotations: { 
-                        ...defaultMovelapRows.annotations,
+                        ...DEFAULT_MOVELAP_ROWS.annotations,
                         ...(colors.movelapRows?.annotations || {}), 
                         color: v 
                       }
@@ -1821,13 +1649,13 @@ export default function BackgroundsColorsSettings() {
                 <h4 className="font-semibold text-sm text-gray-900 mb-3">Aim & Sound</h4>
                 <ColorPicker
                   label="Text Color"
-                  value={colors.movelapRows?.aimSound.color || defaultMovelapRows.aimSound.color}
+                  value={colors.movelapRows?.aimSound.color || DEFAULT_MOVELAP_ROWS.aimSound.color}
                   onChange={(v) => {
                     const newRows: MovelapRowSettings = { 
-                      ...defaultMovelapRows,
+                      ...DEFAULT_MOVELAP_ROWS,
                       ...colors.movelapRows,
                       aimSound: { 
-                        ...defaultMovelapRows.aimSound,
+                        ...DEFAULT_MOVELAP_ROWS.aimSound,
                         ...(colors.movelapRows?.aimSound || {}), 
                         color: v 
                       }

@@ -1,26 +1,23 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom';
 import { useDroppable } from '@dnd-kit/core';
 import { ChevronDown } from 'lucide-react';
 import EditableCell from './EditableCell';
 import { useColorSettings } from '@/hooks/useColorSettings';
-
-interface SportSummary {
-  sport: string;
-  icon: string;
-  name: string; // Section name
-  distance: number;
-  duration: string;
-  color: string;
-}
+import { isImageIcon } from '@/utils/sportIcons';
+import { useSportIconType } from '@/hooks/useSportIconType';
+import { useDropdownPosition } from '@/hooks/useDropdownPosition';
+import { calculateSportSummaries, type SportSummary } from '@/utils/workoutHelpers';
 
 interface DayRowTableProps {
   day: any;
   currentWeek: any;
   isExpanded: boolean;
   onToggleDay: (dayId: string) => void;
+  onToggleWorkout?: (workoutId: string) => void;  // Added for clickable workout numbers
+  onExpandDayWithAllWorkouts?: (dayId: string, workouts: any[]) => void; // For row click
   onEditDay?: (day: any) => void;
   onAddWorkout?: (day: any) => void;
   onShowDayInfo?: (day: any) => void;
@@ -30,74 +27,13 @@ interface DayRowTableProps {
   onDeleteDay?: (day: any) => void;
 }
 
-// Helper to get sport icon
-const getSportIcon = (sport: string): string => {
-  const icons: Record<string, string> = {
-    'SWIM': '🏊',
-    'BIKE': '🚴',
-    'RUN': '🏃',
-    'BODY_BUILDING': '💪',
-    'ROWING': '🚣',
-    'SKATE': '⛸️',
-    'GYMNASTIC': '🤸',
-    'STRETCHING': '🧘',
-    'PILATES': '🧘',
-    'SKI': '⛷️',
-    'TECHNICAL_MOVES': '⚙️',
-    'FREE_MOVES': '🤾'
-  };
-  return icons[sport] || '🏋️';
-};
-
-// Calculate sport summaries for the day (up to 4 sports)
-const calculateSportSummaries = (day: any): SportSummary[] => {
-  if (!day.workouts || day.workouts.length === 0) {
-    return [];
-  }
-
-  const sportMap = new Map<string, SportSummary>();
-
-  day.workouts.forEach((workout: any) => {
-    if (workout.moveframes) {
-      workout.moveframes.forEach((moveframe: any) => {
-        const sport = moveframe.sport;
-        const sectionName = moveframe.section?.name || 'No Section';
-        const sectionColor = moveframe.section?.color || '#E5E7EB';
-        
-        if (!sportMap.has(sport)) {
-          sportMap.set(sport, {
-            sport,
-            icon: getSportIcon(sport),
-            name: sectionName,
-            distance: 0,
-            duration: '0:00',
-            color: sectionColor
-          });
-        }
-
-        const summary = sportMap.get(sport)!;
-        
-        // Sum distances from movelaps
-        if (moveframe.movelaps) {
-          moveframe.movelaps.forEach((movelap: any) => {
-            if (movelap.distance) {
-              summary.distance += Number(movelap.distance);
-            }
-          });
-        }
-      });
-    }
-  });
-
-  // Return up to 4 sports
-  return Array.from(sportMap.values()).slice(0, 4);
-};
-
 export default function DayRowTable({
   day,
   currentWeek,
   isExpanded,
   onToggleDay,
+  onToggleWorkout,
+  onExpandDayWithAllWorkouts,
   onEditDay,
   onAddWorkout,
   onShowDayInfo,
@@ -107,20 +43,33 @@ export default function DayRowTable({
   onDeleteDay
 }: DayRowTableProps) {
   const { colors, getBorderStyle } = useColorSettings();
+  const iconType = useSportIconType();
   const hasWorkouts = day.workouts && day.workouts.length > 0;
   const dayWithWeek = { ...day, weekNumber: currentWeek?.weekNumber };
-  const sportSummaries = calculateSportSummaries(day);
+  const sportSummaries = calculateSportSummaries(day, iconType);
+  const useImageIcons = isImageIcon(iconType);
   
-  // Dropdown state
-  const [isOptionsOpen, setIsOptionsOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const dropdownContentRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  // Sort workouts by creation time (earliest = #1)
+  const sortedWorkouts = day.workouts 
+    ? [...day.workouts].sort((a, b) => {
+        // Sort by id (earlier id = earlier created) or by createdAt timestamp
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : parseInt(a.id) || 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : parseInt(b.id) || 0;
+        return timeA - timeB;
+      })
+    : [];
   
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  // Dropdown state management (using custom hook)
+  const {
+    isOpen: isOptionsOpen,
+    dropdownPosition,
+    dropdownRef,
+    dropdownContentRef,
+    buttonRef,
+    isMounted,
+    toggleDropdown,
+    closeDropdown
+  } = useDropdownPosition();
   
   // Make day row a drop zone
   const { setNodeRef, isOver } = useDroppable({
@@ -130,28 +79,6 @@ export default function DayRowTable({
       day: dayWithWeek
     }
   });
-  
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      // Check if click is outside both the button and the dropdown content
-      if (
-        buttonRef.current && !buttonRef.current.contains(target) &&
-        dropdownContentRef.current && !dropdownContentRef.current.contains(target)
-      ) {
-        setIsOptionsOpen(false);
-      }
-    };
-    
-    if (isOptionsOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOptionsOpen]);
 
   // Format date
   const dayDate = new Date(day.date);
@@ -175,11 +102,20 @@ export default function DayRowTable({
   return (
     <tr
       ref={setNodeRef}
-      className="day-row-table border-b transition-colors hover:opacity-90"
+      className="day-row-table border-b transition-colors hover:opacity-90 cursor-pointer"
       style={{
         backgroundColor: bgStyle,
         color: rowTextColor,
         border: borderStyle
+      }}
+      onClick={() => {
+        // Clicking on the row expands the day (shows workout headers) but collapses all moveframes
+        if (onExpandDayWithAllWorkouts && sortedWorkouts.length > 0) {
+          onExpandDayWithAllWorkouts(day.id, sortedWorkouts);
+        } else if (onToggleDay) {
+          // Fallback to regular toggle if no workouts
+          onToggleDay(day.id);
+        }
       }}
     >
       {/* No Workouts Checkbox */}
@@ -211,8 +147,11 @@ export default function DayRowTable({
       <td 
         className="border border-gray-200 px-2 py-2 text-xs font-bold cursor-pointer hover:bg-blue-100 sticky-col-4 w-[80px] min-w-[80px]"
         style={{ backgroundColor: bgStyle }}
-        onClick={() => onToggleDay(day.id)}
-        title="Click to expand/collapse"
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent row click
+          onToggleDay(day.id); // Toggle just the day (collapse/expand)
+        }}
+        title="Click to collapse/expand day only"
       >
         <div className="flex items-center gap-1">
           <span>{isExpanded ? '▼' : '▶'}</span>
@@ -237,10 +176,14 @@ export default function DayRowTable({
       </td>
 
       {/* Workout Sessions - Show numbers with symbols for each workout */}
-      <td className="border border-gray-200 px-1 py-2 text-center sticky-col-7" style={{ backgroundColor: bgStyle }}>
+      <td 
+        className="border border-gray-200 px-1 py-2 text-center sticky-col-7" 
+        style={{ backgroundColor: bgStyle }}
+        onClick={(e) => e.stopPropagation()} // Prevent row click when clicking on workout numbers
+      >
         <div className="flex items-center justify-center gap-1">
           {[1, 2, 3].map((num) => {
-            const workout = day.workouts?.[num - 1];
+            const workout = sortedWorkouts[num - 1]; // Use sorted workouts
             const symbols = ['○', '□', '△'];
             const symbol = symbols[num - 1];
             const hasData = workout && workout.moveframes && workout.moveframes.length > 0;
@@ -249,8 +192,18 @@ export default function DayRowTable({
             return (
               <span 
                 key={num} 
-                className={`text-xs font-bold ${colorClass} flex items-center gap-0.5`}
-                title={hasData ? `Workout ${num} (has data)` : `Workout ${num} (no data)`}
+                className={`text-xs font-bold ${colorClass} flex items-center gap-0.5 ${workout ? 'cursor-pointer hover:bg-blue-200 px-1 rounded transition-colors' : ''}`}
+                title={workout ? `Click to expand/collapse Workout ${num}` : `Workout ${num} (not created)`}
+                onClick={(e) => {
+                  if (workout && onToggleWorkout) {
+                    e.stopPropagation();
+                    onToggleWorkout(workout.id);
+                    // Also ensure the day is expanded
+                    if (!isExpanded) {
+                      onToggleDay(day.id);
+                    }
+                  }
+                }}
               >
                 {num}<span className="text-sm">{symbol}</span>
               </span>
@@ -263,7 +216,11 @@ export default function DayRowTable({
       <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[0] ? (
           <div className="flex items-center justify-center">
-            <span className="text-base">{sportSummaries[0].icon}</span>
+            {useImageIcons ? (
+              <img src={sportSummaries[0].icon} alt={sportSummaries[0].sport} className="w-5 h-5 object-cover rounded" />
+            ) : (
+              <span className="text-base">{sportSummaries[0].icon}</span>
+            )}
           </div>
         ) : (
           <span className="text-gray-400">—</span>
@@ -296,7 +253,11 @@ export default function DayRowTable({
       <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[1] ? (
           <div className="flex items-center justify-center">
-            <span className="text-base">{sportSummaries[1].icon}</span>
+            {useImageIcons ? (
+              <img src={sportSummaries[1].icon} alt={sportSummaries[1].sport} className="w-5 h-5 object-cover rounded" />
+            ) : (
+              <span className="text-base">{sportSummaries[1].icon}</span>
+            )}
           </div>
         ) : (
           <span className="text-gray-400">—</span>
@@ -329,7 +290,11 @@ export default function DayRowTable({
       <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[2] ? (
           <div className="flex items-center justify-center">
-            <span className="text-base">{sportSummaries[2].icon}</span>
+            {useImageIcons ? (
+              <img src={sportSummaries[2].icon} alt={sportSummaries[2].sport} className="w-5 h-5 object-cover rounded" />
+            ) : (
+              <span className="text-base">{sportSummaries[2].icon}</span>
+            )}
           </div>
         ) : (
           <span className="text-gray-400">—</span>
@@ -362,7 +327,11 @@ export default function DayRowTable({
       <td className="border border-gray-200 px-1 py-1 text-xs">
         {sportSummaries[3] ? (
           <div className="flex items-center justify-center">
-            <span className="text-base">{sportSummaries[3].icon}</span>
+            {useImageIcons ? (
+              <img src={sportSummaries[3].icon} alt={sportSummaries[3].sport} className="w-5 h-5 object-cover rounded" />
+            ) : (
+              <span className="text-base">{sportSummaries[3].icon}</span>
+            )}
           </div>
         ) : (
           <span className="text-gray-400">—</span>
@@ -395,6 +364,7 @@ export default function DayRowTable({
       <td 
         className="border border-gray-200 px-1 py-1 sticky-options-col"
         style={{ backgroundColor: bgStyle }}
+        onClick={(e) => e.stopPropagation()} // Prevent row click when clicking on buttons
       >
         <div className="flex gap-1 justify-center items-center relative" ref={dropdownRef}>
           {/* Edit Button */}
@@ -415,7 +385,7 @@ export default function DayRowTable({
               ref={buttonRef}
               onClick={(e) => {
                 e.stopPropagation();
-                setIsOptionsOpen(!isOptionsOpen);
+                toggleDropdown();
               }}
               className="px-2 py-1 text-[11px] bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors font-medium flex items-center gap-1"
               title="More Options"
@@ -430,13 +400,13 @@ export default function DayRowTable({
                 ref={dropdownContentRef}
                 className="fixed bg-white border border-gray-300 rounded-lg shadow-2xl z-[99999] min-w-[160px]" 
                 style={{
-                  top: `${(buttonRef.current?.getBoundingClientRect().bottom || 0) + 4}px`,
-                  left: `${(buttonRef.current?.getBoundingClientRect().left || 0)}px`
+                  top: `${dropdownPosition.top}px`,
+                  left: `${dropdownPosition.left}px`
                 }}>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsOptionsOpen(false);
+                    closeDropdown();
                     onAddWorkout?.(dayWithWeek);
                   }}
                   className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-50 transition-colors flex items-center gap-2"
@@ -447,7 +417,7 @@ export default function DayRowTable({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsOptionsOpen(false);
+                    closeDropdown();
                     onShowDayInfo?.(dayWithWeek);
                   }}
                   className="w-full text-left px-3 py-2 text-[11px] hover:bg-cyan-50 transition-colors flex items-center gap-2 border-t border-gray-200"
@@ -458,7 +428,7 @@ export default function DayRowTable({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsOptionsOpen(false);
+                    closeDropdown();
                     onCopyDay?.(dayWithWeek);
                   }}
                   className="w-full text-left px-3 py-2 text-[11px] hover:bg-purple-50 transition-colors flex items-center gap-2 border-t border-gray-200"
@@ -469,7 +439,7 @@ export default function DayRowTable({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsOptionsOpen(false);
+                    closeDropdown();
                     onMoveDay?.(dayWithWeek);
                   }}
                   className="w-full text-left px-3 py-2 text-[11px] hover:bg-orange-50 transition-colors flex items-center gap-2 border-t border-gray-200"
@@ -480,7 +450,7 @@ export default function DayRowTable({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setIsOptionsOpen(false);
+                    closeDropdown();
                     onPasteDay?.(dayWithWeek);
                   }}
                   className="w-full text-left px-3 py-2 text-[11px] hover:bg-green-50 transition-colors flex items-center gap-2 border-t border-gray-200"

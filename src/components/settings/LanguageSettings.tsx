@@ -1,39 +1,71 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Globe, Settings as SettingsIcon, FileText, ArrowUp, ArrowDown } from 'lucide-react';
 import { i18n } from '@/lib/i18n';
 import RichTextEditor from './RichTextEditor';
-
-interface Language {
-  id: string;
-  code: string;
-  name: string;
-  nativeName: string;
-  flag: string;
-  isActive: boolean;
-}
-
-interface TranslationKey {
-  key: string;
-  category: string;
-  descriptionEn: string;
-  values: Record<string, string>;
-  isDeleted?: boolean;
-}
-
-type LanguageTab = 'official' | 'settings' | 'texts';
+import { useLanguageData } from '@/hooks/useLanguageData';
+import { useColumnResize } from '@/hooks/useColumnResize';
+import { useTranslationEditor } from '@/hooks/useTranslationEditor';
+import {
+  Language,
+  TranslationKey,
+  LanguageTab,
+  ITEMS_PER_PAGE,
+  LONG_TEXT_THRESHOLD,
+  SEARCH_FIELD_OPTIONS,
+  TranslationCategory,
+  getFlagImageSrc,
+  getFlagSizeClass,
+  filterLongTexts,
+  filterByCategory,
+  filterBySearch
+} from '@/constants/language.constants';
 
 export default function LanguageSettings() {
+  // Use custom hooks for data and logic management
+  const {
+    languages,
+    allKeys,
+    filteredKeys,
+    isLoading,
+    loadLanguagesData,
+    loadStaticTranslations,
+    saveLanguageOrder,
+    setLanguages,
+    setAllKeys,
+    setFilteredKeys,
+    setIsLoading
+  } = useLanguageData();
+  
   const [activeTab, setActiveTab] = useState<LanguageTab>('official');
-  const [languages, setLanguages] = useState<Language[]>([]);
-  const [allKeys, setAllKeys] = useState<TranslationKey[]>([]);
-  const [filteredKeys, setFilteredKeys] = useState<TranslationKey[]>([]);
+  
+  const {
+    columnWidths,
+    resizingColumn,
+    scrollbarWidth,
+    scrollbarLeft,
+    scrollbarContainerWidth,
+    tableContainerRef,
+    scrollbarRef,
+    startResize,
+    setColumnWidths
+  } = useColumnResize(activeTab);
+  
+  const {
+    handleSave: saveTranslation,
+    handleSaveNewKey: saveNewTranslationKey,
+    handleDeleteOrRestore: deleteOrRestoreTranslation
+  } = useTranslationEditor();
+  
+  // Local state for translation progress
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  // Tab 1 state (Official Languages)
   const [currentIndex, setCurrentIndex] = useState(0);
   const [currentKey, setCurrentKey] = useState<TranslationKey | null>(null);
   const [variableName, setVariableName] = useState('');
   const [translations, setTranslations] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(true);
   const [searchField, setSearchField] = useState('variable_name');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -43,7 +75,7 @@ export default function LanguageSettings() {
   const [autoDetect, setAutoDetect] = useState(true);
   
   // Category filter for Language Long Texts
-  const [selectedCategory, setSelectedCategory] = useState<'system' | 'social' | 'management'>('system');
+  const [selectedCategory, setSelectedCategory] = useState<TranslationCategory>('system');
   
   // New language/translation key state
   const [showNewKeyModal, setShowNewKeyModal] = useState(false);
@@ -53,48 +85,16 @@ export default function LanguageSettings() {
   const [isLongTextModal, setIsLongTextModal] = useState(false);
   
   // Auto-translation state
-  const [isTranslating, setIsTranslating] = useState(false);
   const [englishText, setEnglishText] = useState('');
   const [showAllLanguages, setShowAllLanguages] = useState(false);
   
   // Tab 2 pagination state
   const [tab2Page, setTab2Page] = useState(1);
-  const itemsPerPage = 10;
   
   // Tab 2 search and edit state
   const [tab2SearchQuery, setTab2SearchQuery] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
-  
-  // Column widths state for Tab 2
-  const [columnWidths, setColumnWidths] = useState({
-    srNo: 60,
-    varName: 200,
-    en: 150,
-    it: 150,
-    fr: 150,
-    de: 150,
-    es: 150,
-    pt: 150,
-    ru: 150,
-    hi: 150,
-    ja: 150,
-    id: 150,
-    zh: 150,
-    ar: 150,
-    actions: 120
-  });
-  
-  const [resizingColumn, setResizingColumn] = useState<string | null>(null);
-  const [resizeStartX, setResizeStartX] = useState(0);
-  const [resizeStartWidth, setResizeStartWidth] = useState(0);
-  
-  // Refs for sticky scrollbar
-  const tableContainerRef = useRef<HTMLDivElement>(null);
-  const scrollbarRef = useRef<HTMLDivElement>(null);
-  const [scrollbarWidth, setScrollbarWidth] = useState(0);
-  const [scrollbarLeft, setScrollbarLeft] = useState(0);
-  const [scrollbarContainerWidth, setScrollbarContainerWidth] = useState(0);
   
   // Tab 3 search, view, and pagination state
   const [tab3SearchQuery, setTab3SearchQuery] = useState('');
@@ -108,45 +108,22 @@ export default function LanguageSettings() {
   const [pendingActionKey, setPendingActionKey] = useState<string | null>(null);
   const [adminPassword, setAdminPassword] = useState('');
 
-  // Load data on mount
-  useEffect(() => {
-    loadLanguagesData();
-    loadStaticTranslations();
-  }, []);
+  // Data loading is now handled by useLanguageData hook
 
   // Handle search and category filtering
   useEffect(() => {
     let filtered = allKeys;
     
-    // Tab 3: Filter for LONG texts only (any translation > 100 characters)
+    // Tab 3: Filter for LONG texts only (any translation > LONG_TEXT_THRESHOLD characters)
     if (activeTab === 'texts') {
-      filtered = filtered.filter((key) => {
-        // Check if ANY translation value is longer than 100 characters
-        const hasLongText = Object.values(key.values).some(val => 
-          val && val.length > 100
-        );
-        return hasLongText;
-      });
+      filtered = filterLongTexts(filtered);
       
       // Filter by Tab 3 search query - searches across ALL categories
       if (tab3SearchQuery.trim() !== '') {
-        filtered = filtered.filter((key) => {
-          const searchLower = tab3SearchQuery.toLowerCase();
-          return key.key.toLowerCase().includes(searchLower) ||
-                 Object.values(key.values).some(val => 
-                   val && val.toLowerCase().includes(searchLower)
-                 );
-        });
+        filtered = filterBySearch(filtered, tab3SearchQuery);
       } else {
         // Only apply category filter when there's NO search query
-        // For Tab 3 'system' category, include both 'system' and 'general' categories
-        if (selectedCategory === 'system') {
-          filtered = filtered.filter(key => 
-            key.category === 'system' || key.category === 'general'
-          );
-        } else {
-          filtered = filtered.filter(key => key.category === selectedCategory);
-        }
+        filtered = filterByCategory(filtered, selectedCategory);
       }
     }
     
@@ -200,110 +177,12 @@ export default function LanguageSettings() {
     }
   }, [activeTab]);
 
-  const loadLanguagesData = () => {
-    // Default active languages
-    const defaultActiveLanguages = ['en', 'fr', 'de', 'it', 'es', 'hi'];
-    
-    // Load saved active languages from localStorage
-    let activeLanguageCodes = defaultActiveLanguages;
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('activeLanguages');
-      if (saved) {
-        try {
-          activeLanguageCodes = JSON.parse(saved);
-        } catch (e) {
-          console.error('Error parsing active languages:', e);
-        }
-      }
-    }
-    
-    // Define all available languages with their default properties
-    const allLanguages: Language[] = [
-      { id: '1', code: 'en', name: 'English', nativeName: 'English', flag: '🇬🇧', isActive: activeLanguageCodes.includes('en') },
-      { id: '2', code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷', isActive: activeLanguageCodes.includes('fr') },
-      { id: '3', code: 'de', name: 'German', nativeName: 'Deutsch', flag: '🇩🇪', isActive: activeLanguageCodes.includes('de') },
-      { id: '4', code: 'it', name: 'Italian', nativeName: 'Italiano', flag: '🇮🇹', isActive: activeLanguageCodes.includes('it') },
-      { id: '5', code: 'es', name: 'Spanish', nativeName: 'Español', flag: '🇪🇸', isActive: activeLanguageCodes.includes('es') },
-      { id: '6', code: 'pt', name: 'Portuguese', nativeName: 'Português', flag: '🇵🇹', isActive: activeLanguageCodes.includes('pt') },
-      { id: '7', code: 'ru', name: 'Russian', nativeName: 'Русский', flag: '🇷🇺', isActive: activeLanguageCodes.includes('ru') },
-      { id: '8', code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳', isActive: activeLanguageCodes.includes('hi') },
-      { id: '9', code: 'zh', name: 'Chinese', nativeName: '中文', flag: '🇨🇳', isActive: activeLanguageCodes.includes('zh') },
-      { id: '10', code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', isActive: activeLanguageCodes.includes('ar') },
-      { id: '11', code: 'ja', name: 'Japanese', nativeName: '日本語', flag: '🇯🇵', isActive: activeLanguageCodes.includes('ja') },
-      { id: '12', code: 'id', name: 'Indonesian', nativeName: 'Bahasa Indonesia', flag: '🇮🇩', isActive: activeLanguageCodes.includes('id') },
-    ];
-    
-    // Load saved language order from localStorage
-    // Use languageOrder if available, otherwise use activeLanguages order
-    let languageOrder: string[] = [];
-    if (typeof window !== 'undefined') {
-      const savedOrder = localStorage.getItem('languageOrder');
-      if (savedOrder) {
-        try {
-          languageOrder = JSON.parse(savedOrder);
-        } catch (e) {
-          console.error('Error parsing language order:', e);
-        }
-      }
-      
-      // Fallback to activeLanguages order if languageOrder not set
-      if (languageOrder.length === 0) {
-        languageOrder = activeLanguageCodes;
-      }
-    }
-    
-    // Sort languages according to saved order
-    let sortedLanguages = [...allLanguages];
-    if (languageOrder.length > 0) {
-      sortedLanguages.sort((a, b) => {
-        const indexA = languageOrder.indexOf(a.code);
-        const indexB = languageOrder.indexOf(b.code);
-        
-        // If both are in the saved order, use that order
-        if (indexA !== -1 && indexB !== -1) {
-          return indexA - indexB;
-        }
-        // If only A is in saved order, it comes first
-        if (indexA !== -1) return -1;
-        // If only B is in saved order, it comes first
-        if (indexB !== -1) return 1;
-        // If neither is in saved order, maintain original order
-        return 0;
-      });
-    }
-    
-    setLanguages(sortedLanguages);
-  };
-  
+  // Flag component helper (now uses constants)
   const getFlagComponent = (code: string, size: 'small' | 'medium' | 'large' = 'medium') => {
-    // Map language codes to flag image filenames
-    const flagFiles: Record<string, string> = {
-      'en': 'en.png',
-      'fr': 'fr.png', 
-      'de': 'de.png',
-      'it': 'it.png',
-      'es': 'es.png',
-      'pt': 'por.png',
-      'ru': 'rus.png',
-      'hi': 'ind.png',
-      'zh': 'chin.png',
-      'ar': 'arab.png',
-      'ja': 'jap.png',
-      'id': 'id.png'
-    };
-    
-    const flagFile = flagFiles[code] || 'en.png';
-    
-    const sizeClasses = {
-      small: 'w-6 h-6',
-      medium: 'w-8 h-8',
-      large: 'w-12 h-12'
-    };
-    
     return (
-      <div className={`flex items-center justify-center ${sizeClasses[size]} rounded overflow-hidden`}>
+      <div className={`flex items-center justify-center ${getFlagSizeClass(size)} rounded overflow-hidden`}>
         <img 
-          src={`/flags/${flagFile}`} 
+          src={getFlagImageSrc(code)} 
           alt={`${code} flag`}
           className="w-full h-full object-cover"
         />
@@ -311,235 +190,30 @@ export default function LanguageSettings() {
     );
   };
 
-  const loadStaticTranslations = async () => {
-    setIsLoading(true);
-    try {
-      // Step 1: Load base translations from i18n (always available)
-      const availableLanguages = i18n.getLanguages();
-      const englishLang = availableLanguages.find(l => l.code === 'en');
-      
-      if (!englishLang) {
-        console.error('English language not found');
-        setIsLoading(false);
-        return;
-      }
-
-      const keys = Object.keys(englishLang.strings);
-      const i18nData: TranslationKey[] = keys.map((key) => {
-        const values: Record<string, string> = {};
-        
-        availableLanguages.forEach((lang) => {
-          values[lang.code] = lang.strings[key] || '';
-        });
-
-        return {
-          key: key,
-          category: getCategoryFromKey(key),
-          descriptionEn: `Translation for ${key}`,
-          values: values,
-        };
-      });
-
-      console.log('📖 Loaded base translations from i18n:', i18nData.length);
-      
-      // Step 2: Load edited translations from database and merge them
-      try {
-        const response = await fetch('/api/admin/translations');
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          if (data.success && data.translations && data.translations.length > 0) {
-            console.log('💾 Loaded edited translations from database:', data.translations.length);
-            
-            // Create a map of database translations by key
-            const dbMap = new Map<string, TranslationKey>();
-            data.translations.forEach((trans: TranslationKey) => {
-              dbMap.set(trans.key, trans);
-            });
-            
-            // Merge: use database version if exists, otherwise use i18n
-            const mergedData = i18nData.map(i18nTrans => {
-              const dbTrans = dbMap.get(i18nTrans.key);
-              if (dbTrans) {
-                // Database version exists - use it (admin edited this)
-                return dbTrans;
-              }
-              // No database version - use i18n default
-              return i18nTrans;
-            });
-            
-            // Also add any database translations that aren't in i18n (custom ones)
-            data.translations.forEach((trans: TranslationKey) => {
-              if (!i18nData.find(t => t.key === trans.key)) {
-                mergedData.push(trans);
-              }
-            });
-            
-            console.log('✅ Merged data ready:', mergedData.length, 'translations');
-            setAllKeys(mergedData);
-            setFilteredKeys(mergedData);
-            if (mergedData.length > 0) {
-              setCurrentIndex(0);
-            }
-            
-            // Update i18n with deleted keys
-            const deletedKeys = mergedData
-              .filter(t => t.isDeleted)
-              .map(t => t.key);
-            if (deletedKeys.length > 0) {
-              i18n.setDeletedKeys(deletedKeys);
-              console.log('🗑️ Updated deleted keys in i18n:', deletedKeys.length);
-            }
-            
-            setIsLoading(false);
-            return;
-          }
-        }
-      } catch (dbError) {
-        console.warn('Database load failed, using i18n only:', dbError);
-      }
-      
-      // If database load failed, just use i18n
-      console.log('📖 Using i18n translations only');
-      setAllKeys(i18nData);
-      setFilteredKeys(i18nData);
-      if (i18nData.length > 0) {
-        setCurrentIndex(0);
-      }
-    } catch (error) {
-      console.error('Error loading translations:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getCategoryFromKey = (key: string): string => {
-    const lowerKey = key.toLowerCase();
-    
-    // System Administration & Homepage
-    if (lowerKey.includes('nav') || lowerKey.includes('navigation')) return 'system';
-    if (lowerKey.includes('auth') || lowerKey.includes('login') || lowerKey.includes('register')) return 'system';
-    if (lowerKey.includes('dashboard') || lowerKey.includes('home')) return 'system';
-    if (lowerKey.includes('settings') || lowerKey.includes('config')) return 'system';
-    if (lowerKey.includes('footer') || lowerKey.includes('header')) return 'system';
-    if (lowerKey.includes('admin')) return 'system';
-    if (lowerKey.includes('system')) return 'system';
-    
-    // Social & Sport
-    if (lowerKey.includes('sport') || lowerKey.includes('workout') || lowerKey.includes('training')) return 'social';
-    if (lowerKey.includes('club')) return 'social';
-    if (lowerKey.includes('athlete')) return 'social';
-    if (lowerKey.includes('coach')) return 'social';
-    if (lowerKey.includes('team')) return 'social';
-    if (lowerKey.includes('group')) return 'social';
-    
-    // Management
-    if (key.startsWith('member_')) return 'management';
-    if (key.startsWith('user_type_')) return 'management';
-    if (key.startsWith('sidebar_')) return 'management';
-    if (key.startsWith('workout_')) return 'management';
-    
-    return 'system';
-  };
-
   const handleSave = async () => {
-    if (!currentKey) {
-      console.error('No current key selected');
-      alert('⚠️ No translation key selected to save');
-      return;
-    }
-
-    console.log('\n🔄 ======= STARTING SAVE PROCESS =======');
-    console.log('📝 Key:', variableName);
-    console.log('📂 Category:', currentKey?.category);
-    console.log('🌍 Translations:', translations);
-    console.log('📊 Number of languages:', Object.keys(translations).length);
-
-    // Show loading state
-    const originalButtonText = 'Save';
-    setIsLoading(true);
-
-    try {
-      const requestBody = {
-        key: variableName,
-        translations: translations,
-        category: currentKey?.category || 'general',
-      };
-      
-      console.log('📤 Sending POST request to /api/admin/translations/update');
-      console.log('📦 Request body:', JSON.stringify(requestBody, null, 2));
-
-      const response = await fetch('/api/admin/translations/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestBody),
-      });
-
-      console.log('📥 Response status:', response.status, response.statusText);
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('✅ API SUCCESS:', result);
-        
-        // Update local state
-        const updatedKeys = allKeys.map(k => 
-          k.key === currentKey.key ? { ...k, key: variableName, values: translations, category: currentKey?.category || 'general' } : k
-        );
+    await saveTranslation(
+      variableName,
+      translations,
+      currentKey?.category || 'general',
+      currentKey,
+      allKeys,
+      searchQuery,
+      (updatedKeys) => {
         setAllKeys(updatedKeys);
         setFilteredKeys(updatedKeys.filter(k => 
           searchQuery.trim() === '' || k.key.toLowerCase().includes(searchQuery.toLowerCase())
         ));
         
-        console.log('✅ Local state updated successfully!');
-        console.log('======= SAVE COMPLETE =======\n');
-        
-        // Show detailed success message
-        const savedLanguages = Object.keys(translations).join(', ');
-        alert(
-          `✅ SAVE SUCCESSFUL!\n\n` +
-          `Key: "${variableName}"\n` +
-          `Category: ${currentKey?.category || 'general'}\n` +
-          `Languages saved: ${Object.keys(translations).length}\n` +
-          `(${savedLanguages})\n\n` +
-          `✓ Saved to database\n` +
-          `✓ View in Prisma Studio: localhost:5555\n\n` +
-          `💡 Reload the page to verify persistence!`
-        );
-        
         // Reload translations from database to verify
-        console.log('🔄 Reloading translations from database...');
-        await loadStaticTranslations();
-        console.log('✅ Translations reloaded!');
+        loadStaticTranslations();
         
         // If in Tab 3 editor mode, return to list view
         if (activeTab === 'texts' && tab3ViewMode === 'editor') {
           setTab3ViewMode('list');
           setTab3SelectedKey(null);
         }
-      } else {
-        const errorData = await response.json();
-        console.error('❌ API ERROR:', errorData);
-        throw new Error(errorData.error || `Server returned ${response.status}`);
       }
-    } catch (error) {
-      console.error('❌ SAVE FAILED:', error);
-      console.error('Stack trace:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(
-        `❌ SAVE FAILED!\n\n` +
-        `Error: ${errorMessage}\n\n` +
-        `Troubleshooting:\n` +
-        `1. Check browser console (F12) for details\n` +
-        `2. Verify Prisma Studio is running: localhost:5555\n` +
-        `3. Check server terminal for errors\n` +
-        `4. Verify database connection\n\n` +
-        `Key: "${variableName}"\n` +
-        `Languages: ${Object.keys(translations).length}`
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    );
   };
 
   const handleReset = () => {
@@ -556,34 +230,22 @@ export default function LanguageSettings() {
   };
 
   const handleEditSave = async (keyName: string) => {
-    try {
-      // Update in the local state
-      setAllKeys(prev => prev.map(k => 
-        k.key === keyName ? { ...k, values: editedValues } : k
-      ));
-      
-      // Save to database
-      const response = await fetch('/api/admin/translations/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: keyName,
-          translations: editedValues,
-        }),
-      });
-
-      if (response.ok) {
-        alert('✅ Translation updated successfully!');
+    const key = allKeys.find(k => k.key === keyName);
+    if (!key) return;
+    
+    await saveTranslation(
+      keyName,
+      editedValues,
+      key.category,
+      key,
+      allKeys,
+      '',
+      (updatedKeys) => {
+        setAllKeys(updatedKeys);
         setEditingKey(null);
-        // Reload translations
-        await loadStaticTranslations();
-      } else {
-        throw new Error('Failed to save translation');
+        loadStaticTranslations();
       }
-    } catch (error) {
-      console.error('Error saving translation:', error);
-      alert('❌ Failed to save translation');
-    }
+    );
   };
 
   const handleEditCancel = () => {
@@ -592,124 +254,13 @@ export default function LanguageSettings() {
   };
   
   // Column resize handlers
+  // Column resize handler (uses hook)
   const handleResizeStart = (e: React.MouseEvent, columnName: string) => {
     e.preventDefault();
-    setResizingColumn(columnName);
-    setResizeStartX(e.clientX);
-    setResizeStartWidth(columnWidths[columnName as keyof typeof columnWidths]);
+    startResize(columnName, e.clientX, columnWidths[columnName as keyof typeof columnWidths]);
   };
   
-  const handleResizeMove = (e: MouseEvent) => {
-    if (!resizingColumn) return;
-    
-    const diff = e.clientX - resizeStartX;
-    const newWidth = Math.max(60, resizeStartWidth + diff);
-    
-    setColumnWidths(prev => ({
-      ...prev,
-      [resizingColumn]: newWidth
-    }));
-    
-    // Update scrollbar width after resize
-    const tableContainer = tableContainerRef.current;
-    if (tableContainer) {
-      const table = tableContainer.querySelector('table');
-      if (table) {
-        setScrollbarWidth(table.scrollWidth);
-      }
-    }
-  };
-  
-  const handleResizeEnd = () => {
-    setResizingColumn(null);
-  };
-  
-  // Add mouse event listeners for column resizing
-  useEffect(() => {
-    if (resizingColumn) {
-      document.addEventListener('mousemove', handleResizeMove);
-      document.addEventListener('mouseup', handleResizeEnd);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleResizeMove);
-        document.removeEventListener('mouseup', handleResizeEnd);
-      };
-    }
-  }, [resizingColumn, resizeStartX, resizeStartWidth]);
-  
-  // Sync scrollbar with table container
-  useEffect(() => {
-    if (activeTab !== 'settings') {
-      // Reset when not on settings tab
-      setScrollbarWidth(0);
-      setScrollbarLeft(0);
-      setScrollbarContainerWidth(0);
-      return;
-    }
-    
-    const tableContainer = tableContainerRef.current;
-    const scrollbar = scrollbarRef.current;
-    
-    if (!tableContainer) {
-      console.log('No table container found');
-      return;
-    }
-    
-    // Set scrollbar width and position to match table container
-    const updateScrollbarWidth = () => {
-      const table = tableContainer.querySelector('table');
-      const rect = tableContainer.getBoundingClientRect();
-      if (table && rect) {
-        const totalWidth = Object.values(columnWidths).reduce((sum, w) => sum + w, 0);
-        const contentWidth = Math.max(totalWidth, 1400);
-        
-        console.log('Updating scrollbar:', {
-          totalWidth,
-          contentWidth,
-          containerWidth: rect.width,
-          left: rect.left
-        });
-        
-        setScrollbarWidth(contentWidth);
-        setScrollbarLeft(rect.left);
-        setScrollbarContainerWidth(rect.width);
-      }
-    };
-    
-    // Initial updates
-    updateScrollbarWidth();
-    setTimeout(updateScrollbarWidth, 100);
-    setTimeout(updateScrollbarWidth, 500);
-    
-    window.addEventListener('resize', updateScrollbarWidth);
-    window.addEventListener('scroll', updateScrollbarWidth);
-    
-    if (scrollbar) {
-      // Sync scrollbar with table
-      const handleTableScroll = () => {
-        scrollbar.scrollLeft = tableContainer.scrollLeft;
-      };
-      
-      const handleScrollbarScroll = () => {
-        tableContainer.scrollLeft = scrollbar.scrollLeft;
-      };
-      
-      tableContainer.addEventListener('scroll', handleTableScroll);
-      scrollbar.addEventListener('scroll', handleScrollbarScroll);
-      
-      return () => {
-        window.removeEventListener('resize', updateScrollbarWidth);
-        window.removeEventListener('scroll', updateScrollbarWidth);
-        tableContainer.removeEventListener('scroll', handleTableScroll);
-        scrollbar.removeEventListener('scroll', handleScrollbarScroll);
-      };
-    }
-    
-    return () => {
-      window.removeEventListener('resize', updateScrollbarWidth);
-      window.removeEventListener('scroll', updateScrollbarWidth);
-    };
-  }, [activeTab, columnWidths, filteredKeys.length]);
+  // Scrollbar syncing is now handled by useColumnResize hook
 
   const handleDeleteOrRestore = (keyName: string, isCurrentlyDeleted: boolean) => {
     setPendingActionKey(keyName);
@@ -717,81 +268,23 @@ export default function LanguageSettings() {
     setShowPasswordDialog(true);
   };
 
-  const verifyAdminPassword = async () => {
-    // Get super admin from localStorage
-    const superAdmin = localStorage.getItem('adminUser');
-    if (!superAdmin) {
-      alert('❌ No admin user found. Please log in as admin.');
-      return false;
-    }
-
-    try {
-      const adminData = JSON.parse(superAdmin);
-      // Simple verification - in production, you should hash and compare
-      if (adminPassword === adminData.password || adminPassword === 'admin') {
-        return true;
-      } else {
-        alert('❌ Incorrect password!');
-        return false;
-      }
-    } catch (error) {
-      alert('❌ Error verifying password');
-      return false;
-    }
-  };
-
   const handlePasswordConfirm = async () => {
-    const isValid = await verifyAdminPassword();
-    if (!isValid) {
-      return;
-    }
-
     if (!pendingActionKey) return;
-
-    try {
-      const action = passwordAction;
-      const newDeletedStatus = action === 'delete';
-
-      // Update local state
-      setAllKeys(prev => prev.map(k => 
-        k.key === pendingActionKey ? { ...k, isDeleted: newDeletedStatus } : k
-      ));
-
-      // Save to database
-      const response = await fetch('/api/admin/translations/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: pendingActionKey,
-          isDeleted: newDeletedStatus,
-        }),
-      });
-
-      if (response.ok) {
-        // Update i18n deleted keys
-        const deletedKeys = allKeys
-          .filter(k => k.key === pendingActionKey ? newDeletedStatus : k.isDeleted)
-          .map(k => k.key);
-        i18n.setDeletedKeys(deletedKeys);
-        
-        alert(action === 'delete' 
-          ? `✅ Translation "${pendingActionKey}" has been archived.\nIt will now appear as "${pendingActionKey}" in the app until restored.`
-          : `✅ Translation "${pendingActionKey}" has been restored!\nIt will now display the translated text in all languages.`
-        );
-        
-        // Reload translations to refresh the UI
-        await loadStaticTranslations();
-      } else {
-        throw new Error('Failed to update translation status');
+    
+    const isCurrentlyDeleted = passwordAction === 'restore';
+    
+    await deleteOrRestoreTranslation(
+      pendingActionKey,
+      isCurrentlyDeleted,
+      adminPassword,
+      allKeys,
+      () => {
+        loadStaticTranslations();
+        setShowPasswordDialog(false);
+        setAdminPassword('');
+        setPendingActionKey(null);
       }
-    } catch (error) {
-      console.error('Error updating translation:', error);
-      alert('❌ Failed to update translation status');
-    } finally {
-      setShowPasswordDialog(false);
-      setAdminPassword('');
-      setPendingActionKey(null);
-    }
+    );
   };
 
   const toggleLanguage = (langCode: string) => {
@@ -853,66 +346,30 @@ export default function LanguageSettings() {
   };
 
   const handleSaveNewKey = async () => {
-    if (!newKeyName.trim()) {
-      alert('Please enter a variable name');
-      return;
-    }
-
-    // Check if key already exists
-    if (allKeys.find(k => k.key === newKeyName)) {
-      alert('This variable name already exists. Please use a different name.');
-      return;
-    }
-
-    try {
-      // Save to database
-      const response = await fetch('/api/admin/translations/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key: newKeyName,
-          translations: newKeyTranslations,
-          category: newKeyCategory,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save to database');
+    await saveNewTranslationKey(
+      newKeyName,
+      newKeyTranslations,
+      newKeyCategory,
+      allKeys,
+      () => {
+        loadStaticTranslations();
+        setShowNewKeyModal(false);
+        
+        // Check if any translation is long (> 100 chars)
+        const hasLongText = Object.values(newKeyTranslations).some(val => val && val.length > LONG_TEXT_THRESHOLD);
+        
+        // Navigate to appropriate tab
+        if (isLongTextModal || hasLongText) {
+          setActiveTab('texts');
+          setSelectedCategory(newKeyCategory as TranslationCategory);
+        } else {
+          setActiveTab('settings');
+          setSelectedCategory(newKeyCategory as TranslationCategory);
+        }
+        
+        setIsLongTextModal(false);
       }
-
-      console.log('✅ New translation key saved to database');
-
-      // Reload all translations to ensure new key appears correctly
-      await loadStaticTranslations();
-      
-      // Close modal
-      setShowNewKeyModal(false);
-      
-      // Determine category name for message
-      const categoryName = newKeyCategory === 'system' ? 'System Administration & Homepage' :
-                          newKeyCategory === 'social' ? 'Social & Sport' : 'Management';
-      
-      // Check if any translation is long (> 100 chars) 
-      const hasLongText = Object.values(newKeyTranslations).some(val => val && val.length > 100);
-      
-      // Navigate and show appropriate message
-      if (isLongTextModal || hasLongText) {
-        alert(`✅ Long text created!\n\nKey: ${newKeyName}\nCategory: ${categoryName}\n\n📍 Find in Tab 3 → ${categoryName}`);
-        setActiveTab('texts');
-        setSelectedCategory(newKeyCategory as 'system' | 'social' | 'management');
-      } else {
-        alert(`✅ Translation created!\n\nKey: ${newKeyName}\nCategory: ${categoryName}\n\n📍 Find in Tab 2 → ${categoryName}`);
-        setActiveTab('settings');
-        setSelectedCategory(newKeyCategory as 'system' | 'social' | 'management');
-      }
-      
-      setIsLongTextModal(false);
-    } catch (error) {
-      console.error('Error saving new key:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`❌ Failed to save new translation key!\n\nError: ${errorMessage}`);
-    }
+    );
   };
 
   const handleCancelNewKey = () => {
@@ -1274,7 +731,7 @@ export default function LanguageSettings() {
                 </button>
                 
                 {(() => {
-                  const totalPages = Math.ceil(filteredKeys.length / itemsPerPage);
+                  const totalPages = Math.ceil(filteredKeys.length / ITEMS_PER_PAGE);
                   const pages = [];
                   
                   // Always show first page
@@ -1354,10 +811,10 @@ export default function LanguageSettings() {
                 
                 {/* Next Button */}
                 <button
-                  onClick={() => setTab2Page(Math.min(Math.ceil(filteredKeys.length / itemsPerPage), tab2Page + 1))}
-                  disabled={tab2Page >= Math.ceil(filteredKeys.length / itemsPerPage)}
+                  onClick={() => setTab2Page(Math.min(Math.ceil(filteredKeys.length / ITEMS_PER_PAGE), tab2Page + 1))}
+                  disabled={tab2Page >= Math.ceil(filteredKeys.length / ITEMS_PER_PAGE)}
                   className={`px-3 py-2 font-semibold transition ${
-                    tab2Page >= Math.ceil(filteredKeys.length / itemsPerPage)
+                    tab2Page >= Math.ceil(filteredKeys.length / ITEMS_PER_PAGE)
                       ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                       : 'bg-gray-300 text-gray-700 hover:bg-gray-400'
                   }`}
@@ -1574,7 +1031,7 @@ export default function LanguageSettings() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredKeys.slice((tab2Page - 1) * itemsPerPage, tab2Page * itemsPerPage).map((key, index) => {
+                  {filteredKeys.slice((tab2Page - 1) * ITEMS_PER_PAGE, tab2Page * ITEMS_PER_PAGE).map((key, index) => {
                     const isEditing = editingKey === key.key;
                     const isDeleted = key.isDeleted || false;
                     const rowClasses = `border-b border-gray-200 transition ${
@@ -1593,7 +1050,7 @@ export default function LanguageSettings() {
                     return (
                       <tr key={key.key} className={rowClasses}>
                         <td className={`px-4 py-3 text-sm font-medium ${textClasses} sticky left-0 z-10 ${stickyBg} overflow-hidden`} style={{width: `${columnWidths.srNo}px`}}>
-                          <div className="truncate">{(tab2Page - 1) * itemsPerPage + index + 1}</div>
+                          <div className="truncate">{(tab2Page - 1) * ITEMS_PER_PAGE + index + 1}</div>
                         </td>
                         <td className={`px-4 py-3 text-sm font-semibold ${isDeleted ? 'text-gray-400 line-through' : 'text-red-700'} sticky z-10 ${stickyBg} overflow-hidden`} style={{left: `${leftOffsets.varName}px`, width: `${columnWidths.varName}px`}}>
                           <div className="truncate" title={key.key}>{key.key}</div>
@@ -1966,10 +1423,10 @@ export default function LanguageSettings() {
                 ) : (
                   <>
                     {/* Tab 3 Pagination Controls - TOP */}
-                    {filteredKeys.length > itemsPerPage && (
+                    {filteredKeys.length > ITEMS_PER_PAGE && (
                       <div className="flex items-center justify-between bg-white border border-gray-300 p-4 rounded-lg">
                         <div className="text-sm text-gray-600">
-                          Showing {((tab3Page - 1) * itemsPerPage) + 1} to {Math.min(tab3Page * itemsPerPage, filteredKeys.length)} of {filteredKeys.length} long texts
+                          Showing {((tab3Page - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(tab3Page * ITEMS_PER_PAGE, filteredKeys.length)} of {filteredKeys.length} long texts
                         </div>
                         
                         <div className="flex items-center gap-2">
@@ -1983,7 +1440,7 @@ export default function LanguageSettings() {
                           
                           <div className="flex items-center gap-1">
                             {(() => {
-                              const totalPages = Math.ceil(filteredKeys.length / itemsPerPage);
+                              const totalPages = Math.ceil(filteredKeys.length / ITEMS_PER_PAGE);
                               const pages = [];
                               
                               // Always show first page
@@ -2064,7 +1521,7 @@ export default function LanguageSettings() {
                           
                           <button
                             onClick={() => setTab3Page(tab3Page + 1)}
-                            disabled={tab3Page >= Math.ceil(filteredKeys.length / itemsPerPage)}
+                            disabled={tab3Page >= Math.ceil(filteredKeys.length / ITEMS_PER_PAGE)}
                             className="px-4 py-2 bg-gray-600 text-white font-semibold rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-gray-700 transition"
                           >
                             Next →
@@ -2076,8 +1533,8 @@ export default function LanguageSettings() {
                     <div className="grid grid-cols-1 gap-4">
                       {(() => {
                         // Calculate pagination
-                        const startIndex = (tab3Page - 1) * itemsPerPage;
-                        const endIndex = startIndex + itemsPerPage;
+                        const startIndex = (tab3Page - 1) * ITEMS_PER_PAGE;
+                        const endIndex = startIndex + ITEMS_PER_PAGE;
                         const paginatedKeys = filteredKeys.slice(startIndex, endIndex);
                         
                         return paginatedKeys.map((key, paginatedIndex) => {
@@ -2187,10 +1644,10 @@ export default function LanguageSettings() {
                     </div>
                     
                     {/* Tab 3 Pagination Controls */}
-                    {filteredKeys.length > itemsPerPage && (
+                    {filteredKeys.length > ITEMS_PER_PAGE && (
                       <div className="flex items-center justify-between bg-white border border-gray-300 p-4 rounded-lg">
                         <div className="text-sm text-gray-600">
-                          Showing {((tab3Page - 1) * itemsPerPage) + 1} to {Math.min(tab3Page * itemsPerPage, filteredKeys.length)} of {filteredKeys.length} long texts
+                          Showing {((tab3Page - 1) * ITEMS_PER_PAGE) + 1} to {Math.min(tab3Page * ITEMS_PER_PAGE, filteredKeys.length)} of {filteredKeys.length} long texts
                         </div>
                         
                         <div className="flex items-center gap-2">
@@ -2204,7 +1661,7 @@ export default function LanguageSettings() {
                           
                           <div className="flex items-center gap-1">
                             {(() => {
-                              const totalPages = Math.ceil(filteredKeys.length / itemsPerPage);
+                              const totalPages = Math.ceil(filteredKeys.length / ITEMS_PER_PAGE);
                               const pages = [];
                               
                               // Always show first page
@@ -2285,7 +1742,7 @@ export default function LanguageSettings() {
                           
                           <button
                             onClick={() => setTab3Page(tab3Page + 1)}
-                            disabled={tab3Page >= Math.ceil(filteredKeys.length / itemsPerPage)}
+                            disabled={tab3Page >= Math.ceil(filteredKeys.length / ITEMS_PER_PAGE)}
                             className="px-4 py-2 bg-gray-600 text-white font-semibold rounded disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-gray-700 transition"
                           >
                             Next →

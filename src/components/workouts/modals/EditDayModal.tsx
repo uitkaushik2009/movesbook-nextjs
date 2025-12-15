@@ -15,6 +15,7 @@ import type { WorkoutDay, Period } from '@/types/workout.types';
 interface EditDayModalProps {
   day: WorkoutDay;
   periods: Period[];
+  activeSection?: 'A' | 'B' | 'C'; // A = WORKOUT PLAN, B = WORKOUT DONE, C = REST
   onClose: () => void;
   onSave: () => void;
   onError: (message: string) => void;
@@ -24,12 +25,16 @@ interface EditDayModalProps {
 export default function EditDayModal({
   day,
   periods,
+  activeSection = 'A',
   onClose,
   onSave,
   onError,
   onSuccess
 }: EditDayModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Show feeling field only in WORKOUT DONE section (B)
+  const showFeelingField = activeSection === 'B';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -97,24 +102,26 @@ export default function EditDayModal({
             />
           </div>
 
-          {/* Feeling/Status */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Feeling (1-10)
-            </label>
-            <select
-              name="feelingStatus"
-              defaultValue={day.feelingStatus || '5'}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isSubmitting}
-            >
-              {FEELING_STATUS_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Feeling/Status - Only show in WORKOUT DONE section */}
+          {showFeelingField && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Feeling (1-10)
+              </label>
+              <select
+                name="feelingStatus"
+                defaultValue={day.feelingStatus || '5'}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={isSubmitting}
+              >
+                {FEELING_STATUS_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Notes / Annotations */}
           <div>

@@ -63,14 +63,23 @@ export default function WorkoutHierarchyView({
     });
   };
 
-  const workouts = day.workouts || [];
+  // Sort workouts by creation time (earliest = #1)
+  const workouts = day.workouts 
+    ? [...day.workouts].sort((a: any, b: any) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : parseInt(a.id) || 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : parseInt(b.id) || 0;
+        return timeA - timeB;
+      })
+    : [];
   
   console.log(`📋 WorkoutHierarchyView rendering for day with ${workouts.length} workouts`);
+  console.log(`📋 Expanded workouts in view:`, Array.from(expandedWorkoutsSet));
 
   return (
     <div className="space-y-6 overflow-x-auto">
       {workouts.map((workout: any, workoutIndex: number) => {
         const isWorkoutExpanded = expandedWorkoutsSet.has(workout.id);
+        console.log(`📋 Rendering workout ${workout.id}, isExpanded: ${isWorkoutExpanded}`);
         
         return (
           <div key={workout.id} className="space-y-4">

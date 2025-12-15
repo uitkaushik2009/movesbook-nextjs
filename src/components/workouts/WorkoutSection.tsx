@@ -41,8 +41,11 @@ import { sectionHelpers } from '@/utils/workout.helpers';
 
 // Custom Hooks
 import { useWorkoutData } from '@/hooks/useWorkoutData';
+import { useWorkoutModals } from '@/hooks/useWorkoutModals';
+import { useWorkoutExpansion } from '@/hooks/useWorkoutExpansion';
 
 // Components
+import WorkoutSectionHeader from '@/components/workouts/WorkoutSectionHeader';
 import WorkoutCalendarView from '@/components/workouts/WorkoutCalendarView';
 import DayTableView from '@/components/workouts/tables/DayTableView';
 import StyledTableWrapper from '@/components/workouts/tables/StyledTableWrapper';
@@ -97,34 +100,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     showMessage
   } = useWorkoutData({ initialSection: activeSection });
   
-  // ==================== MODAL STATES ====================
-  const [showAddWorkoutModal, setShowAddWorkoutModal] = useState(false);
-  const [showAddMoveframeModal, setShowAddMoveframeModal] = useState(false);
-  const [showEditMoveframeModal, setShowEditMoveframeModal] = useState(false);
-  const [showAddMovelapModal, setShowAddMovelapModal] = useState(false);
-  const [showAddDayModal, setShowAddDayModal] = useState(false);
-  const [showEditDayModal, setShowEditDayModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-  const [showAthleteSelector, setShowAthleteSelector] = useState(false);
-  const [workoutModalMode, setWorkoutModalMode] = useState<'add' | 'edit'>('add');
-  const [moveframeModalMode, setMoveframeModalMode] = useState<'add' | 'edit'>('add');
-  const [movelapModalMode, setMovelapModalMode] = useState<'add' | 'edit'>('add');
-  const [showAddEditMovelapModal, setShowAddEditMovelapModal] = useState(false);
-  const [showBulkAddMovelapModal, setShowBulkAddMovelapModal] = useState(false);
-  
-  // Copy/Move/Export Modals
-  const [showCopyDayModal, setShowCopyDayModal] = useState(false);
-  const [showMoveDayModal, setShowMoveDayModal] = useState(false);
-  const [showCopyWorkoutModal, setShowCopyWorkoutModal] = useState(false);
-  const [showMoveWorkoutModal, setShowMoveWorkoutModal] = useState(false);
-  const [showCopyMoveframeModal, setShowCopyMoveframeModal] = useState(false);
-  const [showMoveMoveframeModal, setShowMoveMoveframeModal] = useState(false);
-  const [showColumnSettingsModal, setShowColumnSettingsModal] = useState(false);
-  const [columnSettingsTableType, setColumnSettingsTableType] = useState<'day' | 'workout' | 'moveframe' | 'movelap'>('workout');
-  const [showExportSharePrint, setShowExportSharePrint] = useState(false);
-  const [exportType, setExportType] = useState<'day' | 'week' | 'plan'>('day');
-  const [exportId, setExportId] = useState<string>('');
+  // ==================== MODAL STATES (Using Custom Hook) ====================
+  const { modals, modes, settings, actions: modalActions } = useWorkoutModals();
 
   // Column Settings Hook
   const columnSettings = useColumnSettings();
@@ -154,85 +131,34 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [editingMovelap, setEditingMovelap] = useState<any>(null);
   
   // ==================== UI STATE ====================
-  const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
-  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
-  const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
   const [excludeStretchingFromTotals, setExcludeStretchingFromTotals] = useState(false);
 
-  // Toggle functions for expand/collapse
-  const toggleDayExpansion = (dayId: string) => {
-    console.log(`📅 toggleDayExpansion called for day: ${dayId}`);
-    setExpandedDays(prev => {
-      const newSet = new Set(prev);
-      const wasExpanded = newSet.has(dayId);
-      if (wasExpanded) {
-        newSet.delete(dayId);
-        console.log(`📉 Collapsed DAY ${dayId}. This HIDES ALL WORKOUTS in this day!`);
-      } else {
-        newSet.add(dayId);
-        console.log(`📈 Expanded DAY ${dayId}. Workouts will be visible.`);
-      }
-      return newSet;
-    });
-  };
+  // ==================== EXPANSION STATE (Using Custom Hook) ====================
+  const {
+    expandedWeeks,
+    expandedDays,
+    expandedWorkouts,
+    toggleDayExpansion,
+    toggleWorkoutExpansion,
+    toggleWeekExpansion,
+    expandAll,
+    collapseAll,
+    expandDayWithAllWorkouts
+  } = useWorkoutExpansion({
+    workoutPlan,
+    activeSection,
+    selectedAthleteId: selectedAthlete?.id
+  });
 
-  const toggleWorkoutExpansion = (workoutId: string) => {
-    console.log(`🔄 toggleWorkoutExpansion called for workout: ${workoutId}`);
-    setExpandedWorkouts(prev => {
-      const newSet = new Set(prev);
-      const wasExpanded = newSet.has(workoutId);
-      if (wasExpanded) {
-        newSet.delete(workoutId);
-        console.log(`📉 Collapsed workout ${workoutId}. Remaining expanded: ${newSet.size}`);
-      } else {
-        newSet.add(workoutId);
-        console.log(`📈 Expanded workout ${workoutId}. Total expanded: ${newSet.size}`);
-      }
-      console.log('Expanded workouts:', Array.from(newSet));
-      return newSet;
-    });
-  };
-
-  // Track if we've done the initial auto-expand for current section/athlete
-  const [lastAutoExpandKey, setLastAutoExpandKey] = useState<string>('');
-
-  // Auto-expand all days and workouts when section/athlete changes
-  useEffect(() => {
-    if (workoutPlan && workoutPlan.weeks) {
-      // Create a unique key for current section + athlete combo
-      const currentKey = `${activeSection}-${selectedAthlete?.id || 'self'}`;
-      
-      // Only auto-expand if this is a new section/athlete combo
-      if (currentKey !== lastAutoExpandKey) {
-        console.log(`🔓 Auto-expanding for new key: ${currentKey} (was: ${lastAutoExpandKey})`);
-        const dayIds = new Set<string>();
-        const workoutIds = new Set<string>();
-        
-        workoutPlan.weeks.forEach((week: any) => {
-          week.days?.forEach((day: any) => {
-            dayIds.add(day.id);
-            day.workouts?.forEach((workout: any) => {
-              workoutIds.add(workout.id);
-            });
-          });
-        });
-        
-        console.log(`Auto-expanded ${dayIds.size} days and ${workoutIds.size} workouts`);
-        setExpandedDays(dayIds);
-        setExpandedWorkouts(workoutIds);
-        setLastAutoExpandKey(currentKey);
-      } else {
-        console.log(`✅ Skipping auto-expand, key unchanged: ${currentKey}`);
-      }
-    }
-  }, [workoutPlan, activeSection, selectedAthlete, lastAutoExpandKey]);
-
+  // ==================== MODAL MODE STATE ====================
+  const [workoutModalMode, setWorkoutModalMode] = useState<'add' | 'edit'>('add');
+  const [moveframeModalMode, setMoveframeModalMode] = useState<'add' | 'edit'>('add');
+  
   // ==================== DRAG & DROP STATE ====================
   // Note: activeWorkout and activeMoveframe already defined above for workout context
   const [draggedWorkout, setDraggedWorkout] = useState<any>(null);
   const [draggedMoveframe, setDraggedMoveframe] = useState<any>(null);
   const [dropTarget, setDropTarget] = useState<any>(null);
-  const [showDragModal, setShowDragModal] = useState(false);
   const [dragModalConfig, setDragModalConfig] = useState<{
     dragType: 'workout' | 'moveframe';
     hasConflict: boolean;
@@ -254,10 +180,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
 
   const [virtualStartDate, setVirtualStartDate] = useState<Date | null>(null);
   const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
-  const [showWorkoutSelector, setShowWorkoutSelector] = useState(false);
-  const [showDaySelector, setShowDaySelector] = useState(false);
-  const [showEditMovelapModal, setShowEditMovelapModal] = useState(false);
-  
   // Auto-expansion tracking for newly added items
   const [autoExpandDayId, setAutoExpandDayId] = useState<string | null>(null);
   const [autoExpandWorkoutId, setAutoExpandWorkoutId] = useState<string | null>(null);
@@ -297,7 +219,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     
     // Open Edit Day modal with the active day
     setEditingDay(activeDay);
-    setShowEditDayModal(true);
+    modalActions.openEditDayModal();
   };
   
   /**
@@ -326,9 +248,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     // All checks passed - open modal
     console.log('✅ Opening Add Workout modal');
     setAddWorkoutDay(activeDay);
-    setWorkoutModalMode('add');
+    modalActions.setWorkoutModalMode('add');
     setEditingWorkout(null);
-    setShowAddWorkoutModal(true);
+    modalActions.openAddWorkoutModal();
   };
   
   /**
@@ -356,7 +278,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     console.log('✅ Opening Add Moveframe modal');
     setSelectedWorkout(activeWorkout.id);
     setSelectedDay(activeDay);
-    setShowAddMoveframeModal(true);
+    modalActions.openAddMoveframeModal();
   };
   
   /**
@@ -375,7 +297,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     
     // Show Add Movelap modal
     console.log('✅ Opening Add Movelap modal');
-    setShowAddMovelapModal(true);
+    modalActions.openAddMovelapModal();
   };
   
   /**
@@ -393,7 +315,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     });
     
     if (response.success) {
-      setShowAddMovelapModal(false);
+      modalActions.closeMovelapModal();
       
       // Auto-expand the day, workout, and moveframe to show the new movelap
       if (activeDay && activeWorkout && activeMoveframe) {
@@ -449,7 +371,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         sourceData: { workout: sourceWorkout, sourceDay: active.data.current?.day },
         targetData: { targetDay, existingWorkout }
       });
-      setShowDragModal(true);
+      modalActions.setShowDragModal(true);
     } else if (dragType === 'moveframe') {
       // Handle moveframe drops
       const showPosition = dropType === 'moveframe';
@@ -461,7 +383,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         sourceData: active.data.current,
         targetData: over.data.current
       });
-      setShowDragModal(true);
+      modalActions.setShowDragModal(true);
     }
     
     setDraggedWorkout(null);
@@ -665,131 +587,36 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     >
       <div className="flex flex-col h-full bg-white">
       {/* Small header bar with close button */}
-      <div className="bg-blue-600 text-white px-2 py-2 flex items-center justify-between border-b">
-        <h3 className="text-lg font-semibold">Workout Planning</h3>
-        <button onClick={onClose} className="p-1.5 hover:bg-blue-700 rounded-full transition-colors">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Internal Navbar - Section Tabs */}
-      <div className="bg-white border-b border-gray-300 px-2 py-2">
-        <div className="flex items-center gap-2">
-          {/* Section Tabs */}
-          {['A', 'B', 'C', 'D'].map((section) => (
-            <button
-              key={section}
-              onClick={() => setActiveSection(section as 'A' | 'B' | 'C' | 'D')}
-              className={`px-4 py-2 rounded-t font-semibold text-sm transition-colors ${
-                activeSection === section 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Sec {section}: {section === 'A' ? '2-3 Weeks' : section === 'B' ? 'Year' : section === 'C' ? 'Done' : 'Archive'}
-            </button>
-          ))}
-          
-          {/* Import Button - Only for sections A & B */}
-          {(activeSection === 'A' || activeSection === 'B') && (
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="ml-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Import from Coach/Team/Club
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Header Component */}
+      <WorkoutSectionHeader
+        activeSection={activeSection}
+        viewMode={viewMode}
+        selectedWeekForTable={selectedWeekForTable}
+        virtualStartDate={virtualStartDate}
+        userType={userType ?? undefined}
+        selectedAthlete={selectedAthlete}
+        onSectionChange={setActiveSection}
+        onViewModeChange={(mode) => {
+          setViewMode(mode);
+          if (mode === 'calendar') {
+            setSelectedWeekForTable(null);
+          }
+        }}
+        onImportClick={() => modalActions.openImportModal()}
+        onStartDateClick={() => modalActions.openStartDatePicker()}
+        onAthleteSelect={() => modalActions.openAthleteSelector()}
+        onWeekFilterClear={() => {
+          setSelectedWeekForTable(null);
+          setViewMode('calendar');
+        }}
+        onClose={onClose}
+      />
 
       {/* Workout area - full width */}
       <div className="flex-1 flex overflow-hidden">
         {/* Center - main workout area (full width, no sidebars) */}
         <main className="flex-1 bg-white overflow-y-auto overflow-x-hidden w-full">
           <div className="p-2">
-            {/* View Toggle & Quick Actions */}
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">
-                {activeSection === 'A' && 'Current 2-3 Weeks'}
-                {activeSection === 'B' && 'Yearly Plan'}
-                {activeSection === 'C' && 'Workouts Done'}
-                {activeSection === 'D' && 'Archive & Templates'}
-              </h2>
-              
-              <div className="flex gap-2 items-center">
-                
-                {/* Virtual Start Date for Sections B & C */}
-                {(activeSection === 'B' || activeSection === 'C') && (
-                  <button 
-                    onClick={() => setShowStartDatePicker(true)}
-                    className="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    {virtualStartDate ? `Start: ${virtualStartDate.toLocaleDateString()}` : 'Set Virtual Start Date'}
-                  </button>
-                )}
-                
-                {/* Athlete Selector for Section C (Coaches/Teams/Clubs only) */}
-                {activeSection === 'C' && userType && ['COACH', 'TEAM', 'CLUB', 'TEAM_MANAGER', 'CLUB_TRAINER'].includes(userType) && (
-                  <button 
-                    onClick={() => setShowAthleteSelector(true)}
-                    className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                    {selectedAthlete ? `Viewing: ${selectedAthlete.name}` : 'Select Athlete'}
-                  </button>
-                )}
-                
-                
-                {/* View Toggle */}
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
-                    viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  <Table className="w-4 h-4" />
-                  Table
-                </button>
-                {activeSection === 'B' && (
-                  <button
-                    onClick={() => {
-                      setViewMode('calendar');
-                      setSelectedWeekForTable(null);
-                    }}
-                    className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
-                      viewMode === 'calendar' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Calendar
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Week Context Header - Show when viewing filtered weeks */}
-            {selectedWeekForTable && viewMode === 'table' && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  <span className="font-semibold text-blue-900">
-                    Viewing: Week {selectedWeekForTable - 1} - Week {selectedWeekForTable} - Week {selectedWeekForTable + 1}
-                  </span>
-                  <span className="text-sm text-blue-700">(3 weeks context)</span>
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedWeekForTable(null);
-                    setViewMode('calendar');
-                  }}
-                  className="px-3 py-1.5 bg-white border border-blue-300 text-blue-700 rounded hover:bg-blue-100 transition-colors text-sm font-medium"
-                >
-                  ← Back to Calendar
-                </button>
-              </div>
-            )}
 
             {isLoading ? (
               <div className="flex items-center justify-center h-96">
@@ -847,22 +674,23 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  expandedWorkouts={expandedWorkouts}
                  onToggleDay={toggleDayExpansion}
                  onToggleWorkout={toggleWorkoutExpansion}
+                 onExpandDayWithAllWorkouts={expandDayWithAllWorkouts}
                  onEditDay={(day) => {
                    setEditingDay(day);
-                   setShowEditDayModal(true);
+                   modalActions.setShowEditDayModal(true);
                  }}
                  onAddWorkout={(day) => {
                    setAddWorkoutDay(day);
                    setWorkoutModalMode('add');
-                   setShowAddWorkoutModal(true);
+                   modalActions.setShowAddWorkoutModal(true);
                  }}
                  onCopyDay={(day) => {
                    setCopiedDay(day);
-                   setShowCopyDayModal(true);
+                   modalActions.setShowCopyDayModal(true);
                  }}
                  onMoveDay={(day) => {
                    setCopiedDay(day);
-                   setShowMoveDayModal(true);
+                   modalActions.setShowMoveDayModal(true);
                  }}
                  onPasteDay={async (targetDay) => {
                    if (!copiedDay) {
@@ -895,58 +723,58 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                      showMessage('error', error.message || 'Failed to paste day');
                    }
                  }}
-                 onEditWorkout={(workout, day) => {
-                   setEditingWorkout(workout);
-                   setAddWorkoutDay(day);
-                   setWorkoutModalMode('edit');
-                   setShowAddWorkoutModal(true);
-                 }}
-                 onCopyWorkout={(workout, day) => {
-                   setCopiedWorkout(workout);
-                   setActiveWorkout(workout);
-                   setActiveDay(day);
-                   setShowCopyWorkoutModal(true);
-                 }}
-                 onMoveWorkout={(workout, day) => {
-                   setCopiedWorkout(workout);
-                   setActiveWorkout(workout);
-                   setActiveDay(day);
-                   setShowMoveWorkoutModal(true);
-                 }}
-                 onAddMoveframe={(workout, day) => {
-                   setActiveWorkout(workout);
-                   setActiveDay(day);
-                   setSelectedWorkout(workout.id);
-                   setSelectedDay(day);
-                   setMoveframeModalMode('add');
-                   setEditingMoveframe(null);
-                   setShowAddMoveframeModal(true);
-                 }}
+                onEditWorkout={(workout, day) => {
+                  setEditingWorkout(workout);
+                  setAddWorkoutDay(day);
+                  setWorkoutModalMode('edit');
+                  modalActions.setShowAddWorkoutModal(true);
+                }}
+                onCopyWorkout={(workout, day) => {
+                  setCopiedWorkout(workout);
+                  setActiveWorkout(workout);
+                  setActiveDay(day);
+                  modalActions.openCopyWorkoutModal();
+                }}
+                onMoveWorkout={(workout, day) => {
+                  setCopiedWorkout(workout);
+                  setActiveWorkout(workout);
+                  setActiveDay(day);
+                  modalActions.openMoveWorkoutModal();
+                }}
+                onAddMoveframe={(workout, day) => {
+                  setActiveWorkout(workout);
+                  setActiveDay(day);
+                  setSelectedWorkout(workout.id);
+                  setSelectedDay(day);
+                  setMoveframeModalMode('add');
+                  setEditingMoveframe(null);
+                  modalActions.setShowAddMoveframeModal(true);
+                }}
                  onEditMoveframe={(moveframe, workout, day) => {
                    setEditingMoveframe(moveframe);
                    setActiveDay(day);
                    setActiveWorkout(workout);
                    setActiveMoveframe(moveframe);
                    setMoveframeModalMode('edit');
-                   setShowAddMoveframeModal(true);
+                   modalActions.setShowAddMoveframeModal(true);
                  }}
                  onEditMovelap={(movelap, moveframe, workout, day) => {
-                   setEditingMovelap(movelap);
-                   setActiveDay(day);
-                   setActiveWorkout(workout);
-                   setActiveMoveframe(moveframe);
-                   setActiveMovelap(movelap);
-                   setMovelapModalMode('edit');
-                   setShowAddEditMovelapModal(true);
-                 }}
-                 onAddMovelap={(moveframe, workout, day) => {
-                   setActiveMoveframe(moveframe);
-                   setActiveWorkout(workout);
-                   setActiveDay(day);
-                   setEditingMovelap(null);
-                   setMovelapModalMode('add');
-                   setShowAddEditMovelapModal(true);
-                 }}
+                  setEditingMovelap(movelap);
+                  setActiveDay(day);
+                  setActiveWorkout(workout);
+                  setActiveMoveframe(moveframe);
+                  setActiveMovelap(movelap);
+                  modalActions.setMovelapModalMode('edit');
+                  modalActions.setShowAddEditMovelapModal(true);
+                }}
+                onAddMovelap={(moveframe, workout, day) => {
+                  setActiveMoveframe(moveframe);
+                  setActiveWorkout(workout);
+                  setActiveDay(day);
+                  setEditingMovelap(null);
+                  modalActions.setMovelapModalMode('add');
+                  modalActions.setShowAddEditMovelapModal(true);
+                }}
                  onDeleteDay={async (day) => {
                    if (confirm(`Are you sure you want to delete this day (${new Date(day.date).toLocaleDateString()})? This will also delete all workouts, moveframes, and movelaps for this day.`)) {
                      try {
@@ -993,18 +821,18 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setCopiedMoveframe(moveframe);
                    setActiveWorkout(workout);
                    setActiveDay(day);
-                   setShowCopyMoveframeModal(true);
+                   modalActions.setShowCopyMoveframeModal(true);
                  }}
                  onMoveMoveframe={(moveframe, workout, day) => {
                    setCopiedMoveframe(moveframe);
                    setActiveWorkout(workout);
                    setActiveDay(day);
-                   setShowMoveMoveframeModal(true);
+                   modalActions.setShowMoveMoveframeModal(true);
                  }}
-                 onOpenColumnSettings={(tableType) => {
-                   setColumnSettingsTableType(tableType);
-                   setShowColumnSettingsModal(true);
-                 }}
+                onOpenColumnSettings={(tableType) => {
+                  modalActions.setColumnSettingsTableType(tableType);
+                  modalActions.setShowColumnSettingsModal(true);
+                }}
                  columnSettings={columnSettings}
                  onDeleteMoveframe={async (moveframe, workout, day) => {
                    if (confirm(`Are you sure you want to delete moveframe ${moveframe.letter || moveframe.code}?`)) {
@@ -1054,18 +882,18 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         </main>
       </div>
       
-      {showAddWorkoutModal && addWorkoutDay && (
+      {modals.showAddWorkoutModal && addWorkoutDay && (
         <AddWorkoutModal
-          isOpen={showAddWorkoutModal}
+          isOpen={modals.showAddWorkoutModal}
           day={addWorkoutDay}
           existingWorkouts={addWorkoutDay.workouts || []}
           mode={workoutModalMode}
           existingWorkout={editingWorkout}
           onClose={() => {
-            setShowAddWorkoutModal(false);
+            modalActions.closeAddWorkoutModal();
             setAddWorkoutDay(null);
             setEditingWorkout(null);
-            setWorkoutModalMode('add');
+            modalActions.setWorkoutModalMode('add');
           }}
           onSave={async (workoutData) => {
             const token = localStorage.getItem('token');
@@ -1130,18 +958,17 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             
             // Keep day and its parent week expanded (for new workouts)
             if (workoutModalMode === 'add' && addWorkoutDay) {
-              const newExpandedDays = new Set(expandedDays);
-              newExpandedDays.add(addWorkoutDay.id);
-              setExpandedDays(newExpandedDays);
+              // Auto-expand the day using toggle if it's not already expanded
+              if (!expandedDays.has(addWorkoutDay.id)) {
+                toggleDayExpansion(addWorkoutDay.id);
+              }
               
               // Find and expand the parent week
               const parentWeek = workoutPlan?.weeks?.find((week: any) => 
                 week.days?.some((day: any) => day.id === addWorkoutDay.id)
               );
-              if (parentWeek) {
-                const newExpandedWeeks = new Set(expandedWeeks);
-                newExpandedWeeks.add(parentWeek.id);
-                setExpandedWeeks(newExpandedWeeks);
+              if (parentWeek && !expandedWeeks.has(parentWeek.id)) {
+                toggleWeekExpansion(parentWeek.id);
               }
               
               // Auto-expand the day to show the new workout
@@ -1149,7 +976,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               setTimeout(() => setAutoExpandDayId(null), 500); // Clear after expansion
             }
             
-            setShowAddWorkoutModal(false);
+            modalActions.setShowAddWorkoutModal(false);
             setAddWorkoutDay(null);
             setEditingWorkout(null);
             setWorkoutModalMode('add');
@@ -1160,11 +987,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         />
       )}
       
-       {showAddMoveframeModal && activeWorkout && activeDay && (
+       {modals.showAddMoveframeModal && activeWorkout && activeDay && (
          <AddEditMoveframeModal
-           isOpen={showAddMoveframeModal}
+           isOpen={modals.showAddMoveframeModal}
              onClose={() => {
-               setShowAddMoveframeModal(false);
+               modalActions.setShowAddMoveframeModal(false);
              setActiveWorkout(null);
              setActiveDay(null);
              setSelectedWorkout(null);
@@ -1202,6 +1029,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  const result = await response.json();
                  console.log('✅ Moveframe updated successfully:', result);
                  showMessage('success', 'Moveframe updated successfully');
+                 
+                 // Reload data to show changes
+                 await loadWorkoutData(activeSection);
                } else {
                  // CREATE new moveframe
                  const movelaps: any[] = [];
@@ -1254,13 +1084,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 const result = await response.json();
                  console.log('✅ Moveframe created successfully:', result);
                  showMessage('success', 'Moveframe created successfully');
+                 
+                 // Reload data to show the new moveframe immediately
+                 await loadWorkoutData(activeSection);
                }
                 
                 // Keep workout expanded
-               if (activeWorkout) {
-                  const newExpandedWorkouts = new Set(expandedWorkouts);
-                 newExpandedWorkouts.add(activeWorkout.id);
-                  setExpandedWorkouts(newExpandedWorkouts);
+               if (activeWorkout && !expandedWorkouts.has(activeWorkout.id)) {
+                  toggleWorkoutExpansion(activeWorkout.id);
                 }
                 
                // Auto-expand the day and workout
@@ -1285,33 +1116,33 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
          />
        )}
        
-       {showImportModal && (activeSection === 'A' || activeSection === 'B') && (
-         <ImportWorkoutsModal
-           targetSection={activeSection}
-           onClose={() => setShowImportModal(false)}
-           onImport={async (sourceType, sourceId, workouts) => {
-             try {
-               const token = localStorage.getItem('token');
-               const response = await fetch('/api/workouts/import', {
-                 method: 'POST',
-                 headers: {
-                   'Authorization': `Bearer ${token}`,
-                   'Content-Type': 'application/json'
-                 },
-                 body: JSON.stringify({
-                   targetSection: activeSection,
-                   sourceType,
-                   sourceId,
-                   workoutIds: workouts.map(w => w.id)
-                 })
-               });
-               
-               if (response.ok) {
-                 setShowImportModal(false);
-                 alert(`Successfully imported ${workouts.length} workout(s)!`);
-               } else {
-                 alert('Failed to import workouts');
-               }
+      {modals.showImportModal && (activeSection === 'A' || activeSection === 'B') && (
+        <ImportWorkoutsModal
+          targetSection={activeSection}
+          onClose={() => modalActions.setShowImportModal(false)}
+          onImport={async (sourceType, sourceId, workouts) => {
+            try {
+              const token = localStorage.getItem('token');
+              const response = await fetch('/api/workouts/import', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  targetSection: activeSection,
+                  sourceType,
+                  sourceId,
+                  workoutIds: workouts.map(w => w.id)
+                })
+              });
+              
+              if (response.ok) {
+                modalActions.setShowImportModal(false);
+                alert(`Successfully imported ${workouts.length} workout(s)!`);
+              } else {
+                alert('Failed to import workouts');
+              }
              } catch (error) {
                console.error('Error importing workouts:', error);
                alert('Error importing workouts');
@@ -1320,23 +1151,23 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
          />
        )}
        
-      {showAddDayModal && workoutPlan && (
+      {modals.showAddDayModal && workoutPlan && (
         <AddDayModal
           workoutPlanId={workoutPlan.id}
-          onClose={() => setShowAddDayModal(false)}
+          onClose={() => modalActions.setShowAddDayModal(false)}
           onSave={() => {
-            setShowAddDayModal(false);
+            modalActions.setShowAddDayModal(false);
           }}
         />
       )}
       
       {/* Virtual Start Date Modal for Sections B & C */}
-      {showStartDatePicker && (
+      {modals.showStartDatePicker && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Set Virtual Start Date</h2>
-              <button onClick={() => setShowStartDatePicker(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => modalActions.setShowStartDatePicker(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -1361,7 +1192,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             
             <div className="flex gap-3 justify-end">
               <button
-                onClick={() => setShowStartDatePicker(false)}
+                onClick={() => modalActions.setShowStartDatePicker(false)}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 Cancel
@@ -1369,7 +1200,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               <button
                 onClick={async () => {
                   if (virtualStartDate) {
-                    setShowStartDatePicker(false);
+                    modalActions.setShowStartDatePicker(false);
                     // Reload data with new start date
                     await loadWorkoutData();
                   }
@@ -1385,12 +1216,12 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
       
       {/* Athlete Selector Modal for Section C (Coaches/Teams/Clubs) */}
-      {showAthleteSelector && (
+      {modals.showAthleteSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto scrollbar-hide">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Select Athlete</h2>
-              <button onClick={() => setShowAthleteSelector(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => modalActions.setShowAthleteSelector(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -1411,7 +1242,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                     key={athlete.id}
                     onClick={() => {
                       setSelectedAthlete(athlete);
-                      setShowAthleteSelector(false);
+                      modalActions.setShowAthleteSelector(false);
                       loadWorkoutData(activeSection); // Reload data for selected athlete
                     }}
                     className="w-full text-left px-4 py-3 border border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors flex items-center justify-between"
@@ -1432,7 +1263,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               <button
                 onClick={() => {
                   setSelectedAthlete(null);
-                  setShowAthleteSelector(false);
+                  modalActions.setShowAthleteSelector(false);
                   loadWorkoutData(activeSection); // Reload own data
                 }}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -1440,7 +1271,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 View My Workouts
               </button>
               <button
-                onClick={() => setShowAthleteSelector(false)}
+                onClick={() => modalActions.setShowAthleteSelector(false)}
                 className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
               >
                 Close
@@ -1451,12 +1282,12 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
       
       {/* Workout Selector Modal - For Adding Moveframe */}
-      {showWorkoutSelector && (
+      {modals.showWorkoutSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto scrollbar-hide">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Select Workout for Moveframe</h2>
-              <button onClick={() => setShowWorkoutSelector(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => modalActions.setShowWorkoutSelector(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -1471,8 +1302,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   key={workout.id}
                   onClick={() => {
                     setSelectedWorkout(workout.id);
-                    setShowWorkoutSelector(false);
-                    setShowAddMoveframeModal(true);
+                    modalActions.setShowWorkoutSelector(false);
+                    modalActions.setShowAddMoveframeModal(true);
                   }}
                   className="w-full text-left px-4 py-4 border-2 border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-colors"
                 >
@@ -1510,7 +1341,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             
             <div className="flex gap-3 justify-end mt-6">
               <button
-                onClick={() => setShowWorkoutSelector(false)}
+                onClick={() => modalActions.setShowWorkoutSelector(false)}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 Cancel
@@ -1522,12 +1353,12 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       
       
       {/* Day Selector Modal - For Editing Day Notes/Annotations */}
-      {showDaySelector && workoutPlan && (
+      {modals.showDaySelector && workoutPlan && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto scrollbar-hide">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold text-gray-900">Select Day to Edit</h2>
-              <button onClick={() => setShowDaySelector(false)} className="text-gray-400 hover:text-gray-600">
+              <button onClick={() => modalActions.setShowDaySelector(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -1549,8 +1380,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                           key={day.id}
                           onClick={() => {
                             setEditingDay(day);
-                            setShowDaySelector(false);
-                            setShowEditDayModal(true);
+                            modalActions.setShowDaySelector(false);
+                            modalActions.setShowEditDayModal(true);
                           }}
                           className="p-3 border-2 border-gray-200 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-colors text-center"
                         >
@@ -1576,7 +1407,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             
             <div className="flex gap-3 justify-end mt-6">
               <button
-                onClick={() => setShowDaySelector(false)}
+                onClick={() => modalActions.setShowDaySelector(false)}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 Cancel
@@ -1588,16 +1419,17 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       
       {/* Edit Day Modal - Edit day notes, weather, feeling, annotations */}
       {/* ==================== EDIT DAY MODAL (Extracted Component) ==================== */}
-      {showEditDayModal && editingDay && (
+      {modals.showEditDayModal && editingDay && (
         <EditDayModal
           day={editingDay}
           periods={periods}
+          activeSection={activeSection === 'D' ? 'A' : activeSection as 'A' | 'B' | 'C'}
           onClose={() => {
-            setShowEditDayModal(false);
+            modalActions.closeEditDayModal();
             setEditingDay(null);
           }}
           onSave={async () => {
-            setShowEditDayModal(false);
+            modalActions.closeEditDayModal();
             setEditingDay(null);
             await loadWorkoutData(activeSection);
           }}
@@ -1607,12 +1439,12 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
 
       {/* ==================== ADD MOVELAP MODAL (Extracted Component) ==================== */}
-      {showAddMovelapModal && activeMoveframe && activeWorkout && activeDay && (
+      {modals.showAddMovelapModal && activeMoveframe && activeWorkout && activeDay && (
         <AddMovelapModal
           moveframe={activeMoveframe}
           workout={activeWorkout}
           day={activeDay}
-          onClose={() => setShowAddMovelapModal(false)}
+          onClose={() => modalActions.setShowAddMovelapModal(false)}
           onSave={(moveframeId, newMovelap) => {
             // Update local state without full page reload
             if (workoutPlan && newMovelap) {
@@ -1654,17 +1486,17 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
 
       {/* ==================== EDIT MOVEFRAME MODAL (Extracted Component) ==================== */}
-      {showEditMoveframeModal && editingMoveframe && activeWorkout && activeDay && (
+      {modals.showEditMoveframeModal && editingMoveframe && activeWorkout && activeDay && (
         <EditMoveframeModal
           moveframe={editingMoveframe}
           workout={activeWorkout}
           day={activeDay}
           onClose={() => {
-            setShowEditMoveframeModal(false);
+            modalActions.setShowEditMoveframeModal(false);
             setEditingMoveframe(null);
           }}
           onSave={async () => {
-            setShowEditMoveframeModal(false);
+            modalActions.setShowEditMoveframeModal(false);
             setEditingMoveframe(null);
             await loadWorkoutData(activeSection);
           }}
@@ -1674,14 +1506,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
 
       {/* ==================== ADD/EDIT MOVELAP MODAL (New Unified Component) ==================== */}
-      {showAddEditMovelapModal && activeMoveframe && (
+      {modals.showAddEditMovelapModal && activeMoveframe && (
         <AddEditMovelapModal
-          isOpen={showAddEditMovelapModal}
-          mode={movelapModalMode}
+          isOpen={modals.showAddEditMovelapModal}
+          mode={modes.movelapModalMode}
           moveframe={activeMoveframe}
           existingMovelap={editingMovelap}
           onClose={() => {
-            setShowAddEditMovelapModal(false);
+            modalActions.setShowAddEditMovelapModal(false);
             setEditingMovelap(null);
             setActiveMoveframe(null);
           }}
@@ -1694,7 +1526,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               }
 
               let response;
-              if (movelapModalMode === 'edit' && editingMovelap) {
+              if (modes.movelapModalMode === 'edit' && editingMovelap) {
                 // Update existing movelap
                 response = await fetch(`/api/workouts/movelaps?id=${editingMovelap.id}`, {
                   method: 'PATCH',
@@ -1721,8 +1553,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 throw new Error(errorData.error || 'Failed to save movelap');
               }
 
-              showMessage('success', movelapModalMode === 'edit' ? 'Movelap updated successfully' : 'Movelap created successfully');
-              setShowAddEditMovelapModal(false);
+              showMessage('success', modes.movelapModalMode === 'edit' ? 'Movelap updated successfully' : 'Movelap created successfully');
+              modalActions.setShowAddEditMovelapModal(false);
               setEditingMovelap(null);
               setActiveMoveframe(null);
               
@@ -1737,11 +1569,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
 
       {/* ==================== COPY DAY MODAL ==================== */}
-      {showCopyDayModal && copiedDay && workoutPlan && (
+      {modals.showCopyDayModal && copiedDay && workoutPlan && (
         <CopyDayModal
-          isOpen={showCopyDayModal}
+          isOpen={modals.showCopyDayModal}
           onClose={() => {
-            setShowCopyDayModal(false);
+            modalActions.closeCopyDayModal();
             setCopiedDay(null);
           }}
           sourceDay={copiedDay}
@@ -1768,7 +1600,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               }
 
               showMessage('success', 'Day copied successfully');
-              setShowCopyDayModal(false);
+              modalActions.closeCopyDayModal();
               setCopiedDay(null);
             } catch (error: any) {
               showMessage('error', error.message || 'Failed to copy day');
@@ -1778,11 +1610,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
 
       {/* ==================== MOVE DAY MODAL ==================== */}
-      {showMoveDayModal && copiedDay && workoutPlan && (
+      {modals.showMoveDayModal && copiedDay && workoutPlan && (
         <MoveDayModal
-          isOpen={showMoveDayModal}
+          isOpen={modals.showMoveDayModal}
           onClose={() => {
-            setShowMoveDayModal(false);
+            modalActions.closeMoveDayModal();
             setCopiedDay(null);
           }}
           sourceDay={copiedDay}
@@ -1809,7 +1641,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               }
 
               showMessage('success', 'Day moved successfully');
-              setShowMoveDayModal(false);
+              modalActions.closeMoveDayModal();
               setCopiedDay(null);
             } catch (error: any) {
               showMessage('error', error.message || 'Failed to move day');
@@ -1819,11 +1651,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
 
       {/* ==================== COPY WORKOUT MODAL ==================== */}
-      {showCopyWorkoutModal && copiedWorkout && workoutPlan && (
+      {modals.showCopyWorkoutModal && copiedWorkout && workoutPlan && (
         <CopyWorkoutModal
-          isOpen={showCopyWorkoutModal}
+          isOpen={modals.showCopyWorkoutModal}
           onClose={() => {
-            setShowCopyWorkoutModal(false);
+            modalActions.closeCopyWorkoutModal();
             setCopiedWorkout(null);
           }}
           sourceWorkout={copiedWorkout}
@@ -1850,7 +1682,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               }
 
               showMessage('success', 'Workout copied successfully');
-              setShowCopyWorkoutModal(false);
+              modalActions.closeCopyWorkoutModal();
               setCopiedWorkout(null);
             } catch (error: any) {
               showMessage('error', error.message || 'Failed to copy workout');
@@ -1860,11 +1692,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
 
       {/* ==================== MOVE WORKOUT MODAL ==================== */}
-      {showMoveWorkoutModal && copiedWorkout && workoutPlan && (
+      {modals.showMoveWorkoutModal && copiedWorkout && workoutPlan && (
         <MoveWorkoutModal
-          isOpen={showMoveWorkoutModal}
+          isOpen={modals.showMoveWorkoutModal}
           onClose={() => {
-            setShowMoveWorkoutModal(false);
+            modalActions.closeMoveWorkoutModal();
             setCopiedWorkout(null);
           }}
           sourceWorkout={copiedWorkout}
@@ -1891,7 +1723,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               }
 
               showMessage('success', 'Workout moved successfully');
-              setShowMoveWorkoutModal(false);
+              modalActions.closeMoveWorkoutModal();
               setCopiedWorkout(null);
             } catch (error: any) {
               showMessage('error', error.message || 'Failed to move workout');
@@ -1901,11 +1733,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
 
       {/* ==================== COPY MOVEFRAME MODAL ==================== */}
-      {showCopyMoveframeModal && copiedMoveframe && workoutPlan && (
+      {modals.showCopyMoveframeModal && copiedMoveframe && workoutPlan && (
         <CopyMoveframeModal
-          isOpen={showCopyMoveframeModal}
+          isOpen={modals.showCopyMoveframeModal}
           onClose={() => {
-            setShowCopyMoveframeModal(false);
+            modalActions.setShowCopyMoveframeModal(false);
             setCopiedMoveframe(null);
           }}
           sourceMoveframe={copiedMoveframe}
@@ -1933,7 +1765,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               }
 
               showMessage('success', 'Moveframe copied successfully');
-              setShowCopyMoveframeModal(false);
+              modalActions.setShowCopyMoveframeModal(false);
               setCopiedMoveframe(null);
               await loadWorkoutData(activeSection);
             } catch (error: any) {
@@ -1944,11 +1776,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
 
       {/* ==================== MOVE MOVEFRAME MODAL ==================== */}
-      {showMoveMoveframeModal && copiedMoveframe && activeWorkout && workoutPlan && (
+      {modals.showMoveMoveframeModal && copiedMoveframe && activeWorkout && workoutPlan && (
         <MoveMoveframeModal
-          isOpen={showMoveMoveframeModal}
+          isOpen={modals.showMoveMoveframeModal}
           onClose={() => {
-            setShowMoveMoveframeModal(false);
+            modalActions.setShowMoveMoveframeModal(false);
             setCopiedMoveframe(null);
           }}
           sourceMoveframe={copiedMoveframe}
@@ -1977,7 +1809,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               }
 
               showMessage('success', 'Moveframe moved successfully');
-              setShowMoveMoveframeModal(false);
+              modalActions.setShowMoveMoveframeModal(false);
               setCopiedMoveframe(null);
               await loadWorkoutData(activeSection);
             } catch (error: any) {
@@ -1988,30 +1820,30 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
 
       {/* ==================== COLUMN SETTINGS MODAL ==================== */}
-      {showColumnSettingsModal && (
+      {modals.showColumnSettingsModal && (
         <ColumnSettingsModal
-          isOpen={showColumnSettingsModal}
-          onClose={() => setShowColumnSettingsModal(false)}
-          tableType={columnSettingsTableType}
-          visibleColumns={columnSettings.getVisibleColumns(columnSettingsTableType)}
-          columnOrder={columnSettings.getColumnOrder(columnSettingsTableType)}
+          isOpen={modals.showColumnSettingsModal}
+          onClose={() => modalActions.setShowColumnSettingsModal(false)}
+          tableType={settings.columnSettingsTableType}
+          visibleColumns={columnSettings.getVisibleColumns(settings.columnSettingsTableType)}
+          columnOrder={columnSettings.getColumnOrder(settings.columnSettingsTableType)}
           onSave={(visibleColumns, columnOrder) => {
-            columnSettings.updateTableSettings(columnSettingsTableType, visibleColumns, columnOrder);
+            columnSettings.updateTableSettings(settings.columnSettingsTableType, visibleColumns, columnOrder);
             showMessage('success', 'Column settings saved');
           }}
           onReset={() => {
-            columnSettings.resetTableSettings(columnSettingsTableType);
+            columnSettings.resetTableSettings(settings.columnSettingsTableType);
             showMessage('success', 'Column settings reset to default');
           }}
         />
       )}
 
       {/* ==================== BULK ADD MOVELAP MODAL ==================== */}
-      {showBulkAddMovelapModal && activeMoveframe && activeWorkout && activeDay && (
+      {modals.showBulkAddMovelapModal && activeMoveframe && activeWorkout && activeDay && (
         <BulkAddMovelapModal
-          isOpen={showBulkAddMovelapModal}
+          isOpen={modals.showBulkAddMovelapModal}
           onClose={() => {
-            setShowBulkAddMovelapModal(false);
+            modalActions.setShowBulkAddMovelapModal(false);
             setActiveMoveframe(null);
           }}
           moveframe={activeMoveframe}
@@ -2037,7 +1869,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               }
 
               showMessage('success', `${movelaps.length} movelaps added successfully`);
-              setShowBulkAddMovelapModal(false);
+              modalActions.setShowBulkAddMovelapModal(false);
               setActiveMoveframe(null);
               await loadWorkoutData(activeSection);
             } catch (error) {
@@ -2066,9 +1898,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       {/* Drag & Drop Confirmation Modal */}
       {dragModalConfig && (
         <DragDropConfirmModal
-          isOpen={showDragModal}
+          isOpen={modals.showDragModal}
           onClose={() => {
-            setShowDragModal(false);
+            modalActions.setShowDragModal(false);
             setDragModalConfig(null);
           }}
           onConfirm={handleDragConfirm}
