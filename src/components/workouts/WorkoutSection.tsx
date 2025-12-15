@@ -1046,6 +1046,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                      pace: moveframeData.pace || null,
                      time: moveframeData.time || null,
                      reps: moveframeData.reps || null,
+                     r1: moveframeData.r1 || null,
+                     r2: moveframeData.r2 || null,
                      restType: null,
                      pause: moveframeData.pause || null,
                      alarm: moveframeData.alarm || null,

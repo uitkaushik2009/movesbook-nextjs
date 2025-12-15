@@ -236,6 +236,8 @@ export function useMoveframeForm({
       alarm: parseInt(alarm),
       sound,
       reps: sport === 'BODY_BUILDING' ? parseInt(reps) : null,
+      r1: sport === 'BIKE' ? r1 : null,
+      r2: sport === 'BIKE' ? r2 : null,
       
       // Annotation fields
       annotationText: type === 'ANNOTATION' ? annotationText : null,
@@ -273,6 +275,8 @@ export function useMoveframeForm({
       setAlarm(existingMoveframe.alarm?.toString() || '-1');
       setSound(existingMoveframe.sound || 'Beep');
       setReps(existingMoveframe.reps?.toString() || '');
+      setR1(existingMoveframe.r1 || '');
+      setR2(existingMoveframe.r2 || '');
       setManualContent(existingMoveframe.description || '');
     } else {
       resetForm();

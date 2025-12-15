@@ -62,6 +62,19 @@ export default function SortableMoveframeRow({
   const sectionColor = moveframe.section?.color || '#5b8def';
   const sectionName = moveframe.section?.name || 'Default';
   
+  // Calculate macro time (total time for all movelaps)
+  const macroTime = (moveframe.movelaps || []).reduce((sum: number, lap: any) => {
+    const time = lap.estimatedTime || lap.time || 0;
+    return sum + (typeof time === 'string' ? parseFloat(time) : time);
+  }, 0);
+  
+  const formatMacroTime = (seconds: number) => {
+    if (!seconds || seconds === 0) return '-';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}'${secs.toString().padStart(2, '0')}"`;
+  };
+  
   return (
     <React.Fragment key={moveframe.id}>
       <tr 
@@ -70,18 +83,6 @@ export default function SortableMoveframeRow({
         className="hover:bg-purple-50"
         title="Click expand button to show/hide movelaps, Double-click moveframe to edit"
       >
-        {/* Checkbox Column */}
-        <td className="border border-gray-200 px-1 py-1 text-center"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <input
-            type="checkbox"
-            className="w-3 h-3 cursor-pointer"
-            title="Select moveframe"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </td>
-        
         {/* Drag Handle Column */}
         <td className="border border-gray-200 px-1 py-1 text-center"
           onClick={(e) => e.stopPropagation()}
@@ -103,7 +104,12 @@ export default function SortableMoveframeRow({
           <span className="font-bold">{isMovelapsExpanded ? '▼' : '►'}</span>
         </td>
         
-        {/* Letter Column - Always shows alphabetical letter */}
+        {/* Index Column */}
+        <td className="border border-gray-200 px-1 py-1 text-center font-bold text-xs">
+          {mfIndex + 1}
+        </td>
+        
+        {/* MF Letter Column - Always shows alphabetical letter */}
         <td className="border border-gray-200 px-1 py-1 text-center font-bold text-xs cursor-pointer"
           onDoubleClick={(e) => {
             e.stopPropagation();
@@ -113,7 +119,7 @@ export default function SortableMoveframeRow({
           {moveframe.letter || String.fromCharCode(65 + mfIndex)}
         </td>
         
-        {/* Color Column */}
+        {/* Color Section Column */}
         <td className="border border-gray-200 px-1 py-1 text-center">
           <div
             className="w-6 h-6 mx-auto rounded"
@@ -122,51 +128,61 @@ export default function SortableMoveframeRow({
           />
         </td>
         
-        {/* Type Column */}
-        <td className="border border-gray-200 px-1 py-1 text-center text-[10px]">
-          {sectionName}
-        </td>
-        
-        {/* Sport Column */}
+        {/* Name Section Column - Shows Sport Name */}
         <td className="border border-gray-200 px-1 py-1 text-center text-[10px]">
           {moveframe.sport?.replace(/_/g, ' ') || 'Unknown'}
         </td>
         
-        {/* Description Column */}
-        <td className="border border-gray-200 px-1 py-1 text-[10px]">
+        {/* Moveframe Description Column */}
+        <td className="border border-gray-200 px-1 py-1 text-center text-[10px]">
           {moveframe.description || 'No description'}
         </td>
         
-        {/* Repetitions Column */}
+        {/* Rip (Repetitions) Column */}
         <td className="border border-gray-200 px-1 py-1 text-center text-red-600 font-semibold text-xs">
           {movelapsCount}
         </td>
         
-        {/* Distance Column */}
+        {/* Macro Column */}
         <td className="border border-gray-200 px-1 py-1 text-center font-semibold text-xs">
-          {totalDistance}
+          {formatMacroTime(macroTime)}
         </td>
         
-        {/* Actions Column */}
+        {/* Alarm & Sound Column */}
+        <td className="border border-gray-200 px-1 py-1 text-center text-[10px]">
+          {moveframe.alarm ? '🔔' : '-'}
+        </td>
+        
+        {/* Options Column */}
         <td className="border border-gray-200 px-1 py-1 text-center">
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center justify-center gap-1 flex-wrap">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onEditMoveframe) onEditMoveframe(moveframe);
+              }}
+              className="px-2 py-1 text-[10px] bg-blue-500 text-white rounded hover:bg-blue-600"
+              title="Edit this moveframe"
+            >
+              Edit
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedMoveframe(moveframe);
                 setShowInfoPanel(true);
               }}
-              className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 font-medium"
+              className="px-2 py-1 text-[10px] bg-indigo-500 text-white rounded hover:bg-indigo-600"
               title="View moveframe info"
             >
-              MF info
+              MF Info
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 if (onCopyMoveframe) onCopyMoveframe(moveframe, workout, day);
               }}
-              className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 font-medium"
+              className="px-2 py-1 text-[10px] bg-green-500 text-white rounded hover:bg-green-600"
               title="Copy this moveframe"
             >
               Copy
@@ -176,7 +192,7 @@ export default function SortableMoveframeRow({
                 e.stopPropagation();
                 if (onMoveMoveframe) onMoveMoveframe(moveframe, workout, day);
               }}
-              className="px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 font-medium"
+              className="px-2 py-1 text-[10px] bg-orange-500 text-white rounded hover:bg-orange-600"
               title="Move this moveframe"
             >
               Move
@@ -190,10 +206,21 @@ export default function SortableMoveframeRow({
                   }
                 }
               }}
-              className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600 font-medium"
+              className="px-2 py-1 text-[10px] bg-red-500 text-white rounded hover:bg-red-600"
               title="Delete this moveframe"
             >
-              Del
+              Delete
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                // Save functionality can be added here if needed
+                alert('Save functionality - to be implemented');
+              }}
+              className="px-2 py-1 text-[10px] bg-purple-500 text-white rounded hover:bg-purple-600"
+              title="Save changes"
+            >
+              Save
             </button>
           </div>
         </td>
@@ -202,7 +229,7 @@ export default function SortableMoveframeRow({
       {/* Movelaps Detail Table */}
       {isMovelapsExpanded && (
         <tr>
-          <td colSpan={11} className="border border-gray-200 p-0">
+          <td colSpan={11} className="border border-gray-200 p-0 bg-gray-50">
             <MovelapDetailTable 
               moveframe={moveframe}
               onEditMovelap={(movelap) => onEditMovelap?.(movelap, moveframe)}

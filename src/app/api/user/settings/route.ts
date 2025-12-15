@@ -144,13 +144,26 @@ export async function POST(request: NextRequest) {
     delete settingsData.createdAt;
     delete settingsData.updatedAt;
 
+    // Ensure all required fields have default values for creation
+    const defaultSettings = {
+      colorSettings: '{}',
+      toolsSettings: '{}',
+      favouritesSettings: '{}',
+      myBestSettings: '{}',
+      adminSettings: '{}',
+      workoutPreferences: '{}',
+      socialSettings: '{}',
+      notificationSettings: '{}'
+    };
+
     // Upsert (update or create)
     const settings = await prisma.userSettings.upsert({
       where: { userId },
       update: settingsData,
       create: {
         userId,
-        ...settingsData
+        ...defaultSettings,
+        ...settingsData // Override defaults with any provided settings
       }
     });
 
@@ -171,7 +184,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error saving settings:', error);
-    return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
+    console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    return NextResponse.json({ 
+      error: 'Failed to save settings',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 

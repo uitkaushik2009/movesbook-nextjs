@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 
 interface AddDayModalProps {
@@ -21,9 +21,45 @@ export default function AddDayModal({ workoutPlanId, onClose, onSave }: AddDayMo
     feeling: 5,
     notes: ''
   });
+  
+  const [periods, setPeriods] = useState<any[]>([]);
+  const [isLoadingPeriods, setIsLoadingPeriods] = useState(true);
+  
+  // Fetch periods on mount
+  useEffect(() => {
+    const fetchPeriods = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/workouts/periods', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setPeriods(data.periods || []);
+          // Auto-select first period if available
+          if (data.periods && data.periods.length > 0) {
+            setDayData(prev => ({ ...prev, periodId: data.periods[0].id }));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching periods:', error);
+      } finally {
+        setIsLoadingPeriods(false);
+      }
+    };
+    
+    fetchPeriods();
+  }, []);
 
   const handleSave = async () => {
     try {
+      // Validate period selection
+      if (!dayData.periodId) {
+        alert('Please select a Period for this day.');
+        return;
+      }
+      
       const token = localStorage.getItem('token');
       
       // Check if week already has 7 days
@@ -51,7 +87,7 @@ export default function AddDayModal({ workoutPlanId, onClose, onSave }: AddDayMo
           workoutPlanId,
           weekNumber: dayData.weekNumber,
           date: dayData.date,
-          periodId: dayData.periodId || undefined,
+          periodId: dayData.periodId,
           weather: dayData.weather,
           feelingStatus: dayData.feeling.toString(),
           notes: dayData.notes
@@ -128,6 +164,43 @@ export default function AddDayModal({ workoutPlanId, onClose, onSave }: AddDayMo
               onChange={(e) => setDayData({ ...dayData, date: e.target.value })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Period *
+            </label>
+            {isLoadingPeriods ? (
+              <div className="text-sm text-gray-500 px-4 py-2">Loading periods...</div>
+            ) : periods.length === 0 ? (
+              <div className="text-sm text-orange-600 px-4 py-2">
+                No periods found. Please create periods in Settings → Period Settings.
+              </div>
+            ) : (
+              <select
+                value={dayData.periodId}
+                onChange={(e) => setDayData({ ...dayData, periodId: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                {periods.map((period) => (
+                  <option key={period.id} value={period.id}>
+                    {period.name} {period.description && `- ${period.description}`}
+                  </option>
+                ))}
+              </select>
+            )}
+            {dayData.periodId && periods.length > 0 && (
+              <div className="mt-2 flex items-center gap-2 px-2">
+                <div
+                  className="w-4 h-4 rounded-full border border-gray-300"
+                  style={{ backgroundColor: periods.find(p => p.id === dayData.periodId)?.color || '#9CA3AF' }}
+                />
+                <span className="text-sm text-gray-600">
+                  Period Color: {periods.find(p => p.id === dayData.periodId)?.name}
+                </span>
+              </div>
+            )}
           </div>
 
           <div>

@@ -283,6 +283,8 @@ model Movelap {
   pace             String?
   time             String?
   reps             Int?
+  r1               String?      // Range 1 (BIKE specific)
+  r2               String?      // Range 2 (BIKE specific)
   restType         RestType?
   pause            String?
   macroFinal       String?      // Macro final field (0' to 9')

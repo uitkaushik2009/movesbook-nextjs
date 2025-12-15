@@ -193,17 +193,17 @@ export default function MoveframesSection({
               <table className="w-full border-collapse text-xs bg-white">
                 <thead className="bg-purple-300 text-purple-900">
                   <tr>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Select">☑</th>
                     <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Drag to reorder">⋮⋮</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">::</th>
+                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Expand/Collapse">::</th>
+                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Index">#</th>
                     <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">MF</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Color</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Type</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Sport</th>
-                    <th className="border border-gray-200 px-1 py-1 text-left text-[10px]">Description</th>
+                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Color section</th>
+                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Name section</th>
+                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Moveframe description</th>
                     <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rip</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Dist</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Actions</th>
+                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Macro</th>
+                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Alarm & Sound</th>
+                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Options</th>
                   </tr>
                 </thead>
                 <tbody>

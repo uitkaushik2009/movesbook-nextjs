@@ -296,6 +296,7 @@ export default function AddEditMoveframeModal({
                   )}
                 </div>
 
+                {/* STYLE & NOTES Section - Show for sports with styles */}
                 {'styles' in sportConfig && (
                   <div className="bg-gray-50 p-2.5 rounded-lg">
                     <h3 className="font-bold text-xs text-gray-700 mb-2">STYLE & NOTES</h3>
@@ -314,6 +315,23 @@ export default function AddEditMoveframeModal({
                         ))}
                       </select>
                     </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Note:</label>
+                      <textarea
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                        rows={3}
+                        placeholder="Add notes..."
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* NOTES Section - Show for sports without styles (like BIKE) */}
+                {!('styles' in sportConfig) && sport !== 'BODY_BUILDING' && (
+                  <div className="bg-gray-50 p-2.5 rounded-lg">
+                    <h3 className="font-bold text-xs text-gray-700 mb-2">NOTES</h3>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Note:</label>
                       <textarea
@@ -345,6 +363,34 @@ export default function AddEditMoveframeModal({
                     ))}
                   </select>
                 </div>
+
+                {/* R1 and R2 fields (BIKE only) */}
+                {sport === 'BIKE' && (
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-2">R1\R2 (Range):</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <input
+                          type="text"
+                          value={r1}
+                          onChange={(e) => setR1(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                          placeholder="R1 range"
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          value={r2}
+                          onChange={(e) => setR2(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                          placeholder="R2 range"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {sport !== 'BODY_BUILDING' && (
                   <>
                     <div className="mb-3">
