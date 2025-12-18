@@ -82,8 +82,8 @@ export default function WorkoutHierarchyView({
         console.log(`📋 Rendering workout ${workout.id}, isExpanded: ${isWorkoutExpanded}`);
         
         return (
-          <div key={workout.id} className="space-y-4">
-            {/* WORKOUT TABLE - includes moveframes inside */}
+          <div key={workout.id} className="space-y-4 ml-8">
+            {/* WORKOUT TABLE - Level 1: Indented from day */}
             <WorkoutTable
               day={day}
               workout={workout}

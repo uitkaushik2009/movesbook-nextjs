@@ -33,8 +33,8 @@ export default function EditDayModal({
 }: EditDayModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Show feeling field only in WORKOUT DONE section (B)
-  const showFeelingField = activeSection === 'B';
+  // Show weather and feeling status only in section C (Workouts Done)
+  const showWeatherAndFeeling = activeSection === 'C';
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -66,7 +66,7 @@ export default function EditDayModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999999]">
       <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -87,23 +87,25 @@ export default function EditDayModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Weather */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Weather
-            </label>
-            <input
-              type="text"
-              name="weather"
-              defaultValue={day.weather || ''}
-              placeholder="Sunny, Rainy, Cloudy, etc."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              disabled={isSubmitting}
-            />
-          </div>
+          {/* Weather - Only show in section C (Workouts Done) */}
+          {showWeatherAndFeeling && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Weather
+              </label>
+              <input
+                type="text"
+                name="weather"
+                defaultValue={day.weather || ''}
+                placeholder="Sunny, Rainy, Cloudy, etc."
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={isSubmitting}
+              />
+            </div>
+          )}
 
-          {/* Feeling/Status - Only show in WORKOUT DONE section */}
-          {showFeelingField && (
+          {/* Feeling/Status - Only show in section C (Workouts Done) */}
+          {showWeatherAndFeeling && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Feeling (1-10)

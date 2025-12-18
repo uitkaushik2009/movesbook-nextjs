@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { X, Edit, Copy, Move, Trash2, Plus, CheckCircle, Circle, Clock, MapPin, Zap, PlusCircle } from 'lucide-react';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
@@ -37,10 +38,15 @@ export default function MoveframeInfoPanel({
   onBulkAddMovelaps
 }: MoveframeInfoPanelProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'movelaps' | 'stats'>('overview');
+  const [isMounted, setIsMounted] = useState(false);
   const iconType = useSportIconType();
   const useImageIcons = isImageIcon(iconType);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isOpen || !isMounted) return null;
 
   // Calculate totals
   const movelaps = moveframe.movelaps || [];
@@ -78,9 +84,9 @@ export default function MoveframeInfoPanel({
     return `${meters} m`;
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div 
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999999] p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
@@ -200,7 +206,7 @@ export default function MoveframeInfoPanel({
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Movelaps ({totalMovelaps})
+              Total reps ({totalMovelaps})
             </button>
             <button
               onClick={() => setActiveTab('stats')}
@@ -247,7 +253,7 @@ export default function MoveframeInfoPanel({
                     </div>
                   </div>
                   <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                    <div className="text-purple-600 text-sm font-medium mb-1">Movelaps</div>
+                    <div className="text-purple-600 text-sm font-medium mb-1">Total reps</div>
                     <div className="text-2xl font-bold text-purple-900">
                       {completedMovelaps}/{totalMovelaps}
                     </div>
@@ -289,7 +295,7 @@ export default function MoveframeInfoPanel({
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Movelaps ({totalMovelaps})
+                  Total reps ({totalMovelaps})
                 </h3>
                 <div className="flex gap-2">
                   <button
@@ -532,7 +538,8 @@ export default function MoveframeInfoPanel({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

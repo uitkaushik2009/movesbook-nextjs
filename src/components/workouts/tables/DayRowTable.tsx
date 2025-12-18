@@ -175,28 +175,29 @@ export default function DayRowTable({
         />
       </td>
 
-      {/* Workout Sessions - Show numbers with symbols for each workout */}
+      {/* Workout Sessions - Show numbers with symbols for each workout + Day Description */}
       <td 
-        className="border border-gray-200 px-1 py-2 text-center sticky-col-7" 
+        className="border border-gray-200 px-1 py-2 sticky-col-7" 
         style={{ backgroundColor: bgStyle }}
         onClick={(e) => e.stopPropagation()} // Prevent row click when clicking on workout numbers
       >
-        <div className="flex items-center justify-center gap-1">
-          {[1, 2, 3].map((num) => {
-            const workout = sortedWorkouts[num - 1]; // Use sorted workouts
-            const symbols = ['○', '□', '△'];
-            const symbol = symbols[num - 1];
-            const hasData = workout && workout.moveframes && workout.moveframes.length > 0;
-            const colorClass = hasData ? 'text-black' : 'text-gray-400';
-            
-            return (
-              <span 
-                key={num} 
-                className={`text-xs font-bold ${colorClass} flex items-center gap-0.5 ${workout ? 'cursor-pointer hover:bg-blue-200 px-1 rounded transition-colors' : ''}`}
-                title={workout ? `Click to expand/collapse Workout ${num}` : `Workout ${num} (not created)`}
-                onClick={(e) => {
-                  if (workout && onToggleWorkout) {
-                    e.stopPropagation();
+        <div className="flex items-center justify-start gap-2">
+          <div className="flex items-center gap-1">
+            {[1, 2, 3].map((num) => {
+              const workout = sortedWorkouts[num - 1]; // Use sorted workouts
+              const symbols = ['○', '□', '△'];
+              const symbol = symbols[num - 1];
+              const hasData = workout && workout.moveframes && workout.moveframes.length > 0;
+              const colorClass = hasData ? 'text-black' : 'text-gray-400';
+              
+              return (
+                <span 
+                  key={num} 
+                  className={`text-xs font-bold ${colorClass} flex items-center gap-0.5 ${workout ? 'cursor-pointer hover:bg-blue-200 px-1 rounded transition-colors' : ''}`}
+                  title={workout ? `Click to expand/collapse Workout ${num}` : `Workout ${num} (not created)`}
+                  onClick={(e) => {
+                    if (workout && onToggleWorkout) {
+                      e.stopPropagation();
                     onToggleWorkout(workout.id);
                     // Also ensure the day is expanded
                     if (!isExpanded) {
@@ -209,6 +210,14 @@ export default function DayRowTable({
               </span>
             );
           })}
+          </div>
+          
+          {/* Day Description Text */}
+          {day.description && (
+            <div className="flex-1 text-[10px] text-gray-700 truncate px-2 max-w-[150px]" title={day.description}>
+              {day.description}
+            </div>
+          )}
         </div>
       </td>
 
@@ -367,16 +376,16 @@ export default function DayRowTable({
         onClick={(e) => e.stopPropagation()} // Prevent row click when clicking on buttons
       >
         <div className="flex gap-1 justify-center items-center relative" ref={dropdownRef}>
-          {/* Edit Button */}
+          {/* Day Info Button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onEditDay?.(dayWithWeek);
+              onShowDayInfo?.(dayWithWeek);
             }}
             className="px-2 py-1 text-[11px] bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors font-medium"
-            title="Edit Day Info"
+            title="View Day Information"
           >
-            Edit
+            Day Info
           </button>
           
           {/* Option Button with Dropdown */}
@@ -407,23 +416,23 @@ export default function DayRowTable({
                   onClick={(e) => {
                     e.stopPropagation();
                     closeDropdown();
-                    onAddWorkout?.(dayWithWeek);
+                    onEditDay?.(dayWithWeek);
                   }}
-                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-50 transition-colors flex items-center gap-2"
+                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-green-50 transition-colors flex items-center gap-2"
                 >
-                  <span className="text-blue-600">➕</span>
-                  <span>Add a Workout</span>
+                  <span className="text-green-600">✏️</span>
+                  <span>Edit Day</span>
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     closeDropdown();
-                    onShowDayInfo?.(dayWithWeek);
+                    onAddWorkout?.(dayWithWeek);
                   }}
-                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-cyan-50 transition-colors flex items-center gap-2 border-t border-gray-200"
+                  className="w-full text-left px-3 py-2 text-[11px] hover:bg-blue-50 transition-colors flex items-center gap-2 border-t border-gray-200"
                 >
-                  <span className="text-cyan-600">ℹ️</span>
-                  <span>Day info</span>
+                  <span className="text-blue-600">➕</span>
+                  <span>Add a Workout</span>
                 </button>
                 <button
                   onClick={(e) => {

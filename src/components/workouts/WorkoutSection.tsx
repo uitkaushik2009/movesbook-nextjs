@@ -588,14 +588,28 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       <div className="flex flex-col h-full bg-white">
       {/* Small header bar with close button */}
       {/* Header Component */}
-      <WorkoutSectionHeader
-        activeSection={activeSection}
-        viewMode={viewMode}
-        selectedWeekForTable={selectedWeekForTable}
-        virtualStartDate={virtualStartDate}
-        userType={userType ?? undefined}
-        selectedAthlete={selectedAthlete}
-        onSectionChange={setActiveSection}
+      {/* Check if we can add a day (Section A: only if a week has < 7 days) */}
+      {(() => {
+        let canAddDay = true;
+        if (activeSection === 'A' && workoutPlan?.weeks) {
+          // For Section A, check if any week has less than 7 days
+          canAddDay = workoutPlan.weeks.some((week: any) => {
+            const dayCount = week.days?.length || 0;
+            return dayCount < 7;
+          });
+        }
+        // For sections B and C, always allow adding days
+        
+        return (
+          <WorkoutSectionHeader
+            activeSection={activeSection}
+            viewMode={viewMode}
+            selectedWeekForTable={selectedWeekForTable}
+            virtualStartDate={virtualStartDate}
+            userType={userType ?? undefined}
+            selectedAthlete={selectedAthlete}
+            canAddDay={canAddDay}
+            onSectionChange={setActiveSection}
         onViewModeChange={(mode) => {
           setViewMode(mode);
           if (mode === 'calendar') {
@@ -609,8 +623,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           setSelectedWeekForTable(null);
           setViewMode('calendar');
         }}
-        onClose={onClose}
-      />
+            onAddDay={() => modalActions.openAddDayModal()}
+            onClose={onClose}
+          />
+        );
+      })()}
 
       {/* Workout area - full width */}
       <div className="flex-1 flex overflow-hidden">
@@ -670,6 +687,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        }
                      : workoutPlan
                  }
+                 activeSection={activeSection}
                  expandedDays={expandedDays}
                  expandedWorkouts={expandedWorkouts}
                  onToggleDay={toggleDayExpansion}
@@ -808,6 +826,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        
                        if (response.ok) {
                          showMessage('success', 'Workout deleted successfully');
+                         // Refresh workout data to remove deleted workout from view
+                         await loadWorkoutData(activeSection);
                        } else {
                          showMessage('error', 'Failed to delete workout');
                        }
@@ -845,6 +865,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        
                        if (response.ok) {
                          showMessage('success', 'Moveframe deleted successfully');
+                         // Refresh workout data to remove deleted moveframe from view
+                         await loadWorkoutData(activeSection);
                        } else {
                          showMessage('error', 'Failed to delete moveframe');
                        }
@@ -865,6 +887,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        
                        if (response.ok) {
                          showMessage('success', 'Movelap deleted successfully');
+                         // Refresh workout data to remove deleted movelap from view
+                         await loadWorkoutData(activeSection);
                        } else {
                          showMessage('error', 'Failed to delete movelap');
                        }

@@ -95,6 +95,24 @@ export const SPORTS_LIST = [
   'TRACK_FIELD'
 ] as const;
 
+// Sports that use distance/duration tracking (all others use series/repetitions)
+export const DISTANCE_BASED_SPORTS = [
+  'SWIM',
+  'BIKE',
+  'RUN',
+  'ROWING',
+  'SKATE',
+  'SKI',
+  'SNOWBOARD',
+  'WALKING',
+  'HIKING'
+] as const;
+
+// Helper function to check if a sport uses series-based tracking
+export const isSeriesBasedSport = (sport: string): boolean => {
+  return !DISTANCE_BASED_SPORTS.includes(sport as any);
+};
+
 // Type definitions
 export type Sport = typeof SPORTS_LIST[number];
 export type MoveframeType = 'STANDARD' | 'BATTERY' | 'ANNOTATION';

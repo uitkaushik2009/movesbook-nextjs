@@ -130,9 +130,12 @@ model WorkoutWeek {
   id            String   @id @default(cuid())
   workoutPlanId String
   weekNumber    Int
+  periodId      String?  // Optional: Period for the entire week
+  notes         String?  @db.Text // Weekly planning notes (HTML content)
   createdAt     DateTime @default(now())
 
   workoutPlan WorkoutPlan @relation(fields: [workoutPlanId], references: [id], onDelete: Cascade)
+  period      Period?     @relation("WeekPeriod", fields: [periodId], references: [id], onDelete: SetNull)
   days        WorkoutDay[]
 
   @@map("workout_weeks")
@@ -185,8 +188,9 @@ model Period {
   color       String
   createdAt   DateTime @default(now())
 
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   days   WorkoutDay[]
+  weeks  WorkoutWeek[] @relation("WeekPeriod")
 
   @@map("periods")
 }
@@ -277,6 +281,7 @@ model Movelap {
   id               String       @id @default(cuid())
   moveframeId      String
   repetitionNumber Int
+  order            Int?         // Display order for drag and drop
   distance         Int?
   speed            String?
   style            String?
@@ -296,6 +301,7 @@ model Movelap {
   status           MovelapStatus
   isSkipped        Boolean      @default(false)
   isDisabled       Boolean      @default(false)
+  series           Int?         // Number of series for BODY_BUILDING
   createdAt        DateTime     @default(now())
 
   moveframe Moveframe @relation(fields: [moveframeId], references: [id], onDelete: Cascade)

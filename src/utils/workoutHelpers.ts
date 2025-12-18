@@ -4,6 +4,7 @@
  */
 
 import { getSportIcon } from './sportIcons';
+import { isSeriesBasedSport } from '@/constants/moveframe.constants';
 
 export interface SportSummary {
   sport: string;
@@ -12,6 +13,7 @@ export interface SportSummary {
   distance: number;
   duration: string;
   color: string;
+  isSeriesBased?: boolean;
 }
 
 /**
@@ -30,7 +32,7 @@ export function calculateSportSummaries(
     return [];
   }
 
-  const sportMap = new Map<string, SportSummary>();
+  const sportMap = new Map<string, SportSummary & { series: number; repetitions: number }>();
 
   day.workouts.forEach((workout: any) => {
     if (workout.moveframes) {
@@ -38,6 +40,7 @@ export function calculateSportSummaries(
         const sport = moveframe.sport;
         const sectionName = moveframe.section?.name || 'No Section';
         const sectionColor = moveframe.section?.color || '#E5E7EB';
+        const isSeries = isSeriesBasedSport(sport);
         
         if (!sportMap.has(sport)) {
           sportMap.set(sport, {
@@ -46,26 +49,49 @@ export function calculateSportSummaries(
             name: sectionName,
             distance: 0,
             duration: '0:00',
-            color: sectionColor
+            color: sectionColor,
+            isSeriesBased: isSeries,
+            series: 0,
+            repetitions: 0
           });
         }
 
         const summary = sportMap.get(sport)!;
         
-        // Sum distances from movelaps
-        if (moveframe.movelaps) {
-          moveframe.movelaps.forEach((movelap: any) => {
-            if (movelap.distance) {
-              summary.distance += Number(movelap.distance);
-            }
-          });
+        if (isSeries) {
+          // For series-based sports: count series and repetitions
+          const seriesCount = moveframe.repetitions || moveframe.movelaps?.[0]?.series || 0;
+          const repsPerSeries = moveframe.movelaps?.[0]?.reps || 0;
+          
+          summary.series += parseInt(seriesCount) || 0;
+          summary.repetitions += (parseInt(seriesCount) || 0) * (parseInt(repsPerSeries) || 0);
+        } else {
+          // For distance-based sports: sum distances from movelaps
+          if (moveframe.movelaps) {
+            moveframe.movelaps.forEach((movelap: any) => {
+              if (movelap.distance) {
+                summary.distance += Number(movelap.distance);
+              }
+            });
+          }
         }
       });
     }
   });
 
+  // Convert to final format
+  const summaries = Array.from(sportMap.values()).map(summary => ({
+    sport: summary.sport,
+    icon: summary.icon,
+    name: summary.name,
+    distance: summary.isSeriesBased ? summary.series : summary.distance,
+    duration: summary.isSeriesBased ? summary.repetitions.toString() : summary.duration,
+    color: summary.color,
+    isSeriesBased: summary.isSeriesBased
+  }));
+
   // Return up to 4 sports
-  return Array.from(sportMap.values()).slice(0, 4);
+  return summaries.slice(0, 4);
 }
 
 /**

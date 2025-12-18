@@ -59,23 +59,27 @@ export function useWorkoutForm({
   // ==================== HELPER FUNCTIONS ====================
 
   /**
-   * Get sports from moveframes in the day
+   * Get sports from moveframes in the current workout only
+   * (not from all workouts in the day)
    */
   const getSportsFromMoveframes = () => {
-    if (!day || !day.workouts) return [];
+    // In add mode, new workout has no moveframes yet
+    if (mode === 'add') return [];
     
-    const allSports = new Set<string>();
-    day.workouts.forEach((workout: any) => {
-      if (workout.moveframes && Array.isArray(workout.moveframes)) {
-        workout.moveframes.forEach((mf: any) => {
+    // In edit mode, get sports only from the current workout being edited
+    if (mode === 'edit' && existingWorkout) {
+      const sports = new Set<string>();
+      if (existingWorkout.moveframes && Array.isArray(existingWorkout.moveframes)) {
+        existingWorkout.moveframes.forEach((mf: any) => {
           if (mf.sport) {
-            allSports.add(mf.sport);
+            sports.add(mf.sport);
           }
         });
       }
-    });
+      return Array.from(sports);
+    }
     
-    return Array.from(allSports);
+    return [];
   };
 
   /**
@@ -288,22 +292,15 @@ export function useWorkoutForm({
           includeStretching: existingWorkout.includeStretching || false
         });
       } else {
-        // Auto-load sports from moveframes in add mode
-        const moveframeSportsData = getSportsFromMoveframes();
-        
-        // Initialize sports array with moveframe sports (up to 4)
-        const initialSports: (string | null)[] = [null, null, null, null];
-        moveframeSportsData.slice(0, 4).forEach((sport, index) => {
-          initialSports[index] = sport;
-        });
-        
+        // In add mode, start with empty form (no pre-population from other workouts)
         setFormData({
           name: '',
           code: '',
-          sports: initialSports,
+          sports: [null, null, null, null],
           includeStretching: false
         });
       }
+      // Reset validation state
       setValidation({
         name: { valid: true, message: '' },
         code: { valid: true, message: '' },
@@ -311,7 +308,7 @@ export function useWorkoutForm({
       });
       setIsSubmitting(false);
     }
-  }, [isOpen, mode, existingWorkout, day]);
+  }, [isOpen, mode, existingWorkout]);
 
   // ==================== RETURN VALUES ====================
   return {

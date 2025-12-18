@@ -10,6 +10,7 @@ interface WorkoutSectionHeaderProps {
   virtualStartDate: Date | null;
   userType?: string;
   selectedAthlete: any;
+  canAddDay?: boolean; // Whether adding a day is allowed (checks 7-day limit for Section A)
   
   // Actions
   onSectionChange: (section: SectionId) => void;
@@ -18,6 +19,7 @@ interface WorkoutSectionHeaderProps {
   onStartDateClick: () => void;
   onAthleteSelect: () => void;
   onWeekFilterClear: () => void;
+  onAddDay: () => void;
   onClose: () => void;
 }
 
@@ -28,12 +30,14 @@ export default function WorkoutSectionHeader({
   virtualStartDate,
   userType,
   selectedAthlete,
+  canAddDay = true,
   onSectionChange,
   onViewModeChange,
   onImportClick,
   onStartDateClick,
   onAthleteSelect,
   onWeekFilterClear,
+  onAddDay,
   onClose
 }: WorkoutSectionHeaderProps) {
   
@@ -131,6 +135,23 @@ export default function WorkoutSectionHeader({
               >
                 <Plus className="w-4 h-4" />
                 {selectedAthlete ? `Viewing: ${selectedAthlete.name}` : 'Select Athlete'}
+              </button>
+            )}
+            
+            {/* Add Day Button - Available for sections A, B & C */}
+            {(activeSection === 'A' || activeSection === 'B' || activeSection === 'C') && (
+              <button
+                onClick={onAddDay}
+                disabled={!canAddDay}
+                className={`px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors ${
+                  canAddDay 
+                    ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer' 
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+                title={!canAddDay && activeSection === 'A' ? 'All weeks are full (7 days each)' : 'Add a new day'}
+              >
+                <Plus className="w-4 h-4" />
+                Add Day
               </button>
             )}
             

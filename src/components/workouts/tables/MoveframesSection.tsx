@@ -124,6 +124,18 @@ export default function MoveframesSection({
             <span className="text-xs text-purple-700 bg-purple-300 px-2 py-0.5 rounded">
               {moveframes.length} total
             </span>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onAddMoveframe) {
+                  onAddMoveframe();
+                }
+              }}
+              className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+              title="Add a Moveframe"
+            >
+              Add a Moveframe
+            </button>
           </div>
 
           {/* Action Buttons */}
@@ -132,13 +144,14 @@ export default function MoveframesSection({
               onClick={(e) => {
                 e.stopPropagation();
                 if (moveframes.length > 0 && onCopyMoveframe) {
-                  onCopyMoveframe(moveframes[0], workout, day);
+                  // Pass ALL moveframes when copying from the section level
+                  onCopyMoveframe(moveframes, workout, day);
                 } else {
                   alert('No moveframes to copy');
                 }
               }}
               className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-              title="Copy moveframe"
+              title="Copy all moveframes"
             >
               Copy
             </button>
@@ -146,13 +159,14 @@ export default function MoveframesSection({
               onClick={(e) => {
                 e.stopPropagation();
                 if (moveframes.length > 0 && onMoveMoveframe) {
-                  onMoveMoveframe(moveframes[0], workout, day);
+                  // Pass ALL moveframes when moving from the section level
+                  onMoveMoveframe(moveframes, workout, day);
                 } else {
                   alert('No moveframes to move');
                 }
               }}
               className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-              title="Move moveframe"
+              title="Move all moveframes"
             >
               Move
             </button>
@@ -197,8 +211,9 @@ export default function MoveframesSection({
                     <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Expand/Collapse">::</th>
                     <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Index">#</th>
                     <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">MF</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Color section</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Name section</th>
+                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Workout section</th>
+                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Ico</th>
+                    <th className="border border-gray-200 px-1 py-1 text-left text-[10px]">Sport of the moveframe</th>
                     <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Moveframe description</th>
                     <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rip</th>
                     <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Macro</th>

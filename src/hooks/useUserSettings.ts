@@ -67,7 +67,11 @@ export function useUserSettings(userId?: string) {
       setLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
-        throw new Error('No authentication token found');
+        // No token - user not logged in, this is expected
+        setSettings(null);
+        setError(null);
+        setLoading(false);
+        return;
       }
 
       const response = await fetch('/api/user/settings', {
@@ -75,6 +79,16 @@ export function useUserSettings(userId?: string) {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (response.status === 401) {
+        // Token invalid/expired - clear auth and silently fail
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setSettings(null);
+        setError(null);
+        setLoading(false);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error('Failed to load settings');
@@ -84,7 +98,10 @@ export function useUserSettings(userId?: string) {
       setSettings(data);
       setError(null);
     } catch (err) {
-      console.error('Error loading settings:', err);
+      // Only log real errors, not auth issues
+      if (err instanceof Error && !err.message.includes('token') && !err.message.includes('401')) {
+        console.error('Error loading settings:', err);
+      }
       setError(err instanceof Error ? err.message : 'Unknown error');
       
       // Fallback to localStorage

@@ -270,7 +270,7 @@ export default function LanguageSettings() {
 
   const handlePasswordConfirm = async () => {
     if (!pendingActionKey) return;
-    
+
     const isCurrentlyDeleted = passwordAction === 'restore';
     
     await deleteOrRestoreTranslation(
@@ -280,10 +280,10 @@ export default function LanguageSettings() {
       allKeys,
       () => {
         loadStaticTranslations();
-        setShowPasswordDialog(false);
-        setAdminPassword('');
-        setPendingActionKey(null);
-      }
+      setShowPasswordDialog(false);
+      setAdminPassword('');
+      setPendingActionKey(null);
+    }
     );
   };
 
@@ -353,22 +353,22 @@ export default function LanguageSettings() {
       allKeys,
       () => {
         loadStaticTranslations();
-        setShowNewKeyModal(false);
-        
-        // Check if any translation is long (> 100 chars)
+      setShowNewKeyModal(false);
+      
+      // Check if any translation is long (> 100 chars) 
         const hasLongText = Object.values(newKeyTranslations).some(val => val && val.length > LONG_TEXT_THRESHOLD);
-        
+      
         // Navigate to appropriate tab
-        if (isLongTextModal || hasLongText) {
-          setActiveTab('texts');
+      if (isLongTextModal || hasLongText) {
+        setActiveTab('texts');
           setSelectedCategory(newKeyCategory as TranslationCategory);
-        } else {
-          setActiveTab('settings');
+      } else {
+        setActiveTab('settings');
           setSelectedCategory(newKeyCategory as TranslationCategory);
-        }
-        
-        setIsLongTextModal(false);
       }
+      
+      setIsLongTextModal(false);
+    }
     );
   };
 

@@ -3,6 +3,8 @@ import { GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import MovelapDetailTable from './MovelapDetailTable';
+import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
+import { useSportIconType } from '@/hooks/useSportIconType';
 
 interface SortableMoveframeRowProps {
   moveframe: any;
@@ -54,6 +56,10 @@ export default function SortableMoveframeRow({
     opacity: isDragging ? 0.5 : 1,
   };
   
+  // Get icon type preference
+  const { iconType } = useSportIconType();
+  const useImageIcons = isImageIcon(iconType);
+  
   const movelapsCount = moveframe.movelaps?.length || 0;
   const totalDistance = (moveframe.movelaps || []).reduce(
     (sum: number, lap: any) => sum + (parseInt(lap.distance) || 0),
@@ -61,6 +67,8 @@ export default function SortableMoveframeRow({
   );
   const sectionColor = moveframe.section?.color || '#5b8def';
   const sectionName = moveframe.section?.name || 'Default';
+  const sportIcon = getSportIcon(moveframe.sport || 'SWIM', iconType);
+  const sportName = moveframe.sport?.replace(/_/g, ' ') || 'Unknown';
   
   // Calculate macro time (total time for all movelaps)
   const macroTime = (moveframe.movelaps || []).reduce((sum: number, lap: any) => {
@@ -119,18 +127,45 @@ export default function SortableMoveframeRow({
           {moveframe.letter || String.fromCharCode(65 + mfIndex)}
         </td>
         
-        {/* Color Section Column */}
+        {/* Workout Section Column - Shows color + section name */}
         <td className="border border-gray-200 px-1 py-1 text-center">
-          <div
-            className="w-6 h-6 mx-auto rounded"
-            style={{ backgroundColor: sectionColor }}
-            title={sectionName}
-          />
+          <div className="flex items-center justify-center gap-1">
+            <div
+              className="w-4 h-4 rounded border border-gray-400 flex-shrink-0"
+              style={{ backgroundColor: sectionColor }}
+              title={sectionName}
+            />
+            <span className="text-[10px] truncate">{sectionName}</span>
+          </div>
         </td>
         
-        {/* Name Section Column - Shows Sport Name */}
-        <td className="border border-gray-200 px-1 py-1 text-center text-[10px]">
-          {moveframe.sport?.replace(/_/g, ' ') || 'Unknown'}
+        {/* Ico Column */}
+        <td className="border border-gray-200 px-1 py-1 text-center">
+          {useImageIcons ? (
+            <img 
+              src={sportIcon} 
+              alt={sportName} 
+              className="w-5 h-5 object-cover rounded mx-auto" 
+            />
+          ) : (
+            <span className="text-base">{sportIcon}</span>
+          )}
+        </td>
+        
+        {/* Sport of the moveframe Column - Shows icon + sport name, left-aligned */}
+        <td className="border border-gray-200 px-1 py-1 text-left">
+          <div className="flex items-center gap-1">
+            {useImageIcons ? (
+              <img 
+                src={sportIcon} 
+                alt={sportName} 
+                className="w-4 h-4 object-cover rounded flex-shrink-0" 
+              />
+            ) : (
+              <span className="text-sm">{sportIcon}</span>
+            )}
+            <span className="text-[10px]">{sportName}</span>
+          </div>
         </td>
         
         {/* Moveframe Description Column */}
@@ -226,16 +261,18 @@ export default function SortableMoveframeRow({
         </td>
       </tr>
       
-      {/* Movelaps Detail Table */}
+      {/* Movelaps Detail Table - Level 3: Indented from moveframe table */}
       {isMovelapsExpanded && (
         <tr>
           <td colSpan={11} className="border border-gray-200 p-0 bg-gray-50">
-            <MovelapDetailTable 
-              moveframe={moveframe}
-              onEditMovelap={(movelap) => onEditMovelap?.(movelap, moveframe)}
-              onDeleteMovelap={(movelap) => onDeleteMovelap?.(movelap, moveframe)}
-              onAddMovelap={() => onAddMovelap?.(moveframe)}
-            />
+            <div className="ml-8">
+              <MovelapDetailTable 
+                moveframe={moveframe}
+                onEditMovelap={(movelap) => onEditMovelap?.(movelap, moveframe)}
+                onDeleteMovelap={(movelap) => onDeleteMovelap?.(movelap, moveframe)}
+                onAddMovelap={() => onAddMovelap?.(moveframe)}
+              />
+            </div>
           </td>
         </tr>
       )}

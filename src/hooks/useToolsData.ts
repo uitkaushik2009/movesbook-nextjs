@@ -325,6 +325,12 @@ export function useToolsData(): UseToolsDataReturn {
     setIsSavingToDatabase(true);
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        console.warn('Cannot save: not logged in');
+        setIsSavingToDatabase(false);
+        return;
+      }
+
       const response = await fetch('/api/user/settings', {
         method: 'PATCH',
         headers: {
@@ -342,6 +348,12 @@ export function useToolsData(): UseToolsDataReturn {
           }
         })
       });
+
+      if (response.status === 401) {
+        console.warn('Session expired. Please log in again.');
+        setIsSavingToDatabase(false);
+        return;
+      }
 
       if (response.ok) {
         setLastSavedTime(new Date());

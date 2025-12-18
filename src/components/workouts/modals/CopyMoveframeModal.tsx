@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 interface CopyMoveframeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  sourceMoveframe: any;
+  sourceMoveframe: any | any[]; // Can be single or array
   workoutPlan: any;
   onConfirm: (targetWorkoutId: string, position: 'before' | 'after' | 'replace', targetMoveframeId?: string) => void;
 }
@@ -68,6 +68,11 @@ export default function CopyMoveframeModal({
 
   if (!isOpen) return null;
 
+  // Check if we're dealing with multiple moveframes
+  const isMultiple = Array.isArray(sourceMoveframe);
+  const moveframes = isMultiple ? sourceMoveframe : [sourceMoveframe];
+  const totalMovelaps = moveframes.reduce((sum, mf) => sum + (mf.movelaps?.length || 0), 0);
+
   // Get all days from the workout plan
   const allDays: any[] = [];
   workoutPlan?.weeks?.forEach((week: any) => {
@@ -84,7 +89,7 @@ export default function CopyMoveframeModal({
 
   return (
     <div 
-      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999999] p-4"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -108,12 +113,23 @@ export default function CopyMoveframeModal({
         <div className="p-6 space-y-6">
           {/* Source Moveframe Info */}
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <h3 className="font-semibold text-purple-900 mb-2">Copying Moveframe:</h3>
+            <h3 className="font-semibold text-purple-900 mb-2">
+              Copying {isMultiple ? `${moveframes.length} Moveframes` : 'Moveframe'}:
+            </h3>
             <div className="text-sm space-y-1">
-              <p><strong>Letter:</strong> {sourceMoveframe.letter}</p>
-              <p><strong>Sport:</strong> {sourceMoveframe.sport?.replace('_', ' ')}</p>
-              <p><strong>Description:</strong> {sourceMoveframe.description || 'No description'}</p>
-              <p><strong>Movelaps:</strong> {sourceMoveframe.movelaps?.length || 0} laps</p>
+              {isMultiple ? (
+                <>
+                  <p><strong>Letters:</strong> {moveframes.map((mf: any) => mf.letter).join(' - ')}</p>
+                  <p><strong>Total reps:</strong> {totalMovelaps}</p>
+                </>
+              ) : (
+                <>
+                  <p><strong>Letter:</strong> {moveframes[0].letter}</p>
+                  <p><strong>Sport:</strong> {moveframes[0].sport?.replace('_', ' ')}</p>
+                  <p><strong>Description:</strong> {moveframes[0].description || 'No description'}</p>
+                  <p><strong>Total reps:</strong> {moveframes[0].movelaps?.length || 0}</p>
+                </>
+              )}
             </div>
           </div>
 

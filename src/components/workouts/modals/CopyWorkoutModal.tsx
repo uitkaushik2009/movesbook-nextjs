@@ -40,7 +40,7 @@ export default function CopyWorkoutModal({
   const availableDays = selectedWeekData?.days || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
         {/* Header */}
         <div className="bg-green-500 text-white px-6 py-4 flex items-center justify-between rounded-t-lg">

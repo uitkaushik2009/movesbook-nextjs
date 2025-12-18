@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Flag } from 'lucide-react';
 import DayRowTable from './DayRowTable';
 import WorkoutHierarchyView from './WorkoutHierarchyView';
 import WeeklyInfoModal from '../WeeklyInfoModal';
@@ -9,6 +9,7 @@ import '../../../styles/sticky-table.css';
 
 interface DayTableViewProps {
   workoutPlan: any;
+  activeSection?: 'A' | 'B' | 'C' | 'D'; // Active section for conditional display
   expandedDays?: Set<string>;
   expandedWorkouts?: Set<string>;
   onToggleDay?: (dayId: string) => void;
@@ -38,6 +39,7 @@ interface DayTableViewProps {
 
 export default function DayTableView({
   workoutPlan,
+  activeSection = 'A',
   expandedDays,
   expandedWorkouts,
   onToggleDay,
@@ -66,8 +68,11 @@ export default function DayTableView({
 }: DayTableViewProps) {
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [isWeeklyInfoModalOpen, setIsWeeklyInfoModalOpen] = useState(false);
-  const [weeklyNotes, setWeeklyNotes] = useState<Record<number, string[]>>({});
+  const [weeklyNotes, setWeeklyNotes] = useState<Record<string, { periodId: string; notes: string }>>({});
   const [dayInfoOpenForDay, setDayInfoOpenForDay] = useState<string | null>(null);
+  const [periods, setPeriods] = useState<any[]>([]);
+  const [showPeriodSelector, setShowPeriodSelector] = useState(false);
+  const [areWeekWorkoutsExpanded, setAreWeekWorkoutsExpanded] = useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const scrollbarRef = useRef<HTMLDivElement>(null);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
@@ -77,6 +82,81 @@ export default function DayTableView({
   
   console.log('📅 DayTableView: expandedDays:', Array.from(expandedDaysSet));
   console.log('🏋️ DayTableView: expandedWorkouts:', Array.from(expandedWorkoutsSet));
+  
+  // Load periods
+  useEffect(() => {
+    const loadPeriods = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('/api/workouts/periods', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setPeriods(data);
+        }
+      } catch (error) {
+        console.error('Error loading periods:', error);
+      }
+    };
+    
+    loadPeriods();
+  }, []);
+
+  // Reset expand state when week changes
+  useEffect(() => {
+    setAreWeekWorkoutsExpanded(false);
+  }, [currentWeekIndex]);
+
+  // Load week notes when weeks change
+  useEffect(() => {
+    const loadWeekNotes = async () => {
+      if (!workoutPlan?.weeks || workoutPlan.weeks.length === 0) return;
+
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      // Load notes for all weeks
+      const notesPromises = workoutPlan.weeks.map(async (week: any) => {
+        try {
+          const response = await fetch(`/api/workouts/weeks/${week.id}/notes`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            return {
+              weekId: week.id,
+              data: {
+                periodId: data.periodId || '',
+                notes: data.notes || ''
+              }
+            };
+          }
+        } catch (error) {
+          console.error(`Error loading notes for week ${week.id}:`, error);
+        }
+        return null;
+      });
+
+      const results = await Promise.all(notesPromises);
+      const notesMap: Record<string, { periodId: string; notes: string }> = {};
+      
+      results.forEach(result => {
+        if (result) {
+          notesMap[result.weekId] = result.data;
+        }
+      });
+
+      if (Object.keys(notesMap).length > 0) {
+        setWeeklyNotes(prev => ({ ...prev, ...notesMap }));
+        console.log('✅ Loaded week notes:', notesMap);
+      }
+    };
+
+    loadWeekNotes();
+  }, [workoutPlan?.weeks]);
   
   // Constants for UI dimensions
   const SCROLLBAR_HEIGHT = 24; // px
@@ -189,6 +269,12 @@ export default function DayTableView({
   const currentWeek = sortedWeeks[currentWeekIndex];
   const weekDays = currentWeek?.days || [];
   const sortedDays = [...weekDays].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  console.log('🗓️ Current week data:', {
+    currentWeekIndex,
+    currentWeek: currentWeek?.id,
+    weekNumber: currentWeek?.weekNumber
+  });
 
   const goToPreviousWeek = () => {
     if (currentWeekIndex > 0) {
@@ -202,12 +288,104 @@ export default function DayTableView({
     }
   };
 
-  const handleSaveWeeklyNotes = (notes: string[]) => {
-    const weekNumber = currentWeek?.weekNumber || currentWeekIndex + 1;
-    setWeeklyNotes(prev => ({
-      ...prev,
-      [weekNumber]: notes
-    }));
+  const toggleWeekWorkouts = () => {
+    if (!currentWeek || !currentWeek.days) return;
+    
+    const allDayIds = currentWeek.days.map((day: any) => day.id);
+    const allWorkoutIds: string[] = [];
+    
+    currentWeek.days.forEach((day: any) => {
+      if (day.workouts && Array.isArray(day.workouts)) {
+        day.workouts.forEach((workout: any) => {
+          allWorkoutIds.push(workout.id);
+        });
+      }
+    });
+    
+    if (areWeekWorkoutsExpanded) {
+      // Collapse all: close all workouts and days
+      console.log('📕 Collapsing all workouts for week', currentWeek.weekNumber);
+      
+      // Close all workouts first
+      allWorkoutIds.forEach(workoutId => {
+        if (expandedWorkoutsSet.has(workoutId) && onToggleWorkout) {
+          onToggleWorkout(workoutId);
+        }
+      });
+      
+      // Then close all days
+      allDayIds.forEach(dayId => {
+        if (expandedDaysSet.has(dayId) && onToggleDay) {
+          onToggleDay(dayId);
+        }
+      });
+      
+      setAreWeekWorkoutsExpanded(false);
+    } else {
+      // Expand all: open all days and workouts (but NOT moveframes)
+      console.log('📖 Expanding all workouts for week', currentWeek.weekNumber);
+      
+      // First open all days
+      allDayIds.forEach(dayId => {
+        if (!expandedDaysSet.has(dayId) && onToggleDay) {
+          onToggleDay(dayId);
+        }
+      });
+      
+      // Then open all workouts
+      allWorkoutIds.forEach(workoutId => {
+        if (!expandedWorkoutsSet.has(workoutId) && onToggleWorkout) {
+          onToggleWorkout(workoutId);
+        }
+      });
+      
+      setAreWeekWorkoutsExpanded(true);
+    }
+  };
+
+  const handleSaveWeeklyNotes = async (data: { periodId: string; notes: string }) => {
+    const weekId = currentWeek?.id;
+    if (!weekId) {
+      console.error('❌ No week ID available');
+      return;
+    }
+
+    console.log('💾 Saving weekly notes:', { weekId, data });
+
+    // Save to local state FIRST
+    setWeeklyNotes(prev => {
+      const updated = {
+        ...prev,
+        [weekId]: data
+      };
+      console.log('📝 Updated weeklyNotes state:', updated);
+      return updated;
+    });
+
+    // Save to backend API
+    try {
+      const token = localStorage.getItem('token');
+      if (token && weekId) {
+        // Save the weekly notes and period to the backend
+        const response = await fetch(`/api/workouts/weeks/${weekId}/notes`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+          console.log('✅ Weekly notes saved to backend successfully');
+        } else {
+          console.warn('⚠️ Backend save failed, but local state is updated');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error saving weekly notes to backend:', error);
+      // Local state is still saved, so this is just a warning
+    }
   };
 
   const handleShowDayInfo = (day: any) => {
@@ -215,39 +393,160 @@ export default function DayTableView({
     setDayInfoOpenForDay(prev => prev === day.id ? null : day.id);
   };
 
-  const currentWeekNotes = weeklyNotes[currentWeek?.weekNumber || currentWeekIndex + 1] || [];
-  const firstNote = currentWeekNotes[0] || '';
+  const currentWeekId = currentWeek?.id || '';
+  const currentWeekData = weeklyNotes[currentWeekId] || { periodId: '', notes: '' };
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('📝 Week notes state changed:', {
+      currentWeekId,
+      hasData: !!currentWeekData.notes,
+      notesLength: currentWeekData.notes?.length || 0,
+      notesPreview: currentWeekData.notes?.substring(0, 100)
+    });
+  }, [weeklyNotes, currentWeekId]);
+  
+  console.log('📝 Current week notes:', { currentWeekId, hasNotes: !!currentWeekData.notes });
 
   return (
-    <div className="p-4 bg-gray-100" style={{ paddingBottom: '30px' }}>
-      {/* Week Navigation */}
-      {totalWeeks > 1 && (
+    <>
+      {/* CSS for rich text preview and fixed workout details */}
+      <style>{`
+        .rich-text-preview b,
+        .rich-text-preview strong {
+          font-weight: bold !important;
+        }
+        .rich-text-preview i,
+        .rich-text-preview em {
+          font-style: italic !important;
+        }
+        .rich-text-preview u {
+          text-decoration: underline !important;
+        }
+        .rich-text-preview strike,
+        .rich-text-preview s {
+          text-decoration: line-through !important;
+        }
+        .rich-text-preview ul {
+          list-style-type: disc;
+          margin-left: 20px;
+          padding-left: 0;
+        }
+        .rich-text-preview ol {
+          list-style-type: decimal;
+          margin-left: 20px;
+          padding-left: 0;
+        }
+        .rich-text-preview li {
+          display: list-item;
+        }
+        .rich-text-preview a {
+          color: #2563eb;
+          text-decoration: underline;
+        }
+        .rich-text-preview p {
+          display: inline;
+          margin: 0;
+        }
+        .rich-text-preview div {
+          display: inline;
+        }
+        /* Support for font colors */
+        .rich-text-preview *[style*="color"] {
+          color: inherit;
+        }
+        .rich-text-preview *[style*="background"] {
+          background: inherit;
+        }
+        
+        /* Fixed workout details - don't scroll with day row */
+        .workout-expanded-row td {
+          position: sticky !important;
+          left: 0 !important;
+        }
+        .workout-details-container {
+          position: relative;
+          width: 100%;
+          max-width: 100vw;
+          overflow-x: visible;
+        }
+      `}</style>
+      
+      <div className="p-4 bg-gray-100" style={{ paddingBottom: '30px' }}>
+        {/* Week Navigation - Always show */}
         <div className="mb-4 bg-white rounded-lg shadow-md p-4">
           <div className="flex items-center justify-between">
-            <button
-              onClick={goToPreviousWeek}
-              disabled={currentWeekIndex === 0}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                currentWeekIndex === 0
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-500 text-white hover:bg-blue-600'
-              }`}
-            >
-              <ChevronLeft size={20} />
-              Previous Week
-            </button>
+            {/* Left side buttons */}
+            <div className="flex items-center gap-2">
+              {/* Previous Week Button - Always visible */}
+              <button
+                onClick={goToPreviousWeek}
+                disabled={currentWeekIndex === 0}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  currentWeekIndex === 0
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                <ChevronLeft size={20} />
+                Previous Week
+              </button>
+
+              {/* Expand/Collapse All Workouts Button */}
+              <button
+                onClick={toggleWeekWorkouts}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors bg-purple-500 text-white hover:bg-purple-600"
+                title={areWeekWorkoutsExpanded ? "Collapse all workouts" : "Expand all workouts"}
+              >
+                {areWeekWorkoutsExpanded ? 'Collapse All' : 'Expand All'}
+              </button>
+            </div>
 
             <div className="flex-1 flex items-center justify-center gap-6">
               <div className="text-lg font-bold text-gray-900">
                 Week {currentWeek?.weekNumber || currentWeekIndex + 1}
               </div>
               
-              {/* Weekly Information - Right side of week number */}
-              {firstNote && (
-                <div className="text-sm text-gray-700 max-w-md px-4 border-l-2 border-gray-200">
-                  {firstNote}
-                </div>
-              )}
+              {/* Set Period Button - Right after week number */}
+              <button
+                onClick={() => setShowPeriodSelector(true)}
+                className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors border-2"
+                style={{
+                  backgroundColor: currentWeek?.period?.color || '#e5e7eb',
+                  borderColor: currentWeek?.period?.color || '#d1d5db',
+                  color: '#000000'
+                }}
+                title="Set period for this week"
+              >
+                <div
+                  className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
+                  style={{ backgroundColor: currentWeek?.period?.color || '#3b82f6' }}
+                />
+                <span className="font-medium">
+                  {currentWeek?.period?.name || 'Set Period'}
+                </span>
+              </button>
+              
+              {/* Weekly Information - Right side of period */}
+              <div className="text-sm max-w-md px-4 border-l-2 border-gray-200">
+                {currentWeekData.notes ? (
+                  <div 
+                    className="rich-text-preview text-gray-700"
+                    dangerouslySetInnerHTML={{ __html: currentWeekData.notes }}
+                    style={{
+                      display: '-webkit-box',
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical',
+                      overflow: 'hidden',
+                      wordBreak: 'break-word',
+                      lineHeight: '1.5',
+                      maxHeight: '3em'
+                    }}
+                  />
+                ) : (
+                  <span className="text-gray-400 italic">No notes yet</span>
+                )}
+              </div>
               
               {/* Edit Weekly Info Button - Right side of information */}
                 <button
@@ -260,6 +559,7 @@ export default function DayTableView({
                 </button>
             </div>
 
+            {/* Next Week Button - Always visible */}
             <button
               onClick={goToNextWeek}
               disabled={currentWeekIndex >= totalWeeks - 1}
@@ -274,7 +574,6 @@ export default function DayTableView({
             </button>
           </div>
         </div>
-      )}
 
       {/* Days Table */}
       <div ref={tableWrapperRef} className="bg-white rounded-lg shadow-md relative mb-6">
@@ -392,9 +691,9 @@ export default function DayTableView({
                 
                 {/* Expanded Workouts Section */}
                   {expandedDaysSet.has(day.id) && (
-                    <tr>
+                    <tr className="workout-expanded-row">
                      <td colSpan={32} className="p-0 bg-gray-50" style={{ position: 'relative' }}>
-                      <div className="p-4">
+                      <div className="p-4 workout-details-container">
                         <div className="mb-2 text-sm font-semibold text-gray-700">
                           Workouts for {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                         </div>
@@ -429,64 +728,78 @@ export default function DayTableView({
                         {dayInfoOpenForDay === day.id && (
                           <div className="mt-4 border-t-2 border-cyan-400 pt-4">
                             <div className="bg-white rounded-lg shadow-md p-4">
-                              <h3 className="text-base font-bold text-cyan-700 mb-3 flex items-center gap-2">
-                                <span>ℹ️</span>
-                                <span>Day Information</span>
-                              </h3>
-                              <div className="grid grid-cols-2 gap-4">
-                                {/* Left Column */}
-                                <div className="space-y-3">
-                                  <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Week Number</label>
-                                    <div className="text-sm text-gray-800">{currentWeek?.weekNumber || '—'}</div>
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Day of Week</label>
-                                    <div className="text-sm text-gray-800">
-                                      {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Date</label>
-                                    <div className="text-sm text-gray-800">
-                                      {new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Number of Workouts</label>
-                                    <div className="text-sm text-gray-800">
-                                      {day.workouts?.length || 0} / 3 
-                                      <span className="text-xs text-gray-500 ml-2">(max 3 workouts per day)</span>
+                               <h3 className="text-base font-bold text-cyan-700 mb-3 flex items-center gap-2">
+                                 <span>ℹ️</span>
+                                 <span>Day Information</span>
+                               </h3>
+                               
+                               {/* All data in single column, left-aligned */}
+                               <div className="space-y-3">
+                                 <div>
+                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Week Number</label>
+                                   <div className="text-sm text-gray-800">{currentWeek?.weekNumber || '—'}</div>
+                                 </div>
+                                 
+                                 <div>
+                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Day of Week</label>
+                                   <div className="text-sm text-gray-800">
+                                     {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                                   </div>
+                                 </div>
+                                 
+                                 <div>
+                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Date</label>
+                                   <div className="text-sm text-gray-800">
+                                     {new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                                   </div>
+                                 </div>
+                                 
+                                 <div>
+                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Period Name</label>
+                                   <div className="flex items-center gap-2">
+                                     <div
+                                       className="w-4 h-4 rounded-full border border-gray-400 flex-shrink-0"
+                                       style={{ backgroundColor: day.period?.color || '#9CA3AF' }}
+                                     />
+                                     <span className="text-sm text-gray-800">{day.period?.name || 'No Period'}</span>
+                                   </div>
+                                 </div>
+                                 
+                                 <div>
+                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Number of Workouts</label>
+                                   <div className="text-sm text-gray-800">
+                                     {day.workouts?.length || 0} / 3 
+                                     <span className="text-xs text-gray-500 ml-2">(max 3 workouts per day)</span>
+                                   </div>
+                                 </div>
+                                 
+                                 {/* Weather and Feeling Status - Only show in section C */}
+                                 {activeSection === 'C' && (
+                                   <>
+                                     <div>
+                                       <label className="block text-xs font-semibold text-gray-600 mb-1">Weather</label>
+                                       <div className="text-sm text-gray-800">{day.weather || '—'}</div>
+                                     </div>
+                                     <div>
+                                       <label className="block text-xs font-semibold text-gray-600 mb-1">Feeling Status</label>
+                                       <div className="text-sm text-gray-800">{day.feelingStatus || '—'}</div>
+                                     </div>
+                                   </>
+                                 )}
+                               </div>
+                              
+                              {/* Notes/Description - Full width with blue highlight on left */}
+                              {day.notes && (
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                  <div className="flex gap-3">
+                                    <div className="w-1 bg-blue-500 rounded-full flex-shrink-0"></div>
+                                    <div className="flex-1">
+                                      <label className="block text-xs font-semibold text-blue-600 mb-2">Description / Notes</label>
+                                      <div className="text-sm text-gray-800 leading-relaxed">{day.notes}</div>
                                     </div>
                                   </div>
                                 </div>
-                                
-                                {/* Right Column */}
-                                <div className="space-y-3">
-                                  <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Period Name</label>
-                                    <div className="flex items-center gap-2">
-                                      <div
-                                        className="w-4 h-4 rounded-full border border-gray-400"
-                                        style={{ backgroundColor: day.period?.color || '#9CA3AF' }}
-                                      />
-                                      <span className="text-sm text-gray-800">{day.period?.name || 'No Period'}</span>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Weather</label>
-                                    <div className="text-sm text-gray-800">{day.weather || '—'}</div>
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Feeling Status</label>
-                                    <div className="text-sm text-gray-800">{day.feelingStatus || '—'}</div>
-                                  </div>
-                                  <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
-                                    <div className="text-sm text-gray-800">{day.notes || 'No notes'}</div>
-                                  </div>
-                                </div>
-                              </div>
+                              )}
                               
                               {/* Workout Summary */}
                               {day.workouts && day.workouts.length > 0 && (
@@ -547,10 +860,104 @@ export default function DayTableView({
         isOpen={isWeeklyInfoModalOpen}
         onClose={() => setIsWeeklyInfoModalOpen(false)}
         weekNumber={currentWeek?.weekNumber || currentWeekIndex + 1}
-        initialNotes={currentWeekNotes}
+        weekId={currentWeekId}
+        initialPeriodId={currentWeekData.periodId}
+        initialNotes={currentWeekData.notes}
         onSave={handleSaveWeeklyNotes}
       />
-    </div>
+
+      {/* Period Selector Modal */}
+      {showPeriodSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Select Period for Week {currentWeek?.weekNumber}</h2>
+              <button
+                onClick={() => setShowPeriodSelector(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              This will set the period for the entire week and update all days in this week.
+            </p>
+            
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {periods && periods.length > 0 ? periods.map((period) => (
+                <button
+                  key={period.id}
+                  onClick={async () => {
+                    try {
+                      const token = localStorage.getItem('token');
+                      const response = await fetch(`/api/workouts/weeks/${currentWeek?.id}/period`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({
+                          periodId: period.id,
+                          updateAllDays: true
+                        })
+                      });
+
+                      if (response.ok) {
+                        setShowPeriodSelector(false);
+                        // Reload the page to show updated data
+                        window.location.reload();
+                      } else {
+                        alert('Failed to update week period');
+                      }
+                    } catch (error) {
+                      console.error('Error updating week period:', error);
+                      alert('Error updating week period');
+                    }
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-3 border-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  style={{
+                    borderColor: period.color,
+                    backgroundColor: currentWeek?.period?.id === period.id ? period.color + '20' : 'white'
+                  }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                    style={{ backgroundColor: period.color }}
+                  />
+                  <div className="flex-1 text-left">
+                    <div className="font-semibold text-gray-900">{period.name}</div>
+                    {period.description && (
+                      <div className="text-xs text-gray-600">{period.description}</div>
+                    )}
+                  </div>
+                  {currentWeek?.period?.id === period.id && (
+                    <div className="text-green-600 font-bold">✓</div>
+                  )}
+                </button>
+              )) : null}
+              
+              {(!periods || periods.length === 0) && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No periods found.</p>
+                  <p className="text-sm mt-2">Create periods in the Settings section.</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => setShowPeriodSelector(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      </div>
+    </>
   );
 }
 

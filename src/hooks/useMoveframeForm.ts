@@ -66,6 +66,7 @@ export function useMoveframeForm({
   const [type, setType] = useState<'STANDARD' | 'BATTERY' | 'ANNOTATION'>('STANDARD');
   const [manualMode, setManualMode] = useState(false);
   const [manualPriority, setManualPriority] = useState(false);
+  const [sectionId, setSectionId] = useState<string>(''); // Workout section for ALL sports
 
   // Standard fields
   const [distance, setDistance] = useState('100');
@@ -117,6 +118,7 @@ export function useMoveframeForm({
     setType('STANDARD');
     setManualMode(false);
     setManualPriority(false);
+    setSectionId(''); // Reset workout section
     setDistance('100');
     setCustomDistance('');
     setRepetitions('1');
@@ -176,17 +178,26 @@ export function useMoveframeForm({
       newErrors.sport = 'Sport is required';
     }
 
+    // Workout Section is required for ALL sports
+    if (!sectionId) {
+      newErrors.sectionId = 'Workout section is required';
+    }
+
     if (type === 'STANDARD' && !manualMode) {
       if (sport === 'BODY_BUILDING') {
         if (!muscularSector) newErrors.muscularSector = 'Muscular sector is required';
         if (!exercise) newErrors.exercise = 'Exercise is required';
         if (!reps) newErrors.reps = 'Reps is required';
+        // For Body Building, repetitions = number of series (1-99)
+        if (!repetitions || parseInt(repetitions) < 1 || parseInt(repetitions) > 99) {
+          newErrors.repetitions = 'Number of series must be between 1 and 99';
+        }
       } else {
         if (!distance && distance !== 'custom') newErrors.distance = 'Distance is required';
         if (distance === 'custom' && !customDistance) newErrors.customDistance = 'Custom distance is required';
-      }
-      if (!repetitions || parseInt(repetitions) < 1) {
-        newErrors.repetitions = 'Repetitions must be at least 1';
+        if (!repetitions || parseInt(repetitions) < 1) {
+          newErrors.repetitions = 'Repetitions must be at least 1';
+        }
       }
     }
 
@@ -214,7 +225,10 @@ export function useMoveframeForm({
       const macroFinalText = macroFinal ? ` M${macroFinal}` : '';
       const sectorText = muscularSector ? `${muscularSector} - ` : '';
       const exerciseText = exercise || 'Exercise';
-      return `${sectorText}${exerciseText}: ${reps} reps ${speed} ${pause ? `P${pause}` : ''}${macroFinalText}`;
+      const seriesCount = parseInt(repetitions) || 1;
+      const repsPerSeries = parseInt(reps) || 0;
+      // Format: "Shoulders - Bench Press: 3 x 10 reps Very slow P30" M0'"
+      return `${sectorText}${exerciseText}: ${seriesCount} x ${repsPerSeries} reps ${speed} ${pause ? `P${pause}` : ''}${macroFinalText}`;
     }
 
     const dist = distance === 'custom' ? customDistance : distance;
@@ -254,6 +268,7 @@ export function useMoveframeForm({
       r2: sport === 'BIKE' ? r2 : null,
       muscularSector: sport === 'BODY_BUILDING' ? muscularSector : null,
       exercise: sport === 'BODY_BUILDING' ? exercise : null,
+      sectionId: sectionId || null, // Workout section (for ALL sports)
       
       // Annotation fields
       annotationText: type === 'ANNOTATION' ? annotationText : null,
@@ -280,9 +295,10 @@ export function useMoveframeForm({
     if (mode === 'edit' && existingMoveframe) {
       console.log('📝 Loading moveframe for editing:', existingMoveframe);
       
-      // Set sport and type
+      // Set sport, type, and section
       setSport(existingMoveframe.sport || 'SWIM');
       setType(existingMoveframe.type || 'STANDARD');
+      setSectionId(existingMoveframe.sectionId || ''); // Load workout section
       
       // Handle ANNOTATION type
       if (existingMoveframe.type === 'ANNOTATION') {
@@ -355,6 +371,7 @@ export function useMoveframeForm({
       type,
       manualMode,
       manualPriority,
+      sectionId, // Workout section for ALL sports
       distance,
       customDistance,
       repetitions,
@@ -386,6 +403,7 @@ export function useMoveframeForm({
       setType,
       setManualMode,
       setManualPriority,
+      setSectionId, // Workout section setter for ALL sports
       setDistance,
       setCustomDistance,
       setRepetitions,

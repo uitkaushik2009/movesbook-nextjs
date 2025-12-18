@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { GripVertical } from 'lucide-react';
+import { GripVertical, Volume2, VolumeX, Bell, BellOff } from 'lucide-react';
+import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface MovelapDetailTableProps {
   moveframe: any;
@@ -8,17 +11,343 @@ interface MovelapDetailTableProps {
   onAddMovelap?: () => void;
 }
 
+// Sortable Row Component
+function SortableMovelapRow({ 
+  movelap, 
+  index, 
+  moveframeLetter, 
+  sectionColor, 
+  sectionName, 
+  moveframe, 
+  onEditMovelap, 
+  onDeleteMovelap,
+  onCopyMovelap,
+  onPasteMovelap,
+  savingFavorite,
+  handleSaveAsFavorite
+}: any) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: movelap.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  // Get sound icon
+  const getSoundIcon = (movelap: any) => {
+    if (movelap.sound) {
+      const soundLower = movelap.sound.toLowerCase();
+      if (soundLower.includes('beep') || soundLower.includes('alarm')) {
+        return <Bell size={14} className="text-yellow-600" />;
+      } else if (soundLower.includes('none') || soundLower === '—') {
+        return <BellOff size={14} className="text-gray-400" />;
+      } else {
+        return <Volume2 size={14} className="text-blue-600" />;
+      }
+    }
+    if (movelap.alarm) {
+      return <Bell size={14} className="text-yellow-600" />;
+    }
+    return <VolumeX size={14} className="text-gray-400" />;
+  };
+
+  return (
+    <tr 
+      ref={setNodeRef} 
+      style={style} 
+      className="hover:bg-gray-100"
+    >
+      {/* Move (Drag Handle) Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <span
+          {...attributes}
+          {...listeners}
+          className="cursor-move text-gray-400 hover:text-gray-600 inline-block"
+          title="Drag to reorder movelap"
+        >
+          <GripVertical size={12} />
+        </span>
+      </td>
+      
+      {/* MF (Moveframe Letter) Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center font-bold text-xs">
+        {moveframeLetter}
+      </td>
+      
+      {/* # (Repetition Number) Column - Always sequential */}
+      <td className="border border-gray-300 px-1 py-1 text-center font-bold text-xs">
+        {index + 1}
+      </td>
+      
+      {/* Color Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center">
+        <div
+          className="w-6 h-6 mx-auto rounded"
+          style={{ backgroundColor: sectionColor }}
+          title={sectionName}
+        />
+      </td>
+      
+      {/* Code Section Column - Shows section name like "Warm up" */}
+      <td className="border border-gray-300 px-1 py-1 text-center text-[10px]">
+        {sectionName}
+      </td>
+      
+      {/* Action Column - Shows sport name */}
+      <td className="border border-gray-300 px-1 py-1 text-center text-[10px]">
+        {moveframe.sport?.replace(/_/g, ' ') || 'Unknown'}
+      </td>
+      
+      {/* Dist Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+        {movelap.distance || '—'}
+      </td>
+      
+      {/* Style Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+        {movelap.style || '—'}
+      </td>
+      
+      {/* Speed Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+        {movelap.speed || '—'}
+      </td>
+      
+      {/* Time Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+        {movelap.time || movelap.estimatedTime || '00.0'}
+      </td>
+      
+      {/* Pace Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+        {movelap.pace || '00.0'}
+      </td>
+      
+      {/* Rec (Recovery/Pause) Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+        {movelap.pause || movelap.recovery || '—'}
+      </td>
+      
+      {/* Rest to Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+        {movelap.restTo || '—'}
+      </td>
+      
+      {/* Aim & Snd Column - With sound icon */}
+      <td className="border border-gray-300 px-1 py-1 text-center">
+        <div className="flex items-center justify-center gap-1">
+          {getSoundIcon(movelap)}
+          {movelap.alarm && <span className="text-[8px]">{movelap.alarm}</span>}
+        </div>
+      </td>
+      
+      {/* Annotations Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+        {movelap.annotations || movelap.notes || '—'}
+      </td>
+      
+      {/* Options Column */}
+      <td className="border border-gray-300 px-1 py-1 text-center">
+        <div className="flex items-center justify-center gap-1 flex-wrap">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onEditMovelap) onEditMovelap(movelap);
+            }}
+            className="px-1 py-0.5 text-[9px] bg-blue-500 text-white rounded hover:bg-blue-600"
+            title="Edit movelap"
+          >
+            Edit
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCopyMovelap(movelap);
+            }}
+            className="px-1 py-0.5 text-[9px] bg-green-500 text-white rounded hover:bg-green-600"
+            title="Copy movelap"
+          >
+            Copy
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPasteMovelap(index);
+            }}
+            className="px-1 py-0.5 text-[9px] bg-orange-500 text-white rounded hover:bg-orange-600"
+            title="Paste copied movelap after this position"
+          >
+            Paste
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onDeleteMovelap) {
+                if (confirm(`Delete ${moveframeLetter}${index + 1}?`)) {
+                  onDeleteMovelap(movelap);
+                }
+              }
+            }}
+            className="px-1 py-0.5 text-[9px] bg-red-500 text-white rounded hover:bg-red-600"
+            title="Delete movelap"
+          >
+            Delete
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleSaveAsFavorite(movelap);
+            }}
+            disabled={savingFavorite === movelap.id}
+            className={`px-1 py-0.5 text-[9px] text-white rounded ${
+              savingFavorite === movelap.id 
+                ? 'bg-purple-300 cursor-wait' 
+                : 'bg-purple-500 hover:bg-purple-600'
+            }`}
+            title="Save as favorite"
+          >
+            {savingFavorite === movelap.id ? 'Saving...' : 'Save as Fav'}
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 export default function MovelapDetailTable({ 
   moveframe, 
   onEditMovelap, 
   onDeleteMovelap, 
   onAddMovelap 
 }: MovelapDetailTableProps) {
-  const movelaps = moveframe.movelaps || [];
+  const [movelaps, setMovelaps] = useState(moveframe.movelaps || []);
   const moveframeLetter = moveframe.letter || 'A'; // Parent moveframe letter
   const sectionColor = moveframe.section?.color || '#5b8def';
   const sectionName = moveframe.section?.name || 'Default';
   const [savingFavorite, setSavingFavorite] = useState<string | null>(null);
+  const [copiedMovelap, setCopiedMovelap] = useState<any>(null);
+
+  // Update movelaps when moveframe prop changes
+  React.useEffect(() => {
+    setMovelaps(moveframe.movelaps || []);
+  }, [moveframe.movelaps]);
+
+  // Setup drag sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    })
+  );
+  // Handle drag end - reorder movelaps
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) return;
+    
+    const oldIndex = movelaps.findIndex((ml: any) => ml.id === active.id);
+    const newIndex = movelaps.findIndex((ml: any) => ml.id === over.id);
+    
+    if (oldIndex === -1 || newIndex === -1) return;
+    
+    // Reorder array
+    const newOrder = [...movelaps];
+    const [movedItem] = newOrder.splice(oldIndex, 1);
+    newOrder.splice(newIndex, 0, movedItem);
+    
+    // Update local state immediately for smooth UX
+    setMovelaps(newOrder);
+    
+    // Persist the new order to database
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch('/api/workouts/movelaps/reorder', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          movelaps: newOrder.map((ml: any, idx: number) => ({
+            id: ml.id,
+            order: idx
+          }))
+        })
+      });
+
+      if (!response.ok) {
+        console.error('Failed to persist movelap order');
+        // Revert on error
+        setMovelaps(moveframe.movelaps || []);
+      }
+    } catch (error) {
+      console.error('Error calling reorder API:', error);
+      // Revert on error
+      setMovelaps(moveframe.movelaps || []);
+    }
+  };
+
+  // Handle copy movelap
+  const handleCopyMovelap = (movelap: any) => {
+    setCopiedMovelap(movelap);
+    alert(`Movelap #${movelaps.findIndex((ml: any) => ml.id === movelap.id) + 1} copied! Click "Paste" on any row to insert it after that position.`);
+  };
+
+  // Handle paste movelap
+  const handlePasteMovelap = async (afterIndex: number) => {
+    if (!copiedMovelap) {
+      alert('No movelap copied. Click "Copy" on a movelap first.');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Authentication required');
+        return;
+      }
+
+      // Create new movelap after the specified position
+      const newMovelap = {
+        ...copiedMovelap,
+        id: undefined, // Will be assigned by backend
+        moveframeId: moveframe.id,
+        repetitionNumber: afterIndex + 2 // Insert after current position
+      };
+
+      const response = await fetch('/api/workouts/movelaps', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(newMovelap)
+      });
+
+      if (response.ok) {
+        alert('Movelap pasted successfully! Refreshing...');
+        window.location.reload(); // Refresh to show new movelap
+      } else {
+        alert('Failed to paste movelap');
+      }
+    } catch (error) {
+      console.error('Error pasting movelap:', error);
+      alert('Error pasting movelap');
+    }
+  };
   
   // Function to save movelap as favorite
   const handleSaveAsFavorite = async (movelap: any) => {
@@ -144,184 +473,55 @@ export default function MovelapDetailTable({
   
   return (
     <div className="bg-gray-50 p-2">
-      <table className="w-full border-collapse text-xs">
-        <thead className="bg-gray-200">
-          <tr>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" title="Drag to reorder">Move</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">MF</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">#</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Color</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Code section</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Action</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Dist</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Style</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Speed</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Time</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Pace</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rec</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rest to</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Aim & Snd</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Annotations</th>
-            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Options</th>
-          </tr>
-        </thead>
-        <tbody>
-          {movelaps.map((movelap: any, index: number) => (
-            <tr key={movelap.id} className="hover:bg-gray-100">
-              {/* Move (Drag Handle) Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <span
-                  className="cursor-move text-gray-400 hover:text-gray-600 inline-block"
-                  title="Drag to reorder movelap"
-                >
-                  <GripVertical size={12} />
-                </span>
-              </td>
-              
-              {/* MF (Moveframe Letter) Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center font-bold text-xs">
-                {moveframeLetter}
-              </td>
-              
-              {/* # (Repetition Number) Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center font-bold text-xs">
-                {movelap.repetitionNumber || index + 1}
-              </td>
-              
-              {/* Color Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center">
-                <div
-                  className="w-6 h-6 mx-auto rounded"
-                  style={{ backgroundColor: sectionColor }}
-                  title={sectionName}
-                />
-              </td>
-              
-              {/* Code Section Column - Shows section name like "Warm up" */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-[10px]">
-                {sectionName}
-              </td>
-              
-              {/* Action Column - Shows sport name */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-[10px]">
-                {moveframe.sport?.replace(/_/g, ' ') || 'Unknown'}
-              </td>
-              
-              {/* Dist Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.distance || '—'}
-              </td>
-              
-              {/* Style Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.style || '—'}
-              </td>
-              
-              {/* Speed Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.speed || '—'}
-              </td>
-              
-              {/* Time Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.time || movelap.estimatedTime || '00.0'}
-              </td>
-              
-              {/* Pace Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.pace || '00.0'}
-              </td>
-              
-              {/* Rec (Recovery/Pause) Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.pause || movelap.recovery || '—'}
-              </td>
-              
-              {/* Rest to Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.restTo || '—'}
-              </td>
-              
-              {/* Aim & Snd Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.aim || movelap.sound ? '🔔' : '—'}
-              </td>
-              
-              {/* Annotations Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.annotations || movelap.notes || '—'}
-              </td>
-              
-              {/* Options Column */}
-              <td className="border border-gray-300 px-1 py-1 text-center">
-                <div className="flex items-center justify-center gap-1 flex-wrap">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onEditMovelap) onEditMovelap(movelap);
-                    }}
-                    className="px-1 py-0.5 text-[9px] bg-blue-500 text-white rounded hover:bg-blue-600"
-                    title="Edit movelap"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      alert('Copy functionality - to be implemented');
-                    }}
-                    className="px-1 py-0.5 text-[9px] bg-green-500 text-white rounded hover:bg-green-600"
-                    title="Copy movelap"
-                  >
-                    Copy
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      alert('Move functionality - to be implemented');
-                    }}
-                    className="px-1 py-0.5 text-[9px] bg-orange-500 text-white rounded hover:bg-orange-600"
-                    title="Move movelap"
-                  >
-                    Move
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onDeleteMovelap) {
-                        if (confirm(`Delete ${moveframeLetter}${movelap.repetitionNumber}?`)) {
-                          onDeleteMovelap(movelap);
-                        }
-                      }
-                    }}
-                    className="px-1 py-0.5 text-[9px] bg-red-500 text-white rounded hover:bg-red-600"
-                    title="Delete movelap"
-                  >
-                    Delete
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleSaveAsFavorite(movelap);
-                    }}
-                    disabled={savingFavorite === movelap.id}
-                    className={`px-1 py-0.5 text-[9px] text-white rounded ${
-                      savingFavorite === movelap.id 
-                        ? 'bg-purple-300 cursor-wait' 
-                        : 'bg-purple-500 hover:bg-purple-600'
-                    }`}
-                    title="Save as favorite"
-                  >
-                    {savingFavorite === movelap.id ? 'Saving...' : 'Save as Fav'}
-                  </button>
-                </div>
-              </td>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <table className="w-full border-collapse text-xs">
+          <thead className="bg-gray-200">
+            <tr>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" title="Drag to reorder">Move</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">MF</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">#</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Color</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Code section</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Action</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Dist</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Style</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Speed</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Time</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Pace</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rec</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rest to</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Aim & Snd</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Annotations</th>
+              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Options</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <SortableContext items={movelaps.map((ml: any) => ml.id)} strategy={verticalListSortingStrategy}>
+            <tbody>
+              {movelaps.map((movelap: any, index: number) => (
+                <SortableMovelapRow
+                  key={movelap.id}
+                  movelap={movelap}
+                  index={index}
+                  moveframeLetter={moveframeLetter}
+                  sectionColor={sectionColor}
+                  sectionName={sectionName}
+                  moveframe={moveframe}
+                  onEditMovelap={onEditMovelap}
+                  onDeleteMovelap={onDeleteMovelap}
+                  onCopyMovelap={handleCopyMovelap}
+                  onPasteMovelap={handlePasteMovelap}
+                  savingFavorite={savingFavorite}
+                  handleSaveAsFavorite={handleSaveAsFavorite}
+                />
+              ))}
+            </tbody>
+          </SortableContext>
+        </table>
+      </DndContext>
       {onAddMovelap && (
         <button
           onClick={(e) => {

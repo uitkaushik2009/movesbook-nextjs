@@ -5,6 +5,7 @@ import { GripVertical } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
+import { isSeriesBasedSport } from '@/constants/moveframe.constants';
 import MoveframesSection from './MoveframesSection';
 
 interface WorkoutTableProps {
@@ -89,14 +90,14 @@ export default function WorkoutTable({
 
   // Calculate sport totals from moveframes and workout sessions
   const calculateSportTotals = () => {
-    const sportMap = new Map<string, { distance: number; durationMinutes: number; k: string }>();
+    const sportMap = new Map<string, { distance: number; durationMinutes: number; series: number; repetitions: number; k: string }>();
     
     // Get sports from workout session
     if (workout.sports && workout.sports.length > 0) {
       workout.sports.forEach((ws: any) => {
         const sportName = ws.sport?.name || ws.sport || 'Unknown';
         if (!sportMap.has(sportName)) {
-          sportMap.set(sportName, { distance: 0, durationMinutes: 0, k: '' });
+          sportMap.set(sportName, { distance: 0, durationMinutes: 0, series: 0, repetitions: 0, k: '' });
         }
       });
     }
@@ -105,32 +106,43 @@ export default function WorkoutTable({
     (workout.moveframes || []).forEach((mf: any) => {
       const sport = mf.sport || 'Unknown';
       if (!sportMap.has(sport)) {
-        sportMap.set(sport, { distance: 0, durationMinutes: 0, k: '' });
+        sportMap.set(sport, { distance: 0, durationMinutes: 0, series: 0, repetitions: 0, k: '' });
       }
       
       const totals = sportMap.get(sport)!;
+      const isSeries = isSeriesBasedSport(sport);
       
-      // Sum distances and duration from movelaps
-      (mf.movelaps || []).forEach((lap: any) => {
-        // Add distance
-        if (lap.distance) {
-          totals.distance += parseInt(lap.distance) || 0;
-        }
+      if (isSeries) {
+        // For series-based sports: count series and repetitions
+        // Series count comes from moveframe (stored in movelaps[0].series or repetitions field)
+        const seriesCount = mf.repetitions || mf.movelaps?.[0]?.series || 0;
+        const repsPerSeries = mf.movelaps?.[0]?.reps || 0;
         
-        // Add duration (if available as time in format like "00:05:30" or minutes)
-        if (lap.time) {
-          const timeStr = lap.time.toString();
-          if (timeStr.includes(':')) {
-            const parts = timeStr.split(':');
-            const hours = parseInt(parts[0]) || 0;
-            const minutes = parseInt(parts[1]) || 0;
-            const seconds = parseInt(parts[2]) || 0;
-            totals.durationMinutes += (hours * 60) + minutes + (seconds / 60);
-          } else {
-            totals.durationMinutes += parseFloat(timeStr) || 0;
+        totals.series += parseInt(seriesCount) || 0;
+        totals.repetitions += (parseInt(seriesCount) || 0) * (parseInt(repsPerSeries) || 0);
+      } else {
+        // For distance-based sports: sum distances and duration from movelaps
+        (mf.movelaps || []).forEach((lap: any) => {
+          // Add distance
+          if (lap.distance) {
+            totals.distance += parseInt(lap.distance) || 0;
           }
-        }
-      });
+          
+          // Add duration (if available as time in format like "00:05:30" or minutes)
+          if (lap.time) {
+            const timeStr = lap.time.toString();
+            if (timeStr.includes(':')) {
+              const parts = timeStr.split(':');
+              const hours = parseInt(parts[0]) || 0;
+              const minutes = parseInt(parts[1]) || 0;
+              const seconds = parseInt(parts[2]) || 0;
+              totals.durationMinutes += (hours * 60) + minutes + (seconds / 60);
+            } else {
+              totals.durationMinutes += parseFloat(timeStr) || 0;
+            }
+          }
+        });
+      }
     });
     
     // Format duration as HH:MM
@@ -145,17 +157,21 @@ export default function WorkoutTable({
     };
     
     // Return exactly 4 sports (pad with empty if needed)
-    const sportsArray = Array.from(sportMap.entries()).map(([name, totals]) => ({
-      name,
-      icon: getSportIcon(name, iconType),
-      distance: totals.distance,
-      duration: formatDuration(totals.durationMinutes),
-      k: totals.k
-    }));
+    const sportsArray = Array.from(sportMap.entries()).map(([name, totals]) => {
+      const isSeries = isSeriesBasedSport(name);
+      return {
+        name,
+        icon: getSportIcon(name, iconType),
+        isSeriesBased: isSeries,
+        distance: isSeries ? totals.series : totals.distance,
+        duration: isSeries ? totals.repetitions.toString() : formatDuration(totals.durationMinutes),
+        k: totals.k
+      };
+    });
     
     // Ensure we have exactly 4 sport slots
     while (sportsArray.length < 4) {
-      sportsArray.push({ name: '', icon: '', distance: 0, duration: '', k: '' });
+      sportsArray.push({ name: '', icon: '', isSeriesBased: false, distance: 0, duration: '', k: '' });
     }
     
     return sportsArray.slice(0, 4);
@@ -247,9 +263,9 @@ export default function WorkoutTable({
                 if (onAddMoveframe) onAddMoveframe();
               }}
               className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors font-medium"
-              title="Add Moveframe"
+              title="Add a Moveframe"
             >
-              + Moveframe
+              Add a Moveframe
             </button>
             <button 
               onClick={(e) => {
@@ -292,33 +308,20 @@ export default function WorkoutTable({
               <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">No</th>
               <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-24">Match</th>
               
-              {/* Sport 1 */}
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center">Sport</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">Icon</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-20">Distance</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-20">Duration</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">K</th>
-              
-              {/* Sport 2 */}
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center">Sport</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">Icon</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-20">Distance</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-20">Duration</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">K</th>
-              
-              {/* Sport 3 */}
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center">Sport</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">Icon</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-20">Distance</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-20">Duration</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">K</th>
-              
-              {/* Sport 4 */}
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center">Sport</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">Icon</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-20">Distance</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-20">Duration</th>
-              <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">K</th>
+              {/* Dynamic headers for each sport */}
+              {sports.map((sport, index) => (
+                <React.Fragment key={index}>
+                  <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center">Sport</th>
+                  <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">Icon</th>
+                  <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-20">
+                    {sport.isSeriesBased ? 'Tot.series' : 'Distance'}
+                  </th>
+                  <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-20">
+                    {sport.isSeriesBased ? 'Repetitions' : 'Duration'}
+                  </th>
+                  <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center w-12">K</th>
+                </React.Fragment>
+              ))}
             </tr>
           </thead>
           
@@ -393,23 +396,25 @@ export default function WorkoutTable({
           </tbody>
         </table>
         
-      {/* MOVEFRAMES SECTION - Display below workout table when expanded */}
+      {/* MOVEFRAMES SECTION - Level 2: Indented from workout table */}
       {isExpanded && (workout.moveframes || []).length > 0 && (
-        <MoveframesSection
-          moveframes={workout.moveframes}
-          workout={workout}
-          workoutIndex={workoutIndex}
-          day={day}
-          onAddMoveframe={onAddMoveframe}
-          onEditMoveframe={onEditMoveframe}
-          onDeleteMoveframe={onDeleteMoveframe}
-          onEditMovelap={onEditMovelap}
-          onDeleteMovelap={onDeleteMovelap}
-          onAddMovelap={onAddMovelap}
-          onCopyMoveframe={onCopyMoveframe}
-          onMoveMoveframe={onMoveMoveframe}
-          onOpenColumnSettings={onOpenColumnSettings}
-        />
+        <div className="ml-8">
+          <MoveframesSection
+            moveframes={workout.moveframes}
+            workout={workout}
+            workoutIndex={workoutIndex}
+            day={day}
+            onAddMoveframe={onAddMoveframe}
+            onEditMoveframe={onEditMoveframe}
+            onDeleteMoveframe={onDeleteMoveframe}
+            onEditMovelap={onEditMovelap}
+            onDeleteMovelap={onDeleteMovelap}
+            onAddMovelap={onAddMovelap}
+            onCopyMoveframe={onCopyMoveframe}
+            onMoveMoveframe={onMoveMoveframe}
+            onOpenColumnSettings={onOpenColumnSettings}
+          />
+        </div>
       )}
     </div>
   );

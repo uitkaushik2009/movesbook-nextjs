@@ -1,9 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { SPORTS_LIST, MACRO_FINAL_OPTIONS, MUSCULAR_SECTORS } from '@/constants/moveframe.constants';
 import { useMoveframeForm } from '@/hooks/useMoveframeForm';
+import { getSportIcon } from '@/utils/sportIcons';
+import { useSportIconType } from '@/hooks/useSportIconType';
+import Image from 'next/image';
 
 interface AddEditMoveframeModalProps {
   isOpen: boolean;
@@ -101,6 +104,9 @@ export default function AddEditMoveframeModal({
   const R1_OPTIONS = ['', '34', '36', '38', '39', '40', '48', '50', '52', '53', '54', '55'];
   const R2_OPTIONS = ['', ...Array.from({ length: 43 }, (_, i) => (i + 10).toString())]; // 10-52
 
+  // Get sport icon type
+  const iconType = useSportIconType();
+
   // Use custom hook for form management
   const {
     formData,
@@ -124,12 +130,43 @@ export default function AddEditMoveframeModal({
     day
   });
 
+  // Workout Sections state
+  const [workoutSections, setWorkoutSections] = useState<any[]>([]);
+
+  // Load workout sections from API
+  useEffect(() => {
+    const loadWorkoutSections = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const response = await fetch('/api/workouts/sections', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setWorkoutSections(data.sections || []);
+        }
+      } catch (error) {
+        console.error('Error loading workout sections:', error);
+      }
+    };
+    
+    if (isOpen) {
+      loadWorkoutSections();
+    }
+  }, [isOpen]);
+
   // Destructure for easier access
   const {
     sport,
     type,
     manualMode,
     manualPriority,
+    sectionId, // Workout section for ALL sports
     distance,
     customDistance,
     repetitions,
@@ -160,6 +197,7 @@ export default function AddEditMoveframeModal({
     setType,
     setManualMode,
     setManualPriority,
+    setSectionId, // Workout section setter for ALL sports
     setDistance,
     setCustomDistance,
     setRepetitions,
@@ -184,6 +222,20 @@ export default function AddEditMoveframeModal({
     setBatterySequence,
     setManualContent
   } = setters;
+
+  // Auto-initialize sport and section for standard mode
+  useEffect(() => {
+    if (isOpen && type === 'STANDARD' && !manualMode && mode === 'add') {
+      // Set default sport if not set
+      if (!sport) {
+        setSport('SWIM');
+      }
+      // Set default section if not set and sections are loaded
+      if (!sectionId && workoutSections.length > 0) {
+        setSectionId(workoutSections[0].id);
+      }
+    }
+  }, [isOpen, type, manualMode, mode, sport, sectionId, workoutSections, setSport, setSectionId]);
 
   // Handle save
   const handleSave = async () => {
@@ -247,18 +299,60 @@ export default function AddEditMoveframeModal({
             <label className="block text-xs font-bold text-gray-700 mb-1">
               Sport <span className="text-red-500">*</span>
             </label>
+            <div className="flex items-center gap-2">
+              <select
+                value={sport}
+                onChange={(e) => setSport(e.target.value)}
+                className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
+              >
+                {SPORTS_LIST.map((s) => (
+                  <option key={s} value={s}>
+                    {s.replace(/_/g, ' ')}
+                  </option>
+                ))}
+              </select>
+              {/* Sport Icon Display */}
+              {sport && (() => {
+                const icon = getSportIcon(sport, iconType);
+                const isImage = icon.startsWith('/');
+                return isImage ? (
+                  <div className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded bg-gray-50">
+                    <Image 
+                      src={icon} 
+                      alt={sport}
+                      width={24}
+                      height={24}
+                      className="object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 flex items-center justify-center text-2xl border border-gray-300 rounded bg-gray-50">
+                    {icon}
+                  </div>
+                );
+              })()}
+            </div>
+            {errors.sport && <p className="mt-0.5 text-xs text-red-500">{errors.sport}</p>}
+          </div>
+
+          {/* Workout Section Selection (ALL SPORTS) */}
+          <div className="mb-3">
+            <label className="block text-xs font-bold text-gray-700 mb-1">
+              Workout Section <span className="text-red-500">*</span>
+            </label>
             <select
-              value={sport}
-              onChange={(e) => setSport(e.target.value)}
+              value={sectionId}
+              onChange={(e) => setSectionId(e.target.value)}
               className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
             >
-              {SPORTS_LIST.map((s) => (
-                <option key={s} value={s}>
-                  {s.replace(/_/g, ' ')}
+              <option value="">Select section...</option>
+              {workoutSections.map((section) => (
+                <option key={section.id} value={section.id}>
+                  {section.name}
                 </option>
               ))}
             </select>
-            {errors.sport && <p className="mt-0.5 text-xs text-red-500">{errors.sport}</p>}
+            {errors.sectionId && <p className="mt-0.5 text-xs text-red-500">{errors.sectionId}</p>}
           </div>
 
           {/* Type Selection */}
@@ -298,13 +392,15 @@ export default function AddEditMoveframeModal({
             </div>
           </div>
 
-          {/* Standard Mode */}
+          {/* Standard Mode - Simplified to 5 fields only */}
           {type === 'STANDARD' && !manualMode && (
             <div className="space-y-3">
-              {/* All fields in vertical layout */}
-              <div className="space-y-2">
+              
+              {/* Simplified form with only 5 fields */}
+              <div className="space-y-3">
+                {/* 1. Distance (m) */}
                 <div className="bg-gray-50 p-2.5 rounded-lg">
-                  <h3 className="font-bold text-xs text-gray-700 mb-2">DISTANCE SECTION</h3>
+                  <h3 className="font-bold text-xs text-gray-700 mb-2">DISTANCE & REPETITIONS</h3>
                   
                   {sport === 'BODY_BUILDING' ? (
                     <>
@@ -344,8 +440,27 @@ export default function AddEditMoveframeModal({
                         {errors.exercise && <p className="mt-1 text-xs text-red-500">{errors.exercise}</p>}
                       </div>
                       
+                      <div className="mb-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Number of series: <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={repetitions}
+                          onChange={(e) => setRepetitions(e.target.value)}
+                          min="1"
+                          max="99"
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                          placeholder="1"
+                        />
+                        <p className="mt-1 text-[10px] text-gray-500">
+                          Range: 1-99 (default: 1)
+                        </p>
+                        {errors.repetitions && <p className="mt-1 text-xs text-red-500">{errors.repetitions}</p>}
+                      </div>
+                      
                       <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Reps:</label>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Reps (per series):</label>
                         <input
                           type="number"
                           value={reps}
@@ -415,114 +530,26 @@ export default function AddEditMoveframeModal({
                   )}
                 </div>
 
-                {/* STYLE & NOTES Section - Show for sports with styles */}
-                {'styles' in sportConfig && (
-                  <div className="bg-gray-50 p-2.5 rounded-lg">
-                    <h3 className="font-bold text-xs text-gray-700 mb-2">STYLE & NOTES</h3>
-                    <div className="mb-3">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Style:</label>
-                      <select
-                        value={style}
-                        onChange={(e) => setStyle(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                      >
-                        <option value="">Select style</option>
-                        {sportConfig.styles.map((s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Note:</label>
-                      <textarea
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                        rows={3}
-                        placeholder="Add notes..."
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* NOTES Section - Show for sports without styles (like BIKE) */}
-                {!('styles' in sportConfig) && sport !== 'BODY_BUILDING' && (
-                  <div className="bg-gray-50 p-2.5 rounded-lg">
-                    <h3 className="font-bold text-xs text-gray-700 mb-2">NOTES</h3>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Note:</label>
-                      <textarea
-                        value={note}
-                        onChange={(e) => setNote(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                        rows={3}
-                        placeholder="Add notes..."
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* SPEED & PACING Section */}
-              <div className="bg-gray-50 p-2.5 rounded-lg">
-                <h3 className="font-bold text-xs text-gray-700 mb-2">SPEED & PACING</h3>
-                <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Speed:</label>
-                  <select
-                    value={speed}
-                    onChange={(e) => setSpeed(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                  >
-                    {sportConfig.speeds.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* R1 and R2 fields (BIKE only) */}
-                {sport === 'BIKE' && (
+                {/* 3. Speed/Pace */}
+                <div className="bg-gray-50 p-2.5 rounded-lg">
+                  <h3 className="font-bold text-xs font-medium text-gray-700 mb-2">SPEED / PACE</h3>
                   <div className="mb-3">
-                    <label className="block text-xs font-medium text-gray-700 mb-2">R1\R2 (Range):</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10px] text-gray-600 mb-1">R1:</label>
-                        <select
-                          value={r1}
-                          onChange={(e) => setR1(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                        >
-                          {R1_OPTIONS.map((option) => (
-                            <option key={option} value={option}>
-                              {option || '(blank)'}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-gray-600 mb-1">R2:</label>
-                        <select
-                          value={r2}
-                          onChange={(e) => setR2(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                        >
-                          {R2_OPTIONS.map((option) => (
-                            <option key={option} value={option}>
-                              {option || '(blank)'}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Speed:</label>
+                    <select
+                      value={speed}
+                      onChange={(e) => setSpeed(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                    >
+                      {sportConfig.speeds.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                )}
 
-                {sport !== 'BODY_BUILDING' && (
-                  <>
-                    <div className="mb-3">
+                  {sport !== 'BODY_BUILDING' && (
+                    <div>
                       {(() => {
                         // Determine pace type for RUN sport
                         let paceLabel = 'Pace/100m';
@@ -530,14 +557,12 @@ export default function AddEditMoveframeModal({
                         let pacePlaceholder = "1'30\"0";
                         let paceFormat = "M'SS\"D (e.g., 1'30\"0)";
                         let isKmPace = false;
-                        let maxLength = 7;
                         
                         if (sport === 'BIKE') {
                           paceLabel = 'Pace/km';
                           paceRange = "(0'00\" to 9'59\")";
                           pacePlaceholder = "1'30\"";
                           paceFormat = "M'SS\" (e.g., 1'30\")";
-                          maxLength = 5;
                         } else if (sport === 'RUN') {
                           const currentDistance = distance === 'custom' ? parseInt(customDistance) || 0 : parseInt(distance) || 0;
                           if (currentDistance > 401) {
@@ -553,7 +578,6 @@ export default function AddEditMoveframeModal({
                             paceFormat = "M'SS\"D (e.g., 0'45\"0)";
                             isKmPace = false;
                           }
-                          maxLength = 7;
                         }
                         
                         return (
@@ -564,123 +588,59 @@ export default function AddEditMoveframeModal({
                             <input
                               type="text"
                               value={pace}
-                              onChange={(e) => {
-                                const formatted = formatPace(e.target.value, isKmPace);
-                                setPace(formatted);
-                              }}
+                              onChange={(e) => setPace(e.target.value)}
                               onBlur={(e) => {
-                                // Auto-format on blur if user entered raw numbers
-                                if (e.target.value && !e.target.value.includes("'")) {
+                                if (e.target.value) {
                                   const formatted = formatPace(e.target.value, isKmPace);
                                   setPace(formatted);
                                 }
                               }}
                               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
                               placeholder={pacePlaceholder}
-                              maxLength={maxLength}
                             />
                             <p className="mt-0.5 text-[10px] text-gray-500">Format: {paceFormat}</p>
                           </>
                         );
                       })()}
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Time: <span className="text-gray-500 text-[10px]">(0h00'00"0 to 9h00'00"0)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={time}
-                        onChange={(e) => {
-                          const formatted = formatTime(e.target.value);
-                          setTime(formatted);
-                        }}
-                        onBlur={(e) => {
-                          // Auto-format on blur if user entered raw numbers
-                          if (e.target.value && !e.target.value.includes("h")) {
-                            const formatted = formatTime(e.target.value);
-                            setTime(formatted);
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                        placeholder="0h05'30&quot;0"
-                        maxLength={11}
-                      />
-                      <p className="mt-0.5 text-[10px] text-gray-500">Format: Hh MM'SS"D (e.g., 0h05'30"0) - Max 9 hours</p>
-                      {estimatedTime && (
-                        <p className="mt-1 text-xs text-blue-600">
-                          Estimated: {estimatedTime}
-                        </p>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* REST & ALERTS Section */}
-              <div className="bg-gray-50 p-2.5 rounded-lg">
-                <h3 className="font-bold text-xs text-gray-700 mb-2">REST & ALERTS</h3>
-                <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Pause:</label>
-                  <select
-                    value={pause}
-                    onChange={(e) => setPause(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                  >
-                    {sportConfig.pauses.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                  {parseInt(repetitions) === 1 && (
-                    <p className="mt-0.5 text-[10px] text-gray-500">Pause can be 0 when repetitions = 1</p>
                   )}
                 </div>
-                
-                {/* Macro Final - NEW FIELD */}
-                <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Macro Final:</label>
-                  <select
-                    value={macroFinal}
-                    onChange={(e) => setMacroFinal(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                  >
-                    {MACRO_FINAL_OPTIONS.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
+
+                {/* 4. Reset/Pause */}
+                <div className="bg-gray-50 p-2.5 rounded-lg">
+                  <h3 className="font-bold text-xs text-gray-700 mb-2">REST / PAUSE</h3>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Pause:</label>
+                    <select
+                      value={pause}
+                      onChange={(e) => setPause(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                    >
+                      {sportConfig.pauses.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    {parseInt(repetitions) === 1 && (
+                      <p className="mt-0.5 text-[10px] text-gray-500">Pause can be 0 when repetitions = 1</p>
+                    )}
+                  </div>
                 </div>
-                
-                <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Alarm:</label>
-                  <select
-                    value={alarm}
-                    onChange={(e) => setAlarm(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                  >
-                    {sportConfig.alarms.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Sound:</label>
-                  <select
-                    value={sound}
-                    onChange={(e) => setSound(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                  >
-                    {sportConfig.sounds.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
+
+                {/* 5. Description */}
+                <div className="bg-gray-50 p-2.5 rounded-lg">
+                  <h3 className="font-bold text-xs text-gray-700 mb-2">DESCRIPTION</h3>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Note / Description:</label>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                      rows={3}
+                      placeholder="Add notes or description..."
+                    />
+                  </div>
                 </div>
               </div>
             </div>
