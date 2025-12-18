@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DndContext, closestCenter, DragEndEvent } from '@dnd-kit/core';
+import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import SortableMoveframeRow from './SortableMoveframeRow';
 import MoveframeInfoPanel from '../MoveframeInfoPanel';
@@ -10,6 +10,7 @@ interface MoveframesSectionProps {
   workoutIndex: number;
   day: any;
   onAddMoveframe: () => void;
+  onAddMoveframeAfter?: (moveframe: any, index: number, workout: any, day: any) => void;
   onEditMoveframe?: (moveframe: any) => void;
   onDeleteMoveframe?: (moveframe: any) => void;
   onEditMovelap?: (movelap: any, moveframe: any) => void;
@@ -26,6 +27,7 @@ export default function MoveframesSection({
   workoutIndex, 
   day,
   onAddMoveframe,
+  onAddMoveframeAfter,
   onEditMoveframe,
   onDeleteMoveframe,
   onEditMovelap,
@@ -47,6 +49,15 @@ export default function MoveframesSection({
   React.useEffect(() => {
     setOrderedMoveframes(moveframes);
   }, [moveframes]);
+  
+  // Setup drag sensors with reliable activation
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 3, // Small distance to start drag
+      },
+    })
+  );
   
   // Handle drag end - reorder and reassign letters alphabetically
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -75,10 +86,19 @@ export default function MoveframesSection({
     
     // Persist the new order to database
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('❌ No authentication token found');
+        alert('Authentication required. Please log in again.');
+        setOrderedMoveframes(moveframes);
+        return;
+      }
+
       const response = await fetch('/api/workouts/moveframes/reorder', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           moveframes: updatedOrder.map((mf: any) => ({
@@ -201,31 +221,32 @@ export default function MoveframesSection({
         {isExpanded && (
           <div className="p-4">
             <DndContext
+              sensors={sensors}
               collisionDetection={closestCenter}
               onDragEnd={handleDragEnd}
             >
-              <table className="w-full border-collapse text-xs bg-white">
-                <thead className="bg-purple-300 text-purple-900">
-                  <tr>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Drag to reorder">⋮⋮</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Expand/Collapse">::</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Index">#</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">MF</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Workout section</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Ico</th>
-                    <th className="border border-gray-200 px-1 py-1 text-left text-[10px]">Sport of the moveframe</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Moveframe description</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rip</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Macro</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Alarm & Sound</th>
-                    <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Options</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <SortableContext
-                    items={orderedMoveframes.map((mf: any) => mf.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
+              <SortableContext
+                items={orderedMoveframes.map((mf: any) => mf.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <table className="w-full border-collapse text-xs bg-white">
+                  <thead className="bg-purple-300 text-purple-900">
+                    <tr>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Drag to reorder">⋮⋮</th>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Expand/Collapse">::</th>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Index">#</th>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">MF</th>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Workout section</th>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Ico</th>
+                      <th className="border border-gray-200 px-1 py-1 text-left text-[10px]">Sport of the moveframe</th>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Moveframe description</th>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rip</th>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Macro</th>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Alarm & Sound</th>
+                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Options</th>
+                    </tr>
+                  </thead>
+                  <tbody>
                     {orderedMoveframes.map((moveframe: any, mfIndex: number) => {
                       const isMovelapsExpanded = expandedMoveframe === moveframe.id;
                       
@@ -241,6 +262,7 @@ export default function MoveframesSection({
                           onEditMovelap={onEditMovelap}
                           onDeleteMovelap={onDeleteMovelap}
                           onAddMovelap={onAddMovelap}
+                          onAddMoveframeAfter={onAddMoveframeAfter}
                           onCopyMoveframe={onCopyMoveframe}
                           onMoveMoveframe={onMoveMoveframe}
                           workout={workout}
@@ -250,9 +272,9 @@ export default function MoveframesSection({
                         />
                       );
                     })}
-                  </SortableContext>
-                </tbody>
-              </table>
+                  </tbody>
+                </table>
+              </SortableContext>
             </DndContext>
           </div>
         )}

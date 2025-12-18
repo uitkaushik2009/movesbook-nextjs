@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
       sport,
       type,
       description,
+      notes,
       movelaps
     } = body;
 
@@ -38,7 +39,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!movelaps || !Array.isArray(movelaps) || movelaps.length === 0) {
+    // For ANNOTATION type, movelaps can be empty
+    if (type !== 'ANNOTATION' && (!movelaps || !Array.isArray(movelaps) || movelaps.length === 0)) {
       return NextResponse.json(
         { error: 'Movelaps array is required and must have at least one movelap' },
         { status: 400 }
@@ -73,35 +75,38 @@ export async function POST(request: NextRequest) {
           letter,
           sport,
           type: type || 'STANDARD',
-          description
+          description,
+          notes: notes || null
         }
       });
 
-      // Create all movelaps
-      const createdMovelaps = await Promise.all(
-        movelaps.map((movelap: any) =>
-          tx.movelap.create({
-            data: {
-              moveframeId: moveframe.id,
-              repetitionNumber: movelap.repetitionNumber,
-              distance: movelap.distance || null,
-              speed: movelap.speed || null,
-              style: movelap.style || null,
-              pace: movelap.pace || null,
-              time: movelap.time || null,
-              reps: movelap.reps || null,
-              restType: movelap.restType || null,
-              pause: movelap.pause || null,
-              alarm: movelap.alarm || null,
-              sound: movelap.sound || null,
-              notes: movelap.notes || null,
-              status: movelap.status || 'PENDING',
-              isSkipped: movelap.isSkipped || false,
-              isDisabled: movelap.isDisabled || false
-            }
-          })
-        )
-      );
+      // Create all movelaps (skip if empty array for ANNOTATION type)
+      const createdMovelaps = movelaps && movelaps.length > 0 
+        ? await Promise.all(
+            movelaps.map((movelap: any) =>
+              tx.movelap.create({
+                data: {
+                  moveframeId: moveframe.id,
+                  repetitionNumber: movelap.repetitionNumber,
+                  distance: movelap.distance || null,
+                  speed: movelap.speed || null,
+                  style: movelap.style || null,
+                  pace: movelap.pace || null,
+                  time: movelap.time || null,
+                  reps: movelap.reps || null,
+                  restType: movelap.restType || null,
+                  pause: movelap.pause || null,
+                  alarm: movelap.alarm || null,
+                  sound: movelap.sound || null,
+                  notes: movelap.notes || null,
+                  status: movelap.status || 'PENDING',
+                  isSkipped: movelap.isSkipped || false,
+                  isDisabled: movelap.isDisabled || false
+                }
+              })
+            )
+          )
+        : [];
 
       return {
         moveframe,

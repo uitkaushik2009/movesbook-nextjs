@@ -29,8 +29,11 @@ export async function GET(
             moveframes: {
               include: {
                 section: true,
-                movelaps: true
-              }
+                movelaps: {
+                  orderBy: { repetitionNumber: 'asc' }
+                }
+              },
+              orderBy: { letter: 'asc' }
             }
           }
         }

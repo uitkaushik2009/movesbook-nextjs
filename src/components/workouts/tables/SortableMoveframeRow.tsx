@@ -16,6 +16,7 @@ interface SortableMoveframeRowProps {
   onEditMovelap?: (movelap: any, moveframe: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any) => void;
   onAddMovelap?: (moveframe: any) => void;
+  onAddMoveframeAfter?: (moveframe: any, index: number, workout: any, day: any) => void;
   onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
   workout: any;
@@ -34,6 +35,7 @@ export default function SortableMoveframeRow({
   onEditMovelap,
   onDeleteMovelap,
   onAddMovelap,
+  onAddMoveframeAfter,
   onCopyMoveframe,
   onMoveMoveframe,
   workout,
@@ -54,6 +56,9 @@ export default function SortableMoveframeRow({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 9999 : 1,
+    position: 'relative' as const,
+    cursor: isDragging ? 'grabbing' : 'auto',
   };
   
   // Get icon type preference
@@ -69,6 +74,20 @@ export default function SortableMoveframeRow({
   const sectionName = moveframe.section?.name || 'Default';
   const sportIcon = getSportIcon(moveframe.sport || 'SWIM', iconType);
   const sportName = moveframe.sport?.replace(/_/g, ' ') || 'Unknown';
+  
+  // Parse annotation colors from notes if type is ANNOTATION
+  let annotationColors = null;
+  if (moveframe.type === 'ANNOTATION' && moveframe.notes) {
+    try {
+      // Only parse if notes looks like JSON (starts with '{')
+      if (typeof moveframe.notes === 'string' && moveframe.notes.trim().startsWith('{')) {
+        annotationColors = JSON.parse(moveframe.notes);
+      }
+    } catch (e) {
+      // Silently fail for malformed JSON - use default colors
+      annotationColors = null;
+    }
+  }
   
   // Calculate macro time (total time for all movelaps)
   const macroTime = (moveframe.movelaps || []).reduce((sum: number, lap: any) => {
@@ -87,22 +106,29 @@ export default function SortableMoveframeRow({
     <React.Fragment key={moveframe.id}>
       <tr 
         ref={setNodeRef}
-        style={style}
-        className="hover:bg-purple-50"
+        style={{
+          ...style,
+          ...(annotationColors ? {
+            backgroundColor: annotationColors.headerBgColor || '#5168c2',
+            color: annotationColors.textBgColor || '#ffffff'
+          } : {})
+        }}
+        className={annotationColors ? '' : 'hover:bg-purple-50'}
         title="Click expand button to show/hide movelaps, Double-click moveframe to edit"
       >
         {/* Drag Handle Column */}
         <td className="border border-gray-200 px-1 py-1 text-center"
           onClick={(e) => e.stopPropagation()}
         >
-          <span
+          <div
             {...attributes}
             {...listeners}
-            className="cursor-move text-gray-400 hover:text-gray-600 inline-block"
+            className="cursor-move text-gray-400 hover:text-gray-600 inline-flex items-center justify-center select-none"
+            style={{ touchAction: 'none' }}
             title="Drag to reorder moveframe"
           >
-            <GripVertical size={12} />
-          </span>
+            <GripVertical size={14} />
+          </div>
         </td>
         
         {/* Expand/Collapse Column */}
@@ -170,7 +196,11 @@ export default function SortableMoveframeRow({
         
         {/* Moveframe Description Column */}
         <td className="border border-gray-200 px-1 py-1 text-center text-[10px]">
-          {moveframe.description || 'No description'}
+          {moveframe.description && moveframe.description.includes('<') ? (
+            <div dangerouslySetInnerHTML={{ __html: moveframe.description }} />
+          ) : (
+            moveframe.description || 'No description'
+          )}
         </td>
         
         {/* Rip (Repetitions) Column */}
@@ -180,17 +210,31 @@ export default function SortableMoveframeRow({
         
         {/* Macro Column */}
         <td className="border border-gray-200 px-1 py-1 text-center font-semibold text-xs">
-          {formatMacroTime(macroTime)}
+          {moveframe.macroFinal || formatMacroTime(macroTime)}
         </td>
         
         {/* Alarm & Sound Column */}
         <td className="border border-gray-200 px-1 py-1 text-center text-[10px]">
-          {moveframe.alarm ? '🔔' : '-'}
+          {moveframe.alarm ? `${moveframe.alarm}🔔` : '-'}
         </td>
         
         {/* Options Column */}
         <td className="border border-gray-200 px-1 py-1 text-center">
           <div className="flex items-center justify-center gap-1 flex-wrap">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onAddMoveframeAfter) {
+                  onAddMoveframeAfter(moveframe, mfIndex, workout, day);
+                }
+              }}
+              className="px-2 py-1 text-[10px] bg-emerald-500 text-white rounded hover:bg-emerald-600 cursor-pointer"
+              title="Add a new moveframe after this one"
+            >
+              Add MF
+            </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -264,8 +308,8 @@ export default function SortableMoveframeRow({
       {/* Movelaps Detail Table - Level 3: Indented from moveframe table */}
       {isMovelapsExpanded && (
         <tr>
-          <td colSpan={11} className="border border-gray-200 p-0 bg-gray-50">
-            <div className="ml-8">
+          <td colSpan={12} className="border border-gray-200 p-0 bg-gray-50">
+            <div className="pl-8">
               <MovelapDetailTable 
                 moveframe={moveframe}
                 onEditMovelap={(movelap) => onEditMovelap?.(movelap, moveframe)}

@@ -22,12 +22,12 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid movelaps data' }, { status: 400 });
     }
 
-    // Update each movelap's order in a transaction
+    // Update each movelap's repetitionNumber (order) in a transaction
     await prisma.$transaction(
-      movelaps.map((ml: { id: string; order: number }) =>
+      movelaps.map((ml: { id: string; repetitionNumber: number }) =>
         prisma.movelap.update({
           where: { id: ml.id },
-          data: { order: ml.order }
+          data: { repetitionNumber: ml.repetitionNumber }
         })
       )
     );

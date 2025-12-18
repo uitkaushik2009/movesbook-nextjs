@@ -140,8 +140,11 @@ export async function POST(request: NextRequest) {
         moveframes: {
           include: {
             section: true,
-            movelaps: true
-          }
+            movelaps: {
+              orderBy: { repetitionNumber: 'asc' }
+            }
+          },
+          orderBy: { letter: 'asc' }
         },
         sports: true
       }

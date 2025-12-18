@@ -248,6 +248,9 @@ model Moveframe {
   sectionId        String
   type             MoveframeType
   description      String
+  notes            String?  @db.Text
+  macroFinal       String?  // Macro final field (0' to 9')
+  alarm            Int?     // Alarm setting
   createdAt        DateTime @default(now())
 
   workoutSession WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
@@ -281,7 +284,6 @@ model Movelap {
   id               String       @id @default(cuid())
   moveframeId      String
   repetitionNumber Int
-  order            Int?         // Display order for drag and drop
   distance         Int?
   speed            String?
   style            String?
@@ -301,7 +303,6 @@ model Movelap {
   status           MovelapStatus
   isSkipped        Boolean      @default(false)
   isDisabled       Boolean      @default(false)
-  series           Int?         // Number of series for BODY_BUILDING
   createdAt        DateTime     @default(now())
 
   moveframe Moveframe @relation(fields: [moveframeId], references: [id], onDelete: Cascade)

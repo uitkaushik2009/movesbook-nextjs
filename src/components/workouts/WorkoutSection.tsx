@@ -50,6 +50,7 @@ import WorkoutCalendarView from '@/components/workouts/WorkoutCalendarView';
 import DayTableView from '@/components/workouts/tables/DayTableView';
 import StyledTableWrapper from '@/components/workouts/tables/StyledTableWrapper';
 import AddWorkoutModal from '@/components/workouts/AddWorkoutModal';
+import WorkoutInfoModal from '@/components/workouts/WorkoutInfoModal';
 import AddMoveframeModal from '@/components/workouts/AddMoveframeModal';
 import AddEditMoveframeModal from '@/components/workouts/AddEditMoveframeModal';
 import ImportWorkoutsModal from '@/components/workouts/ImportWorkoutsModal';
@@ -101,7 +102,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   } = useWorkoutData({ initialSection: activeSection });
   
   // ==================== MODAL STATES (Using Custom Hook) ====================
-  const { modals, modes, settings, actions: modalActions } = useWorkoutModals();
+  const { modals, modes, settings, setters, actions: modalActions } = useWorkoutModals();
 
   // Column Settings Hook
   const columnSettings = useColumnSettings();
@@ -152,7 +153,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
 
   // ==================== MODAL MODE STATE ====================
   const [workoutModalMode, setWorkoutModalMode] = useState<'add' | 'edit'>('add');
-  const [moveframeModalMode, setMoveframeModalMode] = useState<'add' | 'edit'>('add');
+  const [showWorkoutInfoModal, setShowWorkoutInfoModal] = useState(false);
+  // Use moveframeModalMode from the hook instead of local state
+  const moveframeModalMode = modes.moveframeModalMode;
+  const setMoveframeModalMode = setters.setMoveframeModalMode;
+  const [moveframeInsertIndex, setMoveframeInsertIndex] = useState<number | null>(null); // For "Add MF" after specific moveframe
   
   // ==================== DRAG & DROP STATE ====================
   // Note: activeWorkout and activeMoveframe already defined above for workout context
@@ -278,7 +283,32 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     console.log('✅ Opening Add Moveframe modal');
     setSelectedWorkout(activeWorkout.id);
     setSelectedDay(activeDay);
+    setMoveframeModalMode('add');
+    setEditingMoveframe(null);
+    setMoveframeInsertIndex(null); // Reset insert index for regular add (append to end)
     modalActions.openAddMoveframeModal();
+  };
+  
+  /**
+   * ADD MOVEFRAME AFTER - Adds a moveframe after a specific moveframe
+   * @param moveframe - The moveframe to insert after
+   * @param index - The index of the moveframe in the list
+   */
+  const handleAddMoveframeAfter = (moveframe: any, index: number, workout: any, day: any) => {
+    if (!workout || !day) {
+      showMessage('error', 'Could not find workout or day context');
+      return;
+    }
+    
+    setActiveWorkout(workout);
+    setActiveDay(day);
+    setSelectedWorkout(workout.id);
+    setSelectedDay(day);
+    setMoveframeModalMode('add');
+    setEditingMoveframe(null);
+    setMoveframeInsertIndex(index + 1);
+    
+    setters.setShowAddMoveframeModal(true);
   };
   
   /**
@@ -744,8 +774,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 onEditWorkout={(workout, day) => {
                   setEditingWorkout(workout);
                   setAddWorkoutDay(day);
-                  setWorkoutModalMode('edit');
-                  modalActions.setShowAddWorkoutModal(true);
+                  setShowWorkoutInfoModal(true); // Open info modal
                 }}
                 onCopyWorkout={(workout, day) => {
                   setCopiedWorkout(workout);
@@ -768,6 +797,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   setEditingMoveframe(null);
                   modalActions.setShowAddMoveframeModal(true);
                 }}
+                onAddMoveframeAfter={handleAddMoveframeAfter}
                  onEditMoveframe={(moveframe, workout, day) => {
                    setEditingMoveframe(moveframe);
                    setActiveDay(day);
@@ -919,6 +949,10 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             setEditingWorkout(null);
             modalActions.setWorkoutModalMode('add');
           }}
+          onEdit={() => {
+            // Switch from view mode to edit mode
+            setWorkoutModalMode('edit');
+          }}
           onSave={async (workoutData) => {
             const token = localStorage.getItem('token');
             
@@ -1010,19 +1044,40 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           }}
         />
       )}
+
+      {/* Workout Info Modal (Read-only view) */}
+      {showWorkoutInfoModal && editingWorkout && addWorkoutDay && (
+        <WorkoutInfoModal
+          isOpen={showWorkoutInfoModal}
+          workout={editingWorkout}
+          day={addWorkoutDay}
+          onClose={() => {
+            setShowWorkoutInfoModal(false);
+            setEditingWorkout(null);
+            setAddWorkoutDay(null);
+          }}
+          onEdit={() => {
+            // Switch to edit mode
+            setShowWorkoutInfoModal(false);
+            setWorkoutModalMode('edit');
+            modalActions.setShowAddWorkoutModal(true);
+          }}
+        />
+      )}
       
        {modals.showAddMoveframeModal && activeWorkout && activeDay && (
          <AddEditMoveframeModal
            isOpen={modals.showAddMoveframeModal}
-             onClose={() => {
-               modalActions.setShowAddMoveframeModal(false);
-             setActiveWorkout(null);
-             setActiveDay(null);
-             setSelectedWorkout(null);
-               setSelectedDay(null);
-             setEditingMoveframe(null);
-             setMoveframeModalMode('add');
-             }}
+            onClose={() => {
+              modalActions.setShowAddMoveframeModal(false);
+            setActiveWorkout(null);
+            setActiveDay(null);
+            setSelectedWorkout(null);
+              setSelectedDay(null);
+            setEditingMoveframe(null);
+            setMoveframeModalMode('add');
+            setMoveframeInsertIndex(null); // Reset insert index
+            }}
              onSave={async (moveframeData) => {
              console.log(`📤 ${moveframeModalMode === 'edit' ? 'Updating' : 'Creating'} moveframe with data:`, moveframeData);
              
@@ -1037,11 +1092,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                      'Content-Type': 'application/json',
                      'Authorization': `Bearer ${token}`
                    },
-                   body: JSON.stringify({
-                     sport: moveframeData.sport,
-                     description: moveframeData.description,
-                     notes: moveframeData.notes
-                   })
+                  body: JSON.stringify({
+                    sport: moveframeData.sport,
+                    type: moveframeData.type,
+                    description: moveframeData.description,
+                    notes: moveframeData.notes,
+                    macroFinal: moveframeData.macroFinal,
+                    alarm: moveframeData.alarm
+                  })
                  });
                  
                  if (!response.ok) {
@@ -1056,52 +1114,59 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  
                  // Reload data to show changes
                  await loadWorkoutData(activeSection);
-               } else {
-                 // CREATE new moveframe
-                 const movelaps: any[] = [];
-                 const repsCount = parseInt(moveframeData.repetitions) || 1;
-                 
-                 for (let i = 0; i < repsCount; i++) {
-                   movelaps.push({
-                     repetitionNumber: i + 1,
-                     distance: moveframeData.distance?.toString() || null,
-                     speed: moveframeData.speed || null,
-                     style: moveframeData.style || null,
-                     pace: moveframeData.pace || null,
-                     time: moveframeData.time || null,
-                     reps: moveframeData.reps || null,
-                     r1: moveframeData.r1 || null,
-                     r2: moveframeData.r2 || null,
-                     muscularSector: moveframeData.muscularSector || null,
-                     exercise: moveframeData.exercise || null,
-                     restType: null,
-                     pause: moveframeData.pause || null,
-                     alarm: moveframeData.alarm || null,
-                     sound: moveframeData.sound || null,
-                     notes: moveframeData.notes || null,
-                     status: 'PENDING',
-                     isSkipped: false,
-                     isDisabled: false
-                   });
-                 }
-                 
-                 console.log('📤 Generated movelaps:', movelaps);
+              } else {
+                // CREATE new moveframe
+                const movelaps: any[] = [];
+                
+                // Only create movelaps for non-ANNOTATION types
+                if (moveframeData.type !== 'ANNOTATION') {
+                  const repsCount = parseInt(moveframeData.repetitions) || 1;
+                  
+                  for (let i = 0; i < repsCount; i++) {
+                    movelaps.push({
+                      repetitionNumber: i + 1,
+                      distance: moveframeData.distance?.toString() || null,
+                      speed: moveframeData.speed || null,
+                      style: moveframeData.style || null,
+                      pace: moveframeData.pace || null,
+                      time: moveframeData.time || null,
+                      reps: moveframeData.reps || null,
+                      r1: moveframeData.r1 || null,
+                      r2: moveframeData.r2 || null,
+                      muscularSector: moveframeData.muscularSector || null,
+                      exercise: moveframeData.exercise || null,
+                      restType: null,
+                      pause: moveframeData.pause || null,
+                      alarm: moveframeData.alarm || null,
+                      sound: moveframeData.sound || null,
+                      notes: moveframeData.notes || null,
+                      status: 'PENDING',
+                      isSkipped: false,
+                      isDisabled: false
+                    });
+                  }
+                }
+                
+                console.log('📤 Generated movelaps:', movelaps);
                
                const response = await fetch('/api/workouts/moveframes', {
-                 method: 'POST',
-                   headers: {
-                     'Content-Type': 'application/json',
-                     'Authorization': `Bearer ${token}`
-                   },
-                 body: JSON.stringify({
-                     workoutSessionId: activeWorkout.id,
-                   sport: moveframeData.sport,
-                   type: moveframeData.type || 'STANDARD',
-                     description: moveframeData.description,
-                     movelaps,
-                     sectionId: 'default'
-                 })
-               });
+                method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                body: JSON.stringify({
+                    workoutSessionId: activeWorkout.id,
+                  sport: moveframeData.sport,
+                  type: moveframeData.type || 'STANDARD',
+                    description: moveframeData.description,
+                    notes: moveframeData.notes,
+                    macroFinal: moveframeData.macroFinal,
+                    alarm: moveframeData.alarm,
+                    movelaps,
+                    sectionId: 'default'
+                })
+              });
                
                  if (!response.ok) {
                    const errorData = await response.json();
@@ -1111,9 +1176,78 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  
                 const result = await response.json();
                  console.log('✅ Moveframe created successfully:', result);
+                 
+                 // If we have an insert index, reorder the moveframes BEFORE reloading
+                 if (moveframeInsertIndex !== null) {
+                   console.log('📍 Inserting new moveframe at index:', moveframeInsertIndex);
+                   
+                   // Fetch fresh workout plan data directly from API
+                   const planResponse = await fetch(`/api/workouts/plan?type=CURRENT_WEEKS`, {
+                     headers: {
+                       'Authorization': `Bearer ${token}`
+                     }
+                   });
+                   
+                   if (planResponse.ok) {
+                     const freshPlanData = await planResponse.json();
+                     const updatedWorkout = freshPlanData.plan?.weeks
+                       ?.flatMap((w: any) => w.days)
+                       ?.find((d: any) => d.id === activeDay.id)
+                       ?.workouts?.find((w: any) => w.id === activeWorkout.id);
+                   
+                     if (updatedWorkout && updatedWorkout.moveframes && updatedWorkout.moveframes.length > 1) {
+                       const moveframes = [...updatedWorkout.moveframes];
+                       const newMoveframeId = result.moveframe.id;
+                       
+                       // Find the new moveframe
+                       const newMoveframeIndex = moveframes.findIndex((mf: any) => mf.id === newMoveframeId);
+                       
+                       if (newMoveframeIndex !== -1 && newMoveframeIndex !== moveframeInsertIndex) {
+                         console.log('📍 Reordering: moving moveframe from position', newMoveframeIndex, 'to', moveframeInsertIndex);
+                         
+                         // Remove the new moveframe from its current position
+                         const [newMoveframe] = moveframes.splice(newMoveframeIndex, 1);
+                         
+                         // Insert it at the desired position
+                         moveframes.splice(moveframeInsertIndex, 0, newMoveframe);
+                         
+                         // Reassign letters
+                         const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+                         const reorderedMoveframes = moveframes.map((mf: any, idx: number) => ({
+                           id: mf.id,
+                           letter: letters[idx] || `${letters[25]}${idx - 25}`
+                         }));
+                         
+                         // Call reorder API
+                         const reorderResponse = await fetch('/api/workouts/moveframes/reorder', {
+                           method: 'PATCH',
+                           headers: {
+                             'Content-Type': 'application/json',
+                             'Authorization': `Bearer ${token}`
+                           },
+                           body: JSON.stringify({
+                             moveframes: reorderedMoveframes
+                           })
+                         });
+                         
+                         if (!reorderResponse.ok) {
+                           const errorData = await reorderResponse.json();
+                           console.error('❌ Failed to reorder moveframes:', errorData);
+                           showMessage('error', 'Failed to reorder moveframes');
+                         } else {
+                           console.log('✅ Moveframes reordered successfully');
+                         }
+                       }
+                     }
+                   }
+                   
+                   // Reset insert index
+                   setMoveframeInsertIndex(null);
+                 }
+                 
                  showMessage('success', 'Moveframe created successfully');
                  
-                 // Reload data to show the new moveframe immediately
+                 // Reload data to show the final result
                  await loadWorkoutData(activeSection);
                }
                 

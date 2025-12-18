@@ -14,6 +14,7 @@ interface WorkoutHierarchyViewProps {
   onEditMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onEditMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
   onAddMoveframe?: (workout: any, day: any) => void;
+  onAddMoveframeAfter?: (moveframe: any, index: number, workout: any, day: any) => void;
   onAddMovelap?: (moveframe: any, workout: any, day: any) => void;
   onDeleteWorkout?: (workout: any, day: any) => void;
   onDeleteMoveframe?: (moveframe: any, workout: any, day: any) => void;
@@ -35,6 +36,7 @@ export default function WorkoutHierarchyView({
   onEditMoveframe,
   onEditMovelap,
   onAddMoveframe,
+  onAddMoveframeAfter,
   onAddMovelap,
   onDeleteWorkout,
   onDeleteMoveframe,
@@ -95,6 +97,7 @@ export default function WorkoutHierarchyView({
               onEdit={() => onEditWorkout?.(workout, day)}
               onDelete={() => onDeleteWorkout?.(workout, day)}
               onAddMoveframe={() => onAddMoveframe?.(workout, day)}
+              onAddMoveframeAfter={(moveframe, index) => onAddMoveframeAfter?.(moveframe, index, workout, day)}
               onEditMoveframe={(moveframe) => onEditMoveframe?.(moveframe, workout, day)}
               onDeleteMoveframe={(moveframe) => onDeleteMoveframe?.(moveframe, workout, day)}
               onEditMovelap={(movelap, moveframe) => onEditMovelap?.(movelap, moveframe, workout, day)}

@@ -114,11 +114,15 @@ export async function GET(request: NextRequest) {
                 period: true,
                 workouts: {
                   include: {
+                    sports: true,
                     moveframes: {
                       include: {
                         section: true,
-                        movelaps: true
-                      }
+                        movelaps: {
+                          orderBy: { repetitionNumber: 'asc' }
+                        }
+                      },
+                      orderBy: { letter: 'asc' }
                     }
                   },
                   orderBy: { sessionNumber: 'asc' }
@@ -343,8 +347,11 @@ export async function GET(request: NextRequest) {
                       moveframes: {
                         include: {
                           section: true,
-                          movelaps: true
-                        }
+                          movelaps: {
+                            orderBy: { repetitionNumber: 'asc' }
+                          }
+                        },
+                        orderBy: { letter: 'asc' }
                       }
                     },
                     orderBy: { sessionNumber: 'asc' }

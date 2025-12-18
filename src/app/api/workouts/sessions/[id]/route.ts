@@ -77,9 +77,12 @@ export async function PATCH(
         sports: true,
         moveframes: {
           include: {
-            movelaps: true,
+            movelaps: {
+              orderBy: { repetitionNumber: 'asc' }
+            },
             section: true
-          }
+          },
+          orderBy: { letter: 'asc' }
         }
       }
     });

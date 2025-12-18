@@ -19,6 +19,7 @@ interface WorkoutTableProps {
   onEdit: () => void;
   onDelete: () => void;
   onAddMoveframe: () => void;
+  onAddMoveframeAfter?: (moveframe: any, index: number, workout: any, day: any) => void;
   onEditMoveframe?: (moveframe: any) => void;
   onDeleteMoveframe?: (moveframe: any) => void;
   onEditMovelap?: (movelap: any, moveframe: any) => void;
@@ -45,6 +46,7 @@ export default function WorkoutTable({
   onEdit,
   onDelete,
   onAddMoveframe,
+  onAddMoveframeAfter,
   onEditMoveframe,
   onDeleteMoveframe,
   onEditMovelap,
@@ -90,17 +92,11 @@ export default function WorkoutTable({
 
   // Calculate sport totals from moveframes and workout sessions
   const calculateSportTotals = () => {
-    const sportMap = new Map<string, { distance: number; durationMinutes: number; series: number; repetitions: number; k: string }>();
+    // Get the 4 sports defined on the workout (in order)
+    const workoutSportNames = (workout.sports || []).map((ws: any) => ws.sport);
     
-    // Get sports from workout session
-    if (workout.sports && workout.sports.length > 0) {
-      workout.sports.forEach((ws: any) => {
-        const sportName = ws.sport?.name || ws.sport || 'Unknown';
-        if (!sportMap.has(sportName)) {
-          sportMap.set(sportName, { distance: 0, durationMinutes: 0, series: 0, repetitions: 0, k: '' });
-        }
-      });
-    }
+    // Build a map of totals from moveframes
+    const sportMap = new Map<string, { distance: number; durationMinutes: number; series: number; repetitions: number; k: string }>();
     
     // Calculate from moveframes
     (workout.moveframes || []).forEach((mf: any) => {
@@ -156,25 +152,30 @@ export default function WorkoutTable({
       return `0:${mins.toString().padStart(2, '0')}`;
     };
     
-    // Return exactly 4 sports (pad with empty if needed)
-    const sportsArray = Array.from(sportMap.entries()).map(([name, totals]) => {
-      const isSeries = isSeriesBasedSport(name);
-      return {
-        name,
-        icon: getSportIcon(name, iconType),
-        isSeriesBased: isSeries,
-        distance: isSeries ? totals.series : totals.distance,
-        duration: isSeries ? totals.repetitions.toString() : formatDuration(totals.durationMinutes),
-        k: totals.k
-      };
-    });
-    
-    // Ensure we have exactly 4 sport slots
-    while (sportsArray.length < 4) {
-      sportsArray.push({ name: '', icon: '', isSeriesBased: false, distance: 0, duration: '', k: '' });
+    // Build array of exactly 4 sports, using workout.sports order
+    const sportsArray = [];
+    for (let i = 0; i < 4; i++) {
+      const sportName = workoutSportNames[i];
+      if (sportName) {
+        // Sport is defined in workout - show it with totals (or empty if no moveframes yet)
+        const totals = sportMap.get(sportName);
+        const isSeries = isSeriesBasedSport(sportName);
+        
+        sportsArray.push({
+          name: sportName,
+          icon: getSportIcon(sportName, iconType),
+          isSeriesBased: isSeries,
+          distance: totals ? (isSeries ? totals.series : totals.distance) : 0,
+          duration: totals ? (isSeries ? totals.repetitions.toString() : formatDuration(totals.durationMinutes)) : '',
+          k: totals ? totals.k : ''
+        });
+      } else {
+        // Empty slot
+        sportsArray.push({ name: '', icon: '', isSeriesBased: false, distance: 0, duration: '', k: '' });
+      }
     }
     
-    return sportsArray.slice(0, 4);
+    return sportsArray;
   };
   
   const sports = calculateSportTotals();
@@ -253,9 +254,9 @@ export default function WorkoutTable({
                 if (onEdit) onEdit();
               }}
               className="px-3 py-1 text-xs bg-white text-cyan-600 rounded hover:bg-cyan-50 transition-colors font-medium"
-              title="Edit Workout Info"
+              title="View/Edit Workout Info"
             >
-              Edit Info
+              Workout Info
             </button>
             <button 
               onClick={(e) => {
@@ -405,6 +406,7 @@ export default function WorkoutTable({
             workoutIndex={workoutIndex}
             day={day}
             onAddMoveframe={onAddMoveframe}
+            onAddMoveframeAfter={onAddMoveframeAfter}
             onEditMoveframe={onEditMoveframe}
             onDeleteMoveframe={onDeleteMoveframe}
             onEditMovelap={onEditMovelap}

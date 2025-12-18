@@ -72,6 +72,20 @@ export default function MoveframeTable({
     }
   });
 
+  // Parse annotation colors from notes if type is ANNOTATION
+  let annotationColors = null;
+  if (moveframe.type === 'ANNOTATION' && moveframe.notes) {
+    try {
+      // Only parse if notes looks like JSON (starts with '{')
+      if (typeof moveframe.notes === 'string' && moveframe.notes.trim().startsWith('{')) {
+        annotationColors = JSON.parse(moveframe.notes);
+      }
+    } catch (e) {
+      // Silently fail for malformed JSON - use default colors
+      annotationColors = null;
+    }
+  }
+
   // Helper function to get cell value
   const getCellValue = (column: any) => {
     switch (column.id) {
@@ -99,9 +113,9 @@ export default function MoveframeTable({
       case 'total_distance':
         return (moveframe.movelaps || []).reduce((sum: number, lap: any) => sum + (parseInt(lap.distance) || 0), 0);
       case 'macro':
-        return moveframe.macro || '—';
+        return moveframe.macroFinal || '—';
       case 'alarm':
-        return moveframe.alarm || '—';
+        return moveframe.alarm?.toString() || '—';
       case 'notes':
         return moveframe.notes || '';
       default:
@@ -198,11 +212,17 @@ export default function MoveframeTable({
           <tbody>
             <tr 
               ref={setDropNodeRef}
-              className={`hover:bg-purple-100 cursor-pointer ${
+              className={`cursor-pointer ${
+                annotationColors ? '' : 'hover:bg-purple-100'
+              } ${
                 isDragging ? 'opacity-50 bg-purple-200' : ''
               } ${
                 isDropOver ? 'ring-2 ring-yellow-400 bg-yellow-50' : ''
               }`}
+              style={annotationColors ? {
+                backgroundColor: annotationColors.headerBgColor || '#5168c2',
+                color: annotationColors.textBgColor || '#ffffff'
+              } : {}}
               onClick={onToggleExpand}
               title={isExpanded ? "Click to collapse movelaps" : "Click to expand movelaps | Drop moveframe here"}
             >
@@ -220,21 +240,34 @@ export default function MoveframeTable({
                 </span>
               </td>
               
-              {visibleColumns.map((column) => (
-                <td
-                  key={column.id}
-                  className={`border border-gray-200 px-1 py-1 text-xs text-center overflow-hidden ${
-                    column.id === 'mf' ? 'font-bold' : ''
-                  }`}
-                  style={{ 
-                    width: column.id === 'description' ? '250px' : column.id === 'mf' ? '40px' : '70px'
-                  }}
-                >
-                  <div className={column.id === 'description' ? 'truncate' : ''} title={String(getCellValue(column))}>
-                    {getCellValue(column)}
-                  </div>
-                </td>
-              ))}
+              {visibleColumns.map((column) => {
+                const cellValue = getCellValue(column);
+                const isHtml = column.id === 'description' && typeof cellValue === 'string' && cellValue.includes('<');
+                
+                return (
+                  <td
+                    key={column.id}
+                    className={`border border-gray-200 px-1 py-1 text-xs text-center overflow-hidden ${
+                      column.id === 'mf' ? 'font-bold' : ''
+                    }`}
+                    style={{ 
+                      width: column.id === 'description' ? '250px' : column.id === 'mf' ? '40px' : '70px'
+                    }}
+                  >
+                    {isHtml ? (
+                      <div 
+                        className="truncate" 
+                        dangerouslySetInnerHTML={{ __html: cellValue }}
+                        title={cellValue.replace(/<[^>]*>/g, '')}
+                      />
+                    ) : (
+                      <div className={column.id === 'description' ? 'truncate' : ''} title={String(cellValue)}>
+                        {cellValue}
+                      </div>
+                    )}
+                  </td>
+                );
+              })}
             </tr>
           </tbody>
         </table>

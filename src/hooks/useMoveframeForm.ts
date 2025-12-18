@@ -62,7 +62,15 @@ export function useMoveframeForm({
   day
 }: UseMoveframeFormProps) {
   // ==================== FORM STATE ====================
-  const [sport, setSport] = useState<string>('SWIM');
+  // Default sport: use first sport from workout.sports if available, otherwise 'SWIM'
+  const getDefaultSport = () => {
+    if (workout?.sports && workout.sports.length > 0) {
+      return workout.sports[0].sport || 'SWIM';
+    }
+    return 'SWIM';
+  };
+  
+  const [sport, setSport] = useState<string>(getDefaultSport());
   const [type, setType] = useState<'STANDARD' | 'BATTERY' | 'ANNOTATION'>('STANDARD');
   const [manualMode, setManualMode] = useState(false);
   const [manualPriority, setManualPriority] = useState(false);
@@ -114,7 +122,7 @@ export function useMoveframeForm({
    * Reset form to initial state
    */
   const resetForm = () => {
-    setSport('SWIM');
+    setSport(getDefaultSport()); // Use workout's first sport as default
     setType('STANDARD');
     setManualMode(false);
     setManualPriority(false);
@@ -246,10 +254,23 @@ export function useMoveframeForm({
    * Build moveframe data object for API submission
    */
   const buildMoveframeData = () => {
+    // Determine notes value based on type and mode
+    let notesValue = note;
+    if (type === 'ANNOTATION') {
+      // For ANNOTATION type, format colors as JSON in notes field
+      notesValue = JSON.stringify({
+        headerBgColor: annotationBgColor,
+        textBgColor: annotationTextColor
+      });
+    } else if (manualMode && manualContent) {
+      // For manual mode, use manual content as notes
+      notesValue = manualContent;
+    }
+    
     return {
       sport,
       type,
-      description: generateDescription(),
+      description: type === 'ANNOTATION' ? annotationText : generateDescription(),
       
       // Standard fields
       distance: distance === 'custom' ? parseInt(customDistance) : parseInt(distance),
@@ -258,7 +279,7 @@ export function useMoveframeForm({
       style,
       pace,
       time: time || calculateEstimatedTime(),
-      notes: note,
+      notes: notesValue,
       pause,
       macroFinal,
       alarm: parseInt(alarm),
@@ -269,11 +290,6 @@ export function useMoveframeForm({
       muscularSector: sport === 'BODY_BUILDING' ? muscularSector : null,
       exercise: sport === 'BODY_BUILDING' ? exercise : null,
       sectionId: sectionId || null, // Workout section (for ALL sports)
-      
-      // Annotation fields
-      annotationText: type === 'ANNOTATION' ? annotationText : null,
-      annotationBgColor: type === 'ANNOTATION' ? annotationBgColor : null,
-      annotationTextColor: type === 'ANNOTATION' ? annotationTextColor : null,
       
       // Manual mode
       manualMode,
@@ -303,9 +319,21 @@ export function useMoveframeForm({
       // Handle ANNOTATION type
       if (existingMoveframe.type === 'ANNOTATION') {
         setAnnotationText(existingMoveframe.description || '');
-        // Try to extract colors from the description or use defaults
-        setAnnotationBgColor('#5168c2');
-        setAnnotationTextColor('#000000');
+        // Try to extract colors from the notes field
+        if (existingMoveframe.notes) {
+          try {
+            const annotationColors = JSON.parse(existingMoveframe.notes);
+            setAnnotationBgColor(annotationColors.headerBgColor || '#5168c2');
+            setAnnotationTextColor(annotationColors.textBgColor || '#000000');
+          } catch (e) {
+            console.error('Failed to parse annotation colors:', e);
+            setAnnotationBgColor('#5168c2');
+            setAnnotationTextColor('#000000');
+          }
+        } else {
+          setAnnotationBgColor('#5168c2');
+          setAnnotationTextColor('#000000');
+        }
         console.log('📝 Loaded ANNOTATION type');
       }
       // Handle BATTERY type

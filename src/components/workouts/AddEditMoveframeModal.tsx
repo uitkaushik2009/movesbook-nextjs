@@ -259,10 +259,59 @@ export default function AddEditMoveframeModal({
   };
 
   // Handle close
+  const [activeTab, setActiveTab] = React.useState<'edit' | 'manual' | 'favorites'>('edit');
+  const editorRef = React.useRef<HTMLDivElement>(null);
+
   const handleClose = () => {
     onClose();
     resetForm();
+    setActiveTab('edit');
   };
+
+  // Rich text editor commands
+  const execCommand = (command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    editorRef.current?.focus();
+  };
+
+  const handleEditorInput = () => {
+    if (editorRef.current) {
+      setManualContent(editorRef.current.innerHTML);
+    }
+  };
+
+  // Initialize editor content when switching to manual tab
+  React.useEffect(() => {
+    if (editorRef.current && activeTab === 'manual' && manualMode) {
+      // Only update if we're switching to this tab or opening with content
+      if (manualContent && editorRef.current.innerHTML !== manualContent) {
+        // Use a timeout to avoid conflicts with React's rendering
+        setTimeout(() => {
+          if (editorRef.current) {
+            editorRef.current.innerHTML = manualContent || '';
+          }
+        }, 0);
+      }
+    }
+  }, [activeTab, manualMode]);
+  
+  // Clear editor when modal closes
+  React.useEffect(() => {
+    if (!isOpen && editorRef.current) {
+      setTimeout(() => {
+        if (editorRef.current) {
+          editorRef.current.innerHTML = '';
+        }
+      }, 0);
+    }
+  }, [isOpen]);
+
+  // Auto-enable manual mode when switching to manual tab
+  React.useEffect(() => {
+    if (type === 'STANDARD' && activeTab === 'manual' && !manualMode) {
+      setManualMode(true);
+    }
+  }, [activeTab, type, manualMode, setManualMode]);
 
   if (!isOpen) return null;
 
@@ -285,16 +334,55 @@ export default function AddEditMoveframeModal({
           </button>
         </div>
 
+        {/* Tabs */}
+        {type === 'STANDARD' && (
+          <div className="flex border-b border-gray-300 bg-gray-50">
+            <button
+              onClick={() => setActiveTab('edit')}
+              className={`flex-1 px-4 py-2 text-sm font-medium ${
+                activeTab === 'edit'
+                  ? 'bg-white text-gray-900 border-b-2 border-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              Edit Moveframe
+            </button>
+            <button
+              onClick={() => setActiveTab('manual')}
+              className={`flex-1 px-4 py-2 text-sm font-medium ${
+                activeTab === 'manual'
+                  ? 'bg-white text-gray-900 border-b-2 border-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              Moveframe Info (manual input)
+            </button>
+            <button
+              onClick={() => setActiveTab('favorites')}
+              className={`flex-1 px-4 py-2 text-sm font-medium ${
+                activeTab === 'favorites'
+                  ? 'bg-white text-gray-900 border-b-2 border-gray-900'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              Load from Favourites moveframes
+            </button>
+          </div>
+        )}
+
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-4">
-          {/* Error Message */}
-          {errors.general && (
-            <div className="mb-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
-              {errors.general}
-            </div>
-          )}
+          {/* Edit Moveframe Tab */}
+          {(type !== 'STANDARD' || activeTab === 'edit') && (
+            <>
+              {/* Error Message */}
+              {errors.general && (
+                <div className="mb-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+                  {errors.general}
+                </div>
+              )}
 
-          {/* Sport Selection */}
+              {/* Sport Selection */}
           <div className="mb-3">
             <label className="block text-xs font-bold text-gray-700 mb-1">
               Sport <span className="text-red-500">*</span>
@@ -357,38 +445,41 @@ export default function AddEditMoveframeModal({
 
           {/* Type Selection */}
           <div className="mb-3">
-            <label className="block text-xs font-bold text-gray-700 mb-1">Type:</label>
-            <div className="flex gap-3">
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="STANDARD"
-                  checked={type === 'STANDARD'}
-                  onChange={(e) => setType(e.target.value as any)}
-                  className="mr-1.5"
-                />
-                <span className="text-xs">Standard</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="BATTERY"
-                  checked={type === 'BATTERY'}
-                  onChange={(e) => setType(e.target.value as any)}
-                  className="mr-1.5"
-                />
-                <span className="text-xs">Battery</span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="radio"
-                  value="ANNOTATION"
-                  checked={type === 'ANNOTATION'}
-                  onChange={(e) => setType(e.target.value as any)}
-                  className="mr-1.5"
-                />
-                <span className="text-xs">Annotation</span>
-              </label>
+            <label className="block text-xs font-bold text-gray-700 mb-2">Type</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setType('STANDARD')}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded border-2 transition-colors ${
+                  type === 'STANDARD'
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Standard
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('BATTERY')}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded border-2 transition-colors ${
+                  type === 'BATTERY'
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Battery
+              </button>
+              <button
+                type="button"
+                onClick={() => setType('ANNOTATION')}
+                className={`flex-1 px-4 py-2 text-sm font-medium rounded border-2 transition-colors ${
+                  type === 'ANNOTATION'
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                Annotation
+              </button>
             </div>
           </div>
 
@@ -606,25 +697,69 @@ export default function AddEditMoveframeModal({
                   )}
                 </div>
 
-                {/* 4. Reset/Pause */}
+                {/* 4. Reset/Pause & Macro */}
                 <div className="bg-gray-50 p-2.5 rounded-lg">
-                  <h3 className="font-bold text-xs text-gray-700 mb-2">REST / PAUSE</h3>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Pause:</label>
-                    <select
-                      value={pause}
-                      onChange={(e) => setPause(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                    >
-                      {sportConfig.pauses.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
-                    {parseInt(repetitions) === 1 && (
-                      <p className="mt-0.5 text-[10px] text-gray-500">Pause can be 0 when repetitions = 1</p>
-                    )}
+                  <h3 className="font-bold text-xs text-gray-700 mb-2">REST / PAUSE & MACRO</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Pause:</label>
+                      <select
+                        value={pause}
+                        onChange={(e) => setPause(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                      >
+                        {sportConfig.pauses.map((p) => (
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
+                        ))}
+                      </select>
+                      {parseInt(repetitions) === 1 && (
+                        <p className="mt-0.5 text-[10px] text-gray-500">Pause can be 0 when repetitions = 1</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Macro Final:</label>
+                      <select
+                        value={macroFinal}
+                        onChange={(e) => setMacroFinal(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                      >
+                        {sportConfig.macroFinals.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Alarm:</label>
+                      <select
+                        value={alarm}
+                        onChange={(e) => setAlarm(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                      >
+                        {sportConfig.alarms.map((a) => (
+                          <option key={a} value={a}>
+                            {a}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Sound:</label>
+                      <select
+                        value={sound}
+                        onChange={(e) => setSound(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                      >
+                        {sportConfig.sounds.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 
@@ -651,58 +786,55 @@ export default function AddEditMoveframeModal({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Annotation in the row: <span className="text-red-500">*</span>
+                  Annotation in the row
                 </label>
-                <textarea
+                <input
+                  type="text"
                   value={annotationText}
                   onChange={(e) => setAnnotationText(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter annotation text..."
                 />
                 {errors.annotationText && <p className="mt-1 text-xs text-red-500">{errors.annotationText}</p>}
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-bold text-sm text-gray-700 mb-3">COLOR SETTINGS</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Annotation header background:
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={annotationBgColor}
-                        onChange={(e) => setAnnotationBgColor(e.target.value)}
-                        className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={annotationBgColor}
-                        onChange={(e) => setAnnotationBgColor(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                      />
-                    </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 w-64">
+                    Annotation header background
+                  </label>
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      type="color"
+                      value={annotationBgColor}
+                      onChange={(e) => setAnnotationBgColor(e.target.value)}
+                      className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={annotationBgColor}
+                      onChange={(e) => setAnnotationBgColor(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Annotation text color:
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="color"
-                        value={annotationTextColor}
-                        onChange={(e) => setAnnotationTextColor(e.target.value)}
-                        className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
-                      />
-                      <input
-                        type="text"
-                        value={annotationTextColor}
-                        onChange={(e) => setAnnotationTextColor(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                      />
-                    </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 w-64">
+                    Annotation text background
+                  </label>
+                  <div className="flex items-center gap-2 flex-1">
+                    <input
+                      type="color"
+                      value={annotationTextColor}
+                      onChange={(e) => setAnnotationTextColor(e.target.value)}
+                      className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={annotationTextColor}
+                      onChange={(e) => setAnnotationTextColor(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
                   </div>
                 </div>
               </div>
@@ -731,54 +863,6 @@ export default function AddEditMoveframeModal({
             </div>
           )}
 
-          {/* Manual Mode Toggle */}
-          {type === 'STANDARD' && (
-            <div className="mt-6 border-t pt-6">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={manualMode}
-                  onChange={(e) => setManualMode(e.target.checked)}
-                  className="w-4 h-4"
-                />
-                <span className="text-sm font-medium text-gray-700">
-                  Moveframe info (manual input)
-                </span>
-              </label>
-
-              {manualMode && (
-                <div className="mt-4 space-y-4">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={manualPriority}
-                      onChange={(e) => setManualPriority(e.target.checked)}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-sm text-gray-700">Priority 'manual' in the display</span>
-                  </label>
-
-                  <div>
-                    <textarea
-                      value={manualContent}
-                      onChange={(e) => setManualContent(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 font-mono text-sm"
-                      rows={6}
-                      placeholder="Here you can edit freely your moveframe that will be showed in the moveframe section"
-                    />
-                  </div>
-
-                  <button
-                    onClick={() => setManualContent('')}
-                    className="px-3 py-1 text-xs bg-gray-300 hover:bg-gray-400 rounded"
-                  >
-                    Clear Editor
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Preview */}
           {type === 'STANDARD' && !manualMode && (
             <div className="mt-3 bg-blue-50 border border-blue-300 p-3 rounded">
@@ -794,6 +878,240 @@ export default function AddEditMoveframeModal({
                   )}
                 </div>
               )}
+            </div>
+          )}
+            </>
+          )}
+
+          {/* Manual Mode Tab */}
+          {type === 'STANDARD' && activeTab === 'manual' && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-center w-10 h-10 bg-white border border-blue-300 rounded">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <svg className="w-5 h-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm font-medium text-gray-900">
+                      Moveframe edited manually
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center w-8 h-8 bg-green-500 rounded">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+
+              <>
+                  <div className="flex items-center justify-end">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={manualPriority}
+                        onChange={(e) => setManualPriority(e.target.checked)}
+                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">Priority 'manual' in the display</span>
+                    </label>
+                    <div className="ml-2 flex items-center justify-center w-6 h-6 bg-green-500 rounded">
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Rich Text Editor Toolbar */}
+                  <div className="border border-gray-300 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 border-b border-gray-300 p-2 flex flex-wrap gap-1 items-center">
+                      <select 
+                        onChange={(e) => execCommand('fontName', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-xs bg-white"
+                      >
+                        <option value="Arial">Arial</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                        <option value="Georgia">Georgia</option>
+                        <option value="Verdana">Verdana</option>
+                      </select>
+                      <select 
+                        onChange={(e) => execCommand('fontSize', e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded text-xs bg-white ml-1"
+                      >
+                        <option value="3">Normal</option>
+                        <option value="1">Very Small</option>
+                        <option value="2">Small</option>
+                        <option value="4">Large</option>
+                        <option value="5">Very Large</option>
+                        <option value="6">Huge</option>
+                      </select>
+                      <div className="h-4 w-px bg-gray-300 mx-1"></div>
+                      <button 
+                        type="button"
+                        onClick={() => execCommand('bold')}
+                        className="p-1 hover:bg-gray-200 rounded" 
+                        title="Bold"
+                      >
+                        <span className="font-bold text-sm">B</span>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => execCommand('italic')}
+                        className="p-1 hover:bg-gray-200 rounded" 
+                        title="Italic"
+                      >
+                        <span className="italic text-sm">I</span>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => execCommand('underline')}
+                        className="p-1 hover:bg-gray-200 rounded" 
+                        title="Underline"
+                      >
+                        <span className="underline text-sm">U</span>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => execCommand('strikeThrough')}
+                        className="p-1 hover:bg-gray-200 rounded" 
+                        title="Strikethrough"
+                      >
+                        <span className="line-through text-sm">S</span>
+                      </button>
+                      <div className="h-4 w-px bg-gray-300 mx-1"></div>
+                      <input
+                        type="color"
+                        onChange={(e) => execCommand('foreColor', e.target.value)}
+                        className="w-6 h-6 border border-gray-300 rounded cursor-pointer"
+                        title="Text Color"
+                      />
+                      <input
+                        type="color"
+                        onChange={(e) => execCommand('backColor', e.target.value)}
+                        defaultValue="#ffffff"
+                        className="w-6 h-6 border border-gray-300 rounded cursor-pointer"
+                        title="Background Color"
+                      />
+                      <div className="h-4 w-px bg-gray-300 mx-1"></div>
+                      <button 
+                        type="button"
+                        onClick={() => execCommand('justifyLeft')}
+                        className="p-1 hover:bg-gray-200 rounded" 
+                        title="Align Left"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M3 4h14v2H3V4zm0 4h10v2H3V8zm0 4h14v2H3v-2zm0 4h10v2H3v-2z" />
+                        </svg>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => execCommand('justifyCenter')}
+                        className="p-1 hover:bg-gray-200 rounded" 
+                        title="Align Center"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M3 4h14v2H3V4zm2 4h10v2H5V8zm-2 4h14v2H3v-2zm2 4h10v2H5v-2z" />
+                        </svg>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => execCommand('justifyRight')}
+                        className="p-1 hover:bg-gray-200 rounded" 
+                        title="Align Right"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M3 4h14v2H3V4zm4 4h10v2H7V8zm-4 4h14v2H3v-2zm4 4h10v2H7v-2z" />
+                        </svg>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => execCommand('justifyFull')}
+                        className="p-1 hover:bg-gray-200 rounded" 
+                        title="Justify"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M3 4h14v2H3V4zm0 4h14v2H3V8zm0 4h14v2H3v-2zm0 4h14v2H3v-2z" />
+                        </svg>
+                      </button>
+                      <div className="h-4 w-px bg-gray-300 mx-1"></div>
+                      <button 
+                        type="button"
+                        onClick={() => execCommand('insertUnorderedList')}
+                        className="p-1 hover:bg-gray-200 rounded" 
+                        title="Bullet List"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M4 4a1 1 0 100 2 1 1 0 000-2zm3 1h10v1H7V5zm-3 4a1 1 0 100 2 1 1 0 000-2zm3 1h10v1H7v-1zm-3 4a1 1 0 100 2 1 1 0 000-2zm3 1h10v1H7v-1z" />
+                        </svg>
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => execCommand('insertOrderedList')}
+                        className="p-1 hover:bg-gray-200 rounded" 
+                        title="Numbered List"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M3 4h1v2H3V4zm0 4h1v2H3V8zm0 4h1v2H3v-2zM6 5h11v1H6V5zm0 4h11v1H6V9zm0 4h11v1H6v-1z" />
+                        </svg>
+                      </button>
+                      <div className="h-4 w-px bg-gray-300 mx-1"></div>
+                      <button 
+                        type="button"
+                        onClick={() => {
+                          if (editorRef.current) {
+                            editorRef.current.innerHTML = '';
+                            setManualContent('');
+                          }
+                        }}
+                        className="px-2 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="relative">
+                      {(!manualContent || manualContent === '' || manualContent === '<br>') && (
+                        <div className="absolute top-2 left-3 text-sm text-gray-400 pointer-events-none z-0">
+                          Here you can edit freely your moveframe that will be showed in the moveframe section
+                        </div>
+                      )}
+                      <div
+                        ref={editorRef}
+                        contentEditable
+                        onInput={handleEditorInput}
+                        className="w-full px-3 py-2 text-sm focus:outline-none focus:ring-0 min-h-[200px] max-h-[300px] overflow-y-auto relative z-10 bg-white"
+                        style={{ wordBreak: 'break-word' }}
+                        suppressContentEditableWarning
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setManualContent('')}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
+                    >
+                      Save
+                    </button>
+                  </div>
+              </>
+            </div>
+          )}
+
+          {/* Favorites Tab */}
+          {type === 'STANDARD' && activeTab === 'favorites' && (
+            <div className="text-center py-12 text-gray-500">
+              <p>Favourites feature coming soon...</p>
             </div>
           )}
         </div>

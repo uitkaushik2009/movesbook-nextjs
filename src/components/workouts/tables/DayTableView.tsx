@@ -24,6 +24,7 @@ interface DayTableViewProps {
   onEditMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onEditMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
   onAddMoveframe?: (workout: any, day: any) => void;
+  onAddMoveframeAfter?: (moveframe: any, index: number, workout: any, day: any) => void;
   onAddMovelap?: (moveframe: any, workout: any, day: any) => void;
   onDeleteDay?: (day: any) => void;
   onDeleteWorkout?: (workout: any, day: any) => void;
@@ -54,6 +55,7 @@ export default function DayTableView({
   onEditMoveframe,
   onEditMovelap,
   onAddMoveframe,
+  onAddMoveframeAfter,
   onAddMovelap,
   onDeleteDay,
   onDeleteWorkout,
@@ -707,6 +709,7 @@ export default function DayTableView({
                             onEditMoveframe={onEditMoveframe}
                             onEditMovelap={onEditMovelap}
                             onAddMoveframe={onAddMoveframe}
+                            onAddMoveframeAfter={onAddMoveframeAfter}
                             onAddMovelap={onAddMovelap}
                             onDeleteWorkout={onDeleteWorkout}
                             onDeleteMoveframe={onDeleteMoveframe}

@@ -27,7 +27,10 @@ export async function PATCH(
       sport,
       sectionId,
       type,
-      description
+      description,
+      notes,
+      macroFinal,
+      alarm
     } = body;
 
     console.log('📝 Updating moveframe:', params.id, body);
@@ -62,10 +65,15 @@ export async function PATCH(
         sport: sport || undefined,
         sectionId: sectionId || undefined,
         type: type as any || undefined,
-        description: description || undefined
+        description: description || undefined,
+        notes: notes !== undefined ? notes : undefined,
+        macroFinal: macroFinal !== undefined ? macroFinal : undefined,
+        alarm: alarm !== undefined ? (alarm ? parseInt(alarm) : null) : undefined
       },
       include: {
-        movelaps: true,
+        movelaps: {
+          orderBy: { repetitionNumber: 'asc' }
+        },
         section: true
       }
     });

@@ -12,10 +12,11 @@ interface AddWorkoutModalProps {
   isOpen: boolean;
   day: any; // Day object with week, date, period info
   existingWorkouts: any[]; // Array of existing workouts in the day
-  mode?: 'add' | 'edit';
-  existingWorkout?: any; // Workout to edit (when mode is 'edit')
+  mode?: 'add' | 'edit' | 'view';
+  existingWorkout?: any; // Workout to edit (when mode is 'edit' or 'view')
   onClose: () => void;
   onSave: (workoutData: any) => Promise<void>;
+  onEdit?: () => void; // Callback when switching from view to edit mode
 }
 
 export default function AddWorkoutModal({
@@ -25,8 +26,10 @@ export default function AddWorkoutModal({
   mode = 'add',
   existingWorkout,
   onClose,
-  onSave
+  onSave,
+  onEdit
 }: AddWorkoutModalProps) {
+  const isViewMode = mode === 'view';
   // Calculate next available workout number (1, 2, or 3)
   const workoutNumber = getNextAvailableSessionNumber(existingWorkouts);
   const workoutSymbol = WORKOUT_SYMBOLS[workoutNumber as 1 | 2 | 3];
@@ -119,8 +122,8 @@ export default function AddWorkoutModal({
         <div className="flex items-center justify-between p-3 border-b bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 text-white shadow-lg">
           <div>
             <h2 id="modal-title" className="text-lg font-bold flex items-center gap-2">
-              <span>{mode === 'edit' ? 'EDIT WORKOUT' : `ADD WORKOUT #${workoutNumber}`}</span>
-              {mode === 'edit' && existingWorkout && (
+              <span>{mode === 'view' ? 'WORKOUT INFO' : mode === 'edit' ? 'EDIT WORKOUT' : `ADD WORKOUT #${workoutNumber}`}</span>
+              {(mode === 'edit' || mode === 'view') && existingWorkout && (
                 <span className="text-2xl" aria-label={`Symbol: ${WORKOUT_SYMBOLS[existingWorkout.sessionNumber as 1 | 2 | 3]?.label || 'Circle'}`}>
                   {WORKOUT_SYMBOLS[existingWorkout.sessionNumber as 1 | 2 | 3]?.symbol || '○'}
                 </span>
@@ -161,11 +164,12 @@ export default function AddWorkoutModal({
                 value={formData.name}
                 onChange={(e) => handleNameChange(e.target.value)}
                 onBlur={() => handleNameChange(formData.name)}
+                disabled={isViewMode}
                 className={`w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm ${
-                  !validation.name.valid ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'
+                  !validation.name.valid ? 'border-red-500 bg-red-50' : isViewMode ? 'border-gray-300 bg-gray-50' : 'border-gray-300 hover:border-gray-400'
                 }`}
                 placeholder="e.g., Morning Run, Evening Swim"
-                autoFocus
+                autoFocus={!isViewMode}
                 aria-required="true"
                 aria-invalid={!validation.name.valid}
                 aria-describedby={!validation.name.valid ? "name-error" : undefined}
@@ -190,8 +194,9 @@ export default function AddWorkoutModal({
                 value={formData.code}
                 onChange={(e) => handleCodeChange(e.target.value)}
                 onBlur={() => handleCodeChange(formData.code)}
+                disabled={isViewMode}
                 className={`w-full px-3 py-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-mono text-sm ${
-                  !validation.code.valid ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-gray-400'
+                  !validation.code.valid ? 'border-red-500 bg-red-50' : isViewMode ? 'border-gray-300 bg-gray-50' : 'border-gray-300 hover:border-gray-400'
                 }`}
                 placeholder="e.g., WRK001, TR-123"
                 aria-required="true"
@@ -247,11 +252,11 @@ export default function AddWorkoutModal({
                       <select
                         value={formData.sports[index] || ''}
                         onChange={(e) => handleSportChange(index, e.target.value || null)}
-                        disabled={isFromMoveframe || isDisabled}
+                        disabled={isFromMoveframe || isDisabled || isViewMode}
                         className={`w-full px-3 py-2.5 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all ${
                           isFromMoveframe
                             ? 'bg-blue-50 cursor-not-allowed border-blue-300 text-blue-800 font-medium'
-                            : isDisabled
+                            : isDisabled || isViewMode
                             ? 'bg-gray-100 cursor-not-allowed text-gray-400'
                             : selectedSport 
                               ? `${selectedSport.color} border-current font-medium`
@@ -265,7 +270,7 @@ export default function AddWorkoutModal({
                           </option>
                         ))}
                       </select>
-                      {formData.sports[index] && !isFromMoveframe && (
+                      {formData.sports[index] && !isFromMoveframe && !isViewMode && (
                         <button
                           onClick={() => handleSportChange(index, null)}
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
@@ -312,7 +317,8 @@ export default function AddWorkoutModal({
                 id="stretching"
                 checked={formData.includeStretching}
                 onChange={(e) => handleStretchingChange(e.target.checked)}
-                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                disabled={isViewMode}
+                className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <label htmlFor="stretching" className="text-sm text-gray-700 flex items-center gap-1.5 cursor-pointer">
                 <span>🧘</span>
@@ -350,30 +356,52 @@ export default function AddWorkoutModal({
 
         {/* Footer */}
         <div className="flex flex-col sm:flex-row gap-3 p-6 border-t bg-gradient-to-r from-gray-50 to-blue-50">
-          <button
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-white hover:border-gray-400 transition-all font-medium disabled:opacity-50 order-2 sm:order-1 shadow-sm"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || !validation.name.valid || !validation.code.valid || !validation.sports.valid}
-            className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2 shadow-lg hover:shadow-xl"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>{mode === 'edit' ? 'Saving...' : 'Creating...'}</span>
-              </>
-            ) : (
-              <>
-                <span>✓</span>
-                <span>{mode === 'edit' ? 'Save Changes' : 'Create Workout'}</span>
-              </>
-            )}
-          </button>
+          {isViewMode ? (
+            <>
+              <button
+                onClick={onClose}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-white hover:border-gray-400 transition-all font-medium order-2 sm:order-1 shadow-sm"
+              >
+                Close
+              </button>
+              {onEdit && (
+                <button
+                  onClick={onEdit}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium flex items-center justify-center gap-2 order-1 sm:order-2 shadow-lg hover:shadow-xl"
+                >
+                  <span>✏️</span>
+                  <span>Edit Workout</span>
+                </button>
+              )}
+            </>
+          ) : (
+            <>
+              <button
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-white hover:border-gray-400 transition-all font-medium disabled:opacity-50 order-2 sm:order-1 shadow-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting || !validation.name.valid || !validation.code.valid || !validation.sports.valid}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2 shadow-lg hover:shadow-xl"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>{mode === 'edit' ? 'Saving...' : 'Creating...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>✓</span>
+                    <span>{mode === 'edit' ? 'Save Changes' : 'Create Workout'}</span>
+                  </>
+                )}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -28,6 +28,9 @@ export async function POST(request: NextRequest) {
       sectionId,
       type,
       description,
+      notes,
+      macroFinal,
+      alarm,
       movelaps
     } = body;
     
@@ -40,7 +43,8 @@ export async function POST(request: NextRequest) {
       console.error('Missing sport');
       return NextResponse.json({ error: 'sport is required' }, { status: 400 });
     }
-    if (!movelaps || !Array.isArray(movelaps) || movelaps.length === 0) {
+    // For ANNOTATION type, movelaps can be empty
+    if (type !== 'ANNOTATION' && (!movelaps || !Array.isArray(movelaps) || movelaps.length === 0)) {
       console.error('Invalid movelaps:', movelaps);
       return NextResponse.json({ error: 'movelaps must be a non-empty array' }, { status: 400 });
     }
@@ -94,9 +98,12 @@ export async function POST(request: NextRequest) {
       sectionId: finalSectionId,
       type: type as any,
       description: description || '',
+      notes: notes || null,
+      macroFinal: macroFinal || null,
+      alarm: alarm ? parseInt(alarm) : null,
     };
     
-    const movelapsData = movelaps.map((lap: any, index: number) => ({
+    const movelapsData = movelaps && movelaps.length > 0 ? movelaps.map((lap: any, index: number) => ({
       repetitionNumber: index + 1,
       distance: lap.distance ? parseInt(lap.distance) : null,
       speed: lap.speed || null,
@@ -116,7 +123,7 @@ export async function POST(request: NextRequest) {
       status: (lap.status || 'PENDING') as any,
       isSkipped: lap.isSkipped || false,
       isDisabled: lap.isDisabled || false
-    }));
+    })) : [];
     
     console.log('Moveframe data:', JSON.stringify(moveframeData, null, 2));
     console.log('Movelaps data:', JSON.stringify(movelapsData, null, 2));
@@ -124,13 +131,15 @@ export async function POST(request: NextRequest) {
     const moveframe = await prisma.moveframe.create({
       data: {
         ...moveframeData,
-        movelaps: {
+        movelaps: movelapsData.length > 0 ? {
           create: movelapsData
-        }
+        } : undefined
       },
       include: {
         section: true,
-        movelaps: true
+        movelaps: {
+          orderBy: { repetitionNumber: 'asc' }
+        }
       }
     });
 

@@ -39,6 +39,9 @@ function SortableMovelapRow({
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 9999 : 1,
+    position: 'relative' as const,
+    cursor: isDragging ? 'grabbing' : 'auto',
   };
 
   // Get sound icon
@@ -69,14 +72,15 @@ function SortableMovelapRow({
       <td className="border border-gray-300 px-1 py-1 text-center"
         onClick={(e) => e.stopPropagation()}
       >
-        <span
+        <div
           {...attributes}
           {...listeners}
-          className="cursor-move text-gray-400 hover:text-gray-600 inline-block"
+          className="cursor-move text-gray-400 hover:text-gray-600 inline-flex items-center justify-center select-none"
+          style={{ touchAction: 'none' }}
           title="Drag to reorder movelap"
         >
-          <GripVertical size={12} />
-        </span>
+          <GripVertical size={14} />
+        </div>
       </td>
       
       {/* MF (Moveframe Letter) Column */}
@@ -242,11 +246,11 @@ export default function MovelapDetailTable({
     setMovelaps(moveframe.movelaps || []);
   }, [moveframe.movelaps]);
 
-  // Setup drag sensors
+  // Setup drag sensors with reliable activation
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 3, // Small distance to start drag
       },
     })
   );
@@ -283,7 +287,7 @@ export default function MovelapDetailTable({
         body: JSON.stringify({
           movelaps: newOrder.map((ml: any, idx: number) => ({
             id: ml.id,
-            order: idx
+            repetitionNumber: idx + 1 // repetitionNumber starts from 1
           }))
         })
       });
@@ -472,34 +476,52 @@ export default function MovelapDetailTable({
   };
   
   return (
-    <div className="bg-gray-50 p-2">
+    <div className="bg-gray-50 p-2 pr-0">
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <table className="w-full border-collapse text-xs">
-          <thead className="bg-gray-200">
-            <tr>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" title="Drag to reorder">Move</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">MF</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">#</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Color</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Code section</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Action</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Dist</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Style</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Speed</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Time</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Pace</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rec</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rest to</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Aim & Snd</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Annotations</th>
-              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Options</th>
-            </tr>
-          </thead>
-          <SortableContext items={movelaps.map((ml: any) => ml.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={movelaps.map((ml: any) => ml.id)} strategy={verticalListSortingStrategy}>
+          <table className="w-full border-collapse text-xs table-fixed">
+            <colgroup>
+              <col style={{ width: '30px' }} /> {/* Move */}
+              <col style={{ width: '30px' }} /> {/* MF */}
+              <col style={{ width: '30px' }} /> {/* # */}
+              <col style={{ width: '40px' }} /> {/* Color */}
+              <col style={{ width: '80px' }} /> {/* Code section */}
+              <col style={{ width: '80px' }} /> {/* Action */}
+              <col style={{ width: '60px' }} /> {/* Dist */}
+              <col style={{ width: '60px' }} /> {/* Style */}
+              <col style={{ width: '60px' }} /> {/* Speed */}
+              <col style={{ width: '60px' }} /> {/* Time */}
+              <col style={{ width: '60px' }} /> {/* Pace */}
+              <col style={{ width: '60px' }} /> {/* Rec */}
+              <col style={{ width: '60px' }} /> {/* Rest to */}
+              <col style={{ width: '80px' }} /> {/* Aim & Snd */}
+              <col style={{ width: 'auto' }} /> {/* Annotations - flex */}
+              <col style={{ width: '280px' }} /> {/* Options - fixed width to match moveframe */}
+            </colgroup>
+            <thead className="bg-gray-200">
+              <tr>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" title="Drag to reorder">Move</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">MF</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">#</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Color</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Code section</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Action</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Dist</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Style</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Speed</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Time</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Pace</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rec</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rest to</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Aim & Snd</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Annotations</th>
+                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Options</th>
+              </tr>
+            </thead>
             <tbody>
               {movelaps.map((movelap: any, index: number) => (
                 <SortableMovelapRow
@@ -519,8 +541,8 @@ export default function MovelapDetailTable({
                 />
               ))}
             </tbody>
-          </SortableContext>
-        </table>
+          </table>
+        </SortableContext>
       </DndContext>
       {onAddMovelap && (
         <button
