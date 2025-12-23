@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { i18n } from '@/lib/i18n';
 
-const prisma = new PrismaClient();
 
 const LANGUAGE_MAP: Record<string, string> = {
   'en': 'English',

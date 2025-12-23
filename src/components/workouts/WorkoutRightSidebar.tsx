@@ -1,6 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { Settings } from 'lucide-react';
+import PersonalSettingsModal from './PersonalSettingsModal';
 
 interface WorkoutRightSidebarProps {
   activeLevel: 'day' | 'workout' | 'moveframe' | 'movelap' | null;
@@ -22,6 +24,8 @@ export default function WorkoutRightSidebar({
   onAddMoveframe
 }: WorkoutRightSidebarProps) {
   
+  const [showPersonalSettings, setShowPersonalSettings] = useState(false);
+  
   const handleAction = (action: string, level: string) => {
     console.log(`Action: ${action} on ${level}`);
     // Will be implemented with actual functionality later
@@ -30,7 +34,16 @@ export default function WorkoutRightSidebar({
   return (
     <aside className="w-64 bg-gray-50 border-l border-gray-200 flex flex-col overflow-y-auto">
       <div className="p-4 bg-white border-b">
-        <h3 className="text-lg font-bold text-gray-800">Workout Tools</h3>
+        <h3 className="text-lg font-bold text-gray-800 mb-3">Quick Actions</h3>
+        
+        {/* Personal Settings Button - Always visible at the top */}
+        <button
+          onClick={() => setShowPersonalSettings(true)}
+          className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
+        >
+          <Settings className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+          <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 text-left">Personal settings</span>
+        </button>
       </div>
       
       {/* Quick Add Buttons */}
@@ -201,6 +214,13 @@ export default function WorkoutRightSidebar({
           💾 Save Grid Settings
         </button>
       </div>
+      
+      {/* Personal Settings Modal */}
+      <PersonalSettingsModal
+        isOpen={showPersonalSettings}
+        onClose={() => setShowPersonalSettings(false)}
+        userLanguage="en" // TODO: Get from user profile/context
+      />
       
     </aside>
   );

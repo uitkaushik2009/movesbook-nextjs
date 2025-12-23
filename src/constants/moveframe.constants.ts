@@ -8,7 +8,7 @@ export const MACRO_FINAL_OPTIONS = [
   "0'", "1'", "2'", "3'", "4'", "5'", "6'", "7'", "8'", "9'"
 ];
 
-// Muscular sectors for BODY_BUILDING
+// Muscular sectors for BODY_BUILDING (WEIGHTS)
 export const MUSCULAR_SECTORS = [
   'Shoulders',
   'Anterior arms',
@@ -26,37 +26,250 @@ export const MUSCULAR_SECTORS = [
   'Tibials'
 ];
 
+// Rest type options
+export const REST_TYPES = {
+  SET_TIME: 'Set time',
+  RESTART_TIME: 'Restart time',
+  RESTART_PULSE: 'Restart pulse'
+} as const;
+
+// Reps type options (for non-distance sports)
+export const REPS_TYPES = {
+  REPS: 'Reps',
+  TIME: 'Time'
+} as const;
+
 // Sport-specific field configurations
 export const SPORT_CONFIGS = {
   SWIM: {
-    meters: ['20', '50', '75', '100', '150', '200', '400', '500', '800', '1000', '1200', '1500'],
+    meters: ['25', '33', '50', '66', '75', '100', '125', '150', '200', '250', '300', '400', '500', '800', '1000', '1200', '1500', 'input'],
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
     styles: ['Freestyle', 'Dolphin', 'Backstroke', 'Breaststroke', 'Sliding', 'Apnea'],
-    pauses: ['0', '0"', '5"', '10"', '15"', '20"', '25"', '30"', '35"', '40"', '45"', '50"', "1'", "1'10\"", "1'15\"", "1'30\"", "2'", "2'30\"", "3'"],
+    // Pace\100 applies for all meter values in swim
+    pace100Meters: ['25', '33', '50', '66', '75', '100', '125', '150', '200', '250', '300', '400', '500', '800', '1000', '1200', '1500'],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0', '0"', '5"', '10"', '15"', '20"', '25"', '30"', '35"', '40"', '45"', '50"', "1'", "1'10\"", "1'15\"", "1'30\"", "2'", "2'30\"", "3'"],
+      [REST_TYPES.RESTART_TIME]: 'input', // 00'00" format, > Time input
+      [REST_TYPES.RESTART_PULSE]: 'input' // 60-200 range
+    },
     macroFinals: MACRO_FINAL_OPTIONS,
     alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
     sounds: ['Beep', 'Bell', 'Chime', 'None']
   },
+  
   RUN: {
-    meters: ['50', '60', '80', '100', '110', '150', '200', '300', '400', '500', '600', '800', '1000', '1200', '1500', '2000', '3000', '5000', '10000'],
+    meters: ['50', '60', '80', '100', '110', '150', '200', '300', '400', '500', '600', '800', '1000', '1200', '1500', '2000', '3000', '5000', '10000', 'input'],
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
     styles: ['Track', 'Road', 'Cross', 'Beach', 'Hill', 'Downhill'],
-    pauses: ['0', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+    // Pace\100 only for these specific meter values
+    pace100Meters: ['50', '60', '80', '100', '110', '150', '200', '300', '400', '500'],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
     macroFinals: MACRO_FINAL_OPTIONS,
     alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
     sounds: ['Beep', 'Bell', 'Chime', 'None']
   },
+  
   BIKE: {
-    meters: ['200', '400', '500', '1000', '1500', '2000', '3000', '4000', '5000', '7000', '8000', '10000', 'custom'],
+    meters: ['200', '400', '500', '1000', '1500', '2000', '3000', '4000', '5000', '7000', '8000', '10000', 'input'],
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
-    pauses: ['0', '15"', '30"', '45"', "1'", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'"],
+    styles: ['Road', 'Track', 'Mountain', 'Indoor'],
+    // Pace\100 only for 200 and 400 meters
+    pace100Meters: ['200', '400'],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0', '15"', '30"', '45"', "1'", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
     macroFinals: MACRO_FINAL_OPTIONS,
     alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
     sounds: ['Beep', 'Bell', 'Chime', 'None']
   },
+  
   BODY_BUILDING: {
+    // Sector+Exercise+Picture (from procedure)
     speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive', 'Negative'],
-    pauses: ['0', '0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0', '0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  ROWING: {
+    meters: ['100', '200', '250', '300', '400', '500', '750', '1000', '1250', '1500', '1750', '2000', '2500', '3000', '4000', '5000', '7000', '8000', '10000', '12000', '15000', 'input'],
+    speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
+    rowPerMin: 'input', // Range 10-99
+    // Pace\100 only for these specific meter values
+    pace100Meters: ['100', '200', '250', '300', '400'],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['15"', '30"', '45"', "1'", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  SKATE: {
+    meters: ['50', '100', '200', '300', '400', '500', '600', '800', '1000', '1200', '1500', '2000', '3000', '5000', '10000'],
+    speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
+    styles: ['Track', 'Road', 'Downhill'],
+    // Pace\100 for these specific meter values
+    pace100Meters: ['50', '100', '200', '300', '400', '500', '600'],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  SKI: {
+    meters: ['50', '100', '200', '300', '400', '500', '600', '800', '1000', '1200', '1500', '2000', '3000', '5000', '10000', 'input'],
+    speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
+    styles: ['Track', 'Downhill'],
+    // Pace\100 for these specific meter values
+    pace100Meters: ['50', '100', '200', '300', '400', '500'],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  SNOWBOARD: {
+    meters: ['50', '100', '200', '300', '400', '500', '600', '800', '1000', '1200', '1500', '2000', '3000', '5000', '10000', 'input'],
+    speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
+    styles: ['Park', 'Downhill', 'Freestyle'],
+    pace100Meters: ['50', '100', '200', '300', '400', '500'],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  GYMNASTIC: {
+    // Sector+Exercise+Picture (from procedure)
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Very fast', 'Explosive', 'Negative'],
+    styles: 'dropdown', // To be defined by user
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  STRETCHING: {
+    // Sector+Exercise+Picture (from procedure)
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Very fast'],
+    styles: 'dropdown', // To be defined by user
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  PILATES: {
+    // Sector+Exercise+Picture (from procedure)
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Very fast'],
+    styles: 'dropdown', // To be defined by user
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  YOGA: {
+    // Similar to Pilates/Stretching
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Very fast'],
+    styles: 'dropdown',
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  TECHNICAL_MOVES: {
+    // Sector+Exercise+Picture (from procedure)
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Very fast'],
+    styles: 'dropdown', // To be defined by user
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  FREE_MOVES: {
+    // Exercise from user-typed list (tracked history)
+    exerciseSource: 'user-history',
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Very fast'],
+    styles: 'input', // Free text input
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
     macroFinals: MACRO_FINAL_OPTIONS,
     alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
     sounds: ['Beep', 'Bell', 'Chime', 'None']
@@ -108,15 +321,66 @@ export const DISTANCE_BASED_SPORTS = [
   'HIKING'
 ] as const;
 
+// Sports that use Reps type selection (Reps vs Time)
+export const REPS_TYPE_SPORTS = [
+  'GYMNASTIC',
+  'STRETCHING',
+  'PILATES',
+  'YOGA',
+  'TECHNICAL_MOVES',
+  'FREE_MOVES'
+] as const;
+
 // Helper function to check if a sport uses series-based tracking
 export const isSeriesBasedSport = (sport: string): boolean => {
   return !DISTANCE_BASED_SPORTS.includes(sport as any);
+};
+
+// Helper function to check if a sport uses reps type selection
+export const hasRepsTypeSelection = (sport: string): boolean => {
+  return REPS_TYPE_SPORTS.includes(sport as any);
+};
+
+// Helper function to get pace label based on sport and meters
+export const getPaceLabel = (sport: string, meters: string): string => {
+  const config = getSportConfig(sport);
+  
+  // Check if this sport has pace100Meters definition
+  if ('pace100Meters' in config && config.pace100Meters) {
+    // If the current meter value is in the pace100Meters array, show "Pace\100"
+    if ((config.pace100Meters as readonly string[]).includes(meters)) {
+      return 'Pace\\100';
+    }
+  }
+  
+  // Otherwise, show Pace\km (or Pace\mile for English)
+  // TODO: Add language detection for Pace\mile
+  return 'Pace\\km';
+};
+
+// Helper function to check if pace field should be shown
+export const shouldShowPaceField = (sport: string): boolean => {
+  const noPaceSports = ['BODY_BUILDING', 'GYMNASTIC', 'STRETCHING', 'PILATES', 'YOGA', 'TECHNICAL_MOVES', 'FREE_MOVES'];
+  return !noPaceSports.includes(sport);
+};
+
+// Helper function to get display name for sports
+export const getSportDisplayName = (sport: string): string => {
+  const displayNames: Record<string, string> = {
+    'BODY_BUILDING': 'WEIGHTS',
+    'TECHNICAL_MOVES': 'TECHNICAL MOVES',
+    'FREE_MOVES': 'FREE MOVES'
+  };
+  
+  return displayNames[sport] || sport.replace(/_/g, ' ');
 };
 
 // Type definitions
 export type Sport = typeof SPORTS_LIST[number];
 export type MoveframeType = 'STANDARD' | 'BATTERY' | 'ANNOTATION';
 export type SportConfig = typeof SPORT_CONFIGS[keyof typeof SPORT_CONFIGS];
+export type RestType = typeof REST_TYPES[keyof typeof REST_TYPES];
+export type RepsType = typeof REPS_TYPES[keyof typeof REPS_TYPES];
 
 // Helper function to get sport configuration
 export function getSportConfig(sport: string): SportConfig {
@@ -135,3 +399,19 @@ export function sportHasStyles(sport: string): boolean {
   return 'styles' in config;
 }
 
+// Helper function to check if sport has row/min field (ROWING specific)
+export function sportHasRowPerMin(sport: string): boolean {
+  return sport === 'ROWING';
+}
+
+// Helper function to get pause options based on rest type
+export function getPauseOptions(sport: string, restType: string): readonly string[] | 'input' {
+  const config = getSportConfig(sport);
+  if ('pauses' in config) {
+    if (typeof config.pauses === 'object' && !Array.isArray(config.pauses)) {
+      return config.pauses[restType as keyof typeof config.pauses] || [];
+    }
+    return config.pauses;
+  }
+  return [];
+}

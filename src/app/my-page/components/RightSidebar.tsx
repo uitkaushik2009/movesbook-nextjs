@@ -13,10 +13,12 @@ import {
   FolderOpen,
   CalendarRange,
   Mail,
-  Filter
+  Filter,
+  Settings
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useState } from 'react';
+import PersonalSettingsModal from '@/components/workouts/PersonalSettingsModal';
 
 interface RightSidebarProps {
   user: any;
@@ -28,6 +30,7 @@ export default function RightSidebar({ user, onAddMemberClick, activeTab = 'my-p
   const { t } = useLanguage();
   const [activeRightTab, setActiveRightTab] = useState<'actions-planner' | 'chat-panel'>('actions-planner');
   const [expandedActionsPlanner, setExpandedActionsPlanner] = useState(true);
+  const [showPersonalSettings, setShowPersonalSettings] = useState(false);
   
   const isAthlete = user?.userType === 'ATHLETE';
   const isAdmin = user?.userType === 'CLUB_TRAINER' || user?.userType === 'TEAM_MANAGER' || user?.userType === 'GROUP_ADMIN' || user?.userType === 'COACH';
@@ -54,6 +57,15 @@ export default function RightSidebar({ user, onAddMemberClick, activeTab = 'my-p
           {/* Quick Actions for My Page */}
           {activeTab === 'my-page' && (
             <>
+              {/* Personal Settings Button - FIRST button in Quick Actions */}
+              <button
+                onClick={() => setShowPersonalSettings(true)}
+                className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
+              >
+                <Settings className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+                <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 text-left">Personal settings</span>
+              </button>
+              
               <button className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
                 <Calendar className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
                 <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 text-left">{t('sidebar_plan_new_workout')}</span>
@@ -84,6 +96,15 @@ export default function RightSidebar({ user, onAddMemberClick, activeTab = 'my-p
           {/* Quick Actions for My Club/Team/Group */}
           {activeTab === 'my-entity' && (
             <>
+              {/* Personal Settings Button - FIRST button in Quick Actions */}
+              <button
+                onClick={() => setShowPersonalSettings(true)}
+                className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-all duration-200 group"
+              >
+                <Settings className="w-5 h-5 text-gray-400 group-hover:text-green-500 flex-shrink-0" />
+                <span className="text-sm font-medium text-gray-700 group-hover:text-green-700 text-left">Personal settings</span>
+              </button>
+              
               <button className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 transition-all duration-200 group">
                 <Calendar className="w-5 h-5 text-gray-400 group-hover:text-green-500 flex-shrink-0" />
                 <span className="text-sm font-medium text-gray-700 group-hover:text-green-700 text-left">{t('sidebar_plan_new_workout')}</span>
@@ -765,6 +786,13 @@ export default function RightSidebar({ user, onAddMemberClick, activeTab = 'my-p
           )}
         </div>
       </div>
+      
+      {/* Personal Settings Modal */}
+      <PersonalSettingsModal
+        isOpen={showPersonalSettings}
+        onClose={() => setShowPersonalSettings(false)}
+        userLanguage={user?.language || 'en'}
+      />
     </div>
   );
 }

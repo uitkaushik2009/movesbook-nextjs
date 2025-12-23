@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 // POST /api/workouts/moveframes/move - Move a moveframe to another workout
 export async function POST(request: NextRequest) {

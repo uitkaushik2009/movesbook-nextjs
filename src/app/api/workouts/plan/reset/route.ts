@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 /**
  * DELETE endpoint to reset/delete workout plans

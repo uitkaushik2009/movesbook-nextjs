@@ -19,17 +19,20 @@ export async function PATCH(
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const decoded = verifyToken(token);
+    const decoded = await verifyToken(token);
 
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    const resolvedParams = await params;
     const { periodId, updateAllDays = true } = await request.json();
+
+    console.log(`📝 Updating week ${resolvedParams.id} with period: ${periodId}`);
 
     // Update the week's period
     const updatedWeek = await prisma.workoutWeek.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: { periodId: periodId || null },
       include: {
         period: true,
@@ -37,21 +40,24 @@ export async function PATCH(
       }
     });
 
+    console.log(`✅ Week updated. Now updating ${updatedWeek.days.length} days...`);
+
     // If requested, update all days in this week with the same period
-    if (updateAllDays && updatedWeek.days.length > 0) {
+    if (updateAllDays && updatedWeek.days.length > 0 && periodId) {
       await prisma.workoutDay.updateMany({
         where: {
-          workoutWeekId: params.id
+          workoutWeekId: resolvedParams.id
         },
         data: {
-          periodId: periodId || updatedWeek.days[0]?.periodId || ''
+          periodId: periodId
         }
       });
+      console.log(`✅ All days in week ${resolvedParams.id} updated with period ${periodId}`);
     }
 
     // Fetch the updated week with all relations
     const weekWithUpdates = await prisma.workoutWeek.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: {
         period: true,
         days: {
@@ -71,6 +77,8 @@ export async function PATCH(
         }
       }
     });
+
+    console.log(`✅ Returning updated week with period: ${weekWithUpdates?.period?.name || 'None'}`);
 
     return NextResponse.json(weekWithUpdates);
   } catch (error) {

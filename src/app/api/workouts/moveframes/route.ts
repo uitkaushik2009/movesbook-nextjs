@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,6 +30,10 @@ export async function POST(request: NextRequest) {
       notes,
       macroFinal,
       alarm,
+      annotationText,
+      annotationBgColor,
+      annotationTextColor,
+      annotationBold,
       movelaps
     } = body;
     
@@ -43,8 +46,8 @@ export async function POST(request: NextRequest) {
       console.error('Missing sport');
       return NextResponse.json({ error: 'sport is required' }, { status: 400 });
     }
-    // For ANNOTATION type, movelaps can be empty
-    if (type !== 'ANNOTATION' && (!movelaps || !Array.isArray(movelaps) || movelaps.length === 0)) {
+    // Movelaps are required for all types
+    if (!movelaps || !Array.isArray(movelaps) || movelaps.length === 0) {
       console.error('Invalid movelaps:', movelaps);
       return NextResponse.json({ error: 'movelaps must be a non-empty array' }, { status: 400 });
     }
@@ -101,6 +104,10 @@ export async function POST(request: NextRequest) {
       notes: notes || null,
       macroFinal: macroFinal || null,
       alarm: alarm ? parseInt(alarm) : null,
+      annotationText: annotationText || null,
+      annotationBgColor: annotationBgColor || null,
+      annotationTextColor: annotationTextColor || null,
+      annotationBold: annotationBold !== undefined ? annotationBold : false,
     };
     
     const movelapsData = movelaps && movelaps.length > 0 ? movelaps.map((lap: any, index: number) => ({
@@ -110,13 +117,16 @@ export async function POST(request: NextRequest) {
       style: lap.style || null,
       pace: lap.pace || null,
       time: lap.time || null,
-      reps: lap.reps || 1,
+      reps: lap.reps ? parseInt(lap.reps) : null,
+      weight: lap.weight || null,
+      tools: lap.tools || null,
       r1: lap.r1 || null,
       r2: lap.r2 || null,
       muscularSector: lap.muscularSector || null,
       exercise: lap.exercise || null,
       restType: lap.restType || null,
       pause: lap.pause || null,
+      macroFinal: lap.macroFinal || null,
       alarm: lap.alarm ? parseInt(lap.alarm) : null,
       sound: lap.sound || null,
       notes: lap.notes || null,

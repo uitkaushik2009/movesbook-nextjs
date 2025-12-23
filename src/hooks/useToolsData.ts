@@ -15,6 +15,7 @@ import {
   DEFAULT_DEVICES,
   STORAGE_KEYS
 } from '@/constants/tools.constants';
+import { getAuthToken, getAuthHeaders } from '@/utils/auth.utils';
 
 interface UseToolsDataReturn {
   // State
@@ -81,14 +82,14 @@ export function useToolsData(): UseToolsDataReturn {
   useEffect(() => {
     const loadIconTypePreference = async () => {
       try {
-        const token = localStorage.getItem('token');
+        const token = getAuthToken();
         if (!token) {
           setIsLoadingIconPreference(false);
           return;
         }
         
         const response = await fetch('/api/user/settings', {
-          headers: { 'Authorization': `Bearer ${token}` }
+          headers: getAuthHeaders()
         });
         
         if (response.ok) {
@@ -117,22 +118,48 @@ export function useToolsData(): UseToolsDataReturn {
    */
   const loadToolsSettingsFromDatabase = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.warn('⚠️ No authentication token found. Loading from localStorage fallback.');
+        loadAllFromLocalStorage();
+        return;
+      }
+      
+      // Load periods from Prisma Period table (not from JSON settings)
+      const periodsResponse = await fetch('/api/workouts/periods', {
+        headers: getAuthHeaders()
+      });
+      
+      if (periodsResponse.ok) {
+        const periodsData = await periodsResponse.json();
+        if (periodsData.periods && periodsData.periods.length > 0) {
+          // Convert Prisma Period format to local Period format
+          const formattedPeriods = periodsData.periods.map((p: any) => ({
+            id: p.id,
+            title: p.name,
+            description: p.description || '',
+            color: p.color,
+            order: 0 // Order is not stored in Prisma Period
+          }));
+          setPeriods(formattedPeriods);
+        } else {
+          loadPeriodsFromLocalStorage();
+        }
+      } else {
+        loadPeriodsFromLocalStorage();
+      }
+      
+      // Load other settings from UserSettings JSON
       const response = await fetch('/api/user/settings', {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: getAuthHeaders()
       });
 
       if (response.ok) {
         const settings = await response.json();
         const toolsSettings = settings.toolsSettings || {};
 
-        // Load from database if available, otherwise from localStorage
-        if (toolsSettings.periods && toolsSettings.periods.length > 0) {
-          setPeriods(toolsSettings.periods);
-        } else {
-          loadPeriodsFromLocalStorage();
-        }
-
+        // Sections, sports, equipment, exercises, devices are still in JSON
         if (toolsSettings.sections && toolsSettings.sections.length > 0) {
           setSections(toolsSettings.sections);
         } else {
@@ -324,13 +351,46 @@ export function useToolsData(): UseToolsDataReturn {
   const saveToDatabase = async () => {
     setIsSavingToDatabase(true);
     try {
-      const token = localStorage.getItem('token');
+      const token = getAuthToken();
       if (!token) {
         console.warn('Cannot save: not logged in');
         setIsSavingToDatabase(false);
         return;
       }
 
+      console.log('💾 Saving periods to database...', periods);
+
+      // Save periods to Prisma Period table (bulk sync)
+      const periodsResponse = await fetch('/api/workouts/periods/sync', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ periods })
+      });
+
+      if (periodsResponse.ok) {
+        const periodsData = await periodsResponse.json();
+        console.log('✅ Periods synced successfully:', periodsData);
+        
+        // Reload periods from database to get updated IDs
+        if (periodsData.periods && periodsData.periods.length > 0) {
+          const formattedPeriods = periodsData.periods.map((p: any) => ({
+            id: p.id,
+            title: p.name,
+            description: p.description || '',
+            color: p.color,
+            order: 0
+          }));
+          setPeriods(formattedPeriods);
+          console.log('🔄 Periods reloaded:', formattedPeriods);
+        }
+      } else {
+        console.error('❌ Failed to sync periods');
+      }
+
+      // Save other tools settings to UserSettings JSON
       const response = await fetch('/api/user/settings', {
         method: 'PATCH',
         headers: {
@@ -339,7 +399,7 @@ export function useToolsData(): UseToolsDataReturn {
         },
         body: JSON.stringify({
           toolsSettings: {
-            periods,
+            // Periods are now in Prisma table, not JSON
             sections,
             sports,
             equipment,

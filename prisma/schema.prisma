@@ -8,71 +8,54 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  username  String   @unique
-  password  String
-  name      String
-  firstName String?
-  surname   String?
-  gender    String?
-  birthdate DateTime?
-  country   String?
-  userType  UserType
-  securityQuestion String? // Security question for password reset
-  securityAnswer   String? // Hashed security answer
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  workoutPlans WorkoutPlan[]
-  workoutDays  WorkoutDay[]
-  periods      Period[]
-  sections     WorkoutSection[]
-  settings     UserSettings?
-  mainSports   UserMainSport[]
-  workoutTemplates WorkoutTemplate[]
-
-  // Legacy coach-athlete relationship (keeping for backward compatibility)
-  athletes     CoachAthlete[] @relation("CoachAthletes")
-  coaches      CoachAthlete[] @relation("AthleteCoaches")
-
-  // New organizational structure - Admin/Owner relationships
-  ownedCoachingGroups CoachingGroup[] @relation("CoachingGroupOwner")
-  ownedTeams          Team[]          @relation("TeamOwner")
-  ownedClubs          Club[]          @relation("ClubOwner")
-  ownedGroups         Group[]         @relation("GroupOwner")
-
-  // Membership relationships (user belongs to these entities)
-  coachingGroupMemberships CoachingGroupMember[]
-  teamMemberships          TeamMember[]
+  id                       String                @id @default(cuid())
+  email                    String                @unique
+  username                 String                @unique
+  password                 String
+  name                     String
+  userType                 UserType
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  birthdate                DateTime?
+  country                  String?
+  firstName                String?
+  gender                   String?
+  surname                  String?
+  securityQuestion         String?
+  securityAnswer           String?
   clubMemberships          ClubMember[]
+  ownedClubs               Club[]                @relation("ClubOwner")
+  coaches                  CoachAthlete[]        @relation("AthleteCoaches")
+  athletes                 CoachAthlete[]        @relation("CoachAthletes")
+  coachingGroupMemberships CoachingGroupMember[]
+  ownedCoachingGroups      CoachingGroup[]       @relation("CoachingGroupOwner")
+  favoriteWorkouts         FavoriteWorkout[]
+  favoriteSports           FavoriteSport[]
+  freeMoveExercises        FreeMoveExercise[]
   groupMemberships         GroupMember[]
+  ownedGroups              Group[]               @relation("GroupOwner")
+  periods                  Period[]
+  teamMemberships          TeamMember[]
+  ownedTeams               Team[]                @relation("TeamOwner")
+  mainSports               UserMainSport[]
+  settings                 UserSettings?
+  workoutDays              WorkoutDay[]
+  workoutPlans             WorkoutPlan[]
+  sections                 WorkoutSection[]
+  workoutTemplates         WorkoutTemplate[]
 
   @@map("users_new")
 }
 
-enum UserType {
-  ATHLETE
-  COACH
-  TEAM
-  TEAM_MANAGER  // Legacy, maps to TEAM
-  CLUB
-  CLUB_TRAINER  // Legacy, maps to CLUB
-  GROUP
-  GROUP_ADMIN
-  ADMIN
-}
-
-// Translation System Models - New structure (legacy uses wide table format)
 model Language {
-  id           String        @id @default(cuid())
-  code         String        @unique // ISO code: 'en', 'es', 'zh', etc.
-  name         String        // Display name: 'English', 'Español', etc.
-  isActive     Boolean       @default(true)
-  isDefault    Boolean       @default(false)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("languages_new")
 }
 
@@ -84,7 +67,7 @@ model Translation {
   category  String   @default("general") @db.VarChar(50)
   isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@unique([key, language])
   @@map("translations")
@@ -94,140 +77,538 @@ model CoachAthlete {
   id        String   @id @default(cuid())
   coachId   String
   athleteId String
-  notes     String?  // Coach's notes about this athlete
+  notes     String?
   createdAt DateTime @default(now())
-
-  coach   User @relation("CoachAthletes", fields: [coachId], references: [id], onDelete: Cascade)
-  athlete User @relation("AthleteCoaches", fields: [athleteId], references: [id], onDelete: Cascade)
+  athlete   User     @relation("AthleteCoaches", fields: [athleteId], references: [id], onDelete: Cascade)
+  coach     User     @relation("CoachAthletes", fields: [coachId], references: [id], onDelete: Cascade)
 
   @@unique([coachId, athleteId])
+  @@index([athleteId], map: "coach_athletes_athleteId_fkey")
   @@map("coach_athletes")
 }
 
 model WorkoutPlan {
-  id        String   @id @default(cuid())
+  id        String          @id @default(cuid())
   userId    String
   name      String
   type      WorkoutPlanType
   startDate DateTime
   endDate   DateTime
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weeks     WorkoutWeek[]
+
+  @@index([userId], map: "workout_plans_userId_fkey")
+  @@map("workout_plans")
+}
+
+model WorkoutWeek {
+  id            String       @id @default(cuid())
+  workoutPlanId String
+  weekNumber    Int
+  createdAt     DateTime     @default(now())
+  periodId      String?
+  notes         String?      @db.Text
+  days          WorkoutDay[]
+  period        Period?      @relation("WeekPeriod", fields: [periodId], references: [id])
+  workoutPlan   WorkoutPlan  @relation(fields: [workoutPlanId], references: [id], onDelete: Cascade)
+
+  @@index([periodId], map: "workout_weeks_periodId_fkey")
+  @@index([workoutPlanId], map: "workout_weeks_workoutPlanId_fkey")
+  @@map("workout_weeks")
+}
+
+model WorkoutDay {
+  id                 String           @id @default(cuid())
+  workoutWeekId      String
+  date               DateTime
+  weekNumber         Int
+  dayOfWeek          Int
+  periodId           String
+  weather            String?
+  feelingStatus      String?
+  notes              String?          @db.Text
+  createdAt          DateTime         @default(now())
+  userId             String
+  assignedToUserId   String?
+  creatorRole        UserType?
+  isFromSharedSource Boolean          @default(false)
+  originalSenderId   String?
+  storageZone        StorageZone      @default(B)
+  period             Period           @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutWeek        WorkoutWeek      @relation(fields: [workoutWeekId], references: [id], onDelete: Cascade)
+  workouts           WorkoutSession[]
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@index([userId, storageZone, date])
+  @@index([periodId], map: "workout_days_periodId_fkey")
+  @@index([workoutWeekId], map: "workout_days_workoutWeekId_fkey")
+  @@map("workout_days")
+}
+
+model Period {
+  id          String        @id @default(cuid())
+  userId      String
+  name        String
+  description String
+  color       String
+  createdAt   DateTime      @default(now())
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days        WorkoutDay[]
+  weeks       WorkoutWeek[] @relation("WeekPeriod")
+
+  @@index([userId], map: "periods_userId_fkey")
+  @@map("periods")
+}
+
+model WorkoutSession {
+  id                String                @id @default(cuid())
+  workoutDayId      String
+  sessionNumber     Int
+  name              String
+  code              String
+  time              String
+  weather           String?
+  location          String?
+  surface           String?
+  heartRateMax      Int?
+  heartRateAvg      Int?
+  calories          Int?
+  feelingStatus     String?
+  notes             String?
+  status            WorkoutStatus
+  createdAt         DateTime              @default(now())
+  includeStretching Boolean               @default(true)
+  mainSport         SportType?
+  moveframes        Moveframe[]
+  sports            WorkoutSessionSport[]
+  workoutDay        WorkoutDay            @relation(fields: [workoutDayId], references: [id], onDelete: Cascade)
+
+  @@index([workoutDayId], map: "workout_sessions_workoutDayId_fkey")
+  @@map("workout_sessions")
+}
+
+model WorkoutSessionSport {
+  id               String         @id @default(cuid())
+  workoutSessionId String
+  sport            SportType
+  workoutSession   WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
+
+  @@index([workoutSessionId], map: "workout_session_sports_workoutSessionId_fkey")
+  @@map("workout_session_sports")
+}
+
+model Moveframe {
+  id                  String         @id @default(cuid())
+  workoutSessionId    String
+  letter              String
+  sport               SportType
+  sectionId           String
+  type                MoveframeType
+  description         String
+  createdAt           DateTime       @default(now())
+  notes               String?        @db.Text
+  macroFinal          String?
+  alarm               Int?
+  annotationBgColor   String?
+  annotationText      String?
+  annotationTextColor String?
+  annotationBold      Boolean?       @default(false)
+  workType            WorkType?      @default(NONE)
+  section             WorkoutSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  workoutSession      WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
+  movelaps            Movelap[]
+
+  @@index([sectionId], map: "moveframes_sectionId_fkey")
+  @@index([workoutSessionId], map: "moveframes_workoutSessionId_fkey")
+  @@map("moveframes")
+}
+
+model WorkoutSection {
+  id          String      @id @default(cuid())
+  userId      String
+  name        String
+  description String
+  color       String
+  createdAt   DateTime    @default(now())
+  moveframes  Moveframe[]
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "workout_sections_userId_fkey")
+  @@map("workout_sections")
+}
+
+model Movelap {
+  id               String        @id @default(cuid())
+  moveframeId      String
+  repetitionNumber Int
+  distance         Int?
+  speed            String?
+  style            String?
+  pace             String?
+  time             String?
+  rowPerMin        Int? // Row/min for ROWING sport (range 10-99)
+  reps             Int?
+  restType         RestType?
+  pause            String?
+  alarm            Int?
+  sound            String?
+  notes            String?
+  status           MovelapStatus
+  isSkipped        Boolean       @default(false)
+  isDisabled       Boolean       @default(false)
+  isNewlyAdded     Boolean       @default(false)
+  createdAt        DateTime      @default(now())
+  macroFinal       String?
+  r1               String?
+  r2               String?
+  exercise         String?
+  muscularSector   String?
+  weight           String?
+  tools            String?
+  moveframe        Moveframe     @relation(fields: [moveframeId], references: [id], onDelete: Cascade)
+
+  @@index([moveframeId], map: "movelaps_moveframeId_fkey")
+  @@map("movelaps")
+}
+
+model UserSettings {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  gridSize             String   @default("comfortable")
+  columnCount          Int      @default(3)
+  rowHeight            String   @default("medium")
+  defaultView          String   @default("grid")
+  leftSidebarVisible   Boolean  @default(true)
+  rightSidebarVisible  Boolean  @default(true)
+  leftSidebarWidth     Int      @default(20)
+  rightSidebarWidth    Int      @default(25)
+  sidebarPosition      String   @default("fixed")
+  theme                String   @default("light")
+  fontSize             Int      @default(16)
+  iconSize             String   @default("medium")
+  enableAnimations     Boolean  @default(true)
+  reducedMotion        Boolean  @default(false)
+  highContrast         Boolean  @default(false)
+  performanceMode      Boolean  @default(false)
+  imageQuality         String   @default("high")
+  lazyLoading          Boolean  @default(true)
+  dashboardLayout      String   @default("default")
+  widgetArrangement    String   @default("[]")
+  colorSettings        String   @db.Text
+  language             String   @default("en")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
+  adminSettings        String   @db.Text
+  favouritesSettings   String   @db.Text
+  myBestSettings       String   @db.Text
+  notificationSettings String   @db.Text
+  socialSettings       String   @db.Text
+  sportIconType        String   @default("emoji")
+  toolsSettings        String   @db.Text
+  workoutPreferences   String   @db.Text
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_settings")
+}
+
+model UserMainSport {
+  id     String    @id @default(cuid())
+  userId String
+  sport  SportType
+  order  Int       @default(0)
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sport])
+  @@map("user_main_sports")
+}
+
+model WorkoutTemplate {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  description   String?
+  category      String?
+  tags          String?
+  templateType  String   @default("workout")
+  templateData  String
+  sports        String?
+  totalDistance Int?
+  totalDuration Int?
+  difficulty    String?
+  isPublic      Boolean  @default(false)
+  isShared      Boolean  @default(false)
+  timesUsed     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+  @@index([templateType])
+  @@map("workout_templates")
+}
+
+model FavoriteWorkout {
+  id            String   @id @default(cuid())
+  userId        String
+  name          String
+  description   String?
+  workoutData   String   @db.Text
+  sports        String?
+  totalDistance Int?
+  totalDuration Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("favorite_workouts")
+}
+
+model FavoriteSport {
+  id        String    @id @default(cuid())
+  userId    String
+  sport     SportType
+  order     Int       // 1-5 for ordering the favorites
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sport])
+  @@index([userId])
+  @@map("favorite_sports")
+}
+
+model FreeMoveExercise {
+  id        String   @id @default(cuid())
+  userId    String
+  exercise  String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("free_move_exercises")
+}
+
+model CoachingGroup {
+  id          String                @id @default(cuid())
+  coachId     String
+  name        String
+  description String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  members     CoachingGroupMember[]
+  coach       User                  @relation("CoachingGroupOwner", fields: [coachId], references: [id], onDelete: Cascade)
+
+  @@index([coachId], map: "coaching_groups_coachId_fkey")
+  @@map("coaching_groups")
+}
+
+model CoachingGroupMember {
+  id              String        @id @default(cuid())
+  coachingGroupId String
+  athleteId       String
+  role            String?
+  joinedAt        DateTime      @default(now())
+  athlete         User          @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  coachingGroup   CoachingGroup @relation(fields: [coachingGroupId], references: [id], onDelete: Cascade)
+
+  @@unique([coachingGroupId, athleteId])
+  @@index([athleteId], map: "coaching_group_members_athleteId_fkey")
+  @@map("coaching_group_members")
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  adminId     String
+  name        String
+  description String?
+  sport       String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  members     TeamMember[]
+  admin       User         @relation("TeamOwner", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId], map: "teams_new_adminId_fkey")
+  @@map("teams_new")
+}
+
+model TeamMember {
+  id           String   @id @default(cuid())
+  teamId       String
+  athleteId    String
+  role         String?
+  jerseyNumber Int?
+  joinedAt     DateTime @default(now())
+  athlete      User     @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, athleteId])
+  @@index([athleteId], map: "team_members_new_athleteId_fkey")
+  @@map("team_members_new")
+}
+
+model Club {
+  id          String       @id @default(cuid())
+  adminId     String
+  name        String
+  description String?
+  location    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  members     ClubMember[]
+  admin       User         @relation("ClubOwner", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId], map: "clubs_new_adminId_fkey")
+  @@map("clubs_new")
+}
+
+model ClubMember {
+  id             String   @id @default(cuid())
+  clubId         String
+  memberId       String
+  role           String?
+  membershipType String?
+  joinedAt       DateTime @default(now())
+  club           Club     @relation(fields: [clubId], references: [id], onDelete: Cascade)
+  member         User     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([clubId, memberId])
+  @@index([memberId], map: "club_members_new_memberId_fkey")
+  @@map("club_members_new")
+}
+
+model Group {
+  id          String        @id @default(cuid())
+  adminId     String
+  name        String
+  description String?
+  groupType   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  members     GroupMember[]
+  admin       User          @relation("GroupOwner", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId], map: "groups_new_adminId_fkey")
+  @@map("groups_new")
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  groupId  String
+  userId   String
+  role     String?
+  joinedAt DateTime @default(now())
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId], map: "group_members_userId_fkey")
+  @@map("group_members")
+}
+
+model SuperAdmin {
+  id        String    @id @default(cuid())
+  username  String    @unique @db.VarChar(50)
+  email     String    @unique
+  password  String
+  name      String?
+  isActive  Boolean   @default(true)
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("super_admins")
+}
+
+model SuperAdminSettings {
+  id        String   @id @default(cuid())
+  password  String
+  email     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user  User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  weeks WorkoutWeek[]
+  @@map("super_admin_settings")
+}
 
-  @@map("workout_plans")
+model ColorDefaults {
+  id        String   @id @default(cuid())
+  language  String   @unique @db.VarChar(10)
+  data      String   @db.LongText
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("color_defaults")
+}
+
+model ToolsDefaults {
+  id        String   @id @default(cuid())
+  language  String   @unique @db.VarChar(10)
+  data      String   @db.LongText
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tools_defaults")
+}
+
+model FavouritesDefaults {
+  id        String   @id @default(cuid())
+  language  String   @unique @db.VarChar(10)
+  data      String   @db.LongText
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("favourites_defaults")
+}
+
+model MyBestDefaults {
+  id        String   @id @default(cuid())
+  language  String   @unique @db.VarChar(10)
+  data      String   @db.LongText
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("mybest_defaults")
+}
+
+model GridDefaults {
+  id        String   @id @default(cuid())
+  language  String   @unique @db.VarChar(10)
+  data      String   @db.LongText
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("grid_defaults")
+}
+
+enum UserType {
+  ATHLETE
+  COACH
+  TEAM
+  TEAM_MANAGER
+  CLUB
+  CLUB_TRAINER
+  GROUP
+  GROUP_ADMIN
+  ADMIN
 }
 
 enum WorkoutPlanType {
   CURRENT_WEEKS
   YEARLY_PLAN
   WORKOUTS_DONE
-}
-
-model WorkoutWeek {
-  id            String   @id @default(cuid())
-  workoutPlanId String
-  weekNumber    Int
-  periodId      String?  // Optional: Period for the entire week
-  notes         String?  @db.Text // Weekly planning notes (HTML content)
-  createdAt     DateTime @default(now())
-
-  workoutPlan WorkoutPlan @relation(fields: [workoutPlanId], references: [id], onDelete: Cascade)
-  period      Period?     @relation("WeekPeriod", fields: [periodId], references: [id], onDelete: SetNull)
-  days        WorkoutDay[]
-
-  @@map("workout_weeks")
-}
-
-model WorkoutDay {
-  id           String   @id @default(cuid())
-  userId       String   // Required: direct user ownership
-  workoutWeekId String
-  date         DateTime
-  weekNumber   Int
-  dayOfWeek    Int
-  periodId     String
-  weather      String?
-  feelingStatus String?
-  notes        String?  @db.Text
-  
-  // Section A/B/C/D classification
-  storageZone  StorageZone @default(B) // A=Current 2 weeks, B=Yearly plan, C=Done, D=Archive
-  isFromSharedSource Boolean @default(false)
-  creatorRole  UserType?  // Who created this workout
-  originalSenderId String?  // If received from coach/team/club
-  assignedToUserId String?  // Final athlete who owns this
-  
-  createdAt    DateTime @default(now())
-
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workoutWeek WorkoutWeek  @relation(fields: [workoutWeekId], references: [id], onDelete: Cascade)
-  period      Period       @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  workouts    WorkoutSession[]
-
-  @@unique([userId, date]) // Ensure one day per date per user
-  @@index([userId, date])
-  @@index([userId, storageZone, date]) // Query by section
-  @@map("workout_days")
+  ARCHIVE
 }
 
 enum StorageZone {
-  A  // Current 2-week plan
-  B  // Yearly plan (beyond 2 weeks)
-  C  // Workouts done (diary)
-  D  // Archive / Incoming shared workouts
-}
-
-model Period {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  description String
-  color       String
-  createdAt   DateTime @default(now())
-
-  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  days   WorkoutDay[]
-  weeks  WorkoutWeek[] @relation("WeekPeriod")
-
-  @@map("periods")
-}
-
-model WorkoutSession {
-  id             String   @id @default(cuid())
-  workoutDayId   String
-  sessionNumber  Int
-  name           String
-  code           String
-  time           String
-  weather        String?
-  location       String?
-  surface        String?
-  heartRateMax   Int?
-  heartRateAvg   Int?
-  calories       Int?
-  feelingStatus  String?
-  notes          String?
-  status         WorkoutStatus
-  createdAt      DateTime @default(now())
-
-  workoutDay WorkoutDay @relation(fields: [workoutDayId], references: [id], onDelete: Cascade)
-  moveframes Moveframe[]
-  sports     WorkoutSessionSport[]
-
-  @@map("workout_sessions")
-}
-
-model WorkoutSessionSport {
-  id               String   @id @default(cuid())
-  workoutSessionId String
-  sport            SportType
-
-  workoutSession WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
-
-  @@map("workout_session_sports")
+  A
+  B
+  C
+  D
 }
 
 enum WorkoutStatus {
@@ -240,74 +621,16 @@ enum WorkoutStatus {
   DONE_MORE_75
 }
 
-model Moveframe {
-  id               String   @id @default(cuid())
-  workoutSessionId String
-  letter           String
-  sport            SportType
-  sectionId        String
-  type             MoveframeType
-  description      String
-  notes            String?  @db.Text
-  macroFinal       String?  // Macro final field (0' to 9')
-  alarm            Int?     // Alarm setting
-  createdAt        DateTime @default(now())
-
-  workoutSession WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
-  section        WorkoutSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  movelaps       Movelap[]
-
-  @@map("moveframes")
-}
-
 enum MoveframeType {
   STANDARD
   BATTERY
   ANNOTATION
 }
 
-model WorkoutSection {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  description String
-  color       String
-  createdAt   DateTime @default(now())
-
-  user       User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  moveframes Moveframe[]
-
-  @@map("workout_sections")
-}
-
-model Movelap {
-  id               String       @id @default(cuid())
-  moveframeId      String
-  repetitionNumber Int
-  distance         Int?
-  speed            String?
-  style            String?
-  pace             String?
-  time             String?
-  reps             Int?
-  r1               String?      // Range 1 (BIKE specific)
-  r2               String?      // Range 2 (BIKE specific)
-  muscularSector   String?      // Muscular sector (BODY_BUILDING specific)
-  exercise         String?      // Exercise name (BODY_BUILDING specific)
-  restType         RestType?
-  pause            String?
-  macroFinal       String?      // Macro final field (0' to 9')
-  alarm            Int?
-  sound            String?
-  notes            String?
-  status           MovelapStatus
-  isSkipped        Boolean      @default(false)
-  isDisabled       Boolean      @default(false)
-  createdAt        DateTime     @default(now())
-
-  moveframe Moveframe @relation(fields: [moveframeId], references: [id], onDelete: Cascade)
-
-  @@map("movelaps")
+enum WorkType {
+  NONE
+  MAIN
+  SECONDARY
 }
 
 enum RestType {
@@ -352,315 +675,4 @@ enum SportType {
   CROSSFIT
   TRIATHLON
   TRACK_FIELD
-}
-
-model UserSettings {
-  id            String @id @default(cuid())
-  userId        String @unique
-  
-  // ===== COMPREHENSIVE SETTINGS STORAGE =====
-  // All user preferences and configurations stored as JSON for flexibility
-  
-  // Color & Background Settings
-  colorSettings String @db.Text // Page backgrounds, row colors, schemes
-  
-  // Tools Settings (periods, sections, sports, equipment, exercises, devices)
-  toolsSettings String @db.Text
-  
-  // Favourites Settings (saved workout templates, favorite exercises, quick access items)
-  favouritesSettings String @db.Text
-  
-  // My Best Settings (personal records, achievements, milestones)
-  myBestSettings String @db.Text
-  
-  // Admin Management Settings (admin-specific configurations)
-  adminSettings String @db.Text
-  
-  // Workout Preferences (display options, default values, quick settings)
-  workoutPreferences String @db.Text
-  
-  // Social Settings (privacy, notifications, sharing preferences)
-  socialSettings String @db.Text
-  
-  // Notification Settings (email, push, in-app notifications)
-  notificationSettings String @db.Text
-  
-  // Display Settings
-  gridSize      String @default("comfortable") // "compact", "comfortable", "spacious"
-  columnCount   Int @default(3)
-  rowHeight     String @default("medium") // "small", "medium", "large"
-  defaultView   String @default("grid") // "list", "grid", "table"
-  
-  // Sidebar Settings
-  leftSidebarVisible  Boolean @default(true)
-  rightSidebarVisible Boolean @default(true)
-  leftSidebarWidth    Int @default(20)
-  rightSidebarWidth   Int @default(25)
-  sidebarPosition     String @default("fixed") // "fixed", "floating"
-  
-  // Theme & Display
-  theme         String @default("light") // "light", "dark", "auto", "time-based"
-  fontSize      Int @default(16)
-  iconSize      String @default("medium") // "small", "medium", "large"
-  
-  // Accessibility
-  enableAnimations Boolean @default(true)
-  reducedMotion    Boolean @default(false)
-  highContrast     Boolean @default(false)
-  
-  // Performance
-  performanceMode Boolean @default(false)
-  imageQuality    String @default("high") // "low", "medium", "high"
-  lazyLoading     Boolean @default(true)
-  
-  // Dashboard
-  dashboardLayout String @default("default") // "default", "compact", "expanded"
-  widgetArrangement String @default("[]") // JSON array of widget IDs
-  
-  // Language
-  language      String @default("en")
-  
-  // Sport Icons
-  sportIconType String @default("emoji") // "emoji", "bw_icons"
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_settings")
-}
-
-model UserMainSport {
-  id     String    @id @default(cuid())
-  userId String
-  sport  SportType
-  order  Int       @default(0)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, sport])
-  @@map("user_main_sports")
-}
-
-// Workout Templates - Archive/Library for saving and reusing workouts
-model WorkoutTemplate {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  description String?
-  category    String?  // "Swim", "Bike", "Run", "Mixed", "Strength", etc.
-  tags        String?  // JSON array of tags for search/filter
-  templateType String @default("workout") // "workout" or "day"
-  
-  // Template data stored as JSON
-  // For "workout": { workoutSession: {...}, moveframes: [...], movelaps: [...] }
-  // For "day": { day: {...}, workouts: [...], moveframes: [...], movelaps: [...] }
-  templateData String  // JSON string
-  
-  // Metadata
-  sports       String?  // Comma-separated list of sports in template
-  totalDistance Int?    // Total distance in meters (if applicable)
-  totalDuration Int?    // Total duration in minutes (if applicable)
-  difficulty   String?  // "easy", "moderate", "hard", "extreme"
-  
-  isPublic     Boolean  @default(false) // Can be shared with other users
-  isShared     Boolean  @default(false) // Shared by coach with athletes
-  timesUsed    Int      @default(0)     // Track popularity
-  
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([category])
-  @@index([templateType])
-  @@map("workout_templates")
-}
-
-// ===== NEW ORGANIZATIONAL STRUCTURE MODELS =====
-
-// CoachingGroup: A coach can have multiple coaching groups
-model CoachingGroup {
-  id          String   @id @default(cuid())
-  coachId     String
-  name        String
-  description String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  coach   User                    @relation("CoachingGroupOwner", fields: [coachId], references: [id], onDelete: Cascade)
-  members CoachingGroupMember[]
-
-  @@map("coaching_groups")
-}
-
-// Junction table: Athletes in coaching groups
-model CoachingGroupMember {
-  id               String   @id @default(cuid())
-  coachingGroupId  String
-  athleteId        String
-  role             String?  // e.g., "athlete", "assistant"
-  joinedAt         DateTime @default(now())
-
-  coachingGroup CoachingGroup @relation(fields: [coachingGroupId], references: [id], onDelete: Cascade)
-  athlete       User          @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-
-  @@unique([coachingGroupId, athleteId])
-  @@map("coaching_group_members")
-}
-
-// Team: A team admin can manage multiple teams
-model Team {
-  id          String   @id @default(cuid())
-  adminId     String
-  name        String
-  description String?
-  sport       String?  // Primary sport for this team
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  admin   User         @relation("TeamOwner", fields: [adminId], references: [id], onDelete: Cascade)
-  members TeamMember[]
-
-  @@map("teams_new")
-}
-
-// Junction table: Athletes in teams
-model TeamMember {
-  id        String   @id @default(cuid())
-  teamId    String
-  athleteId String
-  role      String?  // e.g., "captain", "player", "reserve"
-  jerseyNumber Int?
-  joinedAt  DateTime @default(now())
-
-  team    Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  athlete User @relation(fields: [athleteId], references: [id], onDelete: Cascade)
-
-  @@unique([teamId, athleteId])
-  @@map("team_members_new")
-}
-
-// Club: A club admin can manage multiple clubs
-model Club {
-  id          String   @id @default(cuid())
-  adminId     String
-  name        String
-  description String?
-  location    String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  admin   User         @relation("ClubOwner", fields: [adminId], references: [id], onDelete: Cascade)
-  members ClubMember[]
-
-  @@map("clubs_new")
-}
-
-// Junction table: Members in clubs
-model ClubMember {
-  id         String   @id @default(cuid())
-  clubId     String
-  memberId   String
-  role       String?  // e.g., "member", "trainer", "staff"
-  membershipType String? // e.g., "monthly", "annual"
-  joinedAt   DateTime @default(now())
-
-  club   Club @relation(fields: [clubId], references: [id], onDelete: Cascade)
-  member User @relation(fields: [memberId], references: [id], onDelete: Cascade)
-
-  @@unique([clubId, memberId])
-  @@map("club_members_new")
-}
-
-// Group: A group admin can manage multiple groups
-model Group {
-  id          String   @id @default(cuid())
-  adminId     String
-  name        String
-  description String?
-  groupType   String?  // e.g., "fitness", "social", "competitive"
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  admin   User          @relation("GroupOwner", fields: [adminId], references: [id], onDelete: Cascade)
-  members GroupMember[]
-
-  @@map("groups_new")
-}
-
-// Junction table: Users in groups
-model GroupMember {
-  id       String   @id @default(cuid())
-  groupId  String
-  userId   String
-  role     String?  // e.g., "member", "moderator"
-  joinedAt DateTime @default(now())
-
-  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([groupId, userId])
-  @@map("group_members")
-}
-
-// Super Admin User - Full super admin account
-model SuperAdmin {
-  id        String   @id @default(cuid())
-  username  String   @unique @db.VarChar(50)
-  email     String   @unique
-  password  String   // Hashed password using bcrypt
-  name      String?  // Full name
-  isActive  Boolean  @default(true)
-  lastLogin DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("super_admins")
-}
-
-// Legacy: Super Admin Settings (kept for backward compatibility)
-model SuperAdminSettings {
-  id        String   @id @default(cuid())
-  password  String   // Hashed password using bcrypt
-  email     String?  // Optional: Super Admin email for recovery
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("super_admin_settings")
-}
-
-// Language-Specific Color Defaults
-model ColorDefaults {
-  id        String   @id @default(cuid())
-  language  String   @unique @db.VarChar(10)
-  data      Json     // Color settings as JSON
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("color_defaults")
-}
-
-// Language-Specific Tools Defaults
-model ToolsDefaults {
-  id        String   @id @default(cuid())
-  language  String   @unique @db.VarChar(10)
-  data      Json     // Tools data (periods, sections, sports, equipment, exercises)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("tools_defaults")
-}
-
-// Language-Specific Favourites Defaults
-model FavouritesDefaults {
-  id        String   @id @default(cuid())
-  language  String   @unique @db.VarChar(10)
-  data      Json     // Favourites data (weeklyPlans, workouts, moveframes)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("favourites_defaults")
 }

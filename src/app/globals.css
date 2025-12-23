@@ -125,6 +125,22 @@ nav > * {
   overflow: visible !important;
 }
 
+/* Force select dropdowns to render properly and open downward */
+select {
+  position: relative;
+  z-index: 1;
+  /* Force dropdown to render below the select */
+  appearance: menulist !important;
+  -webkit-appearance: menulist !important;
+  -moz-appearance: menulist !important;
+}
+
+/* Ensure select dropdowns have space to render downward in modals */
+.modal-body select,
+form select {
+  margin-bottom: 10px;
+}
+
 /* Workout Elements with Custom Borders */
 .workout-day,
 .workout-session,

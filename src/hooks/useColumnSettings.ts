@@ -10,7 +10,15 @@ export function useColumnSettings() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         try {
-          return JSON.parse(stored);
+          const parsed = JSON.parse(stored);
+          // Validate and migrate settings if schema changed
+          const migrated = {
+            day: parsed.day && parsed.day.visibleColumns?.length > 0 ? parsed.day : getDefaultColumnSettings('day'),
+            workout: parsed.workout && parsed.workout.visibleColumns?.length > 0 ? parsed.workout : getDefaultColumnSettings('workout'),
+            moveframe: parsed.moveframe && parsed.moveframe.visibleColumns?.length > 0 ? parsed.moveframe : getDefaultColumnSettings('moveframe'),
+            movelap: parsed.movelap && parsed.movelap.visibleColumns?.length > 0 ? parsed.movelap : getDefaultColumnSettings('movelap'),
+          };
+          return migrated;
         } catch (e) {
           console.error('Failed to parse column settings:', e);
         }
@@ -64,7 +72,12 @@ export function useColumnSettings() {
   };
 
   const isColumnVisible = (tableType: 'day' | 'workout' | 'moveframe' | 'movelap', columnId: string): boolean => {
-    return settings[tableType]?.visibleColumns?.includes(columnId) ?? true;
+    const visibleColumns = settings[tableType]?.visibleColumns;
+    // If no settings exist, default to showing the column
+    if (!visibleColumns || visibleColumns.length === 0) {
+      return true;
+    }
+    return visibleColumns.includes(columnId);
   };
 
   const getVisibleColumns = (tableType: 'day' | 'workout' | 'moveframe' | 'movelap'): string[] => {

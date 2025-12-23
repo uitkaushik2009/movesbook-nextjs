@@ -3,7 +3,11 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { ClientProviders } from '@/components/providers/ClientProviders';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap', // Better performance
+  fallback: ['system-ui', 'arial'] // Explicit fallback
+});
 
 export const metadata: Metadata = {
   title: 'Movesbook - Workout Management System',

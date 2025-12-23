@@ -1,12 +1,27 @@
 import { useState, useEffect } from 'react';
 import { getSportConfig } from '@/constants/moveframe.constants';
 
+export interface IndividualRepetitionPlan {
+  index: number;
+  speed?: string; // For distance-based sports
+  time?: string; // For distance-based sports
+  pause: string;
+  reps?: string; // For BODY_BUILDING and other sports with tools
+  weight?: string; // For BODY_BUILDING
+  tools?: string; // For Gymnastic, Stretching, Pilates, Yoga, etc.
+  macroFinal?: string; // Macro final value per repetition
+}
+
 export interface MoveframeFormData {
   // Basic fields
   sport: string;
   type: 'STANDARD' | 'BATTERY' | 'ANNOTATION';
   manualMode: boolean;
   manualPriority: boolean;
+  
+  // Planning mode
+  planningMode: 'all' | 'individual'; // 'all' = Plan for all, 'individual' = Plan one by one
+  individualPlans: IndividualRepetitionPlan[]; // Individual settings per repetition
   
   // Standard fields
   distance: string;
@@ -16,8 +31,11 @@ export interface MoveframeFormData {
   style: string;
   pace: string;
   time: string;
+  rowPerMin: string; // Row/min for ROWING sport (range 10-99)
   note: string;
   pause: string;
+  restType: string; // 'Set time', 'Restart time', or 'Restart pulse'
+  repsType: string; // 'Reps' or 'Time' (for non-distance sports)
   macroFinal: string;
   alarm: string;
   sound: string;
@@ -33,6 +51,7 @@ export interface MoveframeFormData {
   annotationText: string;
   annotationBgColor: string;
   annotationTextColor: string;
+  annotationBold: boolean; // Text style for annotation
   
   // Battery fields
   batteryCount: number;
@@ -76,6 +95,10 @@ export function useMoveframeForm({
   const [manualPriority, setManualPriority] = useState(false);
   const [sectionId, setSectionId] = useState<string>(''); // Workout section for ALL sports
 
+  // Planning mode
+  const [planningMode, setPlanningMode] = useState<'all' | 'individual'>('all');
+  const [individualPlans, setIndividualPlans] = useState<IndividualRepetitionPlan[]>([]);
+
   // Standard fields
   const [distance, setDistance] = useState('100');
   const [customDistance, setCustomDistance] = useState('');
@@ -84,8 +107,11 @@ export function useMoveframeForm({
   const [style, setStyle] = useState('');
   const [pace, setPace] = useState('');
   const [time, setTime] = useState('');
+  const [rowPerMin, setRowPerMin] = useState(''); // Row/min for ROWING sport (range 10-99)
   const [note, setNote] = useState('');
   const [pause, setPause] = useState('20"');
+  const [restType, setRestType] = useState('Set time'); // Rest type: 'Set time', 'Restart time', 'Restart pulse'
+  const [repsType, setRepsType] = useState('Reps'); // Reps type: 'Reps' or 'Time' (for non-distance sports)
   const [macroFinal, setMacroFinal] = useState("0'");
   const [alarm, setAlarm] = useState('-1');
   const [sound, setSound] = useState('Beep');
@@ -101,6 +127,7 @@ export function useMoveframeForm({
   const [annotationText, setAnnotationText] = useState('');
   const [annotationBgColor, setAnnotationBgColor] = useState('#5168c2');
   const [annotationTextColor, setAnnotationTextColor] = useState('#000000');
+  const [annotationBold, setAnnotationBold] = useState(false);
 
   // Battery fields
   const [batteryCount, setBatteryCount] = useState(3);
@@ -127,6 +154,8 @@ export function useMoveframeForm({
     setManualMode(false);
     setManualPriority(false);
     setSectionId(''); // Reset workout section
+    setPlanningMode('all'); // Reset planning mode
+    setIndividualPlans([]); // Clear individual plans
     setDistance('100');
     setCustomDistance('');
     setRepetitions('1');
@@ -134,8 +163,11 @@ export function useMoveframeForm({
     setStyle('');
     setPace('');
     setTime('');
+    setRowPerMin(''); // Reset Row/min
     setNote('');
     setPause('20"');
+    setRestType('Set time'); // Default rest type
+    setRepsType('Reps'); // Default reps type
     setMacroFinal("0'");
     setAlarm('-1');
     setSound('Beep');
@@ -177,6 +209,81 @@ export function useMoveframeForm({
   };
 
   /**
+   * Check if sport supports individual planning (all sports now support it)
+   */
+  const supportsIndividualPlanning = () => {
+    // All sports now support individual planning
+    return true;
+  };
+
+  /**
+   * Check if can show individual planning (sport supports it AND reps <= 12)
+   */
+  const canShowIndividualPlanning = () => {
+    const repsCount = parseInt(repetitions) || 0;
+    return supportsIndividualPlanning() && repsCount > 0 && repsCount <= 12;
+  };
+
+  /**
+   * Initialize individual plans array based on repetitions count
+   */
+  const initializeIndividualPlans = (repsCount: number) => {
+    const plans: IndividualRepetitionPlan[] = [];
+    const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
+    const isBodyBuilding = sport === 'BODY_BUILDING';
+    const isToolsBased = !distanceBasedSports.includes(sport) && !isBodyBuilding;
+    
+    for (let i = 0; i < repsCount; i++) {
+      const plan: IndividualRepetitionPlan = {
+        index: i + 1,
+        pause: pause || '20"',
+        macroFinal: macroFinal || "0'"
+      };
+      
+      if (isBodyBuilding) {
+        // BODY_BUILDING: reps, weight
+        plan.reps = reps || '12';
+        plan.weight = '12';
+      } else if (isToolsBased) {
+        // TOOLS-BASED: reps, tools
+        plan.reps = repetitions || '1'; // Use repetitions from moveframe
+        plan.tools = '';
+      } else {
+        // DISTANCE-BASED: speed, time
+        plan.speed = speed || 'A2';
+        plan.time = time || '0h05\'30"';
+      }
+      
+      plans.push(plan);
+    }
+    setIndividualPlans(plans);
+  };
+
+  /**
+   * Update an individual plan value
+   * If updating the first row (index 0), automatically copy the value to all subsequent rows
+   */
+  const updateIndividualPlan = (index: number, field: 'speed' | 'time' | 'pause' | 'reps' | 'weight' | 'tools' | 'macroFinal', value: string) => {
+    setIndividualPlans(prev => {
+      const updated = [...prev];
+      
+      // Update the specified row
+      if (updated[index]) {
+        updated[index] = { ...updated[index], [field]: value };
+      }
+      
+      // If updating the first row (index 0), copy the value to all subsequent rows (2nd to last)
+      if (index === 0 && updated.length > 1) {
+        for (let i = 1; i < updated.length; i++) {
+          updated[i] = { ...updated[i], [field]: value };
+        }
+      }
+      
+      return updated;
+    });
+  };
+
+  /**
    * Validate form fields
    */
   const validateForm = () => {
@@ -186,8 +293,8 @@ export function useMoveframeForm({
       newErrors.sport = 'Sport is required';
     }
 
-    // Workout Section is required for ALL sports
-    if (!sectionId) {
+    // Workout Section is required only for STANDARD and BATTERY modes
+    if ((type === 'STANDARD' || type === 'BATTERY') && !sectionId) {
       newErrors.sectionId = 'Workout section is required';
     }
 
@@ -200,18 +307,29 @@ export function useMoveframeForm({
         if (!repetitions || parseInt(repetitions) < 1 || parseInt(repetitions) > 99) {
           newErrors.repetitions = 'Number of series must be between 1 and 99';
         }
+      } else if (sport === 'FREE_MOVES') {
+        // FREE_MOVES validation
+        if (!exercise) newErrors.exercise = 'Exercise is required';
+        if (!repetitions || parseInt(repetitions) < 1 || parseInt(repetitions) > 99) {
+          newErrors.repetitions = 'Repetitions must be between 1 and 99';
+        }
       } else {
-        if (!distance && distance !== 'custom') newErrors.distance = 'Distance is required';
-        if (distance === 'custom' && !customDistance) newErrors.customDistance = 'Custom distance is required';
+        // Distance-based sports (SWIM, BIKE, RUN, etc.) and other sports
+        const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
+        const isDistanceBased = distanceBasedSports.includes(sport);
+        
+        if (isDistanceBased) {
+          if (!distance && distance !== 'custom') newErrors.distance = 'Distance is required';
+          if (distance === 'custom' && !customDistance) newErrors.customDistance = 'Custom distance is required';
+        }
+        
         if (!repetitions || parseInt(repetitions) < 1) {
           newErrors.repetitions = 'Repetitions must be at least 1';
         }
       }
     }
 
-    if (type === 'ANNOTATION' && !annotationText) {
-      newErrors.annotationText = 'Annotation text is required';
-    }
+    // Annotation text is optional for all types
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -223,10 +341,6 @@ export function useMoveframeForm({
   const generateDescription = () => {
     if (manualMode && manualPriority) {
       return manualContent;
-    }
-
-    if (type === 'ANNOTATION') {
-      return annotationText;
     }
 
     if (sport === 'BODY_BUILDING') {
@@ -254,23 +368,27 @@ export function useMoveframeForm({
    * Build moveframe data object for API submission
    */
   const buildMoveframeData = () => {
-    // Determine notes value based on type and mode
+    // Determine notes value based on mode
     let notesValue = note;
-    if (type === 'ANNOTATION') {
-      // For ANNOTATION type, format colors as JSON in notes field
-      notesValue = JSON.stringify({
-        headerBgColor: annotationBgColor,
-        textBgColor: annotationTextColor
-      });
-    } else if (manualMode && manualContent) {
+    if (manualMode && manualContent) {
       // For manual mode, use manual content as notes
       notesValue = manualContent;
     }
-    
+
     return {
       sport,
       type,
-      description: type === 'ANNOTATION' ? annotationText : generateDescription(),
+      description: generateDescription(),
+      
+      // Annotation fields (separate from type)
+      annotationText: annotationText || null,
+      annotationBgColor: annotationBgColor || null,
+      annotationTextColor: annotationTextColor || null,
+      annotationBold: annotationBold || false,
+      
+      // Planning mode
+      planningMode,
+      individualPlans: planningMode === 'individual' ? individualPlans : [],
       
       // Standard fields
       distance: distance === 'custom' ? parseInt(customDistance) : parseInt(distance),
@@ -279,6 +397,7 @@ export function useMoveframeForm({
       style,
       pace,
       time: time || calculateEstimatedTime(),
+      rowPerMin: sport === 'ROWING' && rowPerMin ? parseInt(rowPerMin) : null,
       notes: notesValue,
       pause,
       macroFinal,
@@ -288,7 +407,7 @@ export function useMoveframeForm({
       r1: sport === 'BIKE' ? r1 : null,
       r2: sport === 'BIKE' ? r2 : null,
       muscularSector: sport === 'BODY_BUILDING' ? muscularSector : null,
-      exercise: sport === 'BODY_BUILDING' ? exercise : null,
+      exercise: (sport === 'BODY_BUILDING' || sport === 'FREE_MOVES') ? exercise : null,
       sectionId: sectionId || null, // Workout section (for ALL sports)
       
       // Manual mode
@@ -316,28 +435,14 @@ export function useMoveframeForm({
       setType(existingMoveframe.type || 'STANDARD');
       setSectionId(existingMoveframe.sectionId || ''); // Load workout section
       
-      // Handle ANNOTATION type
-      if (existingMoveframe.type === 'ANNOTATION') {
-        setAnnotationText(existingMoveframe.description || '');
-        // Try to extract colors from the notes field
-        if (existingMoveframe.notes) {
-          try {
-            const annotationColors = JSON.parse(existingMoveframe.notes);
-            setAnnotationBgColor(annotationColors.headerBgColor || '#5168c2');
-            setAnnotationTextColor(annotationColors.textBgColor || '#000000');
-          } catch (e) {
-            console.error('Failed to parse annotation colors:', e);
-            setAnnotationBgColor('#5168c2');
-            setAnnotationTextColor('#000000');
-          }
-        } else {
-          setAnnotationBgColor('#5168c2');
-          setAnnotationTextColor('#000000');
-        }
-        console.log('📝 Loaded ANNOTATION type');
-      }
+      // Load annotation fields (available for all types)
+      setAnnotationText(existingMoveframe.annotationText || '');
+      setAnnotationBgColor(existingMoveframe.annotationBgColor || '#5168c2');
+      setAnnotationTextColor(existingMoveframe.annotationTextColor || '#ffffff');
+      setAnnotationBold(existingMoveframe.annotationBold || false);
+      
       // Handle BATTERY type
-      else if (existingMoveframe.type === 'BATTERY') {
+      if (existingMoveframe.type === 'BATTERY') {
         setBatteryCount(existingMoveframe.movelaps?.length || 3);
         console.log('📝 Loaded BATTERY type');
       }
@@ -391,6 +496,21 @@ export function useMoveframeForm({
     }
   }, [mode, existingMoveframe, isOpen]);
 
+  /**
+   * Initialize individual plans when planning mode changes to 'individual'
+   * or when repetitions change while in individual planning mode
+   */
+  useEffect(() => {
+    if (planningMode === 'individual' && canShowIndividualPlanning()) {
+      const repsCount = parseInt(repetitions) || 0;
+      
+      // Only initialize if plans array is empty or different size
+      if (individualPlans.length !== repsCount) {
+        initializeIndividualPlans(repsCount);
+      }
+    }
+  }, [planningMode, repetitions, sport]);
+
   // ==================== RETURN VALUES ====================
   return {
     // State values
@@ -400,6 +520,8 @@ export function useMoveframeForm({
       manualMode,
       manualPriority,
       sectionId, // Workout section for ALL sports
+      planningMode, // Planning mode: 'all' or 'individual'
+      individualPlans, // Individual repetition plans
       distance,
       customDistance,
       repetitions,
@@ -407,8 +529,11 @@ export function useMoveframeForm({
       style,
       pace,
       time,
+      rowPerMin, // Row/min for ROWING
       note,
       pause,
+      restType, // Rest type selection
+      repsType, // Reps type selection (Reps or Time)
       macroFinal,
       alarm,
       sound,
@@ -420,6 +545,7 @@ export function useMoveframeForm({
       annotationText,
       annotationBgColor,
       annotationTextColor,
+      annotationBold,
       batteryCount,
       batterySequence,
       manualContent
@@ -432,6 +558,8 @@ export function useMoveframeForm({
       setManualMode,
       setManualPriority,
       setSectionId, // Workout section setter for ALL sports
+      setPlanningMode, // Planning mode setter
+      setIndividualPlans, // Individual plans setter
       setDistance,
       setCustomDistance,
       setRepetitions,
@@ -439,8 +567,11 @@ export function useMoveframeForm({
       setStyle,
       setPace,
       setTime,
+      setRowPerMin, // Row/min setter
       setNote,
       setPause,
+      setRestType, // Rest type setter
+      setRepsType, // Reps type setter
       setMacroFinal,
       setAlarm,
       setSound,
@@ -452,6 +583,7 @@ export function useMoveframeForm({
       setAnnotationText,
       setAnnotationBgColor,
       setAnnotationTextColor,
+      setAnnotationBold,
       setBatteryCount,
       setBatterySequence,
       setManualContent
@@ -462,6 +594,8 @@ export function useMoveframeForm({
     totalDistance: calculateTotalDistance(),
     estimatedTime: calculateEstimatedTime(),
     description: generateDescription(),
+    supportsIndividualPlanning: supportsIndividualPlanning(),
+    canShowIndividualPlanning: canShowIndividualPlanning(),
     
     // Validation
     errors,
@@ -474,7 +608,9 @@ export function useMoveframeForm({
     buildMoveframeData,
     calculateTotalDistance,
     calculateEstimatedTime,
-    generateDescription
+    generateDescription,
+    initializeIndividualPlans,
+    updateIndividualPlan
   };
 }
 

@@ -102,8 +102,11 @@ export async function apiFetch<T = any>(
 
 // ==================== WORKOUT PLAN API ====================
 export const workoutPlanApi = {
-  async get(type: string) {
-    return apiFetch(`${API_ENDPOINTS.WORKOUTS.PLAN}?type=${type}`);
+  async get(type: string, forceRecreate = false) {
+    const url = forceRecreate 
+      ? `${API_ENDPOINTS.WORKOUTS.PLAN}?type=${type}&forceRecreate=true`
+      : `${API_ENDPOINTS.WORKOUTS.PLAN}?type=${type}`;
+    return apiFetch(url);
   },
 
   async create(data: { type: string; startDate?: string }) {

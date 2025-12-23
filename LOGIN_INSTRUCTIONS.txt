@@ -1,0 +1,17 @@
+﻿========================================
+  LOGIN AFTER TOKEN CLEANUP
+========================================
+
+1. Go to: http://localhost:3000
+
+2. Click 'Admin' button in the top navigation
+
+3. Enter your admin credentials:
+   - Username/Email: [your admin username]
+   - Password: [your admin password]
+
+4. After successful login, go to Settings
+
+5. Now you can add/edit sports and equipment!
+
+========================================

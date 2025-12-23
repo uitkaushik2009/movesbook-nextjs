@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 // DELETE - Remove a workout plan and all its data
 export async function DELETE(request: NextRequest) {

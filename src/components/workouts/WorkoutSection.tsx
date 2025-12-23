@@ -47,6 +47,7 @@ import { useWorkoutExpansion } from '@/hooks/useWorkoutExpansion';
 // Components
 import WorkoutSectionHeader from '@/components/workouts/WorkoutSectionHeader';
 import WorkoutCalendarView from '@/components/workouts/WorkoutCalendarView';
+import WorkoutTreeView from '@/components/workouts/WorkoutTreeView';
 import DayTableView from '@/components/workouts/tables/DayTableView';
 import StyledTableWrapper from '@/components/workouts/tables/StyledTableWrapper';
 import AddWorkoutModal from '@/components/workouts/AddWorkoutModal';
@@ -82,8 +83,29 @@ interface WorkoutSectionProps {
 export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   // ==================== SECTION & VIEW STATE ====================
   const [activeSection, setActiveSection] = useState<SectionId>('A');
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>('tree');
   const [selectedWeekForTable, setSelectedWeekForTable] = useState<number | null>(null);
+  
+  // Week grouping for Section B pagination
+  const [weeksPerPage, setWeeksPerPage] = useState<number>(3); // 1, 2, 3, 4, 6, 8, 13
+  const [currentPageStart, setCurrentPageStart] = useState<number>(1); // Starting week number for current page
+  
+  // Reset view mode when section changes
+  useEffect(() => {
+    // Section A: Only Tree and Table (default to Tree)
+    // Section B: Tree, Table, and Calendar
+    // Section C & D: Only Tree and Table (default to Tree)
+    if (activeSection === 'A' || activeSection === 'C' || activeSection === 'D') {
+      // If currently on calendar view, switch to tree view
+      if (viewMode === 'calendar') {
+        setViewMode('tree');
+      }
+    }
+    // Clear week filter when changing sections
+    setSelectedWeekForTable(null);
+    // Reset pagination when changing sections
+    setCurrentPageStart(1);
+  }, [activeSection]);
   
   // ==================== USE CUSTOM HOOK FOR DATA MANAGEMENT ====================
   const {
@@ -123,6 +145,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [activeWorkout, setActiveWorkout] = useState<Workout | null>(null);
   const [activeMoveframe, setActiveMoveframe] = useState<Moveframe | null>(null);
   const [activeMovelap, setActiveMovelap] = useState<any>(null);
+  const [movelapInsertIndex, setMovelapInsertIndex] = useState<number | null>(null);
   
   // Editing states
   const [addWorkoutDay, setAddWorkoutDay] = useState<WorkoutDay | null>(null);
@@ -150,6 +173,43 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     activeSection,
     selectedAthleteId: selectedAthlete?.id
   });
+
+  // Handler to expand only the selected workout and collapse all others
+  const handleExpandOnlyThisWorkout = (workout: any, day: any) => {
+    console.log('🎯 Expanding ONLY workout:', workout.id, 'on day:', day.id);
+    console.log('📊 Currently expanded workouts BEFORE:', Array.from(expandedWorkouts));
+    
+    // Step 1: Ensure the day is expanded first
+    if (!expandedDays.has(day.id)) {
+      console.log('📅 Day is collapsed, expanding day:', day.id);
+      toggleDayExpansion(day.id);
+    } else {
+      console.log('📅 Day is already expanded:', day.id);
+    }
+    
+    // Step 2: Get snapshot of all currently expanded workouts
+    const currentlyExpandedWorkouts = Array.from(expandedWorkouts);
+    console.log('📊 Workouts to close:', currentlyExpandedWorkouts.filter(id => id !== workout.id));
+    
+    // Step 3: Close ALL workouts except the target
+    currentlyExpandedWorkouts.forEach((workoutId: string) => {
+      if (workoutId !== workout.id) {
+        console.log('❌ Closing workout:', workoutId);
+        toggleWorkoutExpansion(workoutId);
+      }
+    });
+    
+    // Step 4: Open the target workout if it's not already open
+    if (!expandedWorkouts.has(workout.id)) {
+      console.log('✅ Opening target workout:', workout.id);
+      toggleWorkoutExpansion(workout.id);
+    } else {
+      console.log('ℹ️ Target workout already open:', workout.id);
+    }
+    
+    console.log('📊 Expanded workouts AFTER:', Array.from(expandedWorkouts));
+    console.log('✅ Done. Should have ONLY workout', workout.id, 'open');
+  };
 
   // ==================== MODAL MODE STATE ====================
   const [workoutModalMode, setWorkoutModalMode] = useState<'add' | 'edit'>('add');
@@ -376,7 +436,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     }
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     
     if (!over) {
@@ -388,28 +448,60 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     const dragType = active.data.current?.type;
     const dropType = over.data.current?.type;
     
-    if (dragType === 'workout' && dropType === 'day') {
-      // Check for conflicts
+    // Handle same-workout moveframe reordering (simple case)
+    if (dragType === 'moveframe' && dropType === 'moveframe') {
       const sourceWorkout = active.data.current?.workout;
-      const targetDay = over.data.current?.day;
-      const existingWorkout = targetDay?.workouts?.[0]; // Days can have max 3 workouts
+      const targetWorkout = over.data.current?.workout;
       
-      setDragModalConfig({
-        dragType: 'workout',
-        hasConflict: !!existingWorkout,
-        conflictMessage: existingWorkout ? 'This day already has a workout. Choose an action:' : undefined,
-        sourceData: { workout: sourceWorkout, sourceDay: active.data.current?.day },
-        targetData: { targetDay, existingWorkout }
-      });
-      modalActions.setShowDragModal(true);
-    } else if (dragType === 'moveframe') {
-      // Handle moveframe drops
-      const showPosition = dropType === 'moveframe';
+      // Same workout - simple reorder
+      if (sourceWorkout?.id === targetWorkout?.id) {
+        console.log('🔄 Same-workout reorder - calling reorder API');
+        await handleSameWorkoutMoveframeReorder(active.id, over.id, sourceWorkout);
+        setDraggedMoveframe(null);
+        return;
+      }
       
+      // Cross-workout - show modal
       setDragModalConfig({
         dragType: 'moveframe',
         hasConflict: false,
-        showPositionChoice: showPosition,
+        showPositionChoice: true,
+        sourceData: active.data.current,
+        targetData: over.data.current
+      });
+      modalActions.setShowDragModal(true);
+    } else if (dragType === 'workout' && (dropType === 'day' || dropType === 'workout')) {
+      // Handle workout dragging
+      const sourceWorkout = active.data.current?.workout;
+      const sourceDay = active.data.current?.day;
+      const targetDay = dropType === 'day' ? over.data.current?.day : over.data.current?.day;
+      
+      // Same day - simple reorder
+      if (sourceDay?.id === targetDay?.id && active.id !== over.id) {
+        console.log('🔄 Same-day workout reorder');
+        await handleSameDayWorkoutReorder(active.id, over.id, sourceDay);
+        setDraggedWorkout(null);
+        return;
+      }
+      
+      // Cross-day - show modal
+      const existingWorkoutCount = targetDay?.workouts?.length || 0;
+      const hasConflict = existingWorkoutCount >= 3;
+      
+      setDragModalConfig({
+        dragType: 'workout',
+        hasConflict: hasConflict,
+        conflictMessage: hasConflict ? 'This day already has 3 workouts (maximum). Choose an action:' : undefined,
+        sourceData: { workout: sourceWorkout, sourceDay: sourceDay },
+        targetData: { targetDay, existingWorkout: null }
+      });
+      modalActions.setShowDragModal(true);
+    } else if (dragType === 'moveframe' && (dropType === 'workout' || dropType === 'day')) {
+      // Handle moveframe dropped on workout or day
+      setDragModalConfig({
+        dragType: 'moveframe',
+        hasConflict: false,
+        showPositionChoice: false,
         sourceData: active.data.current,
         targetData: over.data.current
       });
@@ -418,6 +510,100 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     
     setDraggedWorkout(null);
     setDraggedMoveframe(null);
+  };
+
+  // Handle same-workout moveframe reordering
+  const handleSameWorkoutMoveframeReorder = async (activeMoveframeId: any, overMoveframeId: any, workout: any) => {
+    try {
+      const moveframes = workout.moveframes || [];
+      const oldIndex = moveframes.findIndex((mf: any) => mf.id === activeMoveframeId);
+      const newIndex = moveframes.findIndex((mf: any) => mf.id === overMoveframeId);
+      
+      if (oldIndex === -1 || newIndex === -1) return;
+      
+      // Reorder array
+      const newOrder = [...moveframes];
+      const [movedItem] = newOrder.splice(oldIndex, 1);
+      newOrder.splice(newIndex, 0, movedItem);
+      
+      // Reassign letters alphabetically
+      const updatedOrder = newOrder.map((mf, index) => ({
+        id: mf.id,
+        letter: String.fromCharCode(65 + index) // A, B, C, D...
+      }));
+      
+      // Call reorder API
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found');
+      
+      const response = await fetch('/api/workouts/moveframes/reorder', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ moveframes: updatedOrder })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to reorder moveframes');
+      }
+      
+      console.log('✅ Moveframes reordered successfully');
+      showMessage('success', 'Moveframes reordered successfully');
+      await loadWorkoutData(activeSection);
+    } catch (error) {
+      console.error('Error reordering moveframes:', error);
+      showMessage('error', error instanceof Error ? error.message : 'Failed to reorder moveframes');
+    }
+  };
+
+  // Handle same-day workout reordering  
+  const handleSameDayWorkoutReorder = async (activeWorkoutId: any, overWorkoutId: any, day: any) => {
+    try {
+      const workouts = day.workouts || [];
+      const oldIndex = workouts.findIndex((w: any) => w.id === activeWorkoutId.replace('workout-', ''));
+      const newIndex = workouts.findIndex((w: any) => w.id === overWorkoutId.replace('workout-', ''));
+      
+      if (oldIndex === -1 || newIndex === -1) return;
+      
+      // Reorder array
+      const newOrder = [...workouts];
+      const [movedItem] = newOrder.splice(oldIndex, 1);
+      newOrder.splice(newIndex, 0, movedItem);
+      
+      // Reassign session numbers
+      const updatedOrder = newOrder.map((w, index) => ({
+        id: w.id,
+        sessionNumber: index + 1 // 1, 2, 3
+      }));
+      
+      // Call reorder API
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('No authentication token found');
+      
+      const response = await fetch('/api/workouts/sessions/reorder', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ workouts: updatedOrder })
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to reorder workouts');
+      }
+      
+      console.log('✅ Workouts reordered successfully');
+      showMessage('success', 'Workouts reordered successfully');
+      await loadWorkoutData(activeSection);
+    } catch (error) {
+      console.error('Error reordering workouts:', error);
+      showMessage('error', error instanceof Error ? error.message : 'Failed to reorder workouts');
+    }
   };
 
   const handleDragConfirm = async (action: DragAction, position?: DropPosition) => {
@@ -473,8 +659,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       
       console.log('✅ Workout copied:', workout.id, '→', targetDay.id);
     } else if (action === 'move') {
-      // Move workout
-      const response = await fetch('/api/workouts/sessions/move', {
+      // Move workout to different day
+      const response = await fetch('/api/workouts/sessions/move-to-day', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -492,6 +678,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       }
       
       console.log('✅ Workout moved:', workout.id, '→', targetDay.id);
+      await loadWorkoutData(activeSection); // Reload to show changes
     } else if (action === 'switch' && existingWorkout) {
       // Switch workouts
       const response = await fetch('/api/workouts/sessions/switch', {
@@ -584,8 +771,16 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       
       console.log('✅ Moveframe copied:', moveframe.id, '→', targetWorkoutId);
     } else if (action === 'move') {
-      // Move moveframe
-      const response = await fetch('/api/workouts/moveframes/move', {
+      // Move moveframe to different workout
+      // Check if same workout or different
+      if (sourceWorkout.id === targetWorkoutId) {
+        // Same workout - this shouldn't happen as we handle it separately
+        console.warn('Same workout move detected in modal handler - should be handled earlier');
+        return;
+      }
+      
+      // Cross-workout move - use move-to-workout API
+      const response = await fetch('/api/workouts/moveframes/move-to-workout', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -594,8 +789,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         body: JSON.stringify({
           moveframeId: moveframe.id,
           targetWorkoutId,
-          position: finalPosition,
-          insertBeforeId
+          targetIndex: position === 'before' ? 0 : undefined
         })
       });
       
@@ -605,6 +799,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       }
       
       console.log('✅ Moveframe moved:', moveframe.id, '→', targetWorkoutId);
+      await loadWorkoutData(activeSection); // Reload to show changes
     }
   };
 
@@ -616,6 +811,19 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       onDragEnd={handleDragEnd}
     >
       <div className="flex flex-col h-full bg-white">
+      {/* Feedback Message */}
+      {feedbackMessage && (
+        <div 
+          className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium transition-all ${
+            feedbackMessage.type === 'success' ? 'bg-green-500' :
+            feedbackMessage.type === 'error' ? 'bg-red-500' :
+            feedbackMessage.type === 'warning' ? 'bg-yellow-500' :
+            'bg-blue-500'
+          }`}
+        >
+          {feedbackMessage.text}
+        </div>
+      )}
       {/* Small header bar with close button */}
       {/* Header Component */}
       {/* Check if we can add a day (Section A: only if a week has < 7 days) */}
@@ -639,6 +847,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             userType={userType ?? undefined}
             selectedAthlete={selectedAthlete}
             canAddDay={canAddDay}
+            weeksPerPage={weeksPerPage}
+            currentPageStart={currentPageStart}
+            totalWeeks={workoutPlan?.weeks?.length || 0}
             onSectionChange={setActiveSection}
         onViewModeChange={(mode) => {
           setViewMode(mode);
@@ -655,6 +866,17 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         }}
             onAddDay={() => modalActions.openAddDayModal()}
             onClose={onClose}
+        onWeeksPerPageChange={(weeks: number) => {
+          setWeeksPerPage(weeks);
+          setCurrentPageStart(1); // Reset to first page when changing grouping
+        }}
+        onPrevPage={() => {
+          setCurrentPageStart(Math.max(1, currentPageStart - weeksPerPage));
+        }}
+        onNextPage={() => {
+          const totalWeeks = workoutPlan?.weeks?.length || 0;
+          setCurrentPageStart(Math.min(totalWeeks, currentPageStart + weeksPerPage));
+        }}
           />
         );
       })()}
@@ -669,6 +891,32 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               <div className="flex items-center justify-center h-96">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
+            ) : viewMode === 'tree' ? (
+              <WorkoutTreeView
+                workoutPlan={
+                  // Apply pagination filter for Section B
+                  activeSection === 'B' && workoutPlan
+                    ? {
+                        ...workoutPlan,
+                        weeks: workoutPlan.weeks?.filter((week: any) => {
+                          const weekNum = week.weekNumber;
+                          return weekNum >= currentPageStart && weekNum < currentPageStart + weeksPerPage;
+                        }) || []
+                      }
+                    : workoutPlan
+                }
+                activeSection={activeSection}
+                onWeekClick={(weekNumber) => {
+                  setSelectedWeekForTable(weekNumber);
+                  setViewMode('table');
+                }}
+                onDayClick={(day) => {
+                  setSelectedDay(day.id);
+                  setAddWorkoutDay(day);
+                  setSelectedWeekForTable(day.weekNumber);
+                  setViewMode('table'); // Switch to table view
+                }}
+              />
             ) : viewMode === 'calendar' ? (
               <WorkoutCalendarView
                 workoutPlan={workoutPlan}
@@ -715,13 +963,23 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                            return weekNum >= selectedWeekForTable - 1 && weekNum <= selectedWeekForTable + 1;
                          }) || []
                        }
+                     : activeSection === 'B' && workoutPlan
+                     ? {
+                         ...workoutPlan,
+                         weeks: workoutPlan.weeks?.filter((week: any) => {
+                           const weekNum = week.weekNumber;
+                           return weekNum >= currentPageStart && weekNum < currentPageStart + weeksPerPage;
+                         }) || []
+                       }
                      : workoutPlan
                  }
                  activeSection={activeSection}
                  expandedDays={expandedDays}
                  expandedWorkouts={expandedWorkouts}
+                 expandedMoveframeId={autoExpandMoveframeId}
                  onToggleDay={toggleDayExpansion}
                  onToggleWorkout={toggleWorkoutExpansion}
+                 onExpandOnlyThisWorkout={handleExpandOnlyThisWorkout}
                  onExpandDayWithAllWorkouts={expandDayWithAllWorkouts}
                  onEditDay={(day) => {
                    setEditingDay(day);
@@ -771,6 +1029,21 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                      showMessage('error', error.message || 'Failed to paste day');
                    }
                  }}
+                 onShareDay={(day) => {
+                   // TODO: Implement share functionality
+                   showMessage('info', 'Share functionality coming soon!');
+                   console.log('Share day:', day);
+                 }}
+                 onExportPdfDay={(day) => {
+                   // TODO: Implement PDF export functionality
+                   showMessage('info', 'PDF export functionality coming soon!');
+                   console.log('Export PDF for day:', day);
+                 }}
+                 onPrintDay={(day) => {
+                   // TODO: Implement print functionality
+                   showMessage('info', 'Print functionality coming soon!');
+                   console.log('Print day:', day);
+                 }}
                 onEditWorkout={(workout, day) => {
                   setEditingWorkout(workout);
                   setAddWorkoutDay(day);
@@ -812,6 +1085,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   setActiveWorkout(workout);
                   setActiveMoveframe(moveframe);
                   setActiveMovelap(movelap);
+                  setMovelapInsertIndex(null); // Clear insert index for edit mode
                   modalActions.setMovelapModalMode('edit');
                   modalActions.setShowAddEditMovelapModal(true);
                 }}
@@ -820,6 +1094,16 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   setActiveWorkout(workout);
                   setActiveDay(day);
                   setEditingMovelap(null);
+                  setMovelapInsertIndex(null); // Clear insert index for regular add
+                  modalActions.setMovelapModalMode('add');
+                  modalActions.setShowAddEditMovelapModal(true);
+                }}
+                onAddMovelapAfter={(movelap, index, moveframe, workout, day) => {
+                  setActiveMoveframe(moveframe);
+                  setActiveWorkout(workout);
+                  setActiveDay(day);
+                  setEditingMovelap(null);
+                  setMovelapInsertIndex(index); // Store the position where to insert (after this index)
                   modalActions.setMovelapModalMode('add');
                   modalActions.setShowAddEditMovelapModal(true);
                 }}
@@ -845,28 +1129,67 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                      }
                    }
                  }}
-                 onDeleteWorkout={async (workout, day) => {
-                   if (confirm('Are you sure you want to delete this workout?')) {
-                     try {
-                       const token = localStorage.getItem('token');
-                       const response = await fetch(`/api/workouts/sessions/${workout.id}`, {
-                         method: 'DELETE',
-                         headers: { 'Authorization': `Bearer ${token}` }
-                       });
-                       
-                       if (response.ok) {
-                         showMessage('success', 'Workout deleted successfully');
-                         // Refresh workout data to remove deleted workout from view
-                         await loadWorkoutData(activeSection);
-                       } else {
-                         showMessage('error', 'Failed to delete workout');
-                       }
-                     } catch (error) {
-                       console.error('Error deleting workout:', error);
-                       showMessage('error', 'Error deleting workout');
-                     }
-                   }
-                 }}
+                onDeleteWorkout={async (workout, day) => {
+                  if (confirm('Are you sure you want to delete this workout?')) {
+                    try {
+                      const token = localStorage.getItem('token');
+                      const response = await fetch(`/api/workouts/sessions/${workout.id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                      });
+                      
+                      if (response.ok) {
+                        showMessage('success', 'Workout deleted successfully');
+                        // Refresh workout data to remove deleted workout from view
+                        await loadWorkoutData(activeSection);
+                      } else {
+                        showMessage('error', 'Failed to delete workout');
+                      }
+                    } catch (error) {
+                      console.error('Error deleting workout:', error);
+                      showMessage('error', 'Error deleting workout');
+                    }
+                  }
+                }}
+                onSaveFavoriteWorkout={async (workout, day) => {
+                  try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch('/api/workouts/favorites', {
+                      method: 'POST',
+                      headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                      },
+                      body: JSON.stringify({ workoutId: workout.id })
+                    });
+                    
+                    if (response.ok) {
+                      const data = await response.json();
+                      showMessage('success', `"${workout.name}" saved to favorites!`);
+                    } else {
+                      const error = await response.json();
+                      showMessage('error', error.error || 'Failed to save to favorites');
+                    }
+                  } catch (error) {
+                    console.error('Error saving workout to favorites:', error);
+                    showMessage('error', 'Error saving workout to favorites');
+                  }
+                }}
+                onShareWorkout={(workout, day) => {
+                  // TODO: Implement share functionality
+                  showMessage('info', 'Share workout functionality coming soon!');
+                  console.log('Share workout:', workout, day);
+                }}
+                onExportPdfWorkout={(workout, day) => {
+                  // TODO: Implement PDF export functionality
+                  showMessage('info', 'Export workout to PDF functionality coming soon!');
+                  console.log('Export workout PDF:', workout, day);
+                }}
+                onPrintWorkout={(workout, day) => {
+                  // TODO: Implement print functionality
+                  showMessage('info', 'Print workout functionality coming soon!');
+                  console.log('Print workout:', workout, day);
+                }}
                  onCopyMoveframe={(moveframe, workout, day) => {
                    setCopiedMoveframe(moveframe);
                    setActiveWorkout(workout);
@@ -884,6 +1207,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   modalActions.setShowColumnSettingsModal(true);
                 }}
                  columnSettings={columnSettings}
+                 reloadWorkouts={async () => {
+                   await loadWorkoutData(activeSection);
+                 }}
                  onDeleteMoveframe={async (moveframe, workout, day) => {
                    if (confirm(`Are you sure you want to delete moveframe ${moveframe.letter || moveframe.code}?`)) {
                      try {
@@ -943,6 +1269,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           existingWorkouts={addWorkoutDay.workouts || []}
           mode={workoutModalMode}
           existingWorkout={editingWorkout}
+          activeSection={activeSection === 'D' ? 'A' : activeSection as 'A' | 'B' | 'C'}
           onClose={() => {
             modalActions.closeAddWorkoutModal();
             setAddWorkoutDay(null);
@@ -1122,21 +1449,32 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 if (moveframeData.type !== 'ANNOTATION') {
                   const repsCount = parseInt(moveframeData.repetitions) || 1;
                   
+                  // Check if we're using individual planning mode
+                  const hasIndividualPlans = moveframeData.planningMode === 'individual' && 
+                                            moveframeData.individualPlans && 
+                                            moveframeData.individualPlans.length > 0;
+                  
                   for (let i = 0; i < repsCount; i++) {
+                    // If using individual plans, get values from the specific plan
+                    const plan = hasIndividualPlans ? moveframeData.individualPlans[i] : null;
+                    
                     movelaps.push({
                       repetitionNumber: i + 1,
                       distance: moveframeData.distance?.toString() || null,
-                      speed: moveframeData.speed || null,
+                      speed: plan?.speed || moveframeData.speed || null,
                       style: moveframeData.style || null,
                       pace: moveframeData.pace || null,
-                      time: moveframeData.time || null,
-                      reps: moveframeData.reps || null,
+                      time: plan?.time || moveframeData.time || null,
+                      reps: plan?.reps || moveframeData.reps || null,
+                      weight: plan?.weight || null, // For BODY_BUILDING
+                      tools: plan?.tools || null, // For tools-based sports
                       r1: moveframeData.r1 || null,
                       r2: moveframeData.r2 || null,
                       muscularSector: moveframeData.muscularSector || null,
                       exercise: moveframeData.exercise || null,
                       restType: null,
-                      pause: moveframeData.pause || null,
+                      pause: plan?.pause || moveframeData.pause || null,
+                      macroFinal: plan?.macroFinal || moveframeData.macroFinal || null, // Per-movelap macro
                       alarm: moveframeData.alarm || null,
                       sound: moveframeData.sound || null,
                       notes: moveframeData.notes || null,
@@ -1678,6 +2016,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             modalActions.setShowAddEditMovelapModal(false);
             setEditingMovelap(null);
             setActiveMoveframe(null);
+            setMovelapInsertIndex(null); // Clear insert index on close
           }}
           onSave={async (movelapData) => {
             try {
@@ -1708,6 +2047,70 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   },
                   body: JSON.stringify(movelapData)
                 });
+
+                // Always reorder based on sequence number or insert index
+                if (response.ok) {
+                  const newMovelap = await response.json();
+                  
+                  // Fetch fresh moveframe data with all movelaps
+                  const moveframeResponse = await fetch(`/api/workouts/moveframes/${activeMoveframe.id}`, {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  });
+
+                  if (moveframeResponse.ok) {
+                    const freshMoveframe = await moveframeResponse.json();
+                    const allMovelaps = [...freshMoveframe.movelaps];
+                    
+                    // Find the newly created movelap (it will be at the end)
+                    const newMovelapIndex = allMovelaps.findIndex((ml: any) => ml.id === newMovelap.id);
+                    
+                    if (newMovelapIndex !== -1) {
+                      // Remove the new movelap from its current position
+                      const [movedMovelap] = allMovelaps.splice(newMovelapIndex, 1);
+                      
+                      // Determine insertion position
+                      let insertPosition;
+                      if (movelapInsertIndex !== null) {
+                        // Insert after the specified index (for "Add movelap after" button)
+                        insertPosition = movelapInsertIndex + 1;
+                      } else {
+                        // Use sequence number from modal (insert AT that position, pushing others down)
+                        insertPosition = (movelapData.repetitionNumber || 1) - 1;
+                        if (insertPosition < 0) insertPosition = 0;
+                        if (insertPosition > allMovelaps.length) insertPosition = allMovelaps.length;
+                      }
+                      
+                      // Insert at the specified position
+                      allMovelaps.splice(insertPosition, 0, movedMovelap);
+                      
+                      // Update repetitionNumbers for all movelaps and mark the new one
+                      const reorderData = allMovelaps.map((ml: any, idx: number) => ({
+                        id: ml.id,
+                        repetitionNumber: idx + 1,
+                        isNewlyAdded: ml.id === newMovelap.id // Mark newly added movelap
+                      }));
+                      
+                      // Call reorder API
+                      const reorderResponse = await fetch('/api/workouts/movelaps/reorder', {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ movelaps: reorderData })
+                      });
+                      
+                      if (!reorderResponse.ok) {
+                        console.error('Failed to reorder movelaps');
+                      }
+                    }
+                  }
+                  
+                  // Reset insert index
+                  setMovelapInsertIndex(null);
+                }
               }
 
               if (!response.ok) {
@@ -1716,12 +2119,31 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               }
 
               showMessage('success', modes.movelapModalMode === 'edit' ? 'Movelap updated successfully' : 'Movelap created successfully');
+              
+              // Store the IDs we need to keep expanded before clearing states
+              const dayIdToExpand = activeDay?.id;
+              const workoutIdToExpand = activeWorkout?.id;
+              const moveframeIdToExpand = activeMoveframe?.id;
+              
               modalActions.setShowAddEditMovelapModal(false);
               setEditingMovelap(null);
               setActiveMoveframe(null);
+              setMovelapInsertIndex(null);
               
               // Refresh workout data to show changes
               await loadWorkoutData(activeSection);
+              
+              // Keep the moveframe expanded after reload
+              if (dayIdToExpand && workoutIdToExpand && moveframeIdToExpand) {
+                setAutoExpandDayId(dayIdToExpand);
+                setAutoExpandWorkoutId(workoutIdToExpand);
+                setAutoExpandMoveframeId(moveframeIdToExpand);
+                setTimeout(() => {
+                  setAutoExpandDayId(null);
+                  setAutoExpandWorkoutId(null);
+                  setAutoExpandMoveframeId(null);
+                }, 500);
+              }
             } catch (error: any) {
               console.error('Error saving movelap:', error);
               showMessage('error', error.message || 'Failed to save movelap');

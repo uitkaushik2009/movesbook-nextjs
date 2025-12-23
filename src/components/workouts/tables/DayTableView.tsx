@@ -2,9 +2,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, FileText, Flag } from 'lucide-react';
+// import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
 import DayRowTable from './DayRowTable';
 import WorkoutHierarchyView from './WorkoutHierarchyView';
 import WeeklyInfoModal from '../WeeklyInfoModal';
+import WeekTotalsModal from '../modals/WeekTotalsModal';
+import CopyWeekModal from '../modals/CopyWeekModal';
+import MoveWeekModal from '../modals/MoveWeekModal';
 import '../../../styles/sticky-table.css';
 
 interface DayTableViewProps {
@@ -12,22 +16,32 @@ interface DayTableViewProps {
   activeSection?: 'A' | 'B' | 'C' | 'D'; // Active section for conditional display
   expandedDays?: Set<string>;
   expandedWorkouts?: Set<string>;
+  expandedMoveframeId?: string | null;
   onToggleDay?: (dayId: string) => void;
   onToggleWorkout?: (workoutId: string) => void;
+  onExpandOnlyThisWorkout?: (workout: any, day: any) => void;
   onExpandDayWithAllWorkouts?: (dayId: string, workouts: any[]) => void;
   onEditDay?: (day: any) => void;
   onAddWorkout?: (day: any) => void;
   onCopyDay?: (day: any) => void;
   onMoveDay?: (day: any) => void;
   onPasteDay?: (day: any) => void;
+  onShareDay?: (day: any) => void;
+  onExportPdfDay?: (day: any) => void;
+  onPrintDay?: (day: any) => void;
   onEditWorkout?: (workout: any, day: any) => void;
   onEditMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onEditMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
   onAddMoveframe?: (workout: any, day: any) => void;
   onAddMoveframeAfter?: (moveframe: any, index: number, workout: any, day: any) => void;
   onAddMovelap?: (moveframe: any, workout: any, day: any) => void;
+  onAddMovelapAfter?: (movelap: any, index: number, moveframe: any, workout: any, day: any) => void;
   onDeleteDay?: (day: any) => void;
   onDeleteWorkout?: (workout: any, day: any) => void;
+  onSaveFavoriteWorkout?: (workout: any, day: any) => void;
+  onShareWorkout?: (workout: any, day: any) => void;
+  onExportPdfWorkout?: (workout: any, day: any) => void;
+  onPrintWorkout?: (workout: any, day: any) => void;
   onDeleteMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
   onCopyWorkout?: (workout: any, day: any) => void;
@@ -36,6 +50,7 @@ interface DayTableViewProps {
   onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onOpenColumnSettings?: (tableType: 'day' | 'workout' | 'moveframe' | 'movelap') => void;
   columnSettings?: any;
+  reloadWorkouts?: () => Promise<void>; // Added for reloading after copy/move
 }
 
 export default function DayTableView({
@@ -43,22 +58,33 @@ export default function DayTableView({
   activeSection = 'A',
   expandedDays,
   expandedWorkouts,
+  expandedMoveframeId,
   onToggleDay,
   onToggleWorkout,
+  onExpandOnlyThisWorkout,
   onExpandDayWithAllWorkouts,
   onEditDay,
   onAddWorkout,
   onCopyDay,
   onMoveDay,
   onPasteDay,
+  onShareDay,
+  onExportPdfDay,
+  onPrintDay,
   onEditWorkout,
   onEditMoveframe,
   onEditMovelap,
   onAddMoveframe,
   onAddMoveframeAfter,
   onAddMovelap,
+  onAddMovelapAfter,
+  reloadWorkouts,
   onDeleteDay,
   onDeleteWorkout,
+  onSaveFavoriteWorkout,
+  onShareWorkout,
+  onExportPdfWorkout,
+  onPrintWorkout,
   onDeleteMoveframe,
   onDeleteMovelap,
   onCopyWorkout,
@@ -75,6 +101,10 @@ export default function DayTableView({
   const [periods, setPeriods] = useState<any[]>([]);
   const [showPeriodSelector, setShowPeriodSelector] = useState(false);
   const [areWeekWorkoutsExpanded, setAreWeekWorkoutsExpanded] = useState(false);
+  const [showWeekTotalsModal, setShowWeekTotalsModal] = useState(false);
+  const [showCopyWeekModal, setShowCopyWeekModal] = useState(false);
+  const [showMoveWeekModal, setShowMoveWeekModal] = useState(false);
+  const [autoPrintWeek, setAutoPrintWeek] = useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const scrollbarRef = useRef<HTMLDivElement>(null);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
@@ -96,7 +126,7 @@ export default function DayTableView({
         
         if (response.ok) {
           const data = await response.json();
-          setPeriods(data);
+          setPeriods(data.periods || []); // Extract periods array from response
         }
       } catch (error) {
         console.error('Error loading periods:', error);
@@ -168,30 +198,31 @@ export default function DayTableView({
     noWorkouts: 50,
     colorCycle: 50,
     nameCycle: 90,
+    weekNumber: 60,     // NEW: Week n.
+    dayNumber: 50,      // NEW: Day wk
     dayname: 80,
     date: 80,
     matchDone: 60,
     workouts: 80,
-    sportIco: 40,
-    sport: 80,
-    sportName: 90,
-    distance: 70,
-    duration: 70,
-    k: 40,
+    icoSport: 100,      // "Ico Sport" column
+    distTime: 100,      // "Dist & Time" column
+    mainWork: 200,      // "Main work" column
     options: 250
   };
   
   // Calculate minimum table width dynamically based on column widths
-  // 7 sticky columns + 4 sport sections (6 cols each) + 1 options column
+  // 9 sticky columns + 4 sport sections (3 cols each) + 1 options column
   const TABLE_MIN_WIDTH = 
     COL_WIDTHS.noWorkouts + 
     COL_WIDTHS.colorCycle + 
     COL_WIDTHS.nameCycle + 
+    COL_WIDTHS.weekNumber + 
+    COL_WIDTHS.dayNumber + 
     COL_WIDTHS.dayname + 
     COL_WIDTHS.date + 
     COL_WIDTHS.matchDone + 
     COL_WIDTHS.workouts + 
-    (COL_WIDTHS.sportIco + COL_WIDTHS.sport + COL_WIDTHS.sportName + COL_WIDTHS.distance + COL_WIDTHS.duration + COL_WIDTHS.k) * 4 + // 4 sport sections
+    (COL_WIDTHS.icoSport + COL_WIDTHS.distTime + COL_WIDTHS.mainWork) * 4 + // 4 sport sections (3 cols each)
     COL_WIDTHS.options;
   
   // Synchronize scrollbars and position
@@ -316,7 +347,7 @@ export default function DayTableView({
       });
       
       // Then close all days
-      allDayIds.forEach(dayId => {
+      allDayIds.forEach((dayId: string) => {
         if (expandedDaysSet.has(dayId) && onToggleDay) {
           onToggleDay(dayId);
         }
@@ -328,7 +359,7 @@ export default function DayTableView({
       console.log('📖 Expanding all workouts for week', currentWeek.weekNumber);
       
       // First open all days
-      allDayIds.forEach(dayId => {
+      allDayIds.forEach((dayId: string) => {
         if (!expandedDaysSet.has(dayId) && onToggleDay) {
           onToggleDay(dayId);
         }
@@ -391,24 +422,103 @@ export default function DayTableView({
   };
 
   const handleShowDayInfo = (day: any) => {
-    // Toggle day info: if already open for this day, close it; otherwise, open it
     setDayInfoOpenForDay(prev => prev === day.id ? null : day.id);
+  };
+
+  const handleCopyWeek = async (targetWeekId: string) => {
+    const sourceWeekId = currentWeek?.id;
+    if (!sourceWeekId) {
+      console.error('❌ No source week ID available');
+      return;
+    }
+
+    console.log('📋 Copying week:', { sourceWeekId, targetWeekId });
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        return;
+      }
+
+      const response = await fetch('/api/workouts/weeks/copy', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sourceWeekId,
+          targetWeekId
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to copy week');
+      }
+
+      console.log('✅ Week copied successfully');
+      alert('Week copied successfully!');
+      
+      // Reload the workout plan
+      if (reloadWorkouts) {
+        await reloadWorkouts();
+      }
+    } catch (error) {
+      console.error('❌ Error copying week:', error);
+      alert(`Failed to copy week: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleMoveWeek = async (targetWeekId: string) => {
+    const sourceWeekId = currentWeek?.id;
+    if (!sourceWeekId) {
+      console.error('❌ No source week ID available');
+      return;
+    }
+
+    console.log('🚚 Moving week:', { sourceWeekId, targetWeekId });
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Authentication required. Please log in again.');
+        return;
+      }
+
+      const response = await fetch('/api/workouts/weeks/move', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sourceWeekId,
+          targetWeekId
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to move week');
+      }
+
+      console.log('✅ Week moved successfully');
+      alert('Week moved successfully!');
+      
+      // Reload the workout plan
+      if (reloadWorkouts) {
+        await reloadWorkouts();
+      }
+    } catch (error) {
+      console.error('❌ Error moving week:', error);
+      alert(`Failed to move week: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const currentWeekId = currentWeek?.id || '';
   const currentWeekData = weeklyNotes[currentWeekId] || { periodId: '', notes: '' };
-  
-  // Debug logging
-  useEffect(() => {
-    console.log('📝 Week notes state changed:', {
-      currentWeekId,
-      hasData: !!currentWeekData.notes,
-      notesLength: currentWeekData.notes?.length || 0,
-      notesPreview: currentWeekData.notes?.substring(0, 100)
-    });
-  }, [weeklyNotes, currentWeekId]);
-  
-  console.log('📝 Current week notes:', { currentWeekId, hasNotes: !!currentWeekData.notes });
 
   return (
     <>
@@ -474,9 +584,9 @@ export default function DayTableView({
         }
       `}</style>
       
-      <div className="p-4 bg-gray-100" style={{ paddingBottom: '30px' }}>
-        {/* Week Navigation - Always show */}
-        <div className="mb-4 bg-white rounded-lg shadow-md p-4">
+      <div className="bg-gray-100 relative" style={{ minHeight: '100vh', paddingTop: '0' }}>
+        {/* Week Navigation - Sticky Header */}
+        <div className="sticky top-0 z-50 bg-white shadow-lg p-4 border-b-2 border-gray-300">
           <div className="flex items-center justify-between">
             {/* Left side buttons */}
             <div className="flex items-center gap-2">
@@ -550,15 +660,61 @@ export default function DayTableView({
                 )}
               </div>
               
-              {/* Edit Weekly Info Button - Right side of information */}
-                <button
-                  onClick={() => setIsWeeklyInfoModalOpen(true)}
+              {/* Edit Weekly Info Button */}
+              <button
+                onClick={() => setIsWeeklyInfoModalOpen(true)}
                 className="flex items-center gap-1 px-4 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex-shrink-0"
                 title="Edit Weekly Information"
-                >
+              >
                 <FileText size={16} />
-                Edit Weekly Info
-                </button>
+                Edit
+              </button>
+              
+              {/* Copy Week Button */}
+              <button
+                onClick={() => setShowCopyWeekModal(true)}
+                className="flex items-center gap-1 px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex-shrink-0"
+                title="Copy this week"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                Copy
+              </button>
+              
+              {/* Move Week Button */}
+              <button
+                onClick={() => setShowMoveWeekModal(true)}
+                className="flex items-center gap-1 px-4 py-2 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors flex-shrink-0"
+                title="Move this week"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+                Move
+              </button>
+              
+              {/* Overview/Totals Button */}
+              <button
+                onClick={() => {
+                  setAutoPrintWeek(false);
+                  setShowWeekTotalsModal(true);
+                }}
+                className="flex items-center gap-1 px-4 py-2 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors flex-shrink-0"
+                title="View complete week overview with all workouts and totals"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                Overview
+              </button>
+              
+              {/* Print/PDF Button */}
+              <button
+                onClick={() => {
+                  setAutoPrintWeek(true);
+                  setShowWeekTotalsModal(true);
+                }}
+                className="flex items-center gap-1 px-4 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors flex-shrink-0"
+                title="Print week overview"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Print
+              </button>
             </div>
 
             {/* Next Week Button - Always visible */}
@@ -577,6 +733,44 @@ export default function DayTableView({
           </div>
         </div>
 
+        {/* Scrollable Content Area */}
+        <div className="p-4 pt-0">
+          {/* Grid Settings Buttons - NOT Sticky, just below week header */}
+          <div className="bg-gray-100 py-3 flex items-center justify-end gap-3">
+          <button
+            onClick={() => {
+              // TODO: Implement save grid settings
+              console.log('Save Grid Settings clicked');
+              alert('Grid settings saved! (Feature in development)');
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Save Grid Settings
+          </button>
+          <button
+            onClick={() => {
+              // TODO: Implement reset to default
+              console.log('Reset to Default clicked');
+              if (confirm('Are you sure you want to reset grid settings to default?')) {
+                alert('Grid settings reset to default! (Feature in development)');
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <polyline points="23 20 23 14 17 14"></polyline>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+            </svg>
+            Reset to Default
+          </button>
+        </div>
+
       {/* Days Table */}
       <div ref={tableWrapperRef} className="bg-white rounded-lg shadow-md relative mb-6">
         <div className="relative">
@@ -585,7 +779,7 @@ export default function DayTableView({
             className="overflow-x-auto overflow-y-visible table-scrollbar" 
           >
             <table className="text-sm" style={{ minWidth: `${TABLE_MIN_WIDTH}px`, width: '100%' }}>
-            <thead className="bg-blue-600 text-white sticky top-0 z-20 shadow-md">
+            <thead className="bg-blue-600 text-white">
              <tr>
                <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts }} rowSpan={2}>
                  Check
@@ -596,37 +790,43 @@ export default function DayTableView({
                <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-3" style={{ width: COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.nameCycle }} rowSpan={2}>
                  Name<br/>cycle
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-4" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname }} rowSpan={2}>
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-4" style={{ width: COL_WIDTHS.weekNumber, minWidth: COL_WIDTHS.weekNumber }} rowSpan={2}>
+                 Week<br/>n.
+               </th>
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber }} rowSpan={2}>
+                 Day<br/>wk
+               </th>
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname }} rowSpan={2}>
                  Dayname
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.date, minWidth: COL_WIDTHS.date }} rowSpan={2}>
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-7" style={{ width: COL_WIDTHS.date, minWidth: COL_WIDTHS.date }} rowSpan={2}>
                  Date
                </th>
-               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.matchDone, minWidth: COL_WIDTHS.matchDone }} rowSpan={2}>
+               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-8" style={{ width: COL_WIDTHS.matchDone, minWidth: COL_WIDTHS.matchDone }} rowSpan={2}>
                  Match<br/>done
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-7" style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts }} rowSpan={2}>
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-9" style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts }} rowSpan={2}>
                  Workouts
                </th>
               
-              {/* S1 */}
-              <th className="border border-gray-400 px-2 py-1 text-xs font-bold" colSpan={6}>
-                S1
+              {/* S1 - Blue */}
+              <th className="border border-gray-400 px-2 py-1 text-xs font-bold bg-blue-300 text-black" colSpan={3}>
+                S1 ico
               </th>
               
-              {/* S2 */}
-              <th className="border border-gray-400 px-2 py-1 text-xs font-bold" colSpan={6}>
-                S2
+              {/* S2 - Green */}
+              <th className="border border-gray-400 px-2 py-1 text-xs font-bold bg-green-300 text-black" colSpan={3}>
+                S2 ico
               </th>
               
-              {/* S3 */}
-              <th className="border border-gray-400 px-2 py-1 text-xs font-bold" colSpan={6}>
-                S3
+              {/* S3 - Orange */}
+              <th className="border border-gray-400 px-2 py-1 text-xs font-bold bg-orange-300 text-black" colSpan={3}>
+                S3 ico
               </th>
               
-              {/* S4 */}
-              <th className="border border-gray-400 px-2 py-1 text-xs font-bold" colSpan={6}>
-                S4
+              {/* S4 - Pink */}
+              <th className="border border-gray-400 px-2 py-1 text-xs font-bold bg-pink-300 text-black" colSpan={3}>
+                S4 ico
               </th>
               
               <th 
@@ -638,37 +838,25 @@ export default function DayTableView({
               </th>
             </tr>
             <tr>
-              {/* S1 sub-headers */}
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportIco, minWidth: COL_WIDTHS.sportIco }}>ico</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sport, minWidth: COL_WIDTHS.sport }}>Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportName, minWidth: COL_WIDTHS.sportName }}>name</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.distance, minWidth: COL_WIDTHS.distance }}>Distance</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.duration, minWidth: COL_WIDTHS.duration }}>Duration</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.k, minWidth: COL_WIDTHS.k }}>K</th>
+              {/* S1 sub-headers - Blue */}
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
               
-              {/* S2 sub-headers */}
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportIco, minWidth: COL_WIDTHS.sportIco }}>ico</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sport, minWidth: COL_WIDTHS.sport }}>Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportName, minWidth: COL_WIDTHS.sportName }}>name</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.distance, minWidth: COL_WIDTHS.distance }}>Distance</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.duration, minWidth: COL_WIDTHS.duration }}>Duration</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.k, minWidth: COL_WIDTHS.k }}>K</th>
+              {/* S2 sub-headers - Green */}
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
               
-              {/* S3 sub-headers */}
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportIco, minWidth: COL_WIDTHS.sportIco }}>ico</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sport, minWidth: COL_WIDTHS.sport }}>Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportName, minWidth: COL_WIDTHS.sportName }}>name</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.distance, minWidth: COL_WIDTHS.distance }}>Distance</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.duration, minWidth: COL_WIDTHS.duration }}>Duration</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.k, minWidth: COL_WIDTHS.k }}>K</th>
+              {/* S3 sub-headers - Orange */}
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
               
-              {/* S4 sub-headers */}
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportIco, minWidth: COL_WIDTHS.sportIco }}>ico</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sport, minWidth: COL_WIDTHS.sport }}>Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.sportName, minWidth: COL_WIDTHS.sportName }}>name</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.distance, minWidth: COL_WIDTHS.distance }}>Distance</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.duration, minWidth: COL_WIDTHS.duration }}>Duration</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold" style={{ width: COL_WIDTHS.k, minWidth: COL_WIDTHS.k }}>K</th>
+              {/* S4 sub-headers - Pink */}
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
             </tr>
           </thead>
           <tbody>
@@ -681,6 +869,7 @@ export default function DayTableView({
                   isExpanded={expandedDaysSet.has(day.id)}
                   onToggleDay={onToggleDay!}
                   onToggleWorkout={onToggleWorkout}
+                  onExpandOnlyThisWorkout={onExpandOnlyThisWorkout}
                   onExpandDayWithAllWorkouts={onExpandDayWithAllWorkouts}
                   onEditDay={onEditDay}
                   onAddWorkout={onAddWorkout}
@@ -688,6 +877,9 @@ export default function DayTableView({
                   onCopyDay={onCopyDay}
                   onMoveDay={onMoveDay}
                   onPasteDay={onPasteDay}
+                  onShareDay={onShareDay}
+                  onExportPdfDay={onExportPdfDay}
+                  onPrintDay={onPrintDay}
                   onDeleteDay={onDeleteDay}
                 />
                 
@@ -699,38 +891,11 @@ export default function DayTableView({
                         <div className="mb-2 text-sm font-semibold text-gray-700">
                           Workouts for {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                         </div>
-                        {day.workouts && day.workouts.length > 0 ? (
-                          <WorkoutHierarchyView
-                            day={{ ...day, weekNumber: currentWeek?.weekNumber }}
-                            expandedWorkouts={expandedWorkoutsSet}
-                            onToggleWorkout={onToggleWorkout!}
-                            onAddWorkout={onAddWorkout}
-                            onEditWorkout={onEditWorkout}
-                            onEditMoveframe={onEditMoveframe}
-                            onEditMovelap={onEditMovelap}
-                            onAddMoveframe={onAddMoveframe}
-                            onAddMoveframeAfter={onAddMoveframeAfter}
-                            onAddMovelap={onAddMovelap}
-                            onDeleteWorkout={onDeleteWorkout}
-                            onDeleteMoveframe={onDeleteMoveframe}
-                            onDeleteMovelap={onDeleteMovelap}
-                            onCopyWorkout={onCopyWorkout}
-                            onMoveWorkout={onMoveWorkout}
-                            onCopyMoveframe={onCopyMoveframe}
-                            onMoveMoveframe={onMoveMoveframe}
-                            onOpenColumnSettings={onOpenColumnSettings}
-                            columnSettings={columnSettings}
-                          />
-                        ) : (
-                          <div className="text-center py-4 text-gray-500 text-xs">
-                            No workouts scheduled for this day
-                          </div>
-                        )}
                         
-                        {/* Day Info Panel - Shows below workouts when toggled */}
+                        {/* Day Info Panel - Shows immediately after day header when toggled */}
                         {dayInfoOpenForDay === day.id && (
-                          <div className="mt-4 border-t-2 border-cyan-400 pt-4">
-                            <div className="bg-white rounded-lg shadow-md p-4">
+                          <div className="mb-4 border-l-4 border-cyan-500">
+                            <div className="bg-cyan-50 rounded-lg shadow-sm p-4">
                                <h3 className="text-base font-bold text-cyan-700 mb-3 flex items-center gap-2">
                                  <span>ℹ️</span>
                                  <span>Day Information</span>
@@ -753,82 +918,89 @@ export default function DayTableView({
                                  <div>
                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Date</label>
                                    <div className="text-sm text-gray-800">
-                                     {new Date(day.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                                   </div>
-                                 </div>
-                                 
-                                 <div>
-                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Period Name</label>
-                                   <div className="flex items-center gap-2">
-                                     <div
-                                       className="w-4 h-4 rounded-full border border-gray-400 flex-shrink-0"
-                                       style={{ backgroundColor: day.period?.color || '#9CA3AF' }}
-                                     />
-                                     <span className="text-sm text-gray-800">{day.period?.name || 'No Period'}</span>
+                                     {new Date(day.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                                    </div>
                                  </div>
                                  
                                  <div>
                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Number of Workouts</label>
+                                   <div className="text-sm text-gray-800">{day.workouts?.length || 0}</div>
+                                 </div>
+                                 
+                                 <div>
+                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Period</label>
                                    <div className="text-sm text-gray-800">
-                                     {day.workouts?.length || 0} / 3 
-                                     <span className="text-xs text-gray-500 ml-2">(max 3 workouts per day)</span>
+                                     {day.period ? (
+                                       <div className="flex items-center gap-2">
+                                         <div 
+                                           className="w-4 h-4 rounded" 
+                                           style={{ backgroundColor: day.period.color }}
+                                         />
+                                         <span>{day.period.name}</span>
+                                       </div>
+                                     ) : '—'}
                                    </div>
                                  </div>
                                  
-                                 {/* Weather and Feeling Status - Only show in section C */}
-                                 {activeSection === 'C' && (
-                                   <>
-                                     <div>
-                                       <label className="block text-xs font-semibold text-gray-600 mb-1">Weather</label>
-                                       <div className="text-sm text-gray-800">{day.weather || '—'}</div>
-                                     </div>
-                                     <div>
-                                       <label className="block text-xs font-semibold text-gray-600 mb-1">Feeling Status</label>
-                                       <div className="text-sm text-gray-800">{day.feelingStatus || '—'}</div>
-                                     </div>
-                                   </>
-                                 )}
+                                 <div>
+                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
+                                   <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                                     {day.notes || 'No notes'}
+                                   </div>
+                                 </div>
                                </div>
-                              
-                              {/* Notes/Description - Full width with blue highlight on left */}
-                              {day.notes && (
-                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                  <div className="flex gap-3">
-                                    <div className="w-1 bg-blue-500 rounded-full flex-shrink-0"></div>
-                                    <div className="flex-1">
-                                      <label className="block text-xs font-semibold text-blue-600 mb-2">Description / Notes</label>
-                                      <div className="text-sm text-gray-800 leading-relaxed">{day.notes}</div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                              
-                              {/* Workout Summary */}
-                              {day.workouts && day.workouts.length > 0 && (
-                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Workouts Summary</h4>
-                                  <div className="space-y-2">
-                                    {day.workouts.map((workout: any, idx: number) => (
-                                      <div key={workout.id} className="text-xs bg-gray-50 p-2 rounded flex items-center gap-2">
-                                        <span className="font-bold text-blue-600">#{idx + 1}</span>
-                                        <span>{workout.name || `Workout ${idx + 1}`}</span>
-                                        <span className="text-gray-500">
-                                          ({workout.moveframes?.length || 0} moveframe{workout.moveframes?.length !== 1 ? 's' : ''})
-                                        </span>
-                                        {workout.moveframes && workout.moveframes.slice(0, 4).map((mf: any, mfIdx: number) => (
-                                          <span key={mfIdx} className="text-base" title={mf.sport}>
-                                            {mf.sport === 'SWIM' ? '🏊' : mf.sport === 'BIKE' ? '🚴' : mf.sport === 'RUN' ? '🏃' : '🏋️'}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
                             </div>
                           </div>
                         )}
+                        
+                        {day.workouts && day.workouts.length > 0 ? (
+                          <WorkoutHierarchyView
+                            day={{ ...day, weekNumber: currentWeek?.weekNumber }}
+                            expandedWorkouts={expandedWorkoutsSet}
+                            expandedMoveframeId={expandedMoveframeId}
+                            onToggleWorkout={onToggleWorkout!}
+                            onExpandOnlyThisWorkout={onExpandOnlyThisWorkout}
+                            onAddWorkout={onAddWorkout}
+                            onEditWorkout={onEditWorkout}
+                            onEditMoveframe={onEditMoveframe}
+                            onEditMovelap={onEditMovelap}
+                            onAddMoveframe={onAddMoveframe}
+                            onAddMoveframeAfter={onAddMoveframeAfter}
+                            onAddMovelap={onAddMovelap}
+                            onAddMovelapAfter={onAddMovelapAfter}
+                            onDeleteWorkout={onDeleteWorkout}
+                            onSaveFavoriteWorkout={onSaveFavoriteWorkout}
+                            onShareWorkout={onShareWorkout}
+                            onExportPdfWorkout={onExportPdfWorkout}
+                            onPrintWorkout={onPrintWorkout}
+                            onDeleteMoveframe={onDeleteMoveframe}
+                            onDeleteMovelap={onDeleteMovelap}
+                            onCopyWorkout={onCopyWorkout}
+                            onMoveWorkout={onMoveWorkout}
+                            onCopyMoveframe={onCopyMoveframe}
+                            onMoveMoveframe={onMoveMoveframe}
+                            onOpenColumnSettings={onOpenColumnSettings}
+                            reloadWorkouts={reloadWorkouts}
+                            columnSettings={columnSettings}
+                          />
+                        ) : (
+                          <div className="text-center py-4 text-gray-500 text-xs">
+                            No workouts scheduled for this day
+                          </div>
+                        )}
+                        
+                        {/* Add Workout Button - Always visible, centered */}
+                        <div className="flex justify-center mt-4 py-4" style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb' }}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onAddWorkout?.(day);
+                            }}
+                            className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-md shadow-md hover:shadow-lg transition-all duration-150"
+                          >
+                            Add a workout
+                          </button>
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -855,7 +1027,10 @@ export default function DayTableView({
         }}
         title="Horizontal scroll - Drag to navigate table"
       >
-        <div style={{ height: '1px', width: '100%' }}></div>
+        <div style={{ height: '1px', width: '100%' }}>        </div>
+      </div>
+        </div>
+        {/* End of Scrollable Content Area */}
       </div>
 
       {/* Weekly Info Modal */}
@@ -867,6 +1042,35 @@ export default function DayTableView({
         initialPeriodId={currentWeekData.periodId}
         initialNotes={currentWeekData.notes}
         onSave={handleSaveWeeklyNotes}
+      />
+
+      {/* Week Totals Modal */}
+      <WeekTotalsModal
+        isOpen={showWeekTotalsModal}
+        week={currentWeek}
+        autoPrint={autoPrintWeek}
+        onClose={() => {
+          setShowWeekTotalsModal(false);
+          setAutoPrintWeek(false);
+        }}
+      />
+
+      {/* Copy Week Modal */}
+      <CopyWeekModal
+        isOpen={showCopyWeekModal}
+        sourceWeek={currentWeek}
+        allWeeks={workoutPlan?.weeks || []}
+        onClose={() => setShowCopyWeekModal(false)}
+        onCopy={handleCopyWeek}
+      />
+
+      {/* Move Week Modal */}
+      <MoveWeekModal
+        isOpen={showMoveWeekModal}
+        sourceWeek={currentWeek}
+        allWeeks={workoutPlan?.weeks || []}
+        onClose={() => setShowMoveWeekModal(false)}
+        onMove={handleMoveWeek}
       />
 
       {/* Period Selector Modal */}
@@ -908,8 +1112,10 @@ export default function DayTableView({
 
                       if (response.ok) {
                         setShowPeriodSelector(false);
-                        // Reload the page to show updated data
-                        window.location.reload();
+                        // Reload workouts data without page refresh
+                        if (reloadWorkouts) {
+                          await reloadWorkouts();
+                        }
                       } else {
                         alert('Failed to update week period');
                       }
@@ -959,7 +1165,6 @@ export default function DayTableView({
           </div>
         </div>
       )}
-      </div>
     </>
   );
 }

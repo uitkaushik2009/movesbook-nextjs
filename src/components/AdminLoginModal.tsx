@@ -21,8 +21,17 @@ export default function AdminLoginModal({ isOpen, onClose, onSwitchToUserLogin }
     const [error, setError] = useState('');
     const router = useRouter();
 
-    // Clear form when modal closes
+    // Auto-cleanup old tokens when modal opens
     useEffect(() => {
+        if (isOpen) {
+            // Clear any old/invalid tokens automatically
+            console.log('🔧 Auto-cleaning authentication tokens...');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('adminUser');
+            localStorage.removeItem('adminToken');
+        }
+        
         if (!isOpen) {
             // Reset form data when modal is closed
             setFormData({

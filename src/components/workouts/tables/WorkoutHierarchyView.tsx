@@ -8,7 +8,9 @@ import MovelapTable from './MovelapTable';
 interface WorkoutHierarchyViewProps {
   day: any;
   expandedWorkouts?: Set<string>;
+  expandedMoveframeId?: string | null;
   onToggleWorkout?: (workoutId: string) => void;
+  onExpandOnlyThisWorkout?: (workout: any, day: any) => void;
   onAddWorkout?: (day: any) => void;
   onEditWorkout?: (workout: any, day: any) => void;
   onEditMoveframe?: (moveframe: any, workout: any, day: any) => void;
@@ -16,7 +18,12 @@ interface WorkoutHierarchyViewProps {
   onAddMoveframe?: (workout: any, day: any) => void;
   onAddMoveframeAfter?: (moveframe: any, index: number, workout: any, day: any) => void;
   onAddMovelap?: (moveframe: any, workout: any, day: any) => void;
+  onAddMovelapAfter?: (movelap: any, index: number, moveframe: any, workout: any, day: any) => void;
   onDeleteWorkout?: (workout: any, day: any) => void;
+  onSaveFavoriteWorkout?: (workout: any, day: any) => void;
+  onShareWorkout?: (workout: any, day: any) => void;
+  onExportPdfWorkout?: (workout: any, day: any) => void;
+  onPrintWorkout?: (workout: any, day: any) => void;
   onDeleteMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
   onCopyWorkout?: (workout: any, day: any) => void;
@@ -24,13 +31,16 @@ interface WorkoutHierarchyViewProps {
   onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onOpenColumnSettings?: (tableType: 'day' | 'workout' | 'moveframe' | 'movelap') => void;
+  reloadWorkouts?: () => Promise<void>;
   columnSettings?: any;
 }
 
 export default function WorkoutHierarchyView({
   day,
   expandedWorkouts,
+  expandedMoveframeId,
   onToggleWorkout,
+  onExpandOnlyThisWorkout,
   onAddWorkout,
   onEditWorkout,
   onEditMoveframe,
@@ -38,7 +48,12 @@ export default function WorkoutHierarchyView({
   onAddMoveframe,
   onAddMoveframeAfter,
   onAddMovelap,
+  onAddMovelapAfter,
   onDeleteWorkout,
+  onSaveFavoriteWorkout,
+  onShareWorkout,
+  onExportPdfWorkout,
+  onPrintWorkout,
   onDeleteMoveframe,
   onDeleteMovelap,
   onCopyWorkout,
@@ -46,6 +61,7 @@ export default function WorkoutHierarchyView({
   onCopyMoveframe,
   onMoveMoveframe,
   onOpenColumnSettings,
+  reloadWorkouts,
   columnSettings
 }: WorkoutHierarchyViewProps) {
   const [expandedMoveframes, setExpandedMoveframes] = useState<Set<string>>(new Set());
@@ -93,9 +109,15 @@ export default function WorkoutHierarchyView({
               weekNumber={day.weekNumber}
               periodName={day.period?.name}
               isExpanded={isWorkoutExpanded}
+              expandedMoveframeId={expandedMoveframeId}
               onToggleExpand={() => onToggleWorkout?.(workout.id)}
+              onExpandOnlyThis={(workout, day) => onExpandOnlyThisWorkout?.(workout, day)}
               onEdit={() => onEditWorkout?.(workout, day)}
               onDelete={() => onDeleteWorkout?.(workout, day)}
+              onSaveFavorite={() => onSaveFavoriteWorkout?.(workout, day)}
+              onShareWorkout={(workout, day) => onShareWorkout?.(workout, day)}
+              onExportPdfWorkout={(workout, day) => onExportPdfWorkout?.(workout, day)}
+              onPrintWorkout={(workout, day) => onPrintWorkout?.(workout, day)}
               onAddMoveframe={() => onAddMoveframe?.(workout, day)}
               onAddMoveframeAfter={(moveframe, index) => onAddMoveframeAfter?.(moveframe, index, workout, day)}
               onEditMoveframe={(moveframe) => onEditMoveframe?.(moveframe, workout, day)}
@@ -103,11 +125,13 @@ export default function WorkoutHierarchyView({
               onEditMovelap={(movelap, moveframe) => onEditMovelap?.(movelap, moveframe, workout, day)}
               onDeleteMovelap={(movelap, moveframe) => onDeleteMovelap?.(movelap, moveframe, workout, day)}
               onAddMovelap={(moveframe) => onAddMovelap?.(moveframe, workout, day)}
+              onAddMovelapAfter={(movelap, index, moveframe) => onAddMovelapAfter?.(movelap, index, moveframe, workout, day)}
               onCopyWorkout={() => onCopyWorkout?.(workout, day)}
               onMoveWorkout={() => onMoveWorkout?.(workout, day)}
               onCopyMoveframe={(moveframe) => onCopyMoveframe?.(moveframe, workout, day)}
               onMoveMoveframe={(moveframe) => onMoveMoveframe?.(moveframe, workout, day)}
               onOpenColumnSettings={onOpenColumnSettings}
+              onRefreshWorkouts={reloadWorkouts}
               columnSettings={columnSettings}
             />
           </div>

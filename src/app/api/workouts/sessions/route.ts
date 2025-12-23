@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,6 +60,20 @@ export async function POST(request: NextRequest) {
     if (sports.length > 4) {
       return NextResponse.json(
         { error: 'Maximum 4 sports allowed per workout' },
+        { status: 400 }
+      );
+    }
+
+    // Check existing workouts for this day
+    const existingWorkouts = await prisma.workoutSession.findMany({
+      where: { workoutDayId },
+      select: { id: true }
+    });
+
+    // Validate: max 3 workouts per day
+    if (existingWorkouts.length >= 3) {
+      return NextResponse.json(
+        { error: 'Cannot add workout: Maximum 3 workouts per day allowed' },
         { status: 400 }
       );
     }

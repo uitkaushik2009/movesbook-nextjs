@@ -139,11 +139,16 @@ export default function ColumnSettingsModal({
               Hide Optional
             </button>
             <button
-              onClick={handleReset}
-              className="flex items-center gap-2 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition-colors text-sm ml-auto"
+              onClick={() => {
+                // Clear localStorage and reset
+                localStorage.removeItem('workout_column_settings');
+                handleReset();
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg transition-colors text-sm ml-auto"
+              title="Clear all saved settings and reset to default"
             >
               <RotateCcw size={14} />
-              Reset to Default
+              Force Reset
             </button>
           </div>
         </div>

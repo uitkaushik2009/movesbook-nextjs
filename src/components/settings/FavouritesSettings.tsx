@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { Star, Plus, Edit2, Trash2, Calendar, Dumbbell, Target, Clock, Search, Filter, Copy, Eye, Download, Globe, Save } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { SPORTS_LIST } from '@/constants/moveframe.constants';
+import { getSportIcon } from '@/utils/sportIcons';
+import { useSportIconType } from '@/hooks/useSportIconType';
 import Image from 'next/image';
 
 interface WeeklyPlan {
@@ -45,7 +48,13 @@ interface Moveframe {
 
 export default function FavouritesSettings() {
   const { t, currentLanguage } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'plans' | 'workouts' | 'moveframes'>('plans');
+  const iconType = useSportIconType();
+  const [activeTab, setActiveTab] = useState<'plans' | 'workouts' | 'moveframes' | 'sports'>('sports');
+  
+  // Favorite Sports State
+  const [selectedSports, setSelectedSports] = useState<string[]>([]);
+  const [savingSports, setSavingSports] = useState(false);
+  const [showIconType, setShowIconType] = useState<'emoji' | 'icon'>('emoji'); // Toggle between emoji and icon display
   
   // Weekly Plans State
   const [weeklyPlans, setWeeklyPlans] = useState<WeeklyPlan[]>([]);
@@ -227,6 +236,121 @@ export default function FavouritesSettings() {
     }
   }, [moveframes]);
 
+  // Load favorite sports from API
+  useEffect(() => {
+    loadFavoriteSports();
+  }, []);
+
+  const loadFavoriteSports = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('🔒 No token for loading favorites');
+        return;
+      }
+
+      console.log('📥 Loading favorite sports...');
+      const response = await fetch('/api/user/favorite-sports', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Loaded favorites:', data.sports);
+        setSelectedSports(data.sports || []);
+      } else {
+        console.log('⚠️ No favorites found or error');
+        setSelectedSports([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading favorite sports:', error);
+      setSelectedSports([]);
+    }
+  };
+
+  const saveFavoriteSports = async () => {
+    if (selectedSports.length === 0) {
+      alert('⚠️ Please select at least one sport');
+      return;
+    }
+
+    if (selectedSports.length > 5) {
+      alert('⚠️ You can only select up to 5 favorite sports');
+      return;
+    }
+
+    setSavingSports(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login to save favorite sports');
+        setSavingSports(false);
+        return;
+      }
+
+      const response = await fetch('/api/user/favorite-sports', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ sports: selectedSports })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('✅ Server confirmed save:', data.saved);
+        alert(`✅ Favorite sports saved successfully!\n\nSaved: ${data.saved?.join(', ')}`);
+        // Reload the saved sports to confirm
+        await loadFavoriteSports();
+        console.log('🔄 Reloaded favorites after save');
+      } else {
+        console.error('❌ Save failed:', data);
+        alert(`Failed to save: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('❌ Error saving favorite sports:', error);
+      alert('Error saving favorite sports: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setSavingSports(false);
+    }
+  };
+
+  const toggleSport = (sport: string) => {
+    setSelectedSports(prev => {
+      if (prev.includes(sport)) {
+        return prev.filter(s => s !== sport);
+      } else {
+        if (prev.length >= 5) {
+          alert('⚠️ You can only select up to 5 favorite sports');
+          return prev;
+        }
+        return [...prev, sport];
+      }
+    });
+  };
+
+  const moveSportUp = (index: number) => {
+    if (index === 0) return;
+    setSelectedSports(prev => {
+      const newSports = [...prev];
+      [newSports[index - 1], newSports[index]] = [newSports[index], newSports[index - 1]];
+      return newSports;
+    });
+  };
+
+  const moveSportDown = (index: number) => {
+    if (index === selectedSports.length - 1) return;
+    setSelectedSports(prev => {
+      const newSports = [...prev];
+      [newSports[index], newSports[index + 1]] = [newSports[index + 1], newSports[index]];
+      return newSports;
+    });
+  };
+
   // Language-specific defaults handlers
   const saveLanguageDefaults = async () => {
     setShowPasswordDialog(true);
@@ -374,6 +498,17 @@ export default function FavouritesSettings() {
         >
           <Target className="w-4 h-4 inline mr-2" />
           Moveframes ({moveframes.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('sports')}
+          className={`px-6 py-3 font-semibold transition ${
+            activeTab === 'sports'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          <Star className="w-4 h-4 inline mr-2 fill-yellow-400 text-yellow-600" />
+          Favorite Sports ({selectedSports.length}/5)
         </button>
       </div>
 
@@ -793,6 +928,216 @@ export default function FavouritesSettings() {
                 ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Favorite Sports Tab */}
+      {activeTab === 'sports' && (
+        <div className="space-y-6">
+          {/* Instructions */}
+          <div className="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Star className="w-5 h-5 text-yellow-600 fill-yellow-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Select Your Favorite Sports</h3>
+                <p className="text-sm text-gray-700 mb-2">
+                  Choose up to 5 sports that you use most frequently. These will appear as quick-select icons when adding moveframes.
+                </p>
+                <p className="text-xs text-gray-600">
+                  💡 Tip: Drag and drop to reorder your favorites. The order will be preserved in the quick-select icons.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Selected Sports (Ordered) */}
+          {selectedSports.length > 0 && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                <Star className="w-4 h-4 text-yellow-600 fill-yellow-400" />
+                Your Favorite Sports ({selectedSports.length}/5)
+              </h4>
+              <div className="space-y-2">
+                {selectedSports.map((sport, index) => {
+                  const icon = getSportIcon(sport, showIconType);
+                  const isImage = icon.startsWith('/');
+                  
+                  return (
+                    <div
+                      key={sport}
+                      className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200 rounded-lg"
+                    >
+                      <span className="text-lg font-bold text-gray-500 w-6">#{index + 1}</span>
+                      
+                      {/* Sport Icon */}
+                      {isImage ? (
+                        <div className="w-12 h-12 flex items-center justify-center border border-gray-300 rounded bg-white flex-shrink-0">
+                          <Image 
+                            src={icon} 
+                            alt={sport}
+                            width={48}
+                            height={48}
+                            className="object-contain"
+                            style={{ width: '48px', height: '48px' }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-12 h-12 flex items-center justify-center text-3xl border border-gray-300 rounded bg-white flex-shrink-0">
+                          {icon}
+                        </div>
+                      )}
+                      
+                      {/* Sport Name */}
+                      <span className="flex-1 font-semibold text-gray-900">
+                        {sport.replace(/_/g, ' ')}
+                      </span>
+                      
+                      {/* Reorder Buttons */}
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => moveSportUp(index)}
+                          disabled={index === 0}
+                          className={`p-1.5 rounded ${
+                            index === 0
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-600 hover:bg-blue-100'
+                          }`}
+                          title="Move up"
+                        >
+                          ▲
+                        </button>
+                        <button
+                          onClick={() => moveSportDown(index)}
+                          disabled={index === selectedSports.length - 1}
+                          className={`p-1.5 rounded ${
+                            index === selectedSports.length - 1
+                              ? 'text-gray-300 cursor-not-allowed'
+                              : 'text-gray-600 hover:bg-blue-100'
+                          }`}
+                          title="Move down"
+                        >
+                          ▼
+                        </button>
+                        <button
+                          onClick={() => toggleSport(sport)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded ml-2"
+                          title="Remove"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Available Sports Grid */}
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="font-semibold text-gray-900">All Sports</h4>
+              
+              {/* Icon Type Toggle */}
+              <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setShowIconType('emoji')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                    showIconType === 'emoji'
+                      ? 'bg-white text-blue-600 shadow'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  😊 Emoji
+                </button>
+                <button
+                  onClick={() => setShowIconType('icon')}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                    showIconType === 'icon'
+                      ? 'bg-white text-blue-600 shadow'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  🖼️ Icon
+                </button>
+              </div>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Click on a sport to add it to your favorites. Toggle between emoji and icon display above.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {SPORTS_LIST.map((sport) => {
+                const isSelected = selectedSports.includes(sport);
+                // Use the showIconType instead of iconType from context
+                const icon = getSportIcon(sport, showIconType);
+                const isImage = icon.startsWith('/');
+                
+                return (
+                  <button
+                    key={sport}
+                    onClick={() => toggleSport(sport)}
+                    className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                        : 'border-gray-300 bg-white hover:border-yellow-400 hover:bg-yellow-50'
+                    }`}
+                    title={isSelected ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    {/* Icon */}
+                    {isImage ? (
+                      <div className="w-12 h-12 flex items-center justify-center mb-2 flex-shrink-0">
+                        <Image 
+                          src={icon} 
+                          alt={sport}
+                          width={48}
+                          height={48}
+                          className="object-contain"
+                          style={{ width: '48px', height: '48px' }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 flex items-center justify-center text-3xl mb-2 flex-shrink-0">
+                        {icon}
+                      </div>
+                    )}
+                    
+                    {/* Name */}
+                    <span className="text-xs font-medium text-gray-700 text-center leading-tight">
+                      {sport.replace(/_/g, ' ')}
+                    </span>
+                    
+                    {/* Selected Badge */}
+                    {isSelected && (
+                      <Star className="w-4 h-4 text-yellow-600 fill-yellow-400 mt-1" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setSelectedSports([])}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
+            >
+              Clear All
+            </button>
+            <button
+              onClick={saveFavoriteSports}
+              disabled={savingSports || selectedSports.length === 0}
+              className={`px-6 py-3 rounded-lg transition font-semibold flex items-center gap-2 ${
+                savingSports || selectedSports.length === 0
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              <Save className="w-4 h-4" />
+              {savingSports ? 'Saving...' : 'Save Favorite Sports'}
+            </button>
+          </div>
         </div>
       )}
 

@@ -30,7 +30,12 @@ import {
   CheckSquare,
   Save,
   Mail,
-  Filter
+  Filter,
+  Palette,
+  Star,
+  Trophy,
+  Grid,
+  Download
 } from 'lucide-react';
 import AdvertisementCarousel from '@/components/AdvertisementCarousel';
 import ModernNavbar from '@/components/ModernNavbar';
@@ -41,6 +46,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import WorkoutSection from '@/components/workouts/WorkoutSection';
+import BackgroundsColorsSettings from '@/components/settings/BackgroundsColorsSettings';
+import ToolsSettings from '@/components/settings/ToolsSettings';
+import FavouritesSettings from '@/components/settings/FavouritesSettings';
+import MyBestSettings from '@/components/settings/MyBestSettings';
+import GridDisplaySettings from '@/components/settings/GridDisplaySettings';
 
 export default function AthleteDashboard() {
   const router = useRouter();
@@ -48,7 +58,7 @@ export default function AthleteDashboard() {
   const { t } = useLanguage();
   
   // All hooks must be called before any conditional returns
-  const [activeSection, setActiveSection] = useState<'overview' | 'workouts' | 'progress' | 'settings'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'workouts' | 'progress' | 'settings' | 'personal-settings'>('overview');
   const [showAdBanner, setShowAdBanner] = useState(true);
   const [showPersonalBanner, setShowPersonalBanner] = useState(true);
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
@@ -57,13 +67,16 @@ export default function AthleteDashboard() {
   const [activeRightTab, setActiveRightTab] = useState<'actions-planner' | 'chat-panel'>('actions-planner');
   const [expandedActionsPlanner, setExpandedActionsPlanner] = useState(true);
   const [activeTab, setActiveTab] = useState<'my-page' | 'my-entity'>('my-page');
-  const [showWorkoutSection, setShowWorkoutSection] = useState(false);
   
   // Entities athlete belongs to
   const [myCoaches, setMyCoaches] = useState<any[]>([]);
   const [myTeams, setMyTeams] = useState<any[]>([]);
   const [myClubs, setMyClubs] = useState<any[]>([]);
   const [myGroups, setMyGroups] = useState<any[]>([]);
+  
+  // Current period and week data
+  const [currentPeriod, setCurrentPeriod] = useState<{ name: string; color: string } | null>(null);
+  const [currentWeek, setCurrentWeek] = useState<number>(1);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -86,24 +99,18 @@ export default function AthleteDashboard() {
       loadMyTeams();
       loadMyClubs();
       loadMyGroups();
+      loadCurrentWeekAndPeriod();
     }
   }, [user]);
 
-  // Reset workout section when switching to my-page
+  // Hide right sidebar when workout section or personal settings opens
   useEffect(() => {
-    if (activeTab === 'my-page') {
-      setShowWorkoutSection(false);
-    }
-  }, [activeTab]);
-
-                                                                                                                                                    // Hide right sidebar when workout section opens, keep left sidebar visible
-  useEffect(() => {
-    if (showWorkoutSection) {
+    if (activeTab === 'my-page' && (activeSection === 'workouts' || activeSection === 'personal-settings')) {
       setShowRightSidebar(false);
     } else {
       setShowRightSidebar(true);
     }
-  }, [showWorkoutSection]);
+  }, [activeTab, activeSection]);
 
   // Don't render if not authenticated (after all hooks are called)
   if (loading || !user) {
@@ -167,6 +174,43 @@ export default function AthleteDashboard() {
       }
     } catch (error) {
       console.error('Error loading my groups:', error);
+    }
+  };
+
+  const loadCurrentWeekAndPeriod = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/workouts/plan?type=CURRENT_WEEKS', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.plan?.weeks && data.plan.weeks.length > 0) {
+          // Find the current week (week 2 in Section A)
+          const currentWeekData = data.plan.weeks.find((w: any) => w.weekNumber === 2);
+          if (currentWeekData) {
+            setCurrentWeek(currentWeekData.originalWeekNumber || currentWeekData.weekNumber);
+            
+            // Get period from the current week's first day or week itself
+            if (currentWeekData.period) {
+              setCurrentPeriod({
+                name: currentWeekData.period.name || 'Base',
+                color: currentWeekData.period.color || '#14b8a6'
+              });
+            } else if (currentWeekData.days && currentWeekData.days.length > 0) {
+              const firstDay = currentWeekData.days[0];
+              if (firstDay.periodName && firstDay.periodColor) {
+                setCurrentPeriod({
+                  name: firstDay.periodName,
+                  color: firstDay.periodColor
+                });
+              }
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading current week and period:', error);
     }
   };
 
@@ -260,11 +304,6 @@ export default function AthleteDashboard() {
                   alt="Athlete Background"
                   className="w-full h-full object-cover opacity-60"
                 />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-14 bg-red-600 rounded-lg flex items-center justify-center cursor-pointer hover:bg-red-700 transition">
-                    <div className="w-0 h-0 border-t-8 border-t-transparent border-l-12 border-l-white border-b-8 border-b-transparent ml-1"></div>
-                  </div>
-                </div>
               </div>
 
               <div className="absolute top-4 right-4 flex gap-3">
@@ -273,14 +312,17 @@ export default function AthleteDashboard() {
                   <p className="font-semibold">2025 Indoor</p>
                   <p className="text-sm">Championship</p>
                 </div>
-                <div className="bg-teal-600/90 backdrop-blur-sm rounded-lg p-3 text-white min-w-[120px]">
+                <div 
+                  className="backdrop-blur-sm rounded-lg p-3 text-white min-w-[120px]"
+                  style={{ backgroundColor: currentPeriod?.color ? `${currentPeriod.color}e6` : '#14b8a6e6' }}
+                >
                   <p className="text-xs text-gray-200 uppercase mb-1">Period</p>
-                  <p className="font-semibold">Base</p>
+                  <p className="font-semibold">{currentPeriod?.name || 'Base'}</p>
                   <p className="text-sm">Conditioning</p>
                 </div>
                 <div className="bg-blue-600/90 backdrop-blur-sm rounded-lg p-3 text-white min-w-[100px]">
                   <p className="text-xs text-gray-200 uppercase mb-1">Week</p>
-                  <p className="text-2xl font-bold">14</p>
+                  <p className="text-2xl font-bold">{currentWeek}</p>
                 </div>
                 <div className="bg-green-700/90 backdrop-blur-sm rounded-lg p-3 text-white min-w-[140px]">
                   <p className="text-xs text-gray-200 uppercase mb-1">Next Event</p>
@@ -288,16 +330,25 @@ export default function AthleteDashboard() {
                 </div>
               </div>
 
-              <div className="absolute bottom-4 left-4 flex gap-2">
-                <span className="bg-blue-600/90 backdrop-blur-sm text-white px-3 py-1 rounded text-sm">CURRENT 2 WEEKS</span>
-                <span className="bg-gray-700/90 backdrop-blur-sm text-white px-3 py-1 rounded text-sm">REST OF THE YEAR</span>
-                <span className="bg-gray-700/90 backdrop-blur-sm text-white px-3 py-1 rounded text-sm">COMPLETED SESSIONS</span>
-              </div>
-
-              <div className="absolute bottom-4 left-4 mt-12">
-                <div className="bg-blue-800/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-medium">
-                  My Training
-                </div>
+              <div className="absolute bottom-4 left-4 flex gap-3">
+                <button
+                  onClick={() => {
+                    setActiveTab('my-page');
+                    setActiveSection('overview');
+                  }}
+                  className="bg-blue-800/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700/90 transition-colors cursor-pointer"
+                >
+                  Activity Overview
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveTab('my-page');
+                    setActiveSection('workouts');
+                  }}
+                  className="bg-blue-800/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700/90 transition-colors cursor-pointer"
+                >
+                  My Workouts
+                </button>
               </div>
             </div>
           </div>
@@ -323,18 +374,6 @@ export default function AthleteDashboard() {
                   <button className="text-lime-400 hover:text-lime-300 transition-colors whitespace-nowrap font-semibold">
                     <span>Club Magiw Avellino</span>
                   </button>
-                  {activeTab === 'my-entity' && (
-                    <button 
-                      onClick={() => setShowWorkoutSection(!showWorkoutSection)}
-                      className={`transition-colors whitespace-nowrap ${
-                        showWorkoutSection 
-                          ? 'text-lime-400 hover:text-lime-300 font-semibold' 
-                          : 'text-gray-300 hover:text-white'
-                      }`}
-                    >
-                      <span>Workouts section</span>
-                    </button>
-                  )}
                   <button className="text-gray-300 hover:text-white transition-colors whitespace-nowrap">
                     <span>FunClub</span>
                   </button>
@@ -366,6 +405,7 @@ export default function AthleteDashboard() {
         )}
 
         <div className="flex-1 flex gap-0">
+          {/* Left Sidebar - Always Visible */}
           {showLeftSidebar && (
             <div className="w-80 flex-shrink-0 sticky top-0 self-start">
               <DarkSidebar
@@ -375,47 +415,52 @@ export default function AthleteDashboard() {
                 onEntitySelect={(id) => {}}
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
-                onMyPageClick={() => setActiveTab('my-page')}
+                onMyPageClick={() => {
+                  setActiveTab('my-page');
+                  setActiveSection('overview');
+                }}
                 onMyClubClick={() => setActiveTab('my-entity')}
               />
             </div>
           )}
 
-          <div className="flex-1 min-w-0 flex flex-col px-4">
+          {/* Main Content Area */}
+          <div className={`flex-1 min-w-0 flex flex-col ${activeTab === 'my-page' && activeSection === 'personal-settings' ? '' : 'px-4'}`}>
             {activeTab === 'my-page' && (
               <div className="flex-1">
                 {activeSection === 'overview' && <AthleteOverview t={t} />}
-                {activeSection === 'workouts' && <AthleteWorkouts t={t} />}
+                {activeSection === 'workouts' && <WorkoutSection onClose={() => setActiveSection('overview')} />}
                 {activeSection === 'progress' && <AthleteProgress t={t} />}
                 {activeSection === 'settings' && <AthleteSettings t={t} />}
+                {activeSection === 'personal-settings' && <PersonalSettingsContent t={t} user={user} />}
               </div>
             )}
             
-            {activeTab === 'my-entity' && !showWorkoutSection && (
-              <div className="bg-white rounded-lg shadow-sm border p-8 flex-1 flex items-center justify-center">
+            {activeTab === 'my-entity' && (
+              <div className="bg-white rounded-lg shadow-sm border p-8 pt-12 flex-1 flex items-start justify-center">
                 <div className="text-center">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome to Your Athlete Dashboard</h2>
-                  <p className="text-gray-600 mb-6">Click on "Workouts section" in the navigation bar above to view and manage workouts.</p>
-                  <button 
-                    onClick={() => setShowWorkoutSection(true)}
-                    className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition"
-                  >
-                    Go to Workouts Section
-                  </button>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">My Club Page</h2>
+                  <p className="text-gray-600 mb-6">Club-related content will be displayed here.</p>
                 </div>
               </div>
             )}
-            
-            {activeTab === 'my-entity' && showWorkoutSection && (
-              <WorkoutSection onClose={() => setShowWorkoutSection(false)} />
-            )}
           </div>
 
-          {showRightSidebar && (
+          {/* Right Sidebar - Hidden when Personal Settings is active */}
+          {!(activeTab === 'my-page' && activeSection === 'personal-settings') && showRightSidebar && (
             <div className="w-80 flex-shrink-0">
               <div className="bg-white rounded-lg shadow-sm border p-4 h-full flex flex-col overflow-y-auto">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('sidebar_quick_actions')}</h3>
                 <div className="space-y-2">
+                  {/* Personal Settings Button - FIRST button in Quick Actions */}
+                  <button
+                    onClick={() => setActiveSection('personal-settings')}
+                    className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group"
+                  >
+                    <Settings className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-blue-700 text-left">Personal settings</span>
+                  </button>
+                  
                   {/* Quick Actions for My Page (Athlete) */}
                   <button className="w-full flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 group">
                     <Calendar className="w-5 h-5 text-gray-400 group-hover:text-blue-500 flex-shrink-0" />
@@ -650,12 +695,94 @@ export default function AthleteDashboard() {
           )}
         </div>
       </div>
+
       <SimpleFooter />
     </div>
   );
 }
 
 function AthleteOverview({ t }: { t: (key: string) => string }) {
+  const [stats, setStats] = useState({
+    thisWeekWorkouts: 0,
+    thisMonthWorkouts: 0,
+    totalMoveframes: 0,
+    completionRate: 0
+  });
+  const [recentWorkouts, setRecentWorkouts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadWorkoutStats();
+  }, []);
+
+  const loadWorkoutStats = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Load current weeks plan to get workout data
+      const response = await fetch('/api/workouts/plan?type=CURRENT_WEEKS', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const weeks = data.plan?.weeks || [];
+        
+        // Calculate statistics
+        let thisWeekCount = 0;
+        let totalWorkouts = 0;
+        let totalMoveframes = 0;
+        const recentWorkoutsList: any[] = [];
+        
+        weeks.forEach((week: any) => {
+          week.days?.forEach((day: any) => {
+            day.workouts?.forEach((workout: any) => {
+              totalWorkouts++;
+              if (week.weekNumber === 2) { // Current week in Section A
+                thisWeekCount++;
+              }
+              totalMoveframes += workout.moveframes?.length || 0;
+              
+              // Collect recent workouts
+              if (recentWorkoutsList.length < 5) {
+                recentWorkoutsList.push({
+                  id: workout.id,
+                  name: workout.name,
+                  date: day.date,
+                  moveframeCount: workout.moveframes?.length || 0
+                });
+              }
+            });
+          });
+        });
+        
+        setStats({
+          thisWeekWorkouts: thisWeekCount,
+          thisMonthWorkouts: totalWorkouts,
+          totalMoveframes: totalMoveframes,
+          completionRate: totalWorkouts > 0 ? Math.round((totalMoveframes / (totalWorkouts * 5)) * 100) : 0
+        });
+        
+        setRecentWorkouts(recentWorkoutsList);
+      }
+    } catch (error) {
+      console.error('Error loading workout stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading workout data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex flex-col">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('dashboard_activity_overview')}</h2>
@@ -665,38 +792,48 @@ function AthleteOverview({ t }: { t: (key: string) => string }) {
             <h3 className="text-sm font-medium opacity-90">{t('dashboard_this_week')}</h3>
             <Calendar className="w-5 h-5 opacity-90" />
           </div>
-          <p className="text-3xl font-bold mt-3">3 {t('dashboard_workouts_count')}</p>
+          <p className="text-3xl font-bold mt-3">{stats.thisWeekWorkouts} {t('dashboard_workouts_count')}</p>
         </div>
         <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl text-white shadow-lg">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium opacity-90">{t('dashboard_this_month')}</h3>
+            <h3 className="text-sm font-medium opacity-90">Total Workouts</h3>
             <Target className="w-5 h-5 opacity-90" />
           </div>
-          <p className="text-3xl font-bold mt-3">12 {t('dashboard_workouts_count')}</p>
+          <p className="text-3xl font-bold mt-3">{stats.thisMonthWorkouts}</p>
         </div>
         <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-xl text-white shadow-lg">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium opacity-90">{t('dashboard_completion_rate')}</h3>
+            <h3 className="text-sm font-medium opacity-90">Total Moveframes</h3>
             <Award className="w-5 h-5 opacity-90" />
           </div>
-          <p className="text-3xl font-bold mt-3">85%</p>
+          <p className="text-3xl font-bold mt-3">{stats.totalMoveframes}</p>
         </div>
       </div>
       <div className="flex-1">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard_recent_activity_feed')}</h3>
-        <div className="space-y-4">
-          {[1, 2, 3].map((item) => (
-            <div key={item} className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold text-gray-900">{t('dashboard_workout_session')} #{item}</h4>
-                  <p className="text-sm text-gray-500">{t('dashboard_completed_on')} {new Date().toLocaleDateString()}</p>
+        {recentWorkouts.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <p className="text-lg">No workouts planned yet</p>
+            <p className="text-sm mt-2">Click "My Workouts" to start planning</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {recentWorkouts.map((workout) => (
+              <div key={workout.id} className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{workout.name || 'Workout Session'}</h4>
+                    <p className="text-sm text-gray-500">
+                      {new Date(workout.date).toLocaleDateString()} • {workout.moveframeCount} moveframes
+                    </p>
+                  </div>
+                  <Activity className="w-6 h-6 text-blue-500" />
                 </div>
-                <CheckCircle className="w-6 h-6 text-green-500" />
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -775,6 +912,172 @@ function AthleteSettings({ t }: { t: (key: string) => string }) {
         </div>
       </div>
       <SimpleFooter />
+    </div>
+  );
+}
+
+function PersonalSettingsContent({ t, user }: { t: (key: string) => string; user: any }) {
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'backgrounds' | 'tools' | 'favourites' | 'mybest' | 'grid'>('backgrounds');
+  const [loading, setLoading] = useState(false);
+  const userLanguage = user?.language || 'en';
+
+  const loadDefaultSettings = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/user/settings/load-defaults?language=${userLanguage}`);
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success) {
+          const token = localStorage.getItem('token');
+          if (token) {
+            await fetch('/api/user/settings/save', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(data.settings)
+            });
+          }
+          
+          alert(`✅ Default settings for ${data.language.toUpperCase()} loaded and applied successfully!`);
+        } else {
+          alert('Failed to load default settings. Please try again.');
+        }
+      } else {
+        alert('Failed to load default settings. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error loading default settings:', error);
+      alert('Error loading default settings. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const savePersonalSettings = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login to save settings.');
+        setLoading(false);
+        return;
+      }
+
+      // Get current settings and save
+      const response = await fetch('/api/user/settings/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({}) // Settings are managed by individual components
+      });
+      
+      if (response.ok) {
+        alert('✅ Personal settings saved successfully!');
+      } else {
+        const data = await response.json();
+        alert(`Failed to save settings: ${data.details || data.error}`);
+      }
+    } catch (error: any) {
+      console.error('Error saving personal settings:', error);
+      alert(`Error saving settings: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const settingsSections = [
+    { id: 'backgrounds' as const, label: 'Backgrounds & Colors', icon: Palette },
+    { id: 'tools' as const, label: 'Tools', icon: Settings },
+    { id: 'favourites' as const, label: 'Favourites', icon: Star },
+    { id: 'mybest' as const, label: 'My Best', icon: Trophy },
+    { id: 'grid' as const, label: 'Grid Display Mode', icon: Grid },
+  ];
+
+  return (
+    <div className="bg-white rounded-lg shadow-sm border flex-1 flex flex-col overflow-hidden">
+      {/* Header */}
+      <div className="bg-gray-800 text-white px-6 py-4 flex items-center justify-between flex-shrink-0">
+        <div>
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Settings size={24} />
+            <span>Personal Settings</span>
+          </h2>
+          <p className="text-sm text-gray-300 mt-1">
+            Language: <span className="font-semibold">{userLanguage.toUpperCase()}</span> - Configure your personal preferences
+          </p>
+        </div>
+      </div>
+
+      {/* Info Banner */}
+      <div className="bg-gray-50 border-b border-gray-200 px-6 py-3 flex items-center justify-between flex-shrink-0">
+        <div className="flex-1">
+          <p className="text-sm text-gray-800">
+            <strong>Your Personal Settings</strong> - Configure your own preferences
+          </p>
+          <p className="text-xs text-gray-600 mt-1">
+            Optional: Load {userLanguage.toUpperCase()} defaults created by admins as a starting template
+          </p>
+        </div>
+        <button
+          onClick={loadDefaultSettings}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        >
+          <Download size={16} />
+          <span>{loading ? 'Loading...' : 'Load Admin Defaults'}</span>
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar Navigation */}
+        <div className="w-64 bg-gray-50 border-r border-gray-200 overflow-y-auto flex-shrink-0">
+          <nav className="p-4 space-y-2">
+            {settingsSections.map((section) => {
+              const Icon = section.icon;
+              return (
+                <button
+                  key={section.id}
+                  onClick={() => setActiveSettingsTab(section.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
+                    activeSettingsTab === section.id
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <Icon size={20} />
+                  <span className="font-medium">{section.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Settings Content */}
+        <div className="flex-1 overflow-y-auto p-6 bg-white">
+          {activeSettingsTab === 'backgrounds' && <BackgroundsColorsSettings />}
+          {activeSettingsTab === 'tools' && <ToolsSettings isAdmin={false} userType="ATHLETE" />}
+          {activeSettingsTab === 'favourites' && <FavouritesSettings />}
+          {activeSettingsTab === 'mybest' && <MyBestSettings />}
+          {activeSettingsTab === 'grid' && <GridDisplaySettings />}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="border-t bg-gray-50 px-6 py-4 flex items-center justify-end flex-shrink-0">
+        <button
+          onClick={savePersonalSettings}
+          disabled={loading}
+          className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+        >
+          {loading ? 'Saving...' : 'Save My Personal Settings'}
+        </button>
+      </div>
     </div>
   );
 }

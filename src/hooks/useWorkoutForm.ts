@@ -5,17 +5,28 @@ export interface WorkoutFormData {
   code: string;
   sports: (string | null)[];
   includeStretching: boolean;
+  // Section C (WORKOUTS DONE) fields
+  time?: string; // HH:MM format
+  weather?: string;
+  location?: string;
+  surface?: string;
+  heartRateMax?: number;
+  heartRateAvg?: number;
+  calories?: number;
+  feelingStatus?: string;
+  notes?: string;
 }
 
 export interface WorkoutFormValidation {
   name: { valid: boolean; message: string };
   code: { valid: boolean; message: string };
   sports: { valid: boolean; message: string };
+  heartRate?: { valid: boolean; message: string };
 }
 
 interface UseWorkoutFormProps {
   isOpen: boolean;
-  mode: 'add' | 'edit';
+  mode: 'add' | 'edit' | 'view';
   existingWorkout?: any;
   existingWorkouts: any[];
   day: any;
@@ -45,13 +56,24 @@ export function useWorkoutForm({
     name: '',
     code: '',
     sports: [null, null, null, null],
-    includeStretching: false
+    includeStretching: false,
+    // Section C fields
+    time: '',
+    weather: '',
+    location: '',
+    surface: '',
+    heartRateMax: undefined,
+    heartRateAvg: undefined,
+    calories: undefined,
+    feelingStatus: '',
+    notes: ''
   });
 
   const [validation, setValidation] = useState<WorkoutFormValidation>({
     name: { valid: true, message: '' },
     code: { valid: true, message: '' },
-    sports: { valid: true, message: '' }
+    sports: { valid: true, message: '' },
+    heartRate: { valid: true, message: '' }
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,27 +81,61 @@ export function useWorkoutForm({
   // ==================== HELPER FUNCTIONS ====================
 
   /**
-   * Get sports from moveframes in the current workout only
-   * (not from all workouts in the day)
+   * Generate default workout name
+   * Format: "<workout number in words> workout of <day name> - <month abbr> <day number>"
+   * Example: "Second workout of Tuesday Dec 16"
+   */
+  const generateDefaultName = () => {
+    const workoutNumberWords = ['First', 'Second', 'Third'];
+    const workoutWord = workoutNumberWords[workoutNumber - 1] || `${workoutNumber}th`;
+    
+    const date = new Date(day.date);
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+    const monthAbbr = date.toLocaleDateString('en-US', { month: 'short' });
+    const dayNumber = date.getDate();
+    
+    return `${workoutWord} workout of ${dayName} ${monthAbbr} ${dayNumber}`;
+  };
+
+  /**
+   * Generate default workout code
+   * Format: "<week number padded to 2 digits><day number padded to 2 digits>-<workout number>"
+   * Example: "0101-1" (week 1, day 1, workout 1)
+   */
+  const generateDefaultCode = () => {
+    const weekNum = String(day.weekNumber || 1).padStart(2, '0');
+    const dayNum = String(day.weekday || 1).padStart(2, '0');
+    return `${weekNum}${dayNum}-${workoutNumber}`;
+  };
+
+  /**
+   * Get sports from ALL moveframes in ALL workouts of the current day
+   * These sports are automatically included and cannot be changed
    */
   const getSportsFromMoveframes = () => {
-    // In add mode, new workout has no moveframes yet
-    if (mode === 'add') return [];
+    const sports = new Set<string>();
     
-    // In edit mode, get sports only from the current workout being edited
-    if (mode === 'edit' && existingWorkout) {
-      const sports = new Set<string>();
-      if (existingWorkout.moveframes && Array.isArray(existingWorkout.moveframes)) {
-        existingWorkout.moveframes.forEach((mf: any) => {
+    // Scan ALL existing workouts in the day (including the current one being edited)
+    existingWorkouts.forEach((workout: any) => {
+      if (workout.moveframes && Array.isArray(workout.moveframes)) {
+        workout.moveframes.forEach((mf: any) => {
           if (mf.sport) {
             sports.add(mf.sport);
           }
         });
       }
-      return Array.from(sports);
+    });
+    
+    // If editing, also check the current workout's moveframes
+    if ((mode === 'edit' || mode === 'view') && existingWorkout && existingWorkout.moveframes) {
+      existingWorkout.moveframes.forEach((mf: any) => {
+        if (mf.sport) {
+          sports.add(mf.sport);
+        }
+      });
     }
     
-    return [];
+    return Array.from(sports).sort(); // Sort alphabetically for consistency
   };
 
   /**
@@ -102,10 +158,9 @@ export function useWorkoutForm({
   const selectedSportsCount = countSelectedSports();
 
   /**
-   * Check if a sport index is from moveframes (read-only)
+   * Check if a sport at a specific index is from moveframes (read-only)
    */
   const isSportFromMoveframe = (index: number) => {
-    if (mode === 'edit') return false; // In edit mode, all sports are editable
     const sport = formData.sports[index];
     return sport !== null && moveframeSports.includes(sport);
   };
@@ -114,12 +169,20 @@ export function useWorkoutForm({
    * Check if we can manually select a sport at this index
    */
   const canManuallySelectSport = (index: number) => {
-    if (mode === 'edit') return true; // In edit mode, all are editable
-    
     // If this slot already has a moveframe sport, it's read-only
     if (isSportFromMoveframe(index)) return false;
     
-    // Can select if we have less than 4 sports total
+    // Can select manually only if:
+    // 1. We have less than 4 non-stretching sports, OR
+    // 2. This sport is STRETCHING and includeStretching is true
+    const sport = formData.sports[index];
+    
+    // If it's stretching, allow selection regardless of count
+    if (sport === 'STRETCHING' && formData.includeStretching) {
+      return true;
+    }
+    
+    // Otherwise, can only select if under the 4-sport limit
     return selectedSportsCount < 4;
   };
 
@@ -177,20 +240,32 @@ export function useWorkoutForm({
   };
 
   /**
+   * Validate heart rate values
+   */
+  const validateHeartRate = (maxHR?: number, avgHR?: number) => {
+    if (avgHR && maxHR && avgHR >= maxHR) {
+      return { valid: false, message: 'Average HR must be less than Heart Rate Max' };
+    }
+    return { valid: true, message: '' };
+  };
+
+  /**
    * Check if entire form is valid
    */
   const isFormValid = () => {
     const nameVal = validateName(formData.name);
     const codeVal = validateCode(formData.code);
     const sportsVal = validateSports(formData.sports);
+    const hrVal = validateHeartRate(formData.heartRateMax, formData.heartRateAvg);
     
     setValidation({
       name: nameVal,
       code: codeVal,
-      sports: sportsVal
+      sports: sportsVal,
+      heartRate: hrVal
     });
     
-    return nameVal.valid && codeVal.valid && sportsVal.valid;
+    return nameVal.valid && codeVal.valid && sportsVal.valid && hrVal.valid;
   };
 
   // ==================== HANDLERS ====================
@@ -233,6 +308,23 @@ export function useWorkoutForm({
   };
 
   /**
+   * Generic handler for Section C fields
+   */
+  const handleSectionCFieldChange = (field: keyof WorkoutFormData, value: any) => {
+    const newFormData = { ...formData, [field]: value };
+    setFormData(newFormData);
+    
+    // Validate heart rate if applicable
+    if (field === 'heartRateMax' || field === 'heartRateAvg') {
+      const hrValidation = validateHeartRate(
+        field === 'heartRateMax' ? value : formData.heartRateMax,
+        field === 'heartRateAvg' ? value : formData.heartRateAvg
+      );
+      setValidation({ ...validation, heartRate: hrValidation });
+    }
+  };
+
+  /**
    * Handle form submission
    */
   const handleSubmit = async () => {
@@ -243,7 +335,7 @@ export function useWorkoutForm({
     setIsSubmitting(true);
     
     try {
-      const workoutData = {
+      const workoutData: any = {
         name: formData.name.trim(),
         code: formData.code.trim(),
         sessionNumber: workoutNumber,
@@ -255,6 +347,17 @@ export function useWorkoutForm({
         date: day.date,
         periodId: day.periodId
       };
+      
+      // Add Section C fields if they have values
+      if (formData.time) workoutData.time = formData.time;
+      if (formData.weather) workoutData.weather = formData.weather;
+      if (formData.location) workoutData.location = formData.location;
+      if (formData.surface) workoutData.surface = formData.surface;
+      if (formData.heartRateMax) workoutData.heartRateMax = formData.heartRateMax;
+      if (formData.heartRateAvg) workoutData.heartRateAvg = formData.heartRateAvg;
+      if (formData.calories) workoutData.calories = formData.calories;
+      if (formData.feelingStatus) workoutData.feelingStatus = formData.feelingStatus;
+      if (formData.notes) workoutData.notes = formData.notes;
       
       await onSave(workoutData);
       onClose();
@@ -283,32 +386,67 @@ export function useWorkoutForm({
    */
   useEffect(() => {
     if (isOpen) {
-      if (mode === 'edit' && existingWorkout) {
+      if ((mode === 'edit' || mode === 'view') && existingWorkout) {
         // Load existing workout data
         setFormData({
           name: existingWorkout.name || '',
           code: existingWorkout.code || '',
           sports: existingWorkout.sports || [null, null, null, null],
-          includeStretching: existingWorkout.includeStretching || false
+          includeStretching: existingWorkout.includeStretching || false,
+          // Section C fields
+          time: existingWorkout.time || '',
+          weather: existingWorkout.weather || '',
+          location: existingWorkout.location || '',
+          surface: existingWorkout.surface || '',
+          heartRateMax: existingWorkout.heartRateMax || undefined,
+          heartRateAvg: existingWorkout.heartRateAvg || undefined,
+          calories: existingWorkout.calories || undefined,
+          feelingStatus: existingWorkout.feelingStatus || '',
+          notes: existingWorkout.notes || ''
         });
       } else {
-        // In add mode, start with empty form (no pre-population from other workouts)
+        // In add mode, pre-populate with moveframe sports from the day
+        const moveframeSportsFromDay = getSportsFromMoveframes();
+        const initialSports: (string | null)[] = [null, null, null, null];
+        
+        // Fill first N slots with moveframe sports (these will be read-only)
+        moveframeSportsFromDay.forEach((sport, index) => {
+          if (index < 4) {
+            initialSports[index] = sport;
+          }
+        });
+        
+        // Generate default name and code
+        const defaultName = generateDefaultName();
+        const defaultCode = generateDefaultCode();
+        
         setFormData({
-          name: '',
-          code: '',
-          sports: [null, null, null, null],
-          includeStretching: false
+          name: defaultName,
+          code: defaultCode,
+          sports: initialSports,
+          includeStretching: false,
+          // Section C fields (empty for new workout)
+          time: '',
+          weather: '',
+          location: '',
+          surface: '',
+          heartRateMax: undefined,
+          heartRateAvg: undefined,
+          calories: undefined,
+          feelingStatus: '',
+          notes: ''
         });
       }
       // Reset validation state
       setValidation({
         name: { valid: true, message: '' },
         code: { valid: true, message: '' },
-        sports: { valid: true, message: '' }
+        sports: { valid: true, message: '' },
+        heartRate: { valid: true, message: '' }
       });
       setIsSubmitting(false);
     }
-  }, [isOpen, mode, existingWorkout]);
+  }, [isOpen, mode, existingWorkout, existingWorkouts]);
 
   // ==================== RETURN VALUES ====================
   return {
@@ -331,6 +469,7 @@ export function useWorkoutForm({
     handleCodeChange,
     handleSportChange,
     handleStretchingChange,
+    handleSectionCFieldChange,
     handleSubmit,
     handleKeyDown,
     

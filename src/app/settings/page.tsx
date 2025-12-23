@@ -35,13 +35,28 @@ export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState<SettingsSection>('backgrounds');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Check for admin authentication
+  // Check for admin authentication and auto-cleanup invalid tokens
   useEffect(() => {
+    // Try to detect if we have an invalid/old token by checking the adminUser format
     const adminData = localStorage.getItem('adminUser');
+    const adminToken = localStorage.getItem('adminToken');
+    
     if (adminData) {
-      setIsAdmin(true);
+      // Check if token might be invalid (this is just a safety check)
+      try {
+        JSON.parse(adminData);
+        setIsAdmin(true);
+      } catch (e) {
+        // Invalid adminUser data, clear everything
+        console.log('🔧 Auto-cleaning invalid admin data...');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('adminUser');
+        localStorage.removeItem('adminToken');
+        router.push('/');
+      }
     }
-  }, []);
+  }, [router]);
 
   // Redirect to home if not authenticated (neither user nor admin)
   useEffect(() => {
@@ -168,9 +183,9 @@ export default function SettingsPage() {
           {/* Settings Content */}
           <div className="flex-1 min-w-0">
             <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 lg:p-8 transition-colors">
-              {activeSection === 'backgrounds' && <BackgroundsColorsSettings />}
-              {activeSection === 'tools' && <ToolsSettings />}
-              {activeSection === 'favourites' && <FavouritesSettings />}
+            {activeSection === 'backgrounds' && <BackgroundsColorsSettings />}
+            {activeSection === 'tools' && <ToolsSettings isAdmin={isAdmin} userType={user?.userType} />}
+            {activeSection === 'favourites' && <FavouritesSettings />}
               {activeSection === 'mybest' && <MyBestSettings />}
               {activeSection === 'languages' && <LanguageSettings />}
               {activeSection === 'grid' && <GridDisplaySettings />}

@@ -4,7 +4,7 @@
  */
 
 export type IconType = 'emoji' | 'bw_icons';
-export type ToolsTab = 'periods' | 'sections' | 'sports' | 'equipment' | 'exercises' | 'devices';
+export type ToolsTab = 'periods' | 'sections' | 'sports' | 'equipment' | 'equipmentFactories' | 'muscles' | 'sportsEquipment' | 'exercises' | 'myLibrary' | 'devices';
 
 export interface Period {
   id: string;
@@ -33,9 +33,19 @@ export interface Sport {
 export interface Equipment {
   id: string;
   name: string;
+  picture?: string;
   category: string;
+  sports: string[]; // Multi-select sports tags
+  company?: string;
   description: string;
   inStock: boolean;
+  // Athlete-specific fields
+  startDate?: string;
+  durationAlarm?: {
+    days?: number;
+    km?: number;
+    time?: string;
+  };
 }
 
 export interface Exercise {
@@ -126,11 +136,11 @@ export const DEFAULT_SPORTS: Sport[] = [
  * Default equipment list
  */
 export const DEFAULT_EQUIPMENT: Equipment[] = [
-  { id: '1', name: 'Treadmill', category: 'Cardio', description: 'Running machine', inStock: true },
-  { id: '2', name: 'Dumbbells', category: 'Strength', description: 'Free weights', inStock: true },
-  { id: '3', name: 'Yoga Mat', category: 'Flexibility', description: 'Exercise mat', inStock: true },
-  { id: '4', name: 'Resistance Bands', category: 'Strength', description: 'Elastic bands', inStock: true },
-  { id: '5', name: 'Pull-up Bar', category: 'Strength', description: 'Upper body equipment', inStock: true },
+  { id: '1', name: 'Treadmill', category: 'Cardio', sports: ['RUN'], description: 'Running machine', inStock: true },
+  { id: '2', name: 'Dumbbells', category: 'Strength', sports: ['BODY_BUILDING'], description: 'Free weights', inStock: true },
+  { id: '3', name: 'Yoga Mat', category: 'Flexibility', sports: ['YOGA', 'PILATES', 'STRETCHING'], description: 'Exercise mat', inStock: true },
+  { id: '4', name: 'Resistance Bands', category: 'Strength', sports: ['BODY_BUILDING', 'STRETCHING'], description: 'Elastic bands', inStock: true },
+  { id: '5', name: 'Pull-up Bar', category: 'Strength', sports: ['BODY_BUILDING', 'GYMNASTIC'], description: 'Upper body equipment', inStock: true },
 ];
 
 /**

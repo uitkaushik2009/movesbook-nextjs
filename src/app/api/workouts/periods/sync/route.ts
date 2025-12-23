@@ -1,0 +1,103 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyToken } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+
+export async function POST(request: NextRequest) {
+  try {
+    // Verify authentication
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const token = authHeader.split(' ')[1];
+    const decoded = await verifyToken(token);
+    if (!decoded || !decoded.userId) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    const { periods } = await request.json();
+    
+    // Handle fallback admin - accept but don't save
+    if (decoded.userId === 'admin') {
+      return NextResponse.json({
+        success: true,
+        periods: periods || [],
+        message: 'Admin periods accepted (not persisted to database)'
+      });
+    }
+
+    if (!Array.isArray(periods)) {
+      return NextResponse.json({ error: 'Periods must be an array' }, { status: 400 });
+    }
+
+    console.log(`🔄 Syncing ${periods.length} periods for user ${decoded.userId}`);
+
+    // Get existing periods from database
+    const existingPeriods = await prisma.period.findMany({
+      where: { userId: decoded.userId }
+    });
+
+    const existingIds = new Set(existingPeriods.map(p => p.id));
+    const incomingIds = new Set(periods.map((p: any) => p.id).filter((id: string) => id && !id.startsWith('temp_')));
+
+    // 1. Delete periods that are no longer in the incoming list
+    const periodsToDelete = existingPeriods.filter(p => !incomingIds.has(p.id));
+    if (periodsToDelete.length > 0) {
+      await prisma.period.deleteMany({
+        where: {
+          id: { in: periodsToDelete.map(p => p.id) },
+          userId: decoded.userId
+        }
+      });
+      console.log(`🗑️  Deleted ${periodsToDelete.length} periods`);
+    }
+
+    // 2. Update or create periods
+    for (const period of periods) {
+      const periodData = {
+        userId: decoded.userId,
+        name: period.title || period.name, // Support both 'title' and 'name'
+        description: period.description || '',
+        color: period.color || '#3b82f6'
+      };
+
+      // If period has an ID and it exists in database, update it
+      if (period.id && existingIds.has(period.id)) {
+        await prisma.period.update({
+          where: { id: period.id },
+          data: periodData
+        });
+        console.log(`✏️  Updated period: ${periodData.name}`);
+      } 
+      // Otherwise, create a new period
+      else {
+        await prisma.period.create({
+          data: periodData
+        });
+        console.log(`➕ Created new period: ${periodData.name}`);
+      }
+    }
+
+    // Fetch updated list
+    const updatedPeriods = await prisma.period.findMany({
+      where: { userId: decoded.userId },
+      orderBy: { name: 'asc' }
+    });
+
+    console.log(`✅ Sync complete. Total periods: ${updatedPeriods.length}`);
+
+    return NextResponse.json({ 
+      success: true,
+      periods: updatedPeriods 
+    });
+
+  } catch (error) {
+    console.error('❌ Error syncing periods:', error);
+    return NextResponse.json(
+      { error: 'Failed to sync periods', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
+

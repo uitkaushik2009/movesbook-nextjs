@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 // POST /api/workouts/sessions/move - Move a workout session to another day
 export async function POST(request: NextRequest) {
@@ -31,13 +30,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Get the current workout to check if it's moving to a different day
+    const currentWorkout = await prisma.workoutSession.findUnique({
+      where: { id: workoutId },
+      select: { workoutDayId: true }
+    });
+
+    if (!currentWorkout) {
+      return NextResponse.json({ error: 'Workout not found' }, { status: 404 });
+    }
+
+    // Check existing workouts for the target day
+    const existingWorkouts = await prisma.workoutSession.findMany({
+      where: { workoutDayId: targetDayId },
+      select: { id: true, sessionNumber: true }
+    });
+
+    // Validate: max 3 workouts per day (only if moving to a DIFFERENT day)
+    if (currentWorkout.workoutDayId !== targetDayId) {
+      // Moving to a different day
+      if (existingWorkouts.length >= 3) {
+        return NextResponse.json(
+          { error: 'Cannot move workout: Maximum 3 workouts per day allowed' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Determine session number if not provided
     let newSessionNumber = sessionNumber;
     if (!newSessionNumber) {
-      const existingWorkouts = await prisma.workoutSession.findMany({
-        where: { workoutDayId: targetDayId },
-        select: { sessionNumber: true }
-      });
       newSessionNumber = Math.max(0, ...existingWorkouts.map(w => w.sessionNumber)) + 1;
     }
 

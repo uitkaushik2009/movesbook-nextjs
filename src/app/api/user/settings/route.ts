@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
-
-const prisma = new PrismaClient();
 
 // GET - Fetch user settings
 export async function GET(request: NextRequest) {
@@ -22,6 +20,67 @@ export async function GET(request: NextRequest) {
     }
     
     const userId = decoded.userId;
+    
+    // Handle fallback admin - return default settings without database
+    if (userId === 'admin') {
+      // Import default sports list
+      const DEFAULT_SPORTS = [
+        { id: '1', name: 'SWIM', icon: '🏊‍♂️', order: 0, isTop5: true },
+        { id: '2', name: 'RUN', icon: '🏃‍♂️', order: 1, isTop5: true },
+        { id: '3', name: 'BIKE', icon: '🚴‍♂️', order: 2, isTop5: true },
+        { id: '4', name: 'BODY_BUILDING', icon: '💪', order: 3, isTop5: true },
+        { id: '5', name: 'ROWING', icon: '🚣', order: 4, isTop5: true },
+        { id: '6', name: 'SKATE', icon: '⛸️', order: 5, isTop5: false },
+        { id: '7', name: 'SKI', icon: '🎿', order: 6, isTop5: false },
+        { id: '8', name: 'SNOWBOARD', icon: '🏂', order: 7, isTop5: false },
+        { id: '9', name: 'YOGA', icon: '🧘', order: 8, isTop5: false },
+        { id: '10', name: 'GYMNASTIC', icon: '🏋️', order: 9, isTop5: false },
+        { id: '11', name: 'STRETCHING', icon: '🤸', order: 10, isTop5: false },
+        { id: '12', name: 'PILATES', icon: '🥋', order: 11, isTop5: false },
+        { id: '13', name: 'TECHNICAL_MOVES', icon: '🎯', order: 12, isTop5: false },
+        { id: '14', name: 'FREE_MOVES', icon: '🆓', order: 13, isTop5: false },
+      ];
+      
+      return NextResponse.json({
+        userId: 'admin',
+        colorSettings: {},
+        widgetArrangement: [],
+        toolsSettings: {
+          sports: DEFAULT_SPORTS,
+          sections: [],
+          equipment: [],
+          exercises: [],
+          devices: []
+        },
+        favouritesSettings: {},
+        myBestSettings: {},
+        adminSettings: {},
+        workoutPreferences: {},
+        socialSettings: {},
+        notificationSettings: {},
+        gridSize: 'comfortable',
+        columnCount: 3,
+        rowHeight: 'medium',
+        defaultView: 'grid',
+        leftSidebarVisible: true,
+        rightSidebarVisible: true,
+        leftSidebarWidth: 20,
+        rightSidebarWidth: 25,
+        sidebarPosition: 'fixed',
+        theme: 'light',
+        fontSize: 16,
+        iconSize: 'medium',
+        sportIconType: 'emoji',
+        enableAnimations: true,
+        reducedMotion: false,
+        highContrast: false,
+        performanceMode: false,
+        imageQuality: 'high',
+        lazyLoading: true,
+        dashboardLayout: 'default',
+        language: 'en'
+      });
+    }
 
     let settings = await prisma.userSettings.findUnique({
       where: { userId }
@@ -112,6 +171,16 @@ export async function POST(request: NextRequest) {
     }
     
     const userId = decoded.userId;
+    
+    // Handle fallback admin - accept but don't save to database
+    if (userId === 'admin') {
+      const body = await request.json();
+      return NextResponse.json({
+        ...body,
+        userId: 'admin',
+        message: 'Admin settings accepted (not persisted to database)'
+      });
+    }
 
     const body = await request.json();
     
@@ -210,6 +279,16 @@ export async function PATCH(request: NextRequest) {
     }
     
     const userId = decoded.userId;
+    
+    // Handle fallback admin - accept but don't save to database
+    if (userId === 'admin') {
+      const body = await request.json();
+      return NextResponse.json({
+        ...body,
+        userId: 'admin',
+        message: 'Admin settings accepted (not persisted to database)'
+      });
+    }
 
     const body = await request.json();
     

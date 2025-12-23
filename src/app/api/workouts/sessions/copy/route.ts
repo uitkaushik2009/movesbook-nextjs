@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-const prisma = new PrismaClient();
 
 // POST /api/workouts/sessions/copy - Copy a workout session to another day
 export async function POST(request: NextRequest) {
@@ -49,13 +48,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Source workout not found' }, { status: 404 });
     }
 
+    // Check existing workouts for the target day
+    const existingWorkouts = await prisma.workoutSession.findMany({
+      where: { workoutDayId: targetDayId },
+      select: { sessionNumber: true }
+    });
+
+    // Validate: max 3 workouts per day
+    if (existingWorkouts.length >= 3) {
+      return NextResponse.json(
+        { error: 'Cannot copy workout: Maximum 3 workouts per day allowed' },
+        { status: 400 }
+      );
+    }
+
     // Determine session number if not provided
     let newSessionNumber = sessionNumber;
     if (!newSessionNumber) {
-      const existingWorkouts = await prisma.workoutSession.findMany({
-        where: { workoutDayId: targetDayId },
-        select: { sessionNumber: true }
-      });
       newSessionNumber = Math.max(0, ...existingWorkouts.map(w => w.sessionNumber)) + 1;
     }
 

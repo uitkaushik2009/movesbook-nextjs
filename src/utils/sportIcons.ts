@@ -49,12 +49,12 @@ const SPORT_IMAGES: Record<string, string> = {
   'SKATE': '/icons/skating.jpg',
   'GYMNASTIC': '/icons/gymnastics.jpg',
   'STRETCHING': '/icons/stretching.jpg',
-  'PILATES': '/icons/pilates.jpg',
+  'PILATES': '/icons/pilaters.jpg', // Note: actual filename has typo
   'YOGA': '/icons/yoga.jpg',
   'SKI': '/icons/skiing.jpg',
-  'SNOWBOARD': '/icons/snowboarding.jpg',
-  'TECHNICAL_MOVES': '/icons/technical.jpg',
-  'FREE_MOVES': '/icons/freeform.jpg',
+  'SNOWBOARD': '/icons/snowboard.jpg', // Fixed: was 'snowboarding.jpg'
+  'TECHNICAL_MOVES': '/icons/Technical/technical.jpg',
+  'FREE_MOVES': '/icons/gymnastics.jpg', // Fallback
   'SOCCER': '/icons/Technical/soccer.jpg',
   'BASKETBALL': '/icons/Technical/basketball.jpg',
   'TENNIS': '/icons/Technical/tennis.jpg',
@@ -65,10 +65,10 @@ const SPORT_IMAGES: Record<string, string> = {
   'CLIMBING': '/icons/climbing.jpg',
   'HIKING': '/icons/hiking.jpg',
   'WALKING': '/icons/walking.jpg',
-  'DANCING': '/icons/dancing.jpg',
-  'CROSSFIT': '/icons/crossfit.jpg',
+  'DANCING': '/icons/modern_dance.jpg', // Fixed: was 'dancing.jpg'
+  'CROSSFIT': '/icons/weights.jpg', // Fallback
   'TRIATHLON': '/icons/triathlon.jpg',
-  'TRACK_FIELD': '/icons/track_field.jpg',
+  'TRACK_FIELD': '/icons/Technical/athletic.jpg', // Fixed: was 'track_field.jpg'
   'SURFING': '/icons/surfing.jpg',
   'BASEBALL': '/icons/Technical/baseball.jpg',
   'ICE_HOCKEY': '/icons/ice_hockey.jpg',

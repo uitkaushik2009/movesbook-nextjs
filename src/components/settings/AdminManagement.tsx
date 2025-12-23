@@ -43,6 +43,22 @@ export default function AdminManagement() {
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
 
+  // Change Password State
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
+  // Edit Profile State
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editUsername, setEditUsername] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editPasswordConfirm, setEditPasswordConfirm] = useState('');
+  const [showEditPasswordConfirm, setShowEditPasswordConfirm] = useState(false);
+
   // Admin Users State
   const [adminUsers, setAdminUsers] = useState<any[]>([]);
   const [showAddAdmin, setShowAddAdmin] = useState(false);
@@ -292,6 +308,167 @@ export default function AdminManagement() {
     }
   };
 
+  const handleResetSuperAdminPassword = async () => {
+    const confirmReset = confirm(
+      '⚠️ EMERGENCY PASSWORD RESET\n\n' +
+      'This will reset the Super Admin password to the default:\n' +
+      'Password: admin123\n\n' +
+      'Are you sure you want to continue?'
+    );
+
+    if (!confirmReset) return;
+
+    setLoading(true);
+    setMessage(null);
+
+    try {
+      const response = await fetch('/api/admin/super-admin/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ 
+          type: 'success', 
+          text: '✅ Super Admin password reset to default! Use password: admin123' 
+        });
+        setLoginPassword('');
+      } else {
+        setMessage({ 
+          type: 'error', 
+          text: `❌ ${data.error || 'Failed to reset password'}` 
+        });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMessage({ type: 'error', text: '❌ Error resetting Super Admin password' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChangeSuperAdminPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      setMessage({ type: 'error', text: '❌ All fields are required' });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setMessage({ type: 'error', text: '❌ New password must be at least 8 characters' });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setMessage({ type: 'error', text: '❌ New passwords do not match' });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/admin/super-admin/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: '✅ Password changed successfully!' });
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmNewPassword('');
+        setShowChangePassword(false);
+      } else {
+        setMessage({ type: 'error', text: `❌ ${data.error || 'Failed to change password'}` });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMessage({ type: 'error', text: '❌ Error changing password' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setMessage(null);
+
+    if (!editUsername || !editEmail || !editPasswordConfirm) {
+      setMessage({ type: 'error', text: '❌ Username, email, and password confirmation are required' });
+      return;
+    }
+
+    if (editUsername.length < 3) {
+      setMessage({ type: 'error', text: '❌ Username must be at least 3 characters' });
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(editEmail)) {
+      setMessage({ type: 'error', text: '❌ Please enter a valid email address' });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/admin/super-admin/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: editUsername,
+          email: editEmail,
+          name: editName || undefined,
+          password: editPasswordConfirm
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: '✅ Profile updated successfully! Please re-login with new credentials.' });
+        setEditPasswordConfirm('');
+        setShowEditProfile(false);
+        
+        // Logout after profile update
+        setTimeout(() => {
+          handleSuperAdminLogout();
+        }, 2000);
+      } else {
+        setMessage({ type: 'error', text: `❌ ${data.error || 'Failed to update profile'}` });
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setMessage({ type: 'error', text: '❌ Error updating profile' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCurrentProfile = async () => {
+    try {
+      const response = await fetch('/api/admin/super-admin/profile');
+      if (response.ok) {
+        const data = await response.json();
+        setEditUsername(data.username || '');
+        setEditEmail(data.email || '');
+        setEditName(data.name || '');
+      }
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -353,23 +530,253 @@ export default function AdminManagement() {
       {activeTab === 'super-admin' && (
         <div className="space-y-6">
           {superAdminLoggedIn ? (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                  <div>
-                    <h3 className="text-lg font-semibold text-green-900">Logged In as Super Admin</h3>
-                    <p className="text-sm text-green-700">You have full administrative access</p>
+            <>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                    <div>
+                      <h3 className="text-lg font-semibold text-green-900">Logged In as Super Admin</h3>
+                      <p className="text-sm text-green-700">You have full administrative access</p>
+                    </div>
                   </div>
+                  <button
+                    onClick={handleSuperAdminLogout}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+                  >
+                    Logout
+                  </button>
                 </div>
-                <button
-                  onClick={handleSuperAdminLogout}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
-                >
-                  Logout
-                </button>
               </div>
-            </div>
+
+              {/* Edit Profile Section */}
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <User className="w-5 h-5" />
+                    Edit Super Admin Profile
+                  </h4>
+                  <button
+                    onClick={() => {
+                      if (!showEditProfile) {
+                        loadCurrentProfile();
+                      }
+                      setShowEditProfile(!showEditProfile);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    {showEditProfile ? 'Cancel' : 'Edit Profile'}
+                  </button>
+                </div>
+
+                {showEditProfile && (
+                  <form onSubmit={handleEditProfile} className="space-y-4 mt-4">
+                    {/* Username */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Username *
+                      </label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={editUsername}
+                          onChange={(e) => setEditUsername(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="Enter new username"
+                          required
+                          minLength={3}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Email *
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="Enter new email"
+                          required
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Name (Optional) */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Display Name (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Enter display name"
+                        disabled={loading}
+                      />
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Current Password (to confirm changes) *
+                      </label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type={showEditPasswordConfirm ? 'text' : 'password'}
+                          value={editPasswordConfirm}
+                          onChange={(e) => setEditPasswordConfirm(e.target.value)}
+                          className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="Enter current password"
+                          required
+                          disabled={loading}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowEditPasswordConfirm(!showEditPasswordConfirm)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showEditPasswordConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                      <p className="text-xs text-yellow-800 dark:text-yellow-500">
+                        ⚠️ <strong>Warning:</strong> After updating your profile, you will be logged out and must login with your new credentials.
+                      </p>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      {loading ? 'Updating...' : 'Update Profile'}
+                    </button>
+                  </form>
+                )}
+              </div>
+
+              {/* Change Password Section */}
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <Key className="w-5 h-5" />
+                    Change Super Admin Password
+                  </h4>
+                  <button
+                    onClick={() => setShowChangePassword(!showChangePassword)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    {showChangePassword ? 'Cancel' : 'Change Password'}
+                  </button>
+                </div>
+
+                {showChangePassword && (
+                  <form onSubmit={handleChangeSuperAdminPassword} className="space-y-4 mt-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+                      <p className="text-xs text-blue-800 dark:text-blue-500">
+                        💡 <strong>Tip:</strong> If you just reset your password, the current password is <code className="bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">admin123</code>
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Current Password *
+                      </label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type={showCurrentPassword ? 'text' : 'password'}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="Enter current password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showCurrentPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        New Password * (min 8 characters)
+                      </label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type={showNewPassword ? 'text' : 'password'}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="Enter new password"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                        Confirm New Password *
+                      </label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="password"
+                          value={confirmNewPassword}
+                          onChange={(e) => setConfirmNewPassword(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                          placeholder="Confirm new password"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <CheckCircle className="w-5 h-5" />
+                      {loading ? 'Updating...' : 'Update Password'}
+                    </button>
+                  </form>
+                )}
+
+                {!showChangePassword && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Click the "Change Password" button above to update your Super Admin password.
+                  </p>
+                )}
+              </div>
+            </>
           ) : (
             <>
               {/* Registration Form */}
@@ -538,14 +945,32 @@ export default function AdminManagement() {
                     </div>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <LogIn className="w-5 h-5" />
-                    {loading ? 'Logging in...' : 'Login'}
-                  </button>
+                  <div className="flex items-center justify-center gap-4">
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <LogIn className="w-5 h-5" />
+                      {loading ? 'Logging in...' : 'Login'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleResetSuperAdminPassword}
+                      disabled={loading}
+                      className="flex items-center justify-center gap-2 px-6 py-3 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw className="w-5 h-5" />
+                      {loading ? 'Resetting...' : 'Reset to Default'}
+                    </button>
+                  </div>
+
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                    <p className="text-xs text-yellow-800 dark:text-yellow-500 text-center">
+                      <strong>⚠️ Emergency Reset:</strong> Resets password to <code className="bg-yellow-100 dark:bg-yellow-900 px-1 py-0.5 rounded">admin123</code>
+                    </p>
+                  </div>
                 </form>
               )}
             </>

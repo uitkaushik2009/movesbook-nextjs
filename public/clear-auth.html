@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Authentication - Movesbook</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2563eb;
+        }
+        .btn {
+            background: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #1d4ed8;
+        }
+        .btn-danger {
+            background: #ef4444;
+        }
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        .success {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            display: none;
+        }
+        .info {
+            background: #3b82f6;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Authentication Reset</h1>
+        
+        <div class="info">
+            <strong>ℹ️ Important:</strong> If you're experiencing 401 Unauthorized errors, you need to clear your authentication tokens and log in again.
+        </div>
+        
+        <p>This will clear all authentication data from your browser and redirect you to the login page.</p>
+        
+        <h3>What will be cleared:</h3>
+        <ul>
+            <li>JWT Authentication Token</li>
+            <li>User Information</li>
+            <li>Admin Session Data</li>
+        </ul>
+        
+        <button class="btn" onclick="clearAuth()">Clear Auth & Redirect to Login</button>
+        <button class="btn btn-danger" onclick="clearAll()">Clear Everything (Including Settings)</button>
+        
+        <div class="success" id="success">
+            ✅ Authentication cleared! Redirecting to login page in 2 seconds...
+        </div>
+    </div>
+    
+    <script>
+        function clearAuth() {
+            // Clear authentication tokens
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('adminUser');
+            
+            // Show success message
+            document.getElementById('success').style.display = 'block';
+            
+            // Redirect to login
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        }
+        
+        function clearAll() {
+            if (confirm('This will clear ALL data including your settings. Are you sure?')) {
+                // Clear everything
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Show success message
+                document.getElementById('success').textContent = '✅ All data cleared! Redirecting to home page in 2 seconds...';
+                document.getElementById('success').style.display = 'block';
+                
+                // Redirect to home
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            }
+        }
+    </script>
+</body>
+</html>
+

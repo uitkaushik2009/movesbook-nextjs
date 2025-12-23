@@ -9,7 +9,7 @@ import type { Sport, StatusColor, WorkoutStatus, RestType } from '@/config/worko
 export type { WorkoutStatus, StatusColor, RestType, Sport } from '@/config/workout.constants';
 
 // View mode type
-export type ViewMode = 'table' | 'calendar';
+export type ViewMode = 'table' | 'calendar' | 'tree';
 
 // Section ID type
 export type SectionId = 'A' | 'B' | 'C' | 'D';

@@ -7,16 +7,19 @@ const prisma = new PrismaClient();
 // PATCH /api/workouts/sessions/[id] - Update a workout session
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
+    // Handle both Promise and direct params for Next.js compatibility
+    const params = context.params instanceof Promise ? await context.params : context.params;
+    
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const decoded = verifyToken(token);
+    const decoded = await verifyToken(token);
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -27,6 +30,7 @@ export async function PATCH(
       code,
       time,
       location,
+      surface,
       notes,
       weather,
       heartRateMax,
@@ -34,7 +38,9 @@ export async function PATCH(
       calories,
       feelingStatus,
       status,
-      sports
+      sports,
+      mainSport,
+      includeStretching
     } = body;
 
     console.log('📝 Updating workout session:', params.id, body);
@@ -65,13 +71,16 @@ export async function PATCH(
         code: code || undefined,
         time: time || undefined,
         location: location || undefined,
+        surface: surface || undefined,
         notes: notes || undefined,
         weather: weather || undefined,
         heartRateMax: heartRateMax ? parseInt(heartRateMax) : undefined,
         heartRateAvg: heartRateAvg ? parseInt(heartRateAvg) : undefined,
         calories: calories ? parseInt(calories) : undefined,
         feelingStatus: feelingStatus || undefined,
-        status: status as any || undefined
+        status: status as any || undefined,
+        mainSport: mainSport !== undefined ? (mainSport || null) : undefined,
+        includeStretching: includeStretching !== undefined ? includeStretching : undefined
       },
       include: {
         sports: true,
@@ -95,12 +104,17 @@ export async function PATCH(
       });
 
       // Add new sports
-      for (const sport of sports) {
-        if (sport) {
+      for (const sportItem of sports) {
+        if (sportItem) {
+          // Extract the sport type - handle both object and string formats
+          const sportType = typeof sportItem === 'object' && sportItem.sport 
+            ? sportItem.sport 
+            : sportItem;
+          
           await prisma.workoutSessionSport.create({
             data: {
               workoutSessionId: params.id,
-              sport: sport
+              sport: sportType
             }
           });
         }
@@ -122,16 +136,19 @@ export async function PATCH(
 // DELETE /api/workouts/sessions/[id] - Delete a workout session
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> | { id: string } }
 ) {
   try {
+    // Handle both Promise and direct params for Next.js compatibility
+    const params = context.params instanceof Promise ? await context.params : context.params;
+    
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const decoded = verifyToken(token);
+    const decoded = await verifyToken(token);
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }

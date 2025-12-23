@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, GripVertical, ArrowUpAZ, ArrowDownZA, Save, X, Download, Globe, Image as ImageIcon, Smile } from 'lucide-react';
+import { Plus, Edit2, Trash2, GripVertical, ArrowUpAZ, ArrowDownZA, Save, X, Download, Globe, Image as ImageIcon, Smile, Grid3x3, List, ArrowUpDown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToolsData } from '@/hooks/useToolsData';
 import {
@@ -19,7 +19,12 @@ import {
   reorderItems
 } from '@/constants/tools.constants';
 
-export default function ToolsSettings() {
+interface ToolsSettingsProps {
+  isAdmin?: boolean;
+  userType?: string;
+}
+
+export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }: ToolsSettingsProps = {}) {
   const { t, currentLanguage } = useLanguage();
   
   // Use custom hook for data management
@@ -65,6 +70,11 @@ export default function ToolsSettings() {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   
+  // Equipment view and sort state
+  const [equipmentViewMode, setEquipmentViewMode] = useState<'cards' | 'table'>('cards');
+  const [equipmentSortField, setEquipmentSortField] = useState<'name' | 'category' | 'company' | 'startDate'>('name');
+  const [equipmentSortDirection, setEquipmentSortDirection] = useState<'asc' | 'desc'>('asc');
+  
   // Language-specific defaults state
   const [selectedLanguage, setSelectedLanguage] = useState(currentLanguage || 'en');
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -77,6 +87,49 @@ export default function ToolsSettings() {
       setSelectedLanguage(currentLanguage);
     }
   }, [currentLanguage]);
+  
+  // Equipment sorting function
+  const sortEquipment = (equipmentList: Equipment[]) => {
+    return [...equipmentList].sort((a, b) => {
+      let aValue: string | number = '';
+      let bValue: string | number = '';
+      
+      switch (equipmentSortField) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'category':
+          aValue = a.category.toLowerCase();
+          bValue = b.category.toLowerCase();
+          break;
+        case 'company':
+          aValue = (a.company || '').toLowerCase();
+          bValue = (b.company || '').toLowerCase();
+          break;
+        case 'startDate':
+          aValue = a.startDate ? new Date(a.startDate).getTime() : 0;
+          bValue = b.startDate ? new Date(b.startDate).getTime() : 0;
+          break;
+      }
+      
+      if (equipmentSortDirection === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+  };
+  
+  // Handle equipment column sort
+  const handleEquipmentSort = (field: 'name' | 'category' | 'company' | 'startDate') => {
+    if (equipmentSortField === field) {
+      setEquipmentSortDirection(equipmentSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setEquipmentSortField(field);
+      setEquipmentSortDirection('asc');
+    }
+  };
   
   // Data loading is now handled by useToolsData hook
   // All loading functions removed - handled by useToolsData hook
@@ -459,6 +512,36 @@ export default function ToolsSettings() {
           Personal Equipment
         </button>
         <button
+          onClick={() => setActiveTab('equipmentFactories')}
+          className={`px-6 py-3 font-semibold transition ${
+            activeTab === 'equipmentFactories'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Sports Equipment Factories
+        </button>
+        <button
+          onClick={() => setActiveTab('muscles')}
+          className={`px-6 py-3 font-semibold transition ${
+            activeTab === 'muscles'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Muscles Settings
+        </button>
+        <button
+          onClick={() => setActiveTab('sportsEquipment')}
+          className={`px-6 py-3 font-semibold transition ${
+            activeTab === 'sportsEquipment'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Sports Equipment
+        </button>
+        <button
           onClick={() => setActiveTab('exercises')}
           className={`px-6 py-3 font-semibold transition ${
             activeTab === 'exercises'
@@ -467,6 +550,16 @@ export default function ToolsSettings() {
           }`}
         >
           Exercise Bank
+        </button>
+        <button
+          onClick={() => setActiveTab('myLibrary')}
+          className={`px-6 py-3 font-semibold transition ${
+            activeTab === 'myLibrary'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          My Library of Exercises
         </button>
         <button
           onClick={() => setActiveTab('devices')}
@@ -811,7 +904,18 @@ export default function ToolsSettings() {
             <div className="flex gap-3">
               <button
                 onClick={() => {
-                  setEditingEquipment({ id: '', name: '', category: '', description: '', inStock: true });
+                  setEditingEquipment({ 
+                    id: '', 
+                    name: '', 
+                    picture: '',
+                    category: '', 
+                    sports: [],
+                    company: '',
+                    description: '', 
+                    inStock: true,
+                    startDate: '',
+                    durationAlarm: { days: undefined, km: undefined, time: '' }
+                  });
                   setShowEquipmentDialog(true);
                 }}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
@@ -819,6 +923,34 @@ export default function ToolsSettings() {
                 <Plus className="w-4 h-4" />
                 Add Equipment
               </button>
+              
+              {/* View Toggle */}
+              <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setEquipmentViewMode('cards')}
+                  className={`px-3 py-2 flex items-center gap-2 transition ${
+                    equipmentViewMode === 'cards'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                  title="Card View"
+                >
+                  <Grid3x3 className="w-4 h-4" />
+                  Cards
+                </button>
+                <button
+                  onClick={() => setEquipmentViewMode('table')}
+                  className={`px-3 py-2 flex items-center gap-2 transition border-l border-gray-300 ${
+                    equipmentViewMode === 'table'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white text-gray-700 hover:bg-gray-50'
+                  }`}
+                  title="Table View"
+                >
+                  <List className="w-4 h-4" />
+                  Table
+                </button>
+              </div>
             </div>
             <div className="flex gap-3 items-center">
               <select
@@ -831,6 +963,10 @@ export default function ToolsSettings() {
                 <option value="Weights">Weights</option>
                 <option value="Accessories">Accessories</option>
                 <option value="Machines">Machines</option>
+                <option value="Clothes">Clothes</option>
+                <option value="Shoes">Shoes</option>
+                <option value="Beverages">Beverages</option>
+                <option value="Sport devices">Sport devices</option>
               </select>
               <div className="text-sm text-gray-600">
                 {equipment.filter(e => categoryFilter === 'all' || e.category === categoryFilter).length} items
@@ -838,23 +974,29 @@ export default function ToolsSettings() {
             </div>
           </div>
 
-          {/* Equipment Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {equipment
-              .filter(e => categoryFilter === 'all' || e.category === categoryFilter)
-              .map((item) => (
+          {/* Equipment Cards View */}
+          {equipmentViewMode === 'cards' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortEquipment(equipment.filter(e => categoryFilter === 'all' || e.category === categoryFilter))
+                .map((item) => (
                 <div
                   key={item.id}
                   className="bg-white rounded-xl border border-gray-200 p-5 hover:border-gray-300 transition"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="font-bold text-gray-900 mb-1">{item.name}</h3>
+                  <div className="flex items-start gap-3 mb-3">
+                    {item.picture && (
+                      <img src={item.picture} alt={item.name} className="w-16 h-16 object-cover rounded-lg border-2 border-gray-200 flex-shrink-0" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-gray-900 mb-1 truncate">{item.name}</h3>
                       <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
                         {item.category}
                       </span>
+                      {item.company && (
+                        <p className="text-xs text-gray-500 mt-1">{item.company}</p>
+                      )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-shrink-0">
                       <button
                         onClick={() => {
                           setEditingEquipment(item);
@@ -877,7 +1019,36 @@ export default function ToolsSettings() {
                     </div>
                   </div>
                   
-                  <p className="text-sm text-gray-600 mb-3">{item.description}</p>
+                  {/* Sports Tags */}
+                  {item.sports && item.sports.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {item.sports.map((sportId, index) => {
+                        const sport = sports.find(s => s.id === sportId);
+                        return sport ? (
+                          <span key={index} className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded">
+                            {sport.icon} {sport.name}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{item.description}</p>
+                  
+                  {/* Athlete fields */}
+                  {!isAdmin && item.startDate && (
+                    <div className="mb-3 p-2 bg-blue-50 rounded-lg text-xs">
+                      <p className="text-gray-700"><strong>Start:</strong> {new Date(item.startDate).toLocaleDateString()}</p>
+                      {item.durationAlarm && (
+                        <p className="text-gray-700 mt-1">
+                          <strong>Alarm:</strong> 
+                          {item.durationAlarm.days && ` ${item.durationAlarm.days}d`}
+                          {item.durationAlarm.km && ` ${item.durationAlarm.km}km`}
+                          {item.durationAlarm.time && ` ${item.durationAlarm.time}`}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   
                   <div className="flex items-center justify-between">
                     <span className={`text-xs font-semibold ${item.inStock ? 'text-green-600' : 'text-red-600'}`}>
@@ -895,14 +1066,235 @@ export default function ToolsSettings() {
                     </button>
                   </div>
                 </div>
-              ))}
-          </div>
+                ))}
+            </div>
+          )}
+          
+          {/* Equipment Table View */}
+          {equipmentViewMode === 'table' && (
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition"
+                      onClick={() => handleEquipmentSort('name')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Name
+                        {equipmentSortField === 'name' && (
+                          <ArrowUpDown className="w-3 h-3" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition"
+                      onClick={() => handleEquipmentSort('category')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Category
+                        {equipmentSortField === 'category' && (
+                          <ArrowUpDown className="w-3 h-3" />
+                        )}
+                      </div>
+                    </th>
+                    <th 
+                      className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition"
+                      onClick={() => handleEquipmentSort('company')}
+                    >
+                      <div className="flex items-center gap-2">
+                        Company
+                        {equipmentSortField === 'company' && (
+                          <ArrowUpDown className="w-3 h-3" />
+                        )}
+                      </div>
+                    </th>
+                    {!isAdmin && (
+                      <th 
+                        className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase cursor-pointer hover:bg-gray-100 transition"
+                        onClick={() => handleEquipmentSort('startDate')}
+                      >
+                        <div className="flex items-center gap-2">
+                          Date Start
+                          {equipmentSortField === 'startDate' && (
+                            <ArrowUpDown className="w-3 h-3" />
+                          )}
+                        </div>
+                      </th>
+                    )}
+                    <th className="px-6 py-3 text-right text-xs font-semibold text-gray-700 uppercase">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {sortEquipment(equipment.filter(e => categoryFilter === 'all' || e.category === categoryFilter))
+                    .map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50 transition">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            {item.picture && (
+                              <img src={item.picture} alt={item.name} className="w-10 h-10 object-cover rounded border border-gray-200 flex-shrink-0" />
+                            )}
+                            <div>
+                              <div className="font-semibold text-gray-900">{item.name}</div>
+                              {item.sports && item.sports.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {item.sports.slice(0, 2).map((sportId, index) => {
+                                    const sport = sports.find(s => s.id === sportId);
+                                    return sport ? (
+                                      <span key={index} className="text-xs">
+                                        {sport.icon}
+                                      </span>
+                                    ) : null;
+                                  })}
+                                  {item.sports.length > 2 && (
+                                    <span className="text-xs text-gray-500">+{item.sports.length - 2}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
+                            {item.category}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-700">{item.company || '—'}</div>
+                        </td>
+                        {!isAdmin && (
+                          <td className="px-6 py-4">
+                            <div className="text-sm text-gray-700">
+                              {item.startDate ? new Date(item.startDate).toLocaleDateString() : '—'}
+                            </div>
+                          </td>
+                        )}
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingEquipment(item);
+                                setShowEquipmentDialog(true);
+                              }}
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm('Delete this equipment?')) {
+                                  setEquipment(equipment.filter(e => e.id !== item.id));
+                                }
+                              }}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {equipment.filter(e => categoryFilter === 'all' || e.category === categoryFilter).length === 0 && (
             <div className="text-center py-12 bg-gray-50 rounded-xl">
               <p className="text-gray-600">No equipment found. Click "Add Equipment" to get started!</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Sports Equipment Factories Tab */}
+      {activeTab === 'equipmentFactories' && (
+        <div className="space-y-6">
+          {/* Info Banner */}
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 p-6">
+            <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+              <span className="text-2xl">🏭</span>
+              Sports Equipment Factories
+            </h3>
+            <p className="text-gray-600 text-sm">
+              Manage sports equipment manufacturers and factory information. This section is available for{' '}
+              <span className="font-semibold text-purple-600">all users</span>.
+            </p>
+          </div>
+
+          {/* Placeholder Content */}
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <div className="text-6xl mb-4">🏭</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Sports Equipment Factories</h3>
+            <p className="text-gray-600 mb-4">
+              Add and manage sports equipment manufacturers, factory locations, and supplier information.
+            </p>
+            <button className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold">
+              <Plus className="w-4 h-4 inline-block mr-2" />
+              Add Factory
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Muscles Settings Tab */}
+      {activeTab === 'muscles' && (
+        <div className="space-y-6">
+          {/* Info Banner */}
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl border border-red-200 p-6">
+            <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+              <span className="text-2xl">💪</span>
+              Muscles Settings
+            </h3>
+            <p className="text-gray-600 text-sm">
+              Configure muscle groups, anatomical references, and training targets. Admin only section.
+            </p>
+          </div>
+
+          {/* Placeholder Content */}
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <div className="text-6xl mb-4">💪</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Muscles Settings</h3>
+            <p className="text-gray-600 mb-4">
+              Define muscle groups, add anatomical descriptions, and set training parameters.
+            </p>
+            <button className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold">
+              <Plus className="w-4 h-4 inline-block mr-2" />
+              Add Muscle Group
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Sports Equipment Tab */}
+      {activeTab === 'sportsEquipment' && (
+        <div className="space-y-6">
+          {/* Info Banner */}
+          <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl border border-cyan-200 p-6">
+            <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+              <span className="text-2xl">⚽</span>
+              Sports Equipment
+            </h3>
+            <p className="text-gray-600 text-sm">
+              Manage all types of sports equipment and gear. This section is available for{' '}
+              <span className="font-semibold text-cyan-600">all users</span>.
+            </p>
+          </div>
+
+          {/* Placeholder Content */}
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <div className="text-6xl mb-4">⚽</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Sports Equipment</h3>
+            <p className="text-gray-600 mb-4">
+              Add sports-specific equipment, accessories, and gear for your training sessions.
+            </p>
+            <button className="px-6 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition font-semibold">
+              <Plus className="w-4 h-4 inline-block mr-2" />
+              Add Equipment
+            </button>
+          </div>
         </div>
       )}
 
@@ -1049,6 +1441,36 @@ export default function ToolsSettings() {
               <p className="text-gray-600">No exercises found. Try adjusting your search or add a new exercise!</p>
             </div>
           )}
+        </div>
+      )}
+
+      {/* My Library of Exercises Tab */}
+      {activeTab === 'myLibrary' && (
+        <div className="space-y-6">
+          {/* Info Banner */}
+          <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-xl border border-green-200 p-6">
+            <h3 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
+              <span className="text-2xl">📚</span>
+              My Library of Exercises
+            </h3>
+            <p className="text-gray-600 text-sm">
+              Your personal collection of custom exercises and workout routines. This section is available for{' '}
+              <span className="font-semibold text-green-600">all users</span>.
+            </p>
+          </div>
+
+          {/* Placeholder Content */}
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <div className="text-6xl mb-4">📚</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">My Library of Exercises</h3>
+            <p className="text-gray-600 mb-4">
+              Create and save your own custom exercises, workout templates, and training programs.
+            </p>
+            <button className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold">
+              <Plus className="w-4 h-4 inline-block mr-2" />
+              Add Custom Exercise
+            </button>
+          </div>
         </div>
       )}
 
@@ -1394,15 +1816,16 @@ export default function ToolsSettings() {
 
       {/* Equipment Dialog */}
       {showEquipmentDialog && editingEquipment && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-lg w-full">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full my-8">
             <h3 className="text-2xl font-bold mb-6">
               {editingEquipment.id ? 'Edit Equipment' : 'Add New Equipment'}
             </h3>
             
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+              {/* Name */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Name</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Name *</label>
                 <input
                   type="text"
                   value={editingEquipment.name}
@@ -1412,8 +1835,36 @@ export default function ToolsSettings() {
                 />
               </div>
 
+              {/* Picture */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Picture</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        // For now, store as data URL. In production, upload to server
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setEditingEquipment({ ...editingEquipment, picture: reader.result as string });
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  {editingEquipment.picture && (
+                    <img src={editingEquipment.picture} alt="Preview" className="w-16 h-16 object-cover rounded-lg border-2 border-gray-300" />
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Upload an image of the equipment</p>
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Category *</label>
                 <select
                   value={editingEquipment.category}
                   onChange={(e) => setEditingEquipment({ ...editingEquipment, category: e.target.value })}
@@ -1424,9 +1875,78 @@ export default function ToolsSettings() {
                   <option value="Weights">Weights</option>
                   <option value="Accessories">Accessories</option>
                   <option value="Machines">Machines</option>
+                  <option value="Clothes">Clothes</option>
+                  <option value="Shoes">Shoes</option>
+                  <option value="Beverages">Beverages</option>
+                  <option value="Sport devices">Sport devices</option>
                 </select>
               </div>
 
+              {/* Sport Tags */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Sport *</label>
+                <div className="border border-gray-300 rounded-lg p-3 min-h-[100px]">
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {editingEquipment.sports?.map((sportId, index) => {
+                      const sport = sports.find(s => s.id === sportId);
+                      return sport ? (
+                        <span key={index} className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                          {sport.icon} {sport.name}
+                          <button
+                            onClick={() => {
+                              setEditingEquipment({
+                                ...editingEquipment,
+                                sports: editingEquipment.sports?.filter((_, i) => i !== index) || []
+                              });
+                            }}
+                            className="ml-1 hover:text-blue-900"
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                  <select
+                    onChange={(e) => {
+                      const sportId = e.target.value;
+                      if (sportId && !editingEquipment.sports?.includes(sportId)) {
+                        setEditingEquipment({
+                          ...editingEquipment,
+                          sports: [...(editingEquipment.sports || []), sportId]
+                        });
+                      }
+                      e.target.value = '';
+                    }}
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    defaultValue=""
+                  >
+                    <option value="">+ Add sport</option>
+                    {sports
+                      .filter(s => !editingEquipment.sports?.includes(s.id))
+                      .map(sport => (
+                        <option key={sport.id} value={sport.id}>
+                          {sport.icon} {sport.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Select one or more sports this equipment is used for</p>
+              </div>
+
+              {/* Company */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Company</label>
+                <input
+                  type="text"
+                  value={editingEquipment.company || ''}
+                  onChange={(e) => setEditingEquipment({ ...editingEquipment, company: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Manufacturer or brand name"
+                />
+              </div>
+
+              {/* Description */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
                 <textarea
@@ -1438,6 +1958,83 @@ export default function ToolsSettings() {
                 />
               </div>
 
+              {/* Athlete-specific fields */}
+              {!isAdmin && (
+                <>
+                  <div className="border-t pt-4 mt-4">
+                    <h4 className="font-semibold text-gray-700 mb-3">Athlete Tracking</h4>
+                    
+                    {/* Start Date */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Start Date</label>
+                      <input
+                        type="date"
+                        value={editingEquipment.startDate || ''}
+                        onChange={(e) => setEditingEquipment({ ...editingEquipment, startDate: e.target.value })}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    {/* Duration Alarm */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Duration Alarm</label>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Days (autofilled)</label>
+                          <input
+                            type="number"
+                            value={editingEquipment.durationAlarm?.days || ''}
+                            onChange={(e) => setEditingEquipment({
+                              ...editingEquipment,
+                              durationAlarm: {
+                                ...editingEquipment.durationAlarm,
+                                days: parseInt(e.target.value) || undefined
+                              }
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            placeholder="Days"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Km (autofilled)</label>
+                          <input
+                            type="number"
+                            value={editingEquipment.durationAlarm?.km || ''}
+                            onChange={(e) => setEditingEquipment({
+                              ...editingEquipment,
+                              durationAlarm: {
+                                ...editingEquipment.durationAlarm,
+                                km: parseInt(e.target.value) || undefined
+                              }
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            placeholder="Km"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">Time (autofilled)</label>
+                          <input
+                            type="text"
+                            value={editingEquipment.durationAlarm?.time || ''}
+                            onChange={(e) => setEditingEquipment({
+                              ...editingEquipment,
+                              durationAlarm: {
+                                ...editingEquipment.durationAlarm,
+                                time: e.target.value
+                              }
+                            })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                            placeholder="HH:MM:SS"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">Set automatic alarms based on usage duration</p>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* In Stock */}
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
@@ -1456,7 +2053,11 @@ export default function ToolsSettings() {
               <button
                 onClick={() => {
                   if (!editingEquipment.name || !editingEquipment.category) {
-                    alert('Please fill in all required fields');
+                    alert('Please fill in all required fields (Name, Category, Sport)');
+                    return;
+                  }
+                  if (!editingEquipment.sports || editingEquipment.sports.length === 0) {
+                    alert('Please select at least one sport');
                     return;
                   }
                   if (editingEquipment.id) {

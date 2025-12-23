@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter, closestCorners, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import SortableMoveframeRow from './SortableMoveframeRow';
 import MoveframeInfoPanel from '../MoveframeInfoPanel';
+import SetWorkTypeModal from '../SetWorkTypeModal';
 
 interface MoveframesSectionProps {
   moveframes: any[];
   workout: any;
   workoutIndex: number;
   day: any;
+  expandedMoveframeId?: string | null;
+  autoExpandAll?: boolean;
   onAddMoveframe: () => void;
   onAddMoveframeAfter?: (moveframe: any, index: number, workout: any, day: any) => void;
   onEditMoveframe?: (moveframe: any) => void;
@@ -16,9 +19,12 @@ interface MoveframesSectionProps {
   onEditMovelap?: (movelap: any, moveframe: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any) => void;
   onAddMovelap?: (moveframe: any) => void;
+  onAddMovelapAfter?: (movelap: any, index: number, moveframe: any, workout: any, day: any) => void;
   onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onOpenColumnSettings?: (tableType: 'day' | 'workout' | 'moveframe' | 'movelap') => void;
+  onRefreshWorkouts?: () => Promise<void>;
+  columnSettings?: any;
 }
 
 export default function MoveframesSection({ 
@@ -26,6 +32,8 @@ export default function MoveframesSection({
   workout, 
   workoutIndex, 
   day,
+  expandedMoveframeId,
+  autoExpandAll = false,
   onAddMoveframe,
   onAddMoveframeAfter,
   onEditMoveframe,
@@ -33,14 +41,19 @@ export default function MoveframesSection({
   onEditMovelap,
   onDeleteMovelap,
   onAddMovelap,
+  onAddMovelapAfter,
   onCopyMoveframe,
   onMoveMoveframe,
-  onOpenColumnSettings
+  onOpenColumnSettings,
+  onRefreshWorkouts,
+  columnSettings
 }: MoveframesSectionProps) {
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [expandedMoveframe, setExpandedMoveframe] = React.useState<string | null>(null);
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [selectedMoveframe, setSelectedMoveframe] = useState<any>(null);
+  const [showWorkTypeModal, setShowWorkTypeModal] = useState(false);
+  const [workTypeMoveframe, setWorkTypeMoveframe] = useState<any>(null);
   
   // Local state for moveframe order (sorted alphabetically)
   const [orderedMoveframes, setOrderedMoveframes] = useState(moveframes);
@@ -50,20 +63,162 @@ export default function MoveframesSection({
     setOrderedMoveframes(moveframes);
   }, [moveframes]);
   
+  // Auto-expand moveframe when expandedMoveframeId is set
+  React.useEffect(() => {
+    if (expandedMoveframeId) {
+      setExpandedMoveframe(expandedMoveframeId);
+    }
+  }, [expandedMoveframeId]);
+
+  // State to track checked moveframes
+  const [checkedMoveframes, setCheckedMoveframes] = React.useState<Set<string>>(new Set());
+
+  // Toggle checkbox for a moveframe
+  const toggleMoveframeCheck = (moveframeId: string) => {
+    setCheckedMoveframes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(moveframeId)) {
+        newSet.delete(moveframeId);
+      } else {
+        newSet.add(moveframeId);
+      }
+      return newSet;
+    });
+  };
+
+  // Open work type modal for a moveframe
+  const handleOpenWorkTypeModal = (moveframe: any) => {
+    setWorkTypeMoveframe(moveframe);
+    setShowWorkTypeModal(true);
+  };
+
+  // Save work type
+  const handleSaveWorkType = async (workType: 'NONE' | 'MAIN' | 'SECONDARY') => {
+    if (!workTypeMoveframe) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`/api/workouts/moveframes/${workTypeMoveframe.id}/set-work-type`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ workType })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Reload workout data to refresh all tables with updated work types and descriptions
+        if (onRefreshWorkouts) {
+          await onRefreshWorkouts();
+        }
+      } else {
+        console.error('Failed to set work type:', data.error, data.details);
+        throw new Error(data.error || 'Failed to set work type');
+      }
+    } catch (error) {
+      console.error('Error setting work type:', error);
+      throw error;
+    }
+  };
+
+  // Default column order - matching original layout from screenshot
+  // ☑, ⋮⋮, #, MF, Color section, Name section, Moveframe description, Rip, Macro, Alarm & Sound, Options
+  const defaultColumnOrder = ['checkbox', 'drag', 'expand', 'index', 'mf', 'color', 'section', 'description', 'rip', 'macro', 'alarm', 'options', 'code_section', 'action', 'dist', 'style', 'speed', 'time', 'pace', 'rec', 'rest_to', 'aim_snd', 'sport', 'annotation', 'annotations'];
+
+  // Column visibility helper
+  const isColumnVisible = (columnId: string) => {
+    if (!columnSettings) return true; // Show all if no settings
+    const visible = columnSettings.isColumnVisible('moveframe', columnId);
+    // If column ID is not in saved settings, show it by default
+    return visible !== false;
+  };
+
+  // Get column order
+  const getColumnOrder = () => {
+    if (!columnSettings) {
+      return defaultColumnOrder;
+    }
+    const order = columnSettings.getColumnOrder('moveframe');
+    // If no saved order or empty, return default
+    if (!order || order.length === 0) {
+      return defaultColumnOrder;
+    }
+    // Filter out any column IDs that don't exist in our current definition
+    const validOrder = order.filter((id: string) => defaultColumnOrder.includes(id));
+    // If saved order is missing columns, add them at the end
+    const missingColumns = defaultColumnOrder.filter((id: string) => !validOrder.includes(id));
+    return [...validOrder, ...missingColumns];
+  };
+
+  // Map column IDs to their header components
+  const renderColumnHeader = (columnId: string) => {
+    const columnHeaders: { [key: string]: JSX.Element } = {
+      checkbox: <th key="checkbox" className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Select moveframe">☑</th>,
+      drag: <th key="drag" className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Drag to reorder">⋮⋮</th>,
+      expand: <th key="expand" className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Expand/Collapse">::</th>,
+      index: <th key="index" className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Index">#</th>,
+      color: <th key="color" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Color section</th>,
+      code_section: <th key="code_section" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Code section</th>,
+      action: <th key="action" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Action</th>,
+      dist: <th key="dist" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Dist</th>,
+      style: <th key="style" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Style</th>,
+      speed: <th key="speed" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Speed</th>,
+      time: <th key="time" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Time</th>,
+      pace: <th key="pace" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Pace</th>,
+      rec: <th key="rec" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rec</th>,
+      rest_to: <th key="rest_to" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rest to</th>,
+      aim_snd: <th key="aim_snd" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Aim & Snd</th>,
+      annotations: <th key="annotations" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Annotations</th>,
+      mf: <th key="mf" className="border border-gray-200 px-1 py-1 text-center text-[10px]">MF</th>,
+      section: <th key="section" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Period</th>,
+      sport: <th key="sport" className="border border-gray-200 px-1 py-1 text-left text-[10px]">Sport of the moveframe</th>,
+      description: <th key="description" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Moveframe description</th>,
+      rip: <th key="rip" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rip</th>,
+      macro: <th key="macro" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Macro</th>,
+      alarm: <th key="alarm" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Alarm & Sound</th>,
+      annotation: <th key="annotation" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Annotation</th>,
+      options: <th key="options" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Options</th>,
+    };
+    return columnHeaders[columnId];
+  };
+
+  const columnOrder = getColumnOrder();
+  const orderedVisibleColumns = columnOrder.filter(isColumnVisible);
+
+  // Debug logging
+  React.useEffect(() => {
+    console.log('📊 Moveframe Table Columns:', {
+      total: columnOrder.length,
+      visible: orderedVisibleColumns.length,
+      columnOrder,
+      orderedVisibleColumns
+    });
+  }, [columnOrder, orderedVisibleColumns]);
+  
   // Setup drag sensors with reliable activation
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 3, // Small distance to start drag
+        distance: 8, // Distance before drag starts
       },
     })
   );
   
   // Handle drag end - reorder and reassign letters alphabetically
   const handleDragEnd = async (event: DragEndEvent) => {
+    console.log('🎯 Drag ended:', event);
     const { active, over } = event;
     
-    if (!over || active.id === over.id) return;
+    console.log('🎯 Active ID:', active?.id, 'Over ID:', over?.id);
+    
+    if (!over || active.id === over.id) {
+      console.log('🎯 Drag cancelled or same position');
+      return;
+    }
     
     const oldIndex = orderedMoveframes.findIndex((mf: any) => mf.id === active.id);
     const newIndex = orderedMoveframes.findIndex((mf: any) => mf.id === over.id);
@@ -219,64 +374,53 @@ export default function MoveframesSection({
 
         {/* Moveframes Table */}
         {isExpanded && (
-          <div className="p-4">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext
-                items={orderedMoveframes.map((mf: any) => mf.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                <table className="w-full border-collapse text-xs bg-white">
-                  <thead className="bg-purple-300 text-purple-900">
-                    <tr>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Drag to reorder">⋮⋮</th>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Expand/Collapse">::</th>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Index">#</th>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">MF</th>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Workout section</th>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Ico</th>
-                      <th className="border border-gray-200 px-1 py-1 text-left text-[10px]">Sport of the moveframe</th>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Moveframe description</th>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rip</th>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Macro</th>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Alarm & Sound</th>
-                      <th className="border border-gray-200 px-1 py-1 text-center text-[10px]">Options</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orderedMoveframes.map((moveframe: any, mfIndex: number) => {
-                      const isMovelapsExpanded = expandedMoveframe === moveframe.id;
-                      
-                      return (
-                        <SortableMoveframeRow
-                          key={moveframe.id}
-                          moveframe={moveframe}
-                          mfIndex={mfIndex}
-                          isMovelapsExpanded={isMovelapsExpanded}
-                          onToggleExpand={() => setExpandedMoveframe(isMovelapsExpanded ? null : moveframe.id)}
-                          onEditMoveframe={onEditMoveframe}
-                          onDeleteMoveframe={onDeleteMoveframe}
-                          onEditMovelap={onEditMovelap}
-                          onDeleteMovelap={onDeleteMovelap}
-                          onAddMovelap={onAddMovelap}
-                          onAddMoveframeAfter={onAddMoveframeAfter}
-                          onCopyMoveframe={onCopyMoveframe}
-                          onMoveMoveframe={onMoveMoveframe}
-                          workout={workout}
-                          day={day}
-                          setShowInfoPanel={setShowInfoPanel}
-                          setSelectedMoveframe={setSelectedMoveframe}
-                        />
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </SortableContext>
-            </DndContext>
-          </div>
+          <SortableContext
+            items={orderedMoveframes.map((mf: any) => mf.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="p-4">
+              <table className="w-full border-collapse text-xs bg-white">
+                <thead className="bg-purple-300 text-purple-900">
+                  <tr>
+                    {orderedVisibleColumns.map(columnId => renderColumnHeader(columnId))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {orderedMoveframes.map((moveframe: any, mfIndex: number) => {
+                    // Expand movelaps if: explicitly expanded OR autoExpandAll is true
+                    const isMovelapsExpanded = autoExpandAll || expandedMoveframe === moveframe.id;
+                    
+                    return (
+                      <SortableMoveframeRow
+                        key={moveframe.id}
+                        moveframe={moveframe}
+                        mfIndex={mfIndex}
+                        isMovelapsExpanded={isMovelapsExpanded}
+                        isChecked={checkedMoveframes.has(moveframe.id)}
+                        onToggleCheck={() => toggleMoveframeCheck(moveframe.id)}
+                        onToggleExpand={() => setExpandedMoveframe(isMovelapsExpanded ? null : moveframe.id)}
+                        onEditMoveframe={onEditMoveframe}
+                        onDeleteMoveframe={onDeleteMoveframe}
+                        onEditMovelap={onEditMovelap}
+                        onDeleteMovelap={onDeleteMovelap}
+                        onAddMovelap={onAddMovelap}
+                        onAddMovelapAfter={onAddMovelapAfter}
+                        onAddMoveframeAfter={onAddMoveframeAfter}
+                        onCopyMoveframe={onCopyMoveframe}
+                        onMoveMoveframe={onMoveMoveframe}
+                        onSetWorkType={handleOpenWorkTypeModal}
+                        workout={workout}
+                        day={day}
+                        setShowInfoPanel={setShowInfoPanel}
+                        setSelectedMoveframe={setSelectedMoveframe}
+                        orderedVisibleColumns={orderedVisibleColumns}
+                      />
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </SortableContext>
         )}
       </div>
 
@@ -322,6 +466,18 @@ export default function MoveframesSection({
           onDeleteMovelap={(movelap) => {
             if (onDeleteMovelap) onDeleteMovelap(movelap, selectedMoveframe);
           }}
+        />
+      )}
+
+      {/* Set Work Type Modal */}
+      {showWorkTypeModal && workTypeMoveframe && (
+        <SetWorkTypeModal
+          moveframe={workTypeMoveframe}
+          onClose={() => {
+            setShowWorkTypeModal(false);
+            setWorkTypeMoveframe(null);
+          }}
+          onSave={handleSaveWorkType}
         />
       )}
     </>

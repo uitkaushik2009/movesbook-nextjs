@@ -1,24 +1,10 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
 
-// Load private key for JWT signing (lazy loaded)
-let PRIVATE_KEY: string | null = null;
-
-const getPrivateKey = (): string => {
-  if (PRIVATE_KEY) return PRIVATE_KEY;
-  
-  try {
-    const privateKeyPath = path.join(process.cwd(), 'private.pem');
-    PRIVATE_KEY = fs.readFileSync(privateKeyPath, 'utf8');
-    return PRIVATE_KEY;
-  } catch (error) {
-    console.warn('Private key not found, using fallback secret');
-    PRIVATE_KEY = process.env.JWT_SECRET || 'your-fallback-secret-change-in-production';
-    return PRIVATE_KEY;
-  }
+// JWT Secret (use environment variable or fallback)
+const getJwtSecret = (): string => {
+  return process.env.JWT_SECRET || 'movesbook-nextjs-jwt-secret-key-2024';
 };
 
 // Hash password using bcrypt for new users
@@ -47,7 +33,7 @@ export const verifyPassword = async (password: string, hashedPassword: string): 
   }
 };
 
-// Generate JWT token with RSA private key
+// Generate JWT token
 export const generateToken = (userId: string, email: string, username: string, userType: string): string => {
   const payload = { 
     userId, 
@@ -57,28 +43,24 @@ export const generateToken = (userId: string, email: string, username: string, u
     iat: Math.floor(Date.now() / 1000)
   };
   
-  const key = getPrivateKey();
+  const secret = getJwtSecret();
   
-  try {
-    return jwt.sign(payload, key, {
-      algorithm: 'RS256',
-      expiresIn: '7d'
-    });
-  } catch (error) {
-    // Fallback to HS256 if RSA fails
-    return jwt.sign(payload, key, { expiresIn: '7d' });
-  }
+  return jwt.sign(payload, secret, {
+    algorithm: 'HS256',
+    expiresIn: '7d'
+  });
 };
 
 // Verify JWT token
 export const verifyToken = (token: string): any => {
-  const key = getPrivateKey();
+  const secret = getJwtSecret();
   
   try {
-    return jwt.verify(token, key, {
-      algorithms: ['RS256', 'HS256']
+    return jwt.verify(token, secret, {
+      algorithms: ['HS256']
     });
   } catch (error) {
+    console.error('Token verification failed:', error);
     return null;
   }
 };

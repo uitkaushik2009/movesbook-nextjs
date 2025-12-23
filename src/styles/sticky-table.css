@@ -24,6 +24,8 @@ td.sticky-col-4,
 td.sticky-col-5,
 td.sticky-col-6,
 td.sticky-col-7,
+td.sticky-col-8,
+td.sticky-col-9,
 td.sticky-options-col {
   background-clip: padding-box !important;
 }
@@ -62,13 +64,17 @@ td.sticky-col-4,
 td.sticky-col-5,
 td.sticky-col-6,
 td.sticky-col-7,
+td.sticky-col-8,
+td.sticky-col-9,
 th.sticky-header-1,
 th.sticky-header-2,
 th.sticky-header-3,
 th.sticky-header-4,
 th.sticky-header-5,
 th.sticky-header-6,
-th.sticky-header-7 {
+th.sticky-header-7,
+th.sticky-header-8,
+th.sticky-header-9 {
   position: -webkit-sticky !important;
   position: sticky !important;
   z-index: 15 !important;
@@ -92,28 +98,40 @@ th.sticky-header-3 {
   left: 100px !important;
 }
 
-/* Column 4 - Dayname (190px = 50 + 50 + 90) */
+/* Column 4 - Week n. (190px = 50 + 50 + 90) */
 td.sticky-col-4,
 th.sticky-header-4 { 
   left: 190px !important;
 }
 
-/* Column 5 - Date (270px = 50 + 50 + 90 + 80) */
+/* Column 5 - Day wk (250px = 50 + 50 + 90 + 60) */
 td.sticky-col-5,
 th.sticky-header-5 { 
-  left: 270px !important;
+  left: 250px !important;
 }
 
-/* Column 6 - Match done (350px = 50 + 50 + 90 + 80 + 80) */
+/* Column 6 - Dayname (300px = 50 + 50 + 90 + 60 + 50) */
 td.sticky-col-6,
 th.sticky-header-6 { 
-  left: 350px !important;
+  left: 300px !important;
 }
 
-/* Column 7 - Workouts (410px = 50 + 50 + 90 + 80 + 80 + 60) */
+/* Column 7 - Date (380px = 50 + 50 + 90 + 60 + 50 + 80) */
 td.sticky-col-7,
 th.sticky-header-7 { 
-  left: 410px !important;
+  left: 380px !important;
+}
+
+/* Column 8 - Match done (460px = 50 + 50 + 90 + 60 + 50 + 80 + 80) */
+td.sticky-col-8,
+th.sticky-header-8 { 
+  left: 460px !important;
+}
+
+/* Column 9 - Workouts (520px = 50 + 50 + 90 + 60 + 50 + 80 + 80 + 60) */
+td.sticky-col-9,
+th.sticky-header-9 { 
+  left: 520px !important;
 }
 
 /* Headers - Higher z-index and blue background */
@@ -123,7 +141,9 @@ th.sticky-header-3,
 th.sticky-header-4,
 th.sticky-header-5,
 th.sticky-header-6,
-th.sticky-header-7 {
+th.sticky-header-7,
+th.sticky-header-8,
+th.sticky-header-9 {
   z-index: 30 !important;
   background-color: #2563eb !important;
 }
@@ -135,7 +155,9 @@ td.sticky-col-3,
 td.sticky-col-4,
 td.sticky-col-5,
 td.sticky-col-6,
-td.sticky-col-7 {
+td.sticky-col-7,
+td.sticky-col-8,
+td.sticky-col-9 {
   background-color: inherit !important;
 }
 

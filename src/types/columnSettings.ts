@@ -48,18 +48,18 @@ export const WORKOUT_COLUMNS: ColumnDefinition[] = [
 
 // Moveframe Table Columns
 export const MOVEFRAME_COLUMNS: ColumnDefinition[] = [
-  { id: 'drag', label: '::', defaultVisible: true, required: true, description: 'Drag handle' },
+  { id: 'drag', label: '⋮⋮', defaultVisible: true, required: true, description: 'Drag to reorder' },
+  { id: 'expand', label: '::', defaultVisible: true, required: true, description: 'Expand/Collapse' },
+  { id: 'index', label: '#', defaultVisible: true, description: 'Index' },
   { id: 'mf', label: 'MF', defaultVisible: true, required: true, description: 'Moveframe letter' },
-  { id: 'color', label: 'Color', defaultVisible: true, description: 'Section color' },
-  { id: 'type', label: 'Type', defaultVisible: true, description: 'Section name' },
-  { id: 'sport', label: 'Sport', defaultVisible: true, required: true, description: 'Sport type' },
-  { id: 'description', label: 'Description', defaultVisible: true, required: true, description: 'Moveframe description' },
+  { id: 'section', label: 'Workout section', defaultVisible: true, description: 'Workout section' },
+  { id: 'icon', label: 'Ico', defaultVisible: true, description: 'Sport icon' },
+  { id: 'sport', label: 'Sport of the moveframe', defaultVisible: true, required: true, description: 'Sport type' },
+  { id: 'description', label: 'Moveframe description', defaultVisible: true, required: true, description: 'Moveframe description' },
   { id: 'rip', label: 'Rip', defaultVisible: true, description: 'Repetitions' },
-  { id: 'dist', label: 'Dist', defaultVisible: true, description: 'Total distance' },
-  { id: 'time', label: 'Time', defaultVisible: false, description: 'Total time' },
-  { id: 'macro', label: 'Macro', defaultVisible: false, description: 'Macro cycle' },
-  { id: 'alarm', label: 'Alarm', defaultVisible: false, description: 'Alarm settings' },
-  { id: 'actions', label: 'Actions', defaultVisible: true, required: true, description: 'Action buttons' },
+  { id: 'macro', label: 'Macro', defaultVisible: true, description: 'Macro cycle' },
+  { id: 'alarm', label: 'Alarm & Sound', defaultVisible: true, description: 'Alarm settings' },
+  { id: 'options', label: 'Options', defaultVisible: true, required: true, description: 'Action buttons' },
 ];
 
 // Movelap Table Columns

@@ -260,7 +260,7 @@ export default function HomePage() {
       <div 
         className="relative bg-cover bg-center bg-fixed bg-no-repeat flex-1"
         style={{ 
-          backgroundImage: "url('/images/dashboard.png')",
+          backgroundImage: "url('/images/dashboard_2.jpg')",
         }}
       >
         <div className="absolute inset-0 bg-black bg-opacity-50"></div>

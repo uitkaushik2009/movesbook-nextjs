@@ -11,26 +11,34 @@ export async function PATCH(request: NextRequest) {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const decoded = verifyToken(token);
+    const decoded = await verifyToken(token);
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const { movelaps } = await request.json();
 
+    console.log('📝 Reordering movelaps:', movelaps.length, 'items');
+
     if (!movelaps || !Array.isArray(movelaps)) {
       return NextResponse.json({ error: 'Invalid movelaps data' }, { status: 400 });
     }
 
-    // Update each movelap's repetitionNumber (order) in a transaction
+    // Update each movelap's repetitionNumber (order) and isNewlyAdded flag in a transaction
     await prisma.$transaction(
-      movelaps.map((ml: { id: string; repetitionNumber: number }) =>
-        prisma.movelap.update({
+      movelaps.map((ml: { id: string; repetitionNumber: number; isNewlyAdded?: boolean }) => {
+        console.log(`  - Updating movelap ${ml.id}: repetitionNumber=${ml.repetitionNumber}, isNewlyAdded=${ml.isNewlyAdded}`);
+        return prisma.movelap.update({
           where: { id: ml.id },
-          data: { repetitionNumber: ml.repetitionNumber }
-        })
-      )
+          data: { 
+            repetitionNumber: ml.repetitionNumber,
+            isNewlyAdded: ml.isNewlyAdded || false
+          }
+        });
+      })
     );
+
+    console.log('✅ Movelaps reordered successfully');
 
     return NextResponse.json({ 
       success: true, 
@@ -38,10 +46,11 @@ export async function PATCH(request: NextRequest) {
       count: movelaps.length 
     });
 
-  } catch (error) {
-    console.error('Error reordering movelaps:', error);
+  } catch (error: any) {
+    console.error('❌ Error reordering movelaps:', error);
+    console.error('Error details:', error.message, error.stack);
     return NextResponse.json(
-      { error: 'Failed to reorder movelaps' },
+      { error: 'Failed to reorder movelaps', details: error.message },
       { status: 500 }
     );
   }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Download, Table, Plus, X } from 'lucide-react';
+import { Calendar, Download, Table, Plus, X, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { SectionId, ViewMode } from '@/types/workout.types';
 
 interface WorkoutSectionHeaderProps {
@@ -11,6 +11,9 @@ interface WorkoutSectionHeaderProps {
   userType?: string;
   selectedAthlete: any;
   canAddDay?: boolean; // Whether adding a day is allowed (checks 7-day limit for Section A)
+  weeksPerPage?: number; // For Section B pagination
+  currentPageStart?: number; // Starting week number for current page
+  totalWeeks?: number; // Total weeks in the plan
   
   // Actions
   onSectionChange: (section: SectionId) => void;
@@ -21,6 +24,9 @@ interface WorkoutSectionHeaderProps {
   onWeekFilterClear: () => void;
   onAddDay: () => void;
   onClose: () => void;
+  onWeeksPerPageChange?: (weeks: number) => void;
+  onPrevPage?: () => void;
+  onNextPage?: () => void;
 }
 
 export default function WorkoutSectionHeader({
@@ -31,6 +37,9 @@ export default function WorkoutSectionHeader({
   userType,
   selectedAthlete,
   canAddDay = true,
+  weeksPerPage = 3,
+  currentPageStart = 1,
+  totalWeeks = 0,
   onSectionChange,
   onViewModeChange,
   onImportClick,
@@ -38,7 +47,10 @@ export default function WorkoutSectionHeader({
   onAthleteSelect,
   onWeekFilterClear,
   onAddDay,
-  onClose
+  onClose,
+  onWeeksPerPageChange,
+  onPrevPage,
+  onNextPage
 }: WorkoutSectionHeaderProps) {
   
   // Section labels
@@ -157,6 +169,16 @@ export default function WorkoutSectionHeader({
             
             {/* View Toggle */}
             <button
+              onClick={() => onViewModeChange('tree')}
+              className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                viewMode === 'tree' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              Tree
+            </button>
+            
+            <button
               onClick={() => onViewModeChange('table')}
               className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
                 viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -177,6 +199,59 @@ export default function WorkoutSectionHeader({
                 <Calendar className="w-4 h-4" />
                 Calendar
               </button>
+            )}
+            
+            {/* Week Grouping Selector for Section B (Table/Tree view only) */}
+            {activeSection === 'B' && viewMode !== 'calendar' && onWeeksPerPageChange && (
+              <>
+                <div className="flex items-center gap-2 ml-4 border-l pl-4">
+                  <label htmlFor="weeks-per-page" className="text-sm font-medium text-gray-700">
+                    Display:
+                  </label>
+                  <select
+                    id="weeks-per-page"
+                    value={weeksPerPage}
+                    onChange={(e) => onWeeksPerPageChange(parseInt(e.target.value))}
+                    className="px-3 py-1.5 rounded border border-gray-300 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={1}>Week {currentPageStart}</option>
+                    <option value={2}>Weeks {currentPageStart} - {Math.min(currentPageStart + 1, totalWeeks)}</option>
+                    <option value={3}>Weeks {currentPageStart} - {Math.min(currentPageStart + 2, totalWeeks)}</option>
+                    <option value={4}>Weeks {currentPageStart} - {Math.min(currentPageStart + 3, totalWeeks)}</option>
+                    <option value={6}>Weeks {currentPageStart} - {Math.min(currentPageStart + 5, totalWeeks)}</option>
+                    <option value={8}>Weeks {currentPageStart} - {Math.min(currentPageStart + 7, totalWeeks)}</option>
+                    <option value={13}>Weeks {currentPageStart} - {Math.min(currentPageStart + 12, totalWeeks)} (3 months)</option>
+                  </select>
+                </div>
+                
+                {/* Pagination Buttons */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={onPrevPage}
+                    disabled={currentPageStart <= 1}
+                    className={`px-3 py-1.5 rounded flex items-center gap-1 text-sm font-medium transition-colors ${
+                      currentPageStart <= 1
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    Previous
+                  </button>
+                  <button
+                    onClick={onNextPage}
+                    disabled={currentPageStart + weeksPerPage > totalWeeks}
+                    className={`px-3 py-1.5 rounded flex items-center gap-1 text-sm font-medium transition-colors ${
+                      currentPageStart + weeksPerPage > totalWeeks
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>

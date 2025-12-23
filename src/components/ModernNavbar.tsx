@@ -361,6 +361,13 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
       return;
     }
 
+    // Auto-cleanup old tokens before login
+    console.log('🔧 Auto-cleaning old tokens before login...');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('adminUser');
+    localStorage.removeItem('adminToken');
+
     setIsLoggingIn(true);
     setLoginError('');
 

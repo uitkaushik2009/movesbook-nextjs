@@ -29,14 +29,33 @@ const SPORT_CONFIGS = {
   BIKE: {
     distances: ['200', '400', '500', '1000', '1500', '2000', '3000', '4000', '5000', '7000', '8000', '10000'],
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
+    ranges: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'],
     pauses: ['15"', '30"', '45"', "1'", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'"]
   },
   BODY_BUILDING: {
     speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive', 'Negative'],
+    muscularSectors: [
+      'Shoulders',
+      'Anterior arms',
+      'Rear arms',
+      'Forearms',
+      'Chest',
+      'Abdominals',
+      'Intercostals',
+      'Trapezius',
+      'Lats',
+      'Lumbosacral',
+      'Front thighs',
+      'Hind thighs',
+      'Calves',
+      'Tibials'
+    ],
+    restTypes: ['SET_TIME', 'RESTART_TIME', 'RESTART_PULSE'],
     pauses: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"]
   }
 };
 
+const MACRO_FINALS = ["0'", "1'", "2'", "3'", "4'", "5'", "6'", "7'", "8'", "9'"];
 const ALARMS = ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'];
 const SOUNDS = ['Beep', 'Bell', 'Chime', 'None'];
 
@@ -62,10 +81,110 @@ export default function AddEditMovelapModal({
   const [notes, setNotes] = useState('');
   const [alarm, setAlarm] = useState('');
   const [sound, setSound] = useState('Beep');
+  const [macroFinal, setMacroFinal] = useState("0'");
+  
+  // BODY_BUILDING specific
   const [reps, setReps] = useState('');
+  const [weight, setWeight] = useState('');
+  const [muscularSector, setMuscularSector] = useState('');
+  const [exercise, setExercise] = useState('');
+  const [restType, setRestType] = useState('');
+  
+  // OTHER SPORTS (Gymnastic, Stretching, Pilates, Yoga, etc.)
+  const [tools, setTools] = useState('');
+  
+  // BIKE specific
+  const [r1, setR1] = useState('');
+  const [r2, setR2] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+
+  // Fast input parsing functions
+  const parsePaceInput = (input: string): string => {
+    // Remove all non-digit characters
+    const digits = input.replace(/\D/g, '');
+    if (!digits) return '';
+
+    // Convert to number
+    const num = parseInt(digits, 10);
+    
+    // Format based on number of digits
+    if (digits.length <= 2) {
+      // 1-2 digits: treat as seconds (e.g., "30" -> "0'30"0")
+      return `0'${digits.padStart(2, '0')}"0`;
+    } else if (digits.length === 3) {
+      // 3 digits: M'SS (e.g., "130" -> "1'30"0")
+      const min = digits[0];
+      const sec = digits.slice(1);
+      return `${min}'${sec}"0`;
+    } else {
+      // 4+ digits: MM'SS (e.g., "1030" -> "10'30"0")
+      const min = digits.slice(0, -2);
+      const sec = digits.slice(-2);
+      return `${min}'${sec}"0`;
+    }
+  };
+
+  const parseTimeInput = (input: string): string => {
+    // Remove all non-digit characters
+    const digits = input.replace(/\D/g, '');
+    if (!digits) return '';
+
+    // Format based on number of digits
+    if (digits.length <= 2) {
+      // 1-2 digits: treat as seconds (e.g., "30" -> "0h00'30"0")
+      return `0h00'${digits.padStart(2, '0')}"0`;
+    } else if (digits.length === 3) {
+      // 3 digits: M'SS (e.g., "530" -> "0h05'30"0")
+      const min = digits[0];
+      const sec = digits.slice(1);
+      return `0h0${min}'${sec}"0`;
+    } else if (digits.length === 4) {
+      // 4 digits: MM'SS (e.g., "1030" -> "0h10'30"0")
+      const min = digits.slice(0, 2);
+      const sec = digits.slice(2);
+      return `0h${min}'${sec}"0`;
+    } else if (digits.length === 5) {
+      // 5 digits: HMM'SS (e.g., "11030" -> "1h10'30"0")
+      const hour = digits[0];
+      const min = digits.slice(1, 3);
+      const sec = digits.slice(3);
+      return `${hour}h${min}'${sec}"0`;
+    } else {
+      // 6+ digits: HH:MM'SS (e.g., "111030" -> "11h10'30"0")
+      const hour = digits.slice(0, -4);
+      const min = digits.slice(-4, -2);
+      const sec = digits.slice(-2);
+      return `${hour}h${min}'${sec}"0`;
+    }
+  };
+
+  const handlePaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    
+    // If user is typing numbers, auto-format
+    if (/^\d+$/.test(input)) {
+      const formatted = parsePaceInput(input);
+      setPace(formatted);
+    } else {
+      // Allow manual editing with quotes and apostrophes
+      setPace(input);
+    }
+  };
+
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    
+    // If user is typing numbers, auto-format
+    if (/^\d+$/.test(input)) {
+      const formatted = parseTimeInput(input);
+      setTime(formatted);
+    } else {
+      // Allow manual editing
+      setTime(input);
+    }
+  };
 
   // Initialize form
   useEffect(() => {
@@ -80,7 +199,15 @@ export default function AddEditMovelapModal({
       setNotes(existingMovelap.notes || '');
       setAlarm(existingMovelap.alarm?.toString() || '');
       setSound(existingMovelap.sound || 'Beep');
+      setMacroFinal(existingMovelap.macroFinal || "0'");
       setReps(existingMovelap.reps?.toString() || '');
+      setWeight(existingMovelap.weight || '');
+      setTools(existingMovelap.tools || '');
+      setMuscularSector(existingMovelap.muscularSector || '');
+      setExercise(existingMovelap.exercise || '');
+      setRestType(existingMovelap.restType || '');
+      setR1(existingMovelap.r1 || '');
+      setR2(existingMovelap.r2 || '');
     } else {
       // Inherit from moveframe for new movelap
       const movelaps = moveframe.movelaps || [];
@@ -96,17 +223,33 @@ export default function AddEditMovelapModal({
       setNotes('');
       setAlarm('');
       setSound('Beep');
+      setMacroFinal("0'");
       setReps('');
+      setWeight('');
+      setTools('');
+      setMuscularSector('');
+      setExercise('');
+      setRestType('');
+      setR1('');
+      setR2('');
     }
   }, [mode, existingMovelap, moveframe, isOpen]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
+    // Distance-based sports (SWIM, BIKE, RUN, ROWING, SKATE, SKI, SNOWBOARD)
+    const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
+    
     if (sport === 'BODY_BUILDING') {
+      // Body building requires reps
       if (!reps) newErrors.reps = 'Reps is required';
-    } else {
+    } else if (distanceBasedSports.includes(sport)) {
+      // Distance-based sports require distance
       if (!distance) newErrors.distance = 'Distance is required';
+    } else {
+      // Tools-based sports (Gymnastic, Stretching, Pilates, Yoga, etc.) require reps
+      if (!reps) newErrors.reps = 'Reps is required';
     }
 
     setErrors(newErrors);
@@ -127,10 +270,21 @@ export default function AddEditMovelapModal({
         pace,
         time,
         pause,
+        macroFinal,
         alarm: alarm ? parseInt(alarm) : null,
         sound,
         notes,
+        // BODY_BUILDING specific
         reps: reps ? parseInt(reps) : null,
+        weight: weight || null,
+        muscularSector: muscularSector || null,
+        exercise: exercise || null,
+        restType: restType || null,
+        // OTHER SPORTS specific
+        tools: tools || null,
+        // BIKE specific
+        r1: r1 || null,
+        r2: r2 || null,
         status: existingMovelap?.status || 'PENDING',
         isSkipped: false,
         isDisabled: false,
@@ -203,10 +357,42 @@ export default function AddEditMovelapModal({
             {/* Left Column */}
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-bold text-sm text-gray-700 mb-3">MOVELAP DETAILS</h3>
+                <h3 className="font-bold text-sm text-gray-700 mb-3">
+                  {sport === 'BODY_BUILDING' ? '💪 EXERCISE DETAILS' : '🏃 MOVEMENT DETAILS'}
+                </h3>
 
                 {sport === 'BODY_BUILDING' ? (
                   <>
+                    {/* Body Building Fields */}
+                    <div className="mb-3">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Muscular Sector:
+                      </label>
+                      <select
+                        value={muscularSector}
+                        onChange={(e) => setMuscularSector(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select...</option>
+                        {(config as any).muscularSectors?.map((m: string) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="mb-3">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Exercise:
+                      </label>
+                      <input
+                        type="text"
+                        value={exercise}
+                        onChange={(e) => setExercise(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="e.g., Bench Press, Squat..."
+                      />
+                    </div>
                     <div className="mb-3">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Reps: <span className="text-red-500">*</span>
@@ -220,12 +406,91 @@ export default function AddEditMovelapModal({
                       />
                       {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
                     </div>
+                    <div className="mb-3">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Weight:
+                      </label>
+                      <input
+                        type="text"
+                        value={weight}
+                        onChange={(e) => setWeight(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="12 kg, 50 lbs, etc."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Tempo/Speed:
+                      </label>
+                      <select
+                        value={speed}
+                        onChange={(e) => setSpeed(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select...</option>
+                        {config.speeds.map((s: string) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </>
                 ) : (
                   <>
+                    {/* Check if it's a tools-based sport (not distance-based) */}
+                    {(() => {
+                      const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
+                      const isDistanceBased = distanceBasedSports.includes(sport);
+                      const hasTools = !isDistanceBased;
+                      
+                      if (hasTools) {
+                        // Sports with tools (Gymnastic, Stretching, Pilates, Yoga, etc.)
+                        return (
+                          <>
+                            <div className="mb-3">
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Reps: <span className="text-red-500">*</span>
+                              </label>
+                              <input
+                                type="number"
+                                value={reps}
+                                onChange={(e) => setReps(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                placeholder="12"
+                              />
+                              {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Tools:
+                              </label>
+                              <input
+                                type="text"
+                                value={tools}
+                                onChange={(e) => setTools(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                placeholder="Enter tools (alphanumeric)"
+                              />
+                            </div>
+                          </>
+                        );
+                      }
+                      return null;
+                    })()}
+                    
+                    {/* Distance-based sports (SWIM, BIKE, RUN, ROWING, SKATE, SKI, SNOWBOARD) */}
+                    {(() => {
+                      const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
+                      const isDistanceBased = distanceBasedSports.includes(sport);
+                      
+                      if (!isDistanceBased) return null;
+                      
+                      return (
+                        <>
                     <div className="mb-3">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Distance: <span className="text-red-500">*</span>
+                        Distance (m): <span className="text-red-500">*</span>
                       </label>
                       {'distances' in config && (
                         <select
@@ -234,7 +499,7 @@ export default function AddEditMovelapModal({
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select...</option>
-                          {config.distances.map((d) => (
+                          {config.distances.map((d: string) => (
                             <option key={d} value={d}>
                               {d}m
                             </option>
@@ -244,8 +509,9 @@ export default function AddEditMovelapModal({
                       {errors.distance && <p className="mt-1 text-xs text-red-500">{errors.distance}</p>}
                     </div>
 
-                    {'styles' in config && (
-                      <div>
+                    {/* Style - Only for SWIM and RUN */}
+                    {(sport === 'SWIM' || sport === 'RUN') && 'styles' in config && (
+                      <div className="mb-3">
                         <label className="block text-xs font-medium text-gray-700 mb-1">Style:</label>
                         <select
                           value={style}
@@ -253,7 +519,7 @@ export default function AddEditMovelapModal({
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">Select...</option>
-                          {config.styles.map((s) => (
+                          {config.styles.map((s: string) => (
                             <option key={s} value={s}>
                               {s}
                             </option>
@@ -261,55 +527,129 @@ export default function AddEditMovelapModal({
                         </select>
                       </div>
                     )}
+
+                    {/* R1, R2 - Only for BIKE */}
+                    {sport === 'BIKE' && 'ranges' in config && (
+                      <>
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-gray-700 mb-1">R1 (Range 1):</label>
+                          <select
+                            value={r1}
+                            onChange={(e) => setR1(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Select...</option>
+                            {config.ranges.map((r: string) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="mb-3">
+                          <label className="block text-xs font-medium text-gray-700 mb-1">R2 (Range 2):</label>
+                          <select
+                            value={r2}
+                            onChange={(e) => setR2(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Select...</option>
+                            {config.ranges.map((r: string) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Speed - For all distance-based sports */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Speed/Zone:</label>
+                      <select
+                        value={speed}
+                        onChange={(e) => setSpeed(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select...</option>
+                        {config.speeds.map((s: string) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                          </>
+                        );
+                    })()}
                   </>
                 )}
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-bold text-sm text-gray-700 mb-3">TIMING</h3>
-                <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Pace/100m:</label>
-                  <input
-                    type="text"
-                    value={pace}
-                    onChange={(e) => setPace(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                    placeholder="1:30"
-                  />
+              {/* Timing Section - Only for distance-based sports */}
+              {sport !== 'BODY_BUILDING' && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h3 className="font-bold text-sm text-gray-700 mb-3">⏱️ TIMING</h3>
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Time:
+                      <span className="ml-2 text-xs text-gray-500 font-normal">
+                        (Type: 530 → 0h05'30"0)
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      value={time}
+                      onChange={handleTimeChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      placeholder="Type: 530 for 0h05'30&quot;0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Pace/100m:
+                      <span className="ml-2 text-xs text-gray-500 font-normal">
+                        (Type: 130 → 1'30"0)
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      value={pace}
+                      onChange={handlePaceChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      placeholder="Type: 130 for 1'30&quot;0"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Time:</label>
-                  <input
-                    type="text"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                    placeholder="MM:SS"
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Right Column */}
             <div className="space-y-4">
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-bold text-sm text-gray-700 mb-3">INTENSITY & REST</h3>
+                <h3 className="font-bold text-sm text-gray-700 mb-3">⏸️ REST & RECOVERY</h3>
+                
+                {/* Rest Type - Only for BODY_BUILDING */}
+                {sport === 'BODY_BUILDING' && 'restTypes' in config && (
+                  <div className="mb-3">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">Rest Type:</label>
+                    <select
+                      value={restType}
+                      onChange={(e) => setRestType(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select...</option>
+                      {config.restTypes.map((rt: string) => (
+                        <option key={rt} value={rt}>
+                          {rt.replace(/_/g, ' ')}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                
                 <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Speed/Zone:</label>
-                  <select
-                    value={speed}
-                    onChange={(e) => setSpeed(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select...</option>
-                    {config.speeds.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Pause:</label>
                   <select
                     value={pause}
@@ -317,9 +657,23 @@ export default function AddEditMovelapModal({
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">Select...</option>
-                    {config.pauses.map((p) => (
+                    {config.pauses.map((p: string) => (
                       <option key={p} value={p}>
                         {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Macro Final:</label>
+                  <select
+                    value={macroFinal}
+                    onChange={(e) => setMacroFinal(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  >
+                    {MACRO_FINALS.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
                       </option>
                     ))}
                   </select>
@@ -327,7 +681,7 @@ export default function AddEditMovelapModal({
               </div>
 
               <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-bold text-sm text-gray-700 mb-3">ALERTS</h3>
+                <h3 className="font-bold text-sm text-gray-700 mb-3">🔔 ALERTS</h3>
                 <div className="mb-3">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Alarm:</label>
                   <select

@@ -91,10 +91,23 @@
   border-color: var(--movelap-border-color, #e5e7eb);
 }
 
-/* Selected/Hover States */
-.workout-tables-container tr:hover {
-  background-color: var(--selected-bg) !important;
-  color: var(--selected-text) !important;
+/* Selected/Hover States - Only apply to the specific row being hovered */
+/* Background color change on hover - applies to the row itself */
+.day-row-table tbody > tr:hover,
+.workout-row-table tbody > tr:hover,
+.moveframe-row-table tbody > tr:hover,
+.movelap-row-table tbody > tr:hover {
+  background-color: var(--selected-bg);
+}
+
+/* Text color on hover - only apply to cells without specific text colors */
+/* This prevents overriding intentional colors like red text in RIP column */
+.day-row-table tbody > tr:hover > td:not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-green"]),
+.workout-row-table tbody > tr:hover > td:not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-green"]),
+.moveframe-row-table tbody > tr:hover > td:not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-green"]),
+.movelap-row-table tbody > tr:hover > td:not([class*="text-red"]):not([class*="text-blue"]):not([class*="text-green"]) {
+  /* Don't change text color on hover to prevent entire table from turning red */
+  /* color: var(--selected-text); */
 }
 
 /* Button Styles */

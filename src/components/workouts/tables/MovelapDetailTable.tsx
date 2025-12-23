@@ -9,12 +9,14 @@ interface MovelapDetailTableProps {
   onEditMovelap?: (movelap: any) => void;
   onDeleteMovelap?: (movelap: any) => void;
   onAddMovelap?: () => void;
+  onAddMovelapAfter?: (movelap: any, index: number) => void;
 }
 
 // Sortable Row Component
 function SortableMovelapRow({ 
   movelap, 
   index, 
+  sequenceNumber,
   moveframeLetter, 
   sectionColor, 
   sectionName, 
@@ -23,9 +25,21 @@ function SortableMovelapRow({
   onDeleteMovelap,
   onCopyMovelap,
   onPasteMovelap,
-  savingFavorite,
-  handleSaveAsFavorite
-}: any) {
+  onAddMovelapAfter
+}: {
+  movelap: any;
+  index: number;
+  sequenceNumber: number;
+  moveframeLetter: string;
+  sectionColor: string;
+  sectionName: string;
+  moveframe: any;
+  onEditMovelap?: (movelap: any) => void;
+  onDeleteMovelap?: (movelap: any) => void;
+  onCopyMovelap: (movelap: any) => void;
+  onPasteMovelap: (index: number) => void;
+  onAddMovelapAfter?: (movelap: any, index: number) => void;
+}) {
   const {
     attributes,
     listeners,
@@ -62,25 +76,40 @@ function SortableMovelapRow({
     return <VolumeX size={14} className="text-gray-400" />;
   };
 
+  // Sport-specific rendering logic
+  const sport = moveframe.sport || 'SWIM';
+  const isSwim = sport === 'SWIM';
+  const isBike = sport === 'BIKE';
+  const isRun = sport === 'RUN';
+  const isBodyBuilding = sport === 'BODY_BUILDING';
+  
+  // Distance-based sports (no tools)
+  const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
+  const isDistanceBased = distanceBasedSports.includes(sport);
+  
+  // Other sports have tools (Gymnastic, Stretching, Pilates, Yoga, Technical moves, Free moves, etc.)
+  const hasTools = !isBodyBuilding && !isDistanceBased;
+  
   return (
     <tr 
       ref={setNodeRef} 
       style={style} 
-      className="hover:bg-gray-100"
+      className="hover:bg-gray-100 transition-colors duration-150 isolate relative z-0"
     >
       {/* Move (Drag Handle) Column */}
       <td className="border border-gray-300 px-1 py-1 text-center"
         onClick={(e) => e.stopPropagation()}
       >
-        <div
+        <button
           {...attributes}
           {...listeners}
-          className="cursor-move text-gray-400 hover:text-gray-600 inline-flex items-center justify-center select-none"
+          className="cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-700 hover:bg-gray-100 inline-flex items-center justify-center w-8 h-8 rounded select-none transition-colors"
           style={{ touchAction: 'none' }}
           title="Drag to reorder movelap"
+          type="button"
         >
-          <GripVertical size={14} />
-        </div>
+          <GripVertical size={18} />
+        </button>
       </td>
       
       {/* MF (Moveframe Letter) Column */}
@@ -88,76 +117,150 @@ function SortableMovelapRow({
         {moveframeLetter}
       </td>
       
-      {/* # (Repetition Number) Column - Always sequential */}
-      <td className="border border-gray-300 px-1 py-1 text-center font-bold text-xs">
-        {index + 1}
+      {/* # (Repetition Number) Column - Persistent sequence number */}
+      <td className={`border border-gray-300 px-1 py-1 text-center font-bold text-xs ${
+        movelap.isNewlyAdded ? 'text-red-600' : ''
+      }`}>
+        {sequenceNumber}
       </td>
       
-      {/* Color Column */}
+      {/* Workout Section Column - Combined color and name */}
       <td className="border border-gray-300 px-1 py-1 text-center">
-        <div
-          className="w-6 h-6 mx-auto rounded"
-          style={{ backgroundColor: sectionColor }}
-          title={sectionName}
-        />
-      </td>
-      
-      {/* Code Section Column - Shows section name like "Warm up" */}
-      <td className="border border-gray-300 px-1 py-1 text-center text-[10px]">
-        {sectionName}
+        <div className="flex items-center justify-center gap-2">
+          <div
+            className="w-5 h-5 rounded flex-shrink-0"
+            style={{ backgroundColor: sectionColor }}
+            title={sectionName}
+          />
+          <span className="text-[10px]">{sectionName}</span>
+        </div>
       </td>
       
       {/* Action Column - Shows sport name */}
       <td className="border border-gray-300 px-1 py-1 text-center text-[10px]">
-        {moveframe.sport?.replace(/_/g, ' ') || 'Unknown'}
+        {sport.replace(/_/g, ' ')}
       </td>
       
-      {/* Dist Column */}
+      {/* SPORT-SPECIFIC COLUMNS */}
+      
+      {/* BODY BUILDING - Different fields */}
+      {isBodyBuilding && (
+        <>
+          {/* Muscular Sector */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+            {movelap.muscularSector || '—'}
+          </td>
+          {/* Exercise */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+            {movelap.exercise || '—'}
+          </td>
+          {/* Reps */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+            {movelap.reps || '—'}
+          </td>
+          {/* Weight */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs font-semibold text-blue-700">
+            {movelap.weight || '—'}
+          </td>
+          {/* Tempo/Speed */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+            {movelap.speed || '—'}
+          </td>
+          {/* Rest Type */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+            {movelap.restType?.replace(/_/g, ' ') || '—'}
+          </td>
+        </>
+      )}
+      
+      {/* OTHER SPORTS WITH TOOLS (Gymnastic, Stretching, Pilates, Yoga, etc.) */}
+      {hasTools && (
+        <>
+          {/* Reps */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+            {movelap.reps || '—'}
+          </td>
+          {/* Tools */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs font-semibold text-green-700">
+            {movelap.tools || '—'}
+          </td>
+        </>
+      )}
+      
+      {/* SWIM, BIKE, RUN, ROWING, SKATE, SKI, SNOWBOARD - Distance-based sports */}
+      {isDistanceBased && (
+        <>
+          {/* Distance (m) */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+            {movelap.distance || '—'}
+          </td>
+          
+          {/* Style - Only for SWIM and RUN */}
+          {(isSwim || isRun) && (
+            <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+              {movelap.style || '—'}
+            </td>
+          )}
+          
+          {/* R1, R2 - Only for BIKE */}
+          {isBike && (
+            <>
+              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+                {movelap.r1 || '—'}
+              </td>
+              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+                {movelap.r2 || '—'}
+              </td>
+            </>
+          )}
+          
+          {/* Speed - For SWIM, BIKE, RUN */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+            {movelap.speed || '—'}
+          </td>
+          
+          {/* Row/min - Only for ROWING */}
+          {sport === 'ROWING' && (
+            <td className="border border-gray-300 px-1 py-1 text-center text-xs font-semibold text-purple-700">
+              {movelap.rowPerMin || '—'}
+            </td>
+          )}
+          
+          {/* Time */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+            {movelap.time || '—'}
+          </td>
+          
+          {/* Pace */}
+          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+            {movelap.pace || '—'}
+          </td>
+        </>
+      )}
+      
+      {/* COMMON COLUMNS for all sports */}
+      
+      {/* Pause/Recovery */}
       <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-        {movelap.distance || '—'}
+        {movelap.pause || '—'}
       </td>
       
-      {/* Style Column */}
+      {/* Macro Final */}
       <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-        {movelap.style || '—'}
+        {movelap.macroFinal || '—'}
       </td>
       
-      {/* Speed Column */}
-      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-        {movelap.speed || '—'}
-      </td>
-      
-      {/* Time Column */}
-      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-        {movelap.time || movelap.estimatedTime || '00.0'}
-      </td>
-      
-      {/* Pace Column */}
-      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-        {movelap.pace || '00.0'}
-      </td>
-      
-      {/* Rec (Recovery/Pause) Column */}
-      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-        {movelap.pause || movelap.recovery || '—'}
-      </td>
-      
-      {/* Rest to Column */}
-      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-        {movelap.restTo || '—'}
-      </td>
-      
-      {/* Aim & Snd Column - With sound icon */}
+      {/* Alarm & Sound */}
       <td className="border border-gray-300 px-1 py-1 text-center">
         <div className="flex items-center justify-center gap-1">
           {getSoundIcon(movelap)}
-          {movelap.alarm && <span className="text-[8px]">{movelap.alarm}</span>}
+          {movelap.alarm && movelap.alarm !== -1 && <span className="text-[8px]">{Math.abs(movelap.alarm)}</span>}
         </div>
       </td>
       
-      {/* Annotations Column */}
+      {/* Notes */}
       <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-        {movelap.annotations || movelap.notes || '—'}
+        {movelap.notes || '—'}
       </td>
       
       {/* Options Column */}
@@ -210,17 +313,14 @@ function SortableMovelapRow({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              handleSaveAsFavorite(movelap);
+              if (onAddMovelapAfter) {
+                onAddMovelapAfter(movelap, index);
+              }
             }}
-            disabled={savingFavorite === movelap.id}
-            className={`px-1 py-0.5 text-[9px] text-white rounded ${
-              savingFavorite === movelap.id 
-                ? 'bg-purple-300 cursor-wait' 
-                : 'bg-purple-500 hover:bg-purple-600'
-            }`}
-            title="Save as favorite"
+            className="px-1 py-0.5 text-[9px] bg-purple-500 text-white rounded hover:bg-purple-600"
+            title="Add movelap after this position"
           >
-            {savingFavorite === movelap.id ? 'Saving...' : 'Save as Fav'}
+            Add movelap
           </button>
         </div>
       </td>
@@ -232,33 +332,66 @@ export default function MovelapDetailTable({
   moveframe, 
   onEditMovelap, 
   onDeleteMovelap, 
-  onAddMovelap 
+  onAddMovelap,
+  onAddMovelapAfter
 }: MovelapDetailTableProps) {
   const [movelaps, setMovelaps] = useState(moveframe.movelaps || []);
   const moveframeLetter = moveframe.letter || 'A'; // Parent moveframe letter
   const sectionColor = moveframe.section?.color || '#5b8def';
   const sectionName = moveframe.section?.name || 'Default';
-  const [savingFavorite, setSavingFavorite] = useState<string | null>(null);
   const [copiedMovelap, setCopiedMovelap] = useState<any>(null);
+  
+  // Store original sequence numbers for each movelap (persists through drag operations)
+  const [movelapSequences, setMovelapSequences] = useState<Map<string, number>>(new Map());
 
-  // Update movelaps when moveframe prop changes
+  // Initialize or update sequence numbers when movelaps change
   React.useEffect(() => {
-    setMovelaps(moveframe.movelaps || []);
+    const newMovelaps = moveframe.movelaps || [];
+    setMovelaps(newMovelaps);
+    
+    // Regenerate all sequence numbers when movelaps change (e.g., when adding new movelaps)
+    setMovelapSequences((prevSequences) => {
+      const newSequences = new Map<string, number>();
+      newMovelaps.forEach((movelap: any, idx: number) => {
+        // Keep existing sequence if available, otherwise assign new one
+        if (prevSequences.has(movelap.id)) {
+          newSequences.set(movelap.id, prevSequences.get(movelap.id)!);
+        } else {
+          // New movelap - assign next available sequence number
+          newSequences.set(movelap.id, idx + 1);
+        }
+      });
+      
+      // If count changed (new movelap added), regenerate all sequences sequentially
+      if (newMovelaps.length !== prevSequences.size) {
+        newMovelaps.forEach((movelap: any, idx: number) => {
+          newSequences.set(movelap.id, idx + 1);
+        });
+      }
+      
+      return newSequences;
+    });
   }, [moveframe.movelaps]);
 
   // Setup drag sensors with reliable activation
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 3, // Small distance to start drag
+        distance: 5, // Small distance to start drag
       },
     })
   );
   // Handle drag end - reorder movelaps
   const handleDragEnd = async (event: DragEndEvent) => {
+    console.log('🎯 Movelap drag ended:', event);
     const { active, over } = event;
     
-    if (!over || active.id === over.id) return;
+    console.log('🎯 Active ID:', active?.id, 'Over ID:', over?.id);
+    
+    if (!over || active.id === over.id) {
+      console.log('🎯 Movelap drag cancelled or same position');
+      return;
+    }
     
     const oldIndex = movelaps.findIndex((ml: any) => ml.id === active.id);
     const newIndex = movelaps.findIndex((ml: any) => ml.id === over.id);
@@ -353,181 +486,114 @@ export default function MovelapDetailTable({
     }
   };
   
-  // Function to save movelap as favorite
-  const handleSaveAsFavorite = async (movelap: any) => {
-    try {
-      setSavingFavorite(movelap.id);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Authentication required. Please log in.');
-        return;
-      }
-      
-      // Get current user settings
-      const getResponse = await fetch('/api/user/settings', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      let currentSettings: any = {};
-      
-      if (getResponse.ok) {
-        currentSettings = await getResponse.json();
-      } else if (getResponse.status !== 404) {
-        const errorText = await getResponse.text();
-        console.error('Error loading settings:', errorText);
-        throw new Error('Failed to load current settings');
-      }
-      
-      // Parse existing favorites or create new structure
-      let favouritesSettings = currentSettings.favouritesSettings 
-        ? (typeof currentSettings.favouritesSettings === 'string' 
-          ? JSON.parse(currentSettings.favouritesSettings)
-          : currentSettings.favouritesSettings)
-        : { movelaps: [] };
-      
-      // Ensure movelaps array exists
-      if (!favouritesSettings.movelaps) {
-        favouritesSettings.movelaps = [];
-      }
-      
-      // Create favorite movelap object
-      const favoriteMovelap = {
-        id: `fav_${Date.now()}`,
-        name: `${moveframeLetter}${movelap.repetitionNumber} - ${movelap.distance}m`,
-        distance: movelap.distance,
-        speed: movelap.speed,
-        style: movelap.style,
-        pace: movelap.pace,
-        time: movelap.time,
-        pause: movelap.pause,
-        recovery: movelap.recovery,
-        restTo: movelap.restTo,
-        aim: movelap.aim,
-        sound: movelap.sound,
-        notes: movelap.notes || movelap.annotations,
-        sport: moveframe.sport,
-        sectionColor: sectionColor,
-        sectionName: sectionName,
-        createdAt: new Date().toISOString(),
-        sourceMovelap: {
-          moveframeId: moveframe.id,
-          movelapId: movelap.id,
-          moveframeLetter: moveframeLetter,
-          repetitionNumber: movelap.repetitionNumber
-        }
-      };
-      
-      // Check if already favorited
-      const existingIndex = favouritesSettings.movelaps.findIndex(
-        (fav: any) => fav.sourceMovelap?.movelapId === movelap.id
-      );
-      
-      if (existingIndex >= 0) {
-        // Update existing favorite
-        favouritesSettings.movelaps[existingIndex] = favoriteMovelap;
-      } else {
-        // Add new favorite
-        favouritesSettings.movelaps.push(favoriteMovelap);
-      }
-      
-      // Prepare settings data with all required fields
-      const settingsToSave: any = {
-        favouritesSettings: favouritesSettings
-      };
-      
-      // If this is a new settings record, include all required fields with defaults
-      if (!currentSettings.id) {
-        settingsToSave.colorSettings = currentSettings.colorSettings || {};
-        settingsToSave.toolsSettings = currentSettings.toolsSettings || {};
-        settingsToSave.myBestSettings = currentSettings.myBestSettings || {};
-        settingsToSave.adminSettings = currentSettings.adminSettings || {};
-        settingsToSave.workoutPreferences = currentSettings.workoutPreferences || {};
-        settingsToSave.socialSettings = currentSettings.socialSettings || {};
-        settingsToSave.notificationSettings = currentSettings.notificationSettings || {};
-      }
-      
-      // Save updated settings
-      const saveResponse = await fetch('/api/user/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(settingsToSave)
-      });
-      
-      if (!saveResponse.ok) {
-        const errorData = await saveResponse.json();
-        console.error('Save error:', errorData);
-        throw new Error(errorData.error || 'Failed to save favorite');
-      }
-      
-      alert(`Movelap saved as favorite!\n\nName: ${favoriteMovelap.name}\n\nYou can access your favorite movelaps in the Favourites tab.`);
-      
-    } catch (error) {
-      console.error('Error saving favorite:', error);
-      alert(`Failed to save as favorite:\n${error instanceof Error ? error.message : 'Unknown error'}`);
-    } finally {
-      setSavingFavorite(null);
-    }
-  };
-  
   return (
-    <div className="bg-gray-50 p-2 pr-0">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={movelaps.map((ml: any) => ml.id)} strategy={verticalListSortingStrategy}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={(event) => console.log('🚀 Movelap drag started:', event.active.id)}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={movelaps.map((ml: any) => ml.id)} strategy={verticalListSortingStrategy}>
+        <div className="bg-gray-50 p-2 pr-0">
           <table className="w-full border-collapse text-xs table-fixed">
-            <colgroup>
-              <col style={{ width: '30px' }} /> {/* Move */}
-              <col style={{ width: '30px' }} /> {/* MF */}
-              <col style={{ width: '30px' }} /> {/* # */}
-              <col style={{ width: '40px' }} /> {/* Color */}
-              <col style={{ width: '80px' }} /> {/* Code section */}
-              <col style={{ width: '80px' }} /> {/* Action */}
-              <col style={{ width: '60px' }} /> {/* Dist */}
-              <col style={{ width: '60px' }} /> {/* Style */}
-              <col style={{ width: '60px' }} /> {/* Speed */}
-              <col style={{ width: '60px' }} /> {/* Time */}
-              <col style={{ width: '60px' }} /> {/* Pace */}
-              <col style={{ width: '60px' }} /> {/* Rec */}
-              <col style={{ width: '60px' }} /> {/* Rest to */}
-              <col style={{ width: '80px' }} /> {/* Aim & Snd */}
-              <col style={{ width: 'auto' }} /> {/* Annotations - flex */}
-              <col style={{ width: '280px' }} /> {/* Options - fixed width to match moveframe */}
-            </colgroup>
-            <thead className="bg-gray-200">
-              <tr>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" title="Drag to reorder">Move</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">MF</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">#</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Color</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Code section</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Action</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Dist</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Style</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Speed</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Time</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Pace</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rec</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rest to</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Aim & Snd</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Annotations</th>
-                <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Options</th>
-              </tr>
-            </thead>
+            {/* Render sport-specific column headers */}
+            {(() => {
+              const sport = moveframe.sport || 'SWIM';
+              const isSwim = sport === 'SWIM';
+              const isBike = sport === 'BIKE';
+              const isRun = sport === 'RUN';
+              const isBodyBuilding = sport === 'BODY_BUILDING';
+              
+              // Distance-based sports (no tools)
+              const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
+              const isDistanceBased = distanceBasedSports.includes(sport);
+              
+              // Other sports have tools (Gymnastic, Stretching, Pilates, Yoga, Technical moves, Free moves, etc.)
+              const hasTools = !isBodyBuilding && !isDistanceBased;
+              
+              return (
+                <>
+                  <colgroup>
+                    <col style={{ width: '30px' }} />
+                    <col style={{ width: '30px' }} />
+                    <col style={{ width: '30px' }} />
+                    <col style={{ width: '120px' }} />
+                    <col style={{ width: '80px' }} />
+                    {isBodyBuilding && <><col style={{ width: '100px' }} /><col style={{ width: '120px' }} /><col style={{ width: '50px' }} /><col style={{ width: '60px' }} /><col style={{ width: '80px' }} /><col style={{ width: '80px' }} /></>}
+                    {hasTools && <><col style={{ width: '50px' }} /><col style={{ width: '120px' }} /></>}
+                    {isDistanceBased && <><col style={{ width: '60px' }} />{(isSwim || isRun) && <col style={{ width: '100px' }} />}{isBike && <><col style={{ width: '50px' }} /><col style={{ width: '50px' }} /></>}<col style={{ width: '60px' }} /><col style={{ width: '60px' }} /><col style={{ width: '60px' }} /></>}
+                    <col style={{ width: '60px' }} />
+                    <col style={{ width: '50px' }} />
+                    <col style={{ width: '80px' }} />
+                    <col style={{ width: '80px' }} />
+                    <col style={{ width: '280px' }} />
+                  </colgroup>
+                  <thead className="bg-gray-200">
+                    <tr>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" title="Drag to reorder">Move</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">MF</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">#</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Workout section</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Sport</th>
+                      
+                      {isBodyBuilding && (
+                        <>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Musc.Sector</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Exercise</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Reps</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Weight</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Tempo</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rest Type</th>
+                        </>
+                      )}
+                      
+                      {hasTools && (
+                        <>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Reps</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Tools</th>
+                        </>
+                      )}
+                      
+                      {isDistanceBased && (
+                        <>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Dist (m)</th>
+                          {(isSwim || isRun) && (
+                            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Style</th>
+                          )}
+                          {isBike && (
+                            <>
+                              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">R1</th>
+                              <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">R2</th>
+                            </>
+                          )}
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Speed</th>
+                          {sport === 'ROWING' && (
+                            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Row/min</th>
+                          )}
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Time</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Pace</th>
+                        </>
+                      )}
+                      
+                      {/* Common headers */}
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Pause</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Macro</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Alarm&Snd</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Notes</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Options</th>
+                    </tr>
+                  </thead>
+                </>
+              );
+            })()}
+            
             <tbody>
               {movelaps.map((movelap: any, index: number) => (
                 <SortableMovelapRow
                   key={movelap.id}
                   movelap={movelap}
                   index={index}
+                  sequenceNumber={movelapSequences.get(movelap.id) || index + 1}
                   moveframeLetter={moveframeLetter}
                   sectionColor={sectionColor}
                   sectionName={sectionName}
@@ -536,26 +602,47 @@ export default function MovelapDetailTable({
                   onDeleteMovelap={onDeleteMovelap}
                   onCopyMovelap={handleCopyMovelap}
                   onPasteMovelap={handlePasteMovelap}
-                  savingFavorite={savingFavorite}
-                  handleSaveAsFavorite={handleSaveAsFavorite}
+                  onAddMovelapAfter={onAddMovelapAfter}
                 />
               ))}
             </tbody>
           </table>
-        </SortableContext>
-      </DndContext>
-      {onAddMovelap && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddMovelap();
-          }}
-          className="mt-2 px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-        >
-          + Add Movelap
-        </button>
-      )}
-    </div>
+          
+          {/* Note Box and Add Movelap Button - Same Line */}
+          <div className="mt-2 flex items-center gap-4">
+            {/* Add Movelap Button */}
+            {onAddMovelap && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddMovelap();
+                }}
+                className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 whitespace-nowrap"
+              >
+                + Add Movelap
+              </button>
+            )}
+            
+            {/* Note Box */}
+            <div className="flex items-center gap-2 flex-1">
+              <label className="text-xs font-semibold text-black whitespace-nowrap">
+                Note
+              </label>
+              <input
+                type="text"
+                className="flex-1 px-2 py-1 text-xs text-red-600 border-2 border-black rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+                placeholder="Add a note for this moveframe..."
+                defaultValue={moveframe.note || ''}
+                onBlur={(e) => {
+                  // TODO: Save note to backend
+                  console.log('Note updated:', e.target.value);
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 

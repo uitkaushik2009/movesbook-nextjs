@@ -35,6 +35,60 @@ export default function EditDayModal({
   
   // Show weather and feeling status only in section C (Workouts Done)
   const showWeatherAndFeeling = activeSection === 'C';
+  
+  // Debug: Log day data
+  console.log('📅 Edit Day Modal - Day data:', day);
+  console.log('📅 Periods:', periods);
+  
+  // Get day of week name from date
+  const getDayOfWeekName = (): string => {
+    try {
+      const date = new Date(day.date);
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      return days[date.getDay()] || '';
+    } catch (error) {
+      console.error('Error getting day of week:', error);
+      return '';
+    }
+  };
+  
+  // Get period information (from day.period or lookup in periods array)
+  const getPeriodInfo = () => {
+    console.log('🔍 Getting period info...');
+    console.log('  - day.periodId:', day.periodId);
+    console.log('  - day.periodName:', day.periodName);
+    console.log('  - day.periodColor:', day.periodColor);
+    
+    // First try to get from day's direct properties
+    if (day.periodName && day.periodColor) {
+      console.log('✅ Using direct properties');
+      return {
+        name: day.periodName,
+        color: day.periodColor
+      };
+    }
+    
+    // Otherwise, look up in periods array if available
+    if (periods && Array.isArray(periods) && day.periodId) {
+      console.log('🔍 Looking up in periods array, count:', periods.length);
+      const period = periods.find(p => p.id === day.periodId);
+      console.log('  - Found period:', period);
+      if (period) {
+        console.log('✅ Using period from array');
+        return {
+          name: period.name,
+          color: period.color
+        };
+      }
+    }
+    
+    // No period assigned
+    console.log('❌ No period found');
+    return null;
+  };
+  
+  const periodInfo = getPeriodInfo();
+  console.log('📊 Final period info:', periodInfo);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -83,6 +137,48 @@ export default function EditDayModal({
           >
             <X className="w-6 h-6" />
           </button>
+        </div>
+
+        {/* Day Summary - Read-only information */}
+        <div className="mb-6 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 border border-blue-200">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Day Summary</h3>
+          <div className="grid grid-cols-3 gap-4">
+            {/* Week Number */}
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Week Number</div>
+              <div className="text-lg font-bold text-gray-900">
+                Week {day.weekNumber}
+              </div>
+            </div>
+            
+            {/* Day of Week */}
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Day of Week</div>
+              <div className="text-lg font-bold text-gray-900">
+                {getDayOfWeekName()}
+              </div>
+            </div>
+            
+            {/* Period */}
+            <div>
+              <div className="text-xs text-gray-500 mb-1">Period</div>
+              {periodInfo ? (
+                <div className="flex items-center gap-2">
+                  <div 
+                    className="w-4 h-4 rounded-full border border-gray-300 flex-shrink-0" 
+                    style={{ backgroundColor: periodInfo.color }}
+                  />
+                  <div className="text-lg font-bold text-gray-900 truncate">
+                    {periodInfo.name}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-lg font-bold text-gray-400 italic">
+                  No period
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Form */}

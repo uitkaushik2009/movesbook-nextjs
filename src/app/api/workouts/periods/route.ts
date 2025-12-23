@@ -19,14 +19,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    // Handle fallback admin - return default periods
+    if (decoded.userId === 'admin') {
+      const defaultPeriods = [
+        { id: 'admin-base', name: 'Base', description: 'Base training period', color: '#93C5FD' },
+        { id: 'admin-build', name: 'Build', description: 'Build training period', color: '#FCD34D' },
+        { id: 'admin-peak', name: 'Peak', description: 'Peak/Competition period', color: '#FCA5A5' },
+        { id: 'admin-recovery', name: 'Recovery', description: 'Recovery period', color: '#86EFAC' }
+      ];
+      return NextResponse.json({ periods: defaultPeriods });
+    }
+
     // Get all periods for this user
     const periods = await prisma.period.findMany({
       where: { userId: decoded.userId },
       orderBy: { name: 'asc' }
     });
 
+    console.log(`📊 Found ${periods.length} periods for user ${decoded.userId}`);
+    periods.forEach((p, i) => console.log(`  ${i+1}. ${p.name} (ID: ${p.id}, Color: ${p.color})`));
+
     // If user has no periods, create default ones
     if (periods.length === 0) {
+      console.log('🔨 Creating default periods...');
       const defaultPeriods = await prisma.$transaction([
         prisma.period.create({
           data: {
@@ -62,9 +77,11 @@ export async function GET(request: NextRequest) {
         })
       ]);
 
+      console.log('✅ Created default periods:', defaultPeriods.map(p => p.name).join(', '));
       return NextResponse.json({ periods: defaultPeriods });
     }
 
+    console.log('✅ Returning periods:', periods.map(p => p.name).join(', '));
     return NextResponse.json({ periods });
 
   } catch (error) {
@@ -91,6 +108,19 @@ export async function POST(request: NextRequest) {
     const decoded = verifyToken(token);
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Handle fallback admin - accept but don't save
+    if (decoded.userId === 'admin') {
+      const body = await request.json();
+      return NextResponse.json({ 
+        period: { 
+          id: `admin-${Date.now()}`, 
+          userId: 'admin',
+          ...body 
+        },
+        message: 'Admin period accepted (not persisted to database)'
+      }, { status: 201 });
     }
 
     const body = await request.json();

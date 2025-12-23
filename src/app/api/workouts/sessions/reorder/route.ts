@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
 import { verifyToken } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
-const prisma = new PrismaClient();
-
-// POST /api/workouts/sessions/reorder - Reorder workout sessions within a day
-export async function POST(request: NextRequest) {
+/**
+ * PATCH /api/workouts/sessions/reorder
+ * Reorder workout sessions within the same day
+ * 
+ * Request Body:
+ * {
+ *   workouts: [
+ *     { id: string, sessionNumber: number },
+ *     ...
+ *   ]
+ * }
+ */
+export async function PATCH(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
@@ -19,52 +28,59 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { workoutDayId, sessionOrders } = body;
-    // sessionOrders: [{ sessionId: string, newSessionNumber: number }]
+    const { workouts } = body;
 
-    if (!workoutDayId || !sessionOrders || !Array.isArray(sessionOrders)) {
+    if (!workouts || !Array.isArray(workouts)) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Invalid request body. Expected { workouts: [{ id, sessionNumber }] }' },
         { status: 400 }
       );
     }
 
-    // Verify the day belongs to user
-    const day = await prisma.workoutDay.findUnique({
-      where: { id: workoutDayId },
-      include: {
-        workoutWeek: {
-          include: {
-            workoutPlan: true
-          }
+    // Validate that all workouts belong to the user
+    const workoutIds = workouts.map((w: any) => w.id);
+    
+    const existingWorkouts = await prisma.workoutSession.findMany({
+      where: {
+        id: { in: workoutIds },
+        workoutDay: {
+          userId: decoded.userId
         }
-      }
+      },
+      select: { id: true }
     });
 
-    if (!day || day.workoutWeek.workoutPlan.userId !== decoded.userId) {
+    if (existingWorkouts.length !== workoutIds.length) {
       return NextResponse.json(
-        { error: 'Day not found or unauthorized' },
-        { status: 404 }
+        { error: 'Some workouts do not exist or do not belong to the user' },
+        { status: 403 }
       );
     }
 
-    // Update each session's session number
-    const updatePromises = sessionOrders.map((order: any) =>
-      prisma.workoutSession.update({
-        where: { id: order.sessionId },
-        data: { sessionNumber: order.newSessionNumber }
-      })
+    // Update each workout's session number in a transaction
+    await prisma.$transaction(
+      workouts.map((w: any) => 
+        prisma.workoutSession.update({
+          where: { id: w.id },
+          data: { sessionNumber: w.sessionNumber }
+        })
+      )
     );
 
-    await Promise.all(updatePromises);
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error reordering workout sessions:', error);
     return NextResponse.json(
-      { error: 'Failed to reorder workout sessions' },
+      { 
+        success: true, 
+        message: 'Workouts reordered successfully',
+        updatedCount: workouts.length
+      },
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Error reordering workouts:', error);
+    return NextResponse.json(
+      { error: 'Failed to reorder workouts' },
       { status: 500 }
     );
   }
 }
-

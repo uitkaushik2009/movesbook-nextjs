@@ -1,0 +1,14 @@
+To force recreate Section A plan, you can:
+
+Option 1: Add ?forceRecreate=true to the URL when loading Section A
+Go to: http://localhost:3000/your-workout-page?forceRecreate=true
+
+Option 2: Use the browser console to call the API
+fetch('/api/workouts/plan?type=CURRENT_WEEKS&forceRecreate=true', {
+  headers: {
+    'Authorization': 'Bearer ' + localStorage.getItem('token')
+  }
+})
+
+Option 3: I can create a button to do this automatically
+

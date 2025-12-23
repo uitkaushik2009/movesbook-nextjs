@@ -88,12 +88,37 @@ export function useWorkoutData({
         console.log('✅ Plan loaded:', plan?.id);
         console.log('📊 Number of weeks:', plan?.weeks?.length);
         
+        // Check if Section A has less than 3 weeks - if so, force recreation
+        if (targetSection === 'A' && plan?.weeks && plan.weeks.length < 3) {
+          console.warn(`⚠️ Section A has only ${plan.weeks.length} weeks! Force recreating plan...`);
+          const recreateResponse = await workoutPlanApi.get(planType, true); // forceRecreate = true
+          if (recreateResponse.success && recreateResponse.data) {
+            setWorkoutPlan(recreateResponse.data.plan);
+            console.log('✅ Plan recreated successfully with', recreateResponse.data.plan?.weeks?.length, 'weeks');
+          }
+          setIsLoading(false);
+          return;
+        }
+        
         // Debug: Check weeks structure
         if (plan?.weeks && plan.weeks.length > 0) {
           console.log('✅ First week:', plan.weeks[0]);
           console.log('✅ First week days:', plan.weeks[0].days);
         } else {
-          console.warn('⚠️ No weeks found in plan!');
+          // Only warn for sections A and B where weeks are expected to be pre-created
+          if (targetSection === 'A' || targetSection === 'B') {
+            console.warn('⚠️ No weeks found in plan! Force recreating...');
+            const recreateResponse = await workoutPlanApi.get(planType, true);
+            if (recreateResponse.success && recreateResponse.data) {
+              setWorkoutPlan(recreateResponse.data.plan);
+              console.log('✅ Plan recreated successfully');
+            }
+            setIsLoading(false);
+            return;
+          } else {
+            // Sections C and D are expected to start empty
+            console.log(`ℹ️ Section ${targetSection} plan is empty (expected)`);
+          }
         }
         
         // Debug: Check moveframes

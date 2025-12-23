@@ -14,6 +14,9 @@ export interface SportSummary {
   duration: string;
   color: string;
   isSeriesBased?: boolean;
+  descriptions?: string[]; // All moveframe descriptions
+  mainWork?: string; // Main work moveframe description
+  secondaryWork?: string; // Secondary work moveframe description
 }
 
 /**
@@ -32,7 +35,7 @@ export function calculateSportSummaries(
     return [];
   }
 
-  const sportMap = new Map<string, SportSummary & { series: number; repetitions: number }>();
+  const sportMap = new Map<string, SportSummary & { series: number; repetitions: number; descriptions: string[]; mainWork: string; secondaryWork: string; moveframes: any[] }>();
 
   day.workouts.forEach((workout: any) => {
     if (workout.moveframes) {
@@ -52,19 +55,44 @@ export function calculateSportSummaries(
             color: sectionColor,
             isSeriesBased: isSeries,
             series: 0,
-            repetitions: 0
+            repetitions: 0,
+            descriptions: [],
+            mainWork: '',
+            secondaryWork: '',
+            moveframes: []
           });
         }
 
         const summary = sportMap.get(sport)!;
         
+        // Store moveframe for later processing
+        summary.moveframes.push(moveframe);
+        
+        // Add moveframe description if available
+        if (moveframe.description) {
+          summary.descriptions.push(moveframe.description);
+        }
+        
+        // Set main work description if this moveframe is marked as MAIN
+        if (moveframe.workType === 'MAIN' && moveframe.description) {
+          summary.mainWork = moveframe.description;
+        }
+        
+        // Set secondary work description if this moveframe is marked as SECONDARY
+        if (moveframe.workType === 'SECONDARY' && moveframe.description) {
+          summary.secondaryWork = moveframe.description;
+        }
+        
+        // For ALL sports: sum the repetitions/series from each moveframe
+        // For distance-based sports: repetitions = number of laps planned
+        // For series-based sports: repetitions = number of series planned
+        const moveframeRepetitions = parseInt(moveframe.repetitions) || 0;
+        summary.series += moveframeRepetitions;
+        
         if (isSeries) {
-          // For series-based sports: count series and repetitions
-          const seriesCount = moveframe.repetitions || moveframe.movelaps?.[0]?.series || 0;
+          // For series-based sports: also calculate total reps (series × reps per series)
           const repsPerSeries = moveframe.movelaps?.[0]?.reps || 0;
-          
-          summary.series += parseInt(seriesCount) || 0;
-          summary.repetitions += (parseInt(seriesCount) || 0) * (parseInt(repsPerSeries) || 0);
+          summary.repetitions += moveframeRepetitions * (parseInt(repsPerSeries) || 0);
         } else {
           // For distance-based sports: sum distances from movelaps
           if (moveframe.movelaps) {
@@ -79,6 +107,28 @@ export function calculateSportSummaries(
     }
   });
 
+  // Apply automatic fallback logic for main work and secondary work if not explicitly set
+  sportMap.forEach(summary => {
+    const moveframes = summary.moveframes;
+    
+    // If no explicit main work is set, apply automatic logic
+    if (!summary.mainWork && moveframes.length > 0) {
+      if (moveframes.length === 1) {
+        // Only 1 moveframe → it becomes main work
+        summary.mainWork = moveframes[0].description || '';
+      } else if (moveframes.length >= 2) {
+        // 2+ moveframes → 2nd moveframe becomes main work
+        summary.mainWork = moveframes[1].description || '';
+      }
+    }
+    
+    // If no explicit secondary work is set and there are 3+ moveframes
+    if (!summary.secondaryWork && moveframes.length >= 3) {
+      // 3+ moveframes → 3rd moveframe becomes secondary work
+      summary.secondaryWork = moveframes[2].description || '';
+    }
+  });
+
   // Convert to final format
   const summaries = Array.from(sportMap.values()).map(summary => ({
     sport: summary.sport,
@@ -87,7 +137,10 @@ export function calculateSportSummaries(
     distance: summary.isSeriesBased ? summary.series : summary.distance,
     duration: summary.isSeriesBased ? summary.repetitions.toString() : summary.duration,
     color: summary.color,
-    isSeriesBased: summary.isSeriesBased
+    isSeriesBased: summary.isSeriesBased,
+    descriptions: summary.descriptions,
+    mainWork: summary.mainWork,
+    secondaryWork: summary.secondaryWork
   }));
 
   // Return up to 4 sports
