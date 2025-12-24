@@ -617,7 +617,7 @@ export const shouldShowPaceField = (sport: string): boolean => {
 // Helper function to get display name for sports
 export const getSportDisplayName = (sport: string): string => {
   const displayNames: Record<string, string> = {
-    'BODY_BUILDING': 'WEIGHTS',
+    'BODY_BUILDING': 'BODY BUILDING',
     'TECHNICAL_MOVES': 'TECHNICAL MOVES',
     'FREE_MOVES': 'FREE MOVES'
   };

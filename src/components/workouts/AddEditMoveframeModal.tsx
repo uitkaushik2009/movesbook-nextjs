@@ -909,17 +909,17 @@ export default function AddEditMoveframeModal({
                 const icon = getSportIcon(sport, iconType);
                 const isImage = icon.startsWith('/');
                 return isImage ? (
-                  <div className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded bg-gray-50">
+                  <div className="w-12 h-12 flex items-center justify-center border border-gray-300 rounded bg-gray-50">
                     <Image 
                       src={icon} 
                       alt={sport}
-                      width={24}
-                      height={24}
+                      width={48}
+                      height={48}
                       className="object-contain"
                     />
                   </div>
                 ) : (
-                  <div className="w-8 h-8 flex items-center justify-center text-2xl border border-gray-300 rounded bg-gray-50">
+                  <div className="w-12 h-12 flex items-center justify-center text-4xl border border-gray-300 rounded bg-gray-50">
                     {icon}
                   </div>
                 );

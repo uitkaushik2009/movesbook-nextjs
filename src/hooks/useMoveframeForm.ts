@@ -352,10 +352,12 @@ export function useMoveframeForm({
       const macroFinalText = macroFinal ? ` M${macroFinal}` : '';
       const sectorText = muscularSector ? `${muscularSector} - ` : '';
       const exerciseText = exercise || 'Exercise';
-      const seriesCount = parseInt(repetitions) || 1;
-      const repsPerSeries = parseInt(reps) || 0;
-      // Format: "Shoulders - Bench Press: 3 x 10 reps Very slow P30" M0'"
-      return `${sectorText}${exerciseText}: ${seriesCount} x ${repsPerSeries} reps ${speed} ${pause ? `P${pause}` : ''}${macroFinalText}`;
+      const setsCount = parseInt(repetitions) || 1;
+      const repsPerSet = parseInt(reps) || 0;
+      const tempoText = speed ? ` ${speed}` : ''; // Tempo, not speed (no A2/B3 format)
+      const pauseText = pause ? ` P${pause}` : '';
+      // Format: "Shoulders - Bench Press: 3 sets x 10 reps Very slow P30" M0'"
+      return `${sectorText}${exerciseText}: ${setsCount} sets x ${repsPerSet} reps${tempoText}${pauseText}${macroFinalText}`;
     }
 
     const dist = distance === 'custom' ? customDistance : distance;
