@@ -7,8 +7,18 @@ interface PersonalBannerProps {
 export default function PersonalBanner({ user }: PersonalBannerProps) {
   return (
     <div className="mb-6 flex-shrink-0 px-4">
-      <div className="bg-gray-800 rounded-lg overflow-hidden shadow-lg">
-        <div className="flex items-center justify-between px-4 py-3 text-sm">
+      <div className="bg-gray-800 rounded-lg overflow-hidden shadow-lg relative">
+        {/* Background image with overlay */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center opacity-30"
+          style={{
+            backgroundImage: 'url(/images/banner.jpg)',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        ></div>
+        
+        <div className="flex items-center justify-between px-4 py-3 text-sm relative z-10">
           {/* Left side - Profile Picture, FAQ and Most used buttons */}
           <div className="flex items-center gap-4">
             {/* Profile Picture */}

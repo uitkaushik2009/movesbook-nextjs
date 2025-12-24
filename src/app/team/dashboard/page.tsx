@@ -109,16 +109,16 @@ export default function TeamDashboard() {
           </div>
         )}
 
-        {/* Video/Image Banner with Info Cards */}
-        {showPersonalBanner && (
-          <div className="flex-shrink-0">
-            <div className="relative overflow-hidden shadow-lg" style={{ height: '300px' }}>
-              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800">
-                <img 
-                  src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200&h=300&fit=crop" 
-                  alt="Team Background"
-                  className="w-full h-full object-cover opacity-60"
-                />
+         {/* Video/Image Banner with Info Cards */}
+         {showPersonalBanner && (
+           <div className="flex-shrink-0">
+             <div className="relative overflow-hidden shadow-lg" style={{ height: '300px' }}>
+               <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-gray-800">
+                 <img 
+                   src="/images/banner.jpg" 
+                   alt="Team Background"
+                   className="w-full h-full object-cover opacity-60"
+                 />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-20 h-14 bg-red-600 rounded-lg flex items-center justify-center cursor-pointer hover:bg-red-700 transition">
                     <div className="w-0 h-0 border-t-8 border-t-transparent border-l-12 border-l-white border-b-8 border-b-transparent ml-1"></div>
@@ -163,10 +163,20 @@ export default function TeamDashboard() {
         )}
 
         {/* Personal Banner - Horizontal Navigation Bar */}
-        {showPersonalBanner && (
-          <div className="flex-shrink-0">
-            <div className="bg-gray-800 overflow-hidden shadow-lg" style={{ height: '52px' }}>
-              <div className="flex items-center justify-between px-4 text-sm h-full">
+         {showPersonalBanner && (
+           <div className="flex-shrink-0">
+             <div className="bg-gray-800 overflow-hidden shadow-lg relative" style={{ height: '52px' }}>
+               {/* Background image with subtle overlay */}
+               <div 
+                 className="absolute inset-0 bg-cover bg-center opacity-20"
+                 style={{
+                   backgroundImage: 'url(/images/banner.jpg)',
+                   backgroundSize: 'cover',
+                   backgroundPosition: 'center'
+                 }}
+               ></div>
+               
+               <div className="flex items-center justify-between px-4 text-sm h-full relative z-10">
                 {/* Left side - Navigation items */}
                 <div className="flex items-center gap-4 overflow-x-auto">
                   <button className="text-gray-300 hover:text-white transition-colors flex items-center gap-2 whitespace-nowrap">
@@ -314,4 +324,3 @@ export default function TeamDashboard() {
     </div>
   );
 }
-

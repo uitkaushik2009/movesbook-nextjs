@@ -13,21 +13,17 @@ interface WeekTotalsModalProps {
 export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = false }: WeekTotalsModalProps) {
   const iconType = useSportIconType();
   const useImageIcons = isImageIcon(iconType);
+  const [shouldAutoPrint, setShouldAutoPrint] = React.useState(false);
 
-  // Auto-trigger print if autoPrint is true
+  // Set auto-print flag when modal opens with autoPrint prop
   React.useEffect(() => {
     if (isOpen && autoPrint) {
-      // Small delay to ensure modal is rendered (off-screen)
-      const timer = setTimeout(() => {
-        window.print();
-        // Close modal after print dialog is opened
-        setTimeout(() => {
-          onClose();
-        }, 100);
-      }, 300);
-      return () => clearTimeout(timer);
+      console.log('🖨️ Auto-print mode activated');
+      setShouldAutoPrint(true);
+    } else {
+      setShouldAutoPrint(false);
     }
-  }, [isOpen, autoPrint, onClose]);
+  }, [isOpen, autoPrint]);
 
   if (!isOpen || !week) return null;
 
@@ -116,10 +112,15 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
 
   const { sportTotals, totalWorkouts, totalMoveframes, totalDistance, totalDuration } = calculateWeekTotals();
 
-  const handlePrint = () => {
+  const handlePrint = React.useCallback(() => {
+    console.log('🖨️ handlePrint called');
     // Get the modal content
     const modalContent = document.querySelector('[role="dialog"]');
-    if (!modalContent) return;
+    if (!modalContent) {
+      console.error('❌ Modal content not found');
+      return;
+    }
+    console.log('✅ Modal content found, creating print window...');
     
     // Create a new window for printing
     const printWindow = window.open('', '', 'width=800,height=600');
@@ -208,7 +209,22 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
       printWindow.print();
       printWindow.close();
     }, 250);
-  };
+  }, [week.weekNumber]); // Add week.weekNumber as dependency for useCallback
+
+  // Trigger auto-print after modal content is rendered
+  React.useEffect(() => {
+    if (shouldAutoPrint && isOpen) {
+      console.log('📋 Triggering auto-print...');
+      const timer = setTimeout(() => {
+        handlePrint();
+        // Close modal after print is triggered
+        setTimeout(() => {
+          onClose();
+        }, 500);
+      }, 500); // Give enough time for modal to render
+      return () => clearTimeout(timer);
+    }
+  }, [shouldAutoPrint, isOpen, handlePrint, onClose]);
 
   // Get date range
   const startDate = week.days[0] ? new Date(week.days[0].date) : null;
@@ -219,15 +235,22 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
 
   return (
     <div 
-      className={`fixed inset-0 flex items-center justify-center z-50 p-4 print:!p-0 ${autoPrint ? 'opacity-0 pointer-events-none' : 'bg-black'}`}
-      onClick={autoPrint ? undefined : onClose}
-      style={autoPrint ? {} : { backgroundColor: 'rgba(0, 0, 0, 0.95)' }}
+      className="fixed inset-0 flex items-center justify-center z-50 p-4 print:!p-0"
+      style={{ 
+        backgroundColor: shouldAutoPrint ? 'transparent' : 'rgba(0, 0, 0, 0.95)',
+        visibility: shouldAutoPrint ? 'hidden' : 'visible',
+        pointerEvents: shouldAutoPrint ? 'none' : 'auto'
+      }}
+      onClick={shouldAutoPrint ? undefined : onClose}
     >
       <div 
         role="dialog"
         aria-modal="true"
         className="bg-white rounded-lg shadow-2xl w-full max-w-[1000px] max-h-[90vh] overflow-hidden flex flex-col print:!max-w-full print:!max-h-none print:!rounded-none print:!shadow-none print:!overflow-visible print:!block"
         onClick={(e) => e.stopPropagation()}
+        style={{ 
+          visibility: shouldAutoPrint ? 'hidden' : 'visible'
+        }}
       >
         {/* Header (Screen Only) */}
         <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-4 flex items-center justify-between print:hidden">

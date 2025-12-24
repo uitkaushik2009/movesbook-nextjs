@@ -125,9 +125,27 @@ export default function WorkoutSectionHeader({
       {/* Sub-Header: Title + Actions */}
       <div className="bg-white px-4 py-3 border-b border-gray-200">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-bold">
-            {getSectionTitle(activeSection)}
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold">
+              {getSectionTitle(activeSection)}
+            </h2>
+            {/* Status Badge */}
+            {activeSection === 'B' && (
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full border border-blue-300">
+                📋 PLANNED
+              </span>
+            )}
+            {activeSection === 'C' && (
+              <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full border border-green-300">
+                ✅ COMPLETED
+              </span>
+            )}
+            {activeSection === 'A' && (
+              <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full border border-purple-300">
+                📝 DRAFT
+              </span>
+            )}
+          </div>
           
           <div className="flex gap-2 items-center">
             {/* Virtual Start Date for Sections B & C */}
@@ -178,6 +196,18 @@ export default function WorkoutSectionHeader({
               >
                 <Plus className="w-4 h-4" />
                 Create Plan
+              </button>
+            )}
+            
+            {/* Import Button - Only for Section C (Workouts Done) */}
+            {activeSection === 'C' && (
+              <button
+                onClick={onImportClick}
+                className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                title="Import workouts from Yearly Plan"
+              >
+                <Download className="w-4 h-4" />
+                Import from Plan
               </button>
             )}
             

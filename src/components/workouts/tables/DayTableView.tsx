@@ -54,6 +54,22 @@ interface DayTableViewProps {
   reloadWorkouts?: () => Promise<void>; // Added for reloading after copy/move
 }
 
+// Helper function to get section label and color
+const getSectionBadge = (section?: 'A' | 'B' | 'C' | 'D') => {
+  switch(section) {
+    case 'B':
+      return { label: 'PLANNED', bgColor: 'bg-blue-100', textColor: 'text-blue-700', borderColor: 'border-blue-300' };
+    case 'C':
+      return { label: 'COMPLETED', bgColor: 'bg-green-100', textColor: 'text-green-700', borderColor: 'border-green-300' };
+    case 'A':
+      return { label: 'DRAFT', bgColor: 'bg-purple-100', textColor: 'text-purple-700', borderColor: 'border-purple-300' };
+    case 'D':
+      return { label: 'ARCHIVE', bgColor: 'bg-gray-100', textColor: 'text-gray-700', borderColor: 'border-gray-300' };
+    default:
+      return null;
+  }
+};
+
 export default function DayTableView({
   workoutPlan,
   activeSection = 'A',
@@ -1084,8 +1100,10 @@ export default function DayTableView({
         week={currentWeek}
         autoPrint={autoPrintWeek}
         onClose={() => {
+          console.log('🚪 WeekTotalsModal closing...');
           setShowWeekTotalsModal(false);
           setAutoPrintWeek(false);
+          console.log('✅ Modal closed and autoPrint reset');
         }}
       />
 

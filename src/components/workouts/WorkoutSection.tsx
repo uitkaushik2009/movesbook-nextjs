@@ -70,6 +70,7 @@ import MoveMoveframeModal from '@/components/workouts/modals/MoveMoveframeModal'
 import ColumnSettingsModal from '@/components/workouts/ColumnSettingsModal';
 import BulkAddMovelapModal from '@/components/workouts/BulkAddMovelapModal';
 import CreateYearlyPlanModal from '@/components/workouts/modals/CreateYearlyPlanModal';
+import ImportFromPlanModal from '@/components/workouts/modals/ImportFromPlanModal';
 import DayPrintModal from '@/components/workouts/modals/DayPrintModal';
 import WeekTotalsModal from '@/components/workouts/modals/WeekTotalsModal';
 import ExportSharePrint from '@/components/workouts/ExportSharePrint';
@@ -434,6 +435,43 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       showMessage('success', SUCCESS_MESSAGES.MOVELAP_ADDED(activeMoveframe.letter || activeMoveframe.code));
     } else {
       showMessage('error', response.error || ERROR_MESSAGES.GENERIC_ERROR);
+    }
+  };
+
+  /**
+   * IMPORT WORKOUTS - Handler for importing workouts from Yearly Plan to Workouts Done
+   */
+  const handleImportWorkouts = async (workoutIds: string[], targetDate?: string) => {
+    modalActions.closeImportModal();
+    
+    try {
+      showMessage('info', 'Importing workouts...');
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showMessage('error', 'Please log in first');
+        return;
+      }
+
+      const response = await fetch('/api/workouts/import-from-plan', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ workoutIds, targetDate })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        showMessage('success', data.message || 'Workouts imported successfully!');
+      } else {
+        showMessage('error', data.error || 'Failed to import workouts');
+      }
+    } catch (error) {
+      console.error('Error importing workouts:', error);
+      showMessage('error', 'Failed to import workouts');
     }
   };
 
@@ -962,6 +1000,15 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           isOpen={showCreateYearlyPlanModal}
           onClose={() => setShowCreateYearlyPlanModal(false)}
           onConfirm={handleCreateYearlyPlan}
+        />
+      )}
+
+      {/* ==================== IMPORT FROM PLAN MODAL ==================== */}
+      {modals.showImportModal && (
+        <ImportFromPlanModal
+          isOpen={modals.showImportModal}
+          onClose={() => modalActions.closeImportModal()}
+          onConfirm={handleImportWorkouts}
         />
       )}
 
