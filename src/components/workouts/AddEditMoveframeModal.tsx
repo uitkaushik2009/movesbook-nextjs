@@ -1906,16 +1906,21 @@ export default function AddEditMoveframeModal({
                                 <td className="border border-gray-300 px-2 py-1.5">
                                   <input
                                     type="number"
-                                    value={plan.reps || ''}
+                                    value={plan.reps ?? ''}
+                                    onInput={(e) => {
+                                      // Use onInput instead of onChange for more immediate response
+                                      const value = (e.target as HTMLInputElement).value;
+                                      updateIndividualPlan(idx, 'reps', value);
+                                    }}
                                     onChange={(e) => {
+                                      // Also handle onChange as fallback
                                       const value = e.target.value;
-                                      // Update immediately without validation during typing
                                       updateIndividualPlan(idx, 'reps', value);
                                     }}
                                     onBlur={(e) => {
                                       const value = parseInt(e.target.value);
                                       if (e.target.value && (value < 1 || value > 999)) {
-                                        alert('Reps must be between 1 and 999');
+                                        console.warn('Reps must be between 1 and 999');
                                         updateIndividualPlan(idx, 'reps', '12');
                                       }
                                     }}
@@ -1928,10 +1933,17 @@ export default function AddEditMoveframeModal({
                                 <td className="border border-gray-300 px-2 py-1.5">
                                   <input
                                     type="number"
-                                    value={plan.weight || ''}
+                                    value={plan.weight ?? ''}
+                                    onInput={(e) => {
+                                      // Use onInput for more immediate response
+                                      const value = (e.target as HTMLInputElement).value;
+                                      if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 9999)) {
+                                        updateIndividualPlan(idx, 'weight', value);
+                                      }
+                                    }}
                                     onChange={(e) => {
+                                      // Also handle onChange as fallback
                                       const value = e.target.value;
-                                      // Allow empty or values between 0-9999
                                       if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 9999)) {
                                         updateIndividualPlan(idx, 'weight', value);
                                       }
@@ -1939,7 +1951,7 @@ export default function AddEditMoveframeModal({
                                     onBlur={(e) => {
                                       const value = parseInt(e.target.value);
                                       if (e.target.value && (value < 0 || value > 9999)) {
-                                        alert('Weight must be between 0 and 9999');
+                                        console.warn('Weight must be between 0 and 9999');
                                         updateIndividualPlan(idx, 'weight', '');
                                       }
                                     }}

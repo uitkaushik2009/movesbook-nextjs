@@ -264,12 +264,16 @@ export function useMoveframeForm({
    * If updating the first row (index 0), automatically copy the value to all subsequent rows
    */
   const updateIndividualPlan = (index: number, field: 'speed' | 'time' | 'pause' | 'reps' | 'weight' | 'tools' | 'macroFinal', value: string) => {
+    // Force immediate update without batching
     setIndividualPlans(prev => {
       const updated = [...prev];
       
-      // Update the specified row
+      // Update the specified row - create a new object reference to force re-render
       if (updated[index]) {
-        updated[index] = { ...updated[index], [field]: value };
+        updated[index] = { 
+          ...updated[index], 
+          [field]: value 
+        };
       }
       
       // If updating the first row (index 0), copy the value to all subsequent rows (2nd to last)
@@ -279,7 +283,8 @@ export function useMoveframeForm({
         }
       }
       
-      return updated;
+      // Return a completely new array to ensure React detects the change
+      return [...updated];
     });
   };
 
