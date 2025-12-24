@@ -243,7 +243,7 @@ export function useMoveframeForm({
       if (isBodyBuilding) {
         // BODY_BUILDING: reps, weight
         plan.reps = reps || '12';
-        plan.weight = '12';
+        plan.weight = ''; // Start blank, user can enter 0-9999
       } else if (isToolsBased) {
         // TOOLS-BASED: reps, tools
         plan.reps = repetitions || '1'; // Use repetitions from moveframe

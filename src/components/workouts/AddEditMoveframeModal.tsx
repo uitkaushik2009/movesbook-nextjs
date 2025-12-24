@@ -1907,19 +1907,46 @@ export default function AddEditMoveframeModal({
                                   <input
                                     type="number"
                                     value={plan.reps || ''}
-                                    onChange={(e) => updateIndividualPlan(idx, 'reps', e.target.value)}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      // Update immediately without validation during typing
+                                      updateIndividualPlan(idx, 'reps', value);
+                                    }}
+                                    onBlur={(e) => {
+                                      const value = parseInt(e.target.value);
+                                      if (e.target.value && (value < 1 || value > 999)) {
+                                        alert('Reps must be between 1 and 999');
+                                        updateIndividualPlan(idx, 'reps', '12');
+                                      }
+                                    }}
                                     className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
                                     placeholder="12"
                                     min="1"
+                                    max="999"
                                   />
                                 </td>
                                 <td className="border border-gray-300 px-2 py-1.5">
                                   <input
-                                    type="text"
+                                    type="number"
                                     value={plan.weight || ''}
-                                    onChange={(e) => updateIndividualPlan(idx, 'weight', e.target.value)}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      // Allow empty or values between 0-9999
+                                      if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 9999)) {
+                                        updateIndividualPlan(idx, 'weight', value);
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const value = parseInt(e.target.value);
+                                      if (e.target.value && (value < 0 || value > 9999)) {
+                                        alert('Weight must be between 0 and 9999');
+                                        updateIndividualPlan(idx, 'weight', '');
+                                      }
+                                    }}
                                     className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
-                                    placeholder="12"
+                                    placeholder="0"
+                                    min="0"
+                                    max="9999"
                                   />
                                 </td>
                                 <td className="border border-gray-300 px-2 py-1.5">
