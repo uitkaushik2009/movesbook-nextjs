@@ -409,6 +409,7 @@ export default function MoveframesSection({
                         onCopyMoveframe={onCopyMoveframe}
                         onMoveMoveframe={onMoveMoveframe}
                         onSetWorkType={handleOpenWorkTypeModal}
+                        onRefresh={onRefreshWorkouts}
                         workout={workout}
                         day={day}
                         setShowInfoPanel={setShowInfoPanel}

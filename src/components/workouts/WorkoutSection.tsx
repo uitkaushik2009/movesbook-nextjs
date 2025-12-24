@@ -793,6 +793,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     }
     
     setDragModalConfig(null);
+    await loadWorkoutData(activeSection);
   };
 
   const handleWorkoutDragAction = async (action: DragAction, sourceData: any, targetData: any) => {
@@ -1669,7 +1670,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        showMessage('error', 'Error deleting moveframe');
                      }
                    }
-                 }
+                 }}
                  onDeleteMovelap={async (movelap, moveframe, workout, day) => {
                    if (confirm('Are you sure you want to delete this movelap?')) {
                      try {
@@ -1700,7 +1701,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        showMessage('error', 'Error deleting movelap');
                      }
                    }
-                 }
+                 }}
                />
                </StyledTableWrapper>
               </>

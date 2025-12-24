@@ -10,6 +10,7 @@ interface MovelapDetailTableProps {
   onDeleteMovelap?: (movelap: any) => void;
   onAddMovelap?: () => void;
   onAddMovelapAfter?: (movelap: any, index: number) => void;
+  onRefresh?: () => void;
 }
 
 // Sortable Row Component
@@ -333,7 +334,8 @@ export default function MovelapDetailTable({
   onEditMovelap, 
   onDeleteMovelap, 
   onAddMovelap,
-  onAddMovelapAfter
+  onAddMovelapAfter,
+  onRefresh
 }: MovelapDetailTableProps) {
   const [movelaps, setMovelaps] = useState(moveframe.movelaps || []);
   const moveframeLetter = moveframe.letter || 'A'; // Parent moveframe letter
@@ -446,14 +448,14 @@ export default function MovelapDetailTable({
   // Handle paste movelap
   const handlePasteMovelap = async (afterIndex: number) => {
     if (!copiedMovelap) {
-      alert('No movelap copied. Click "Copy" on a movelap first.');
+      console.log('No movelap copied. Click "Copy" on a movelap first.');
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Authentication required');
+        console.error('Authentication required');
         return;
       }
 
@@ -475,14 +477,16 @@ export default function MovelapDetailTable({
       });
 
       if (response.ok) {
-        alert('Movelap pasted successfully! Refreshing...');
-        window.location.reload(); // Refresh to show new movelap
+        console.log('Movelap pasted successfully');
+        // Refresh data without page reload
+        if (onRefresh) {
+          onRefresh();
+        }
       } else {
-        alert('Failed to paste movelap');
+        console.error('Failed to paste movelap');
       }
     } catch (error) {
       console.error('Error pasting movelap:', error);
-      alert('Error pasting movelap');
     }
   };
   

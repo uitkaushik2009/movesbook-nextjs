@@ -24,6 +24,7 @@ interface SortableMoveframeRowProps {
   onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onSetWorkType?: (moveframe: any) => void;
+  onRefresh?: () => void;
   workout: any;
   day: any;
   setShowInfoPanel: (show: boolean) => void;
@@ -48,6 +49,7 @@ export default function SortableMoveframeRow({
   onCopyMoveframe,
   onMoveMoveframe,
   onSetWorkType,
+  onRefresh,
   workout,
   day,
   setShowInfoPanel,
@@ -525,6 +527,7 @@ export default function SortableMoveframeRow({
                 onDeleteMovelap={(movelap) => onDeleteMovelap?.(movelap, moveframe)}
                 onAddMovelap={() => onAddMovelap?.(moveframe)}
                 onAddMovelapAfter={(movelap, index) => onAddMovelapAfter?.(movelap, index, moveframe, workout, day)}
+                onRefresh={onRefresh}
               />
             </div>
           </td>
