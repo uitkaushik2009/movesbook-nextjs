@@ -25,8 +25,6 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
     }
   }, [isOpen, autoPrint]);
 
-  if (!isOpen || !week) return null;
-
   // Format duration as HH:MM
   const formatTime = (minutes: number): string => {
     if (minutes === 0) return '0:00';
@@ -51,6 +49,17 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
     let totalMoveframes = 0;
     let totalDistance = 0;
     let totalDuration = 0;
+
+    // Safe access - check if week and days exist
+    if (!week || !week.days) {
+      return { 
+        sportTotals: [], 
+        totalWorkouts: 0, 
+        totalMoveframes: 0, 
+        totalDistance: 0, 
+        totalDuration: 0 
+      };
+    }
 
     week.days.forEach((day: any) => {
       day.workouts.forEach((workout: any) => {
@@ -131,7 +140,7 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Training Plan - Week ${week.weekNumber}</title>
+        <title>Training Plan - Week ${week?.weekNumber || 'N/A'}</title>
         <style>
           @page {
             size: A4 landscape;
@@ -209,7 +218,7 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
       printWindow.print();
       printWindow.close();
     }, 250);
-  }, [week.weekNumber]); // Add week.weekNumber as dependency for useCallback
+  }, [week?.weekNumber]); // Safe optional chaining for dependency
 
   // Trigger auto-print after modal content is rendered
   React.useEffect(() => {
@@ -226,12 +235,15 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
     }
   }, [shouldAutoPrint, isOpen, handlePrint, onClose]);
 
-  // Get date range
-  const startDate = week.days[0] ? new Date(week.days[0].date) : null;
-  const endDate = week.days[week.days.length - 1] ? new Date(week.days[week.days.length - 1].date) : null;
+  // Get date range - safe access
+  const startDate = week?.days?.[0] ? new Date(week.days[0].date) : null;
+  const endDate = week?.days?.[week.days.length - 1] ? new Date(week.days[week.days.length - 1].date) : null;
   const dateRange = startDate && endDate 
     ? `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
     : '';
+
+  // Early return check - must be after all hooks
+  if (!isOpen || !week) return null;
 
   return (
     <div 
