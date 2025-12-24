@@ -123,6 +123,7 @@ export default function DayTableView({
   const [showCopyWeekModal, setShowCopyWeekModal] = useState(false);
   const [showMoveWeekModal, setShowMoveWeekModal] = useState(false);
   const [autoPrintWeek, setAutoPrintWeek] = useState(false);
+  const [targetWeeks, setTargetWeeks] = useState<any[]>([]);
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const scrollbarRef = useRef<HTMLDivElement>(null);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
@@ -700,7 +701,35 @@ export default function DayTableView({
               
               {/* Copy Week Button */}
               <button
-                onClick={() => setShowCopyWeekModal(true)}
+                onClick={async () => {
+                  const token = localStorage.getItem('token');
+                  if (!token) {
+                    alert('Please log in to copy weeks.');
+                    return;
+                  }
+                  
+                  try {
+                    // Always fetch from Yearly Plan (Section B)
+                    const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'THREE_WEEKS_PLAN';
+                    console.log('📥 Fetching target weeks for Copy from:', targetPlanType);
+                    
+                    const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                      const data = await response.json();
+                      console.log('✅ Loaded target plan:', data.plan?.type, 'with', data.plan?.weeks?.length || 0, 'weeks');
+                      setTargetWeeks(data.plan?.weeks || []);
+                      setShowCopyWeekModal(true);
+                    } else {
+                      alert('Failed to load target weeks. Please try again.');
+                    }
+                  } catch (error) {
+                    console.error('Error loading target weeks:', error);
+                    alert('An error occurred while loading available weeks.');
+                  }
+                }}
                 className="flex items-center gap-1 px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex-shrink-0"
                 title="Copy this week"
               >
@@ -710,7 +739,35 @@ export default function DayTableView({
               
               {/* Move Week Button */}
               <button
-                onClick={() => setShowMoveWeekModal(true)}
+                onClick={async () => {
+                  const token = localStorage.getItem('token');
+                  if (!token) {
+                    alert('Please log in to move weeks.');
+                    return;
+                  }
+                  
+                  try {
+                    // Always fetch from Yearly Plan (Section B)
+                    const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'THREE_WEEKS_PLAN';
+                    console.log('📥 Fetching target weeks for Move from:', targetPlanType);
+                    
+                    const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {
+                      headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    
+                    if (response.ok) {
+                      const data = await response.json();
+                      console.log('✅ Loaded target plan:', data.plan?.type, 'with', data.plan?.weeks?.length || 0, 'weeks');
+                      setTargetWeeks(data.plan?.weeks || []);
+                      setShowMoveWeekModal(true);
+                    } else {
+                      alert('Failed to load target weeks. Please try again.');
+                    }
+                  } catch (error) {
+                    console.error('Error loading target weeks:', error);
+                    alert('An error occurred while loading available weeks.');
+                  }
+                }}
                 className="flex items-center gap-1 px-4 py-2 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors flex-shrink-0"
                 title="Move this week"
               >
@@ -1111,8 +1168,11 @@ export default function DayTableView({
       <CopyWeekModal
         isOpen={showCopyWeekModal}
         sourceWeek={currentWeek}
-        allWeeks={workoutPlan?.weeks || []}
-        onClose={() => setShowCopyWeekModal(false)}
+        allWeeks={targetWeeks}
+        onClose={() => {
+          setShowCopyWeekModal(false);
+          setTargetWeeks([]);
+        }}
         onCopy={handleCopyWeek}
       />
 
@@ -1120,8 +1180,11 @@ export default function DayTableView({
       <MoveWeekModal
         isOpen={showMoveWeekModal}
         sourceWeek={currentWeek}
-        allWeeks={workoutPlan?.weeks || []}
-        onClose={() => setShowMoveWeekModal(false)}
+        allWeeks={targetWeeks}
+        onClose={() => {
+          setShowMoveWeekModal(false);
+          setTargetWeeks([]);
+        }}
         onMove={handleMoveWeek}
       />
 
