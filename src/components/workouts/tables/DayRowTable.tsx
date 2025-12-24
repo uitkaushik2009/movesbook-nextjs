@@ -15,6 +15,7 @@ interface DayRowTableProps {
   day: any;
   currentWeek: any;
   isExpanded: boolean;
+  isLastDayOfWeek?: boolean; // Add thick bottom border for week separator
   onToggleDay: (dayId: string) => void;
   onToggleWorkout?: (workoutId: string) => void;  // Added for clickable workout numbers
   onExpandOnlyThisWorkout?: (workout: any, day: any) => void; // For expanding only one workout
@@ -35,6 +36,7 @@ export default function DayRowTable({
   day,
   currentWeek,
   isExpanded,
+  isLastDayOfWeek = false,
   onToggleDay,
   onToggleWorkout,
   onExpandOnlyThisWorkout,
@@ -114,15 +116,14 @@ export default function DayRowTable({
     <tr
       ref={setNodeRef}
       className={`day-row-table border-b transition-colors hover:opacity-90 cursor-pointer ${
-        isSunday ? 'week-separator' : ''
+        isLastDayOfWeek ? 'week-separator-thick' : ''
       }`}
       style={{
         backgroundColor: bgStyle,
         color: rowTextColor,
         borderTop: borderStyle,
         borderLeft: borderStyle,
-        borderRight: borderStyle,
-        borderBottom: isSunday ? '4px solid black' : borderStyle
+        borderRight: borderStyle
       }}
       onClick={() => {
         // Clicking on the row expands the day (shows workout headers) but collapses all moveframes

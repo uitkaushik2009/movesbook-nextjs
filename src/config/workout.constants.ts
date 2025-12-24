@@ -7,12 +7,12 @@
 export const WORKOUT_SECTIONS = {
   A: {
     id: 'A' as const,
-    name: 'Current Weeks',
-    description: 'Current 3-week training period',
-    planType: 'CURRENT_WEEKS',
+    name: '3 Weeks Plan',
+    description: '3 generic template weeks for planning',
+    planType: 'TEMPLATE_WEEKS',
     maxWeeks: 3,
     maxDays: 21,
-    canAddDays: false,
+    canAddDays: true,
     isEditable: true,
     icon: 'Calendar'
   },
@@ -23,7 +23,7 @@ export const WORKOUT_SECTIONS = {
     planType: 'YEARLY_PLAN',
     maxWeeks: 52,
     maxDays: 364,
-    canAddDays: true,
+    canAddDays: false, // Plan is created via "Create Plan" button with start date
     isEditable: true,
     icon: 'CalendarRange'
   },

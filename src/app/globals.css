@@ -196,3 +196,9 @@ form select {
 .animate-shake {
   animation: shake 400ms ease-in-out;
 }
+
+/* ==============================================
+   PRINT STYLES - DISABLED (Using component-level CSS)
+   ============================================== */
+/* Global print styles removed to avoid conflicts */
+

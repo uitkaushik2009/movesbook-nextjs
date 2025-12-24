@@ -88,16 +88,9 @@ export default function ExportSharePrint({
   };
 
   const handlePrint = () => {
-    // Open print-friendly view
-    const printWindow = window.open(`/print/${type}/${id}`, '_blank');
-    if (printWindow) {
-      printWindow.onload = () => {
-        printWindow.print();
-      };
-    } else {
-      // Fallback: print current window
-      window.print();
-    }
+    // Use browser's native print dialog
+    // This will print the current page with all CSS print styles applied
+    window.print();
   };
 
   if (!isOpen) return null;

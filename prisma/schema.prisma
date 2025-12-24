@@ -276,41 +276,42 @@ model Movelap {
 }
 
 model UserSettings {
-  id                   String   @id @default(cuid())
-  userId               String   @unique
-  gridSize             String   @default("comfortable")
-  columnCount          Int      @default(3)
-  rowHeight            String   @default("medium")
-  defaultView          String   @default("grid")
-  leftSidebarVisible   Boolean  @default(true)
-  rightSidebarVisible  Boolean  @default(true)
-  leftSidebarWidth     Int      @default(20)
-  rightSidebarWidth    Int      @default(25)
-  sidebarPosition      String   @default("fixed")
-  theme                String   @default("light")
-  fontSize             Int      @default(16)
-  iconSize             String   @default("medium")
-  enableAnimations     Boolean  @default(true)
-  reducedMotion        Boolean  @default(false)
-  highContrast         Boolean  @default(false)
-  performanceMode      Boolean  @default(false)
-  imageQuality         String   @default("high")
-  lazyLoading          Boolean  @default(true)
-  dashboardLayout      String   @default("default")
-  widgetArrangement    String   @default("[]")
-  colorSettings        String   @db.Text
-  language             String   @default("en")
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @default(now()) @updatedAt
-  adminSettings        String   @db.Text
-  favouritesSettings   String   @db.Text
-  myBestSettings       String   @db.Text
-  notificationSettings String   @db.Text
-  socialSettings       String   @db.Text
-  sportIconType        String   @default("emoji")
-  toolsSettings        String   @db.Text
-  workoutPreferences   String   @db.Text
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  gridSize             String    @default("comfortable")
+  columnCount          Int       @default(3)
+  rowHeight            String    @default("medium")
+  defaultView          String    @default("grid")
+  leftSidebarVisible   Boolean   @default(true)
+  rightSidebarVisible  Boolean   @default(true)
+  leftSidebarWidth     Int       @default(20)
+  rightSidebarWidth    Int       @default(25)
+  sidebarPosition      String    @default("fixed")
+  theme                String    @default("light")
+  fontSize             Int       @default(16)
+  iconSize             String    @default("medium")
+  enableAnimations     Boolean   @default(true)
+  reducedMotion        Boolean   @default(false)
+  highContrast         Boolean   @default(false)
+  performanceMode      Boolean   @default(false)
+  imageQuality         String    @default("high")
+  lazyLoading          Boolean   @default(true)
+  dashboardLayout      String    @default("default")
+  widgetArrangement    String    @default("[]")
+  colorSettings        String    @db.Text
+  language             String    @default("en")
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @default(now()) @updatedAt
+  adminSettings        String    @db.Text
+  favouritesSettings   String    @db.Text
+  myBestSettings       String    @db.Text
+  notificationSettings String    @db.Text
+  socialSettings       String    @db.Text
+  sportIconType        String    @default("emoji")
+  toolsSettings        String    @db.Text
+  workoutPreferences   String    @db.Text
+  yearlyPlanStartDate  DateTime? // Start date for Section B (Yearly Plan)
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
 }
@@ -598,10 +599,11 @@ enum UserType {
 }
 
 enum WorkoutPlanType {
-  CURRENT_WEEKS
-  YEARLY_PLAN
-  WORKOUTS_DONE
-  ARCHIVE
+  TEMPLATE_WEEKS  // Section A: 3 generic template weeks (no dates)
+  CURRENT_WEEKS   // Legacy - being replaced by TEMPLATE_WEEKS
+  YEARLY_PLAN     // Section B: Full year plan with start date
+  WORKOUTS_DONE   // Section C: Completed workouts
+  ARCHIVE         // Section D: Archived workouts
 }
 
 enum StorageZone {

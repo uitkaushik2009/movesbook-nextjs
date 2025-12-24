@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Star } from 'lucide-react';
-import { SPORTS_LIST, MACRO_FINAL_OPTIONS, MUSCULAR_SECTORS, getPaceLabel, shouldShowPaceField, getSportConfig, getPauseOptions, REST_TYPES, REPS_TYPES, hasRepsTypeSelection, getSportDisplayName } from '@/constants/moveframe.constants';
+import { SPORTS_LIST, MACRO_FINAL_OPTIONS, MUSCULAR_SECTORS, getPaceLabel, shouldShowPaceField, getSportConfig, getPauseOptions, REST_TYPES, REPS_TYPES, hasRepsTypeSelection, getSportDisplayName, DISTANCE_BASED_SPORTS } from '@/constants/moveframe.constants';
 import { useMoveframeForm } from '@/hooks/useMoveframeForm';
 import { getSportIcon } from '@/utils/sportIcons';
 import { useFavoriteSports } from '@/hooks/useFavoriteSports';
@@ -1305,8 +1305,7 @@ export default function AddEditMoveframeModal({
                     <>
                       {/* Determine sport type */}
                       {(() => {
-                        const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
-                        const isDistanceBased = distanceBasedSports.includes(sport);
+                        const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
                         const hasTools = !isDistanceBased;
                         
                         // TOOLS-BASED SPORTS (Gymnastic, Stretching, Pilates, Yoga, etc.)
@@ -1747,8 +1746,7 @@ export default function AddEditMoveframeModal({
 
                 {/* Individual Repetition Planning Table for DISTANCE-BASED SPORTS ONLY */}
                 {(() => {
-                  const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
-                  const isDistanceBased = distanceBasedSports.includes(sport);
+                  const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
                   
                   if (!isDistanceBased || planningMode !== 'individual' || !canShowIndividualPlanning) return null;
                   
@@ -1951,8 +1949,7 @@ export default function AddEditMoveframeModal({
 
                 {/* Individual Repetition Planning Table for OTHER SPORTS (Gymnastic, Stretching, Pilates, Yoga, etc.) */}
                 {(() => {
-                  const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
-                  const hasTools = !distanceBasedSports.includes(sport) && sport !== 'BODY_BUILDING';
+                  const hasTools = !DISTANCE_BASED_SPORTS.includes(sport as any) && sport !== 'BODY_BUILDING';
                   
                   if (!hasTools || planningMode !== 'individual' || !canShowIndividualPlanning) return null;
                   
@@ -2045,8 +2042,7 @@ export default function AddEditMoveframeModal({
                   // Don't show in individual planning mode for ANY sport
                   if (planningMode === 'individual') return null;
                   
-                  const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
-                  const hasTools = !distanceBasedSports.includes(sport) && sport !== 'BODY_BUILDING';
+                  const hasTools = !DISTANCE_BASED_SPORTS.includes(sport as any) && sport !== 'BODY_BUILDING';
                   const showSpeedSection = (sport === 'BODY_BUILDING' || hasTools || planningMode === 'all');
                   
                   if (!showSpeedSection) return null;

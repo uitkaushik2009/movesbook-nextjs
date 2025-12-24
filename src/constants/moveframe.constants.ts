@@ -273,6 +273,244 @@ export const SPORT_CONFIGS = {
     macroFinals: MACRO_FINAL_OPTIONS,
     alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
     sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  SOCCER: {
+    // Team sport - series/reps based, not distance based
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast'],
+    styles: 'input', // Free text input (e.g., "Shooting drills", "Passing practice")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '10"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "2'30\"", "3'", "5'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  BASKETBALL: {
+    // Team sport - series/reps based, not distance based
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast'],
+    styles: 'input', // Free text input (e.g., "Free throws", "Layup drills")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '10"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "2'30\"", "3'", "5'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  TENNIS: {
+    // Racket sport - series/reps based, not distance based
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast'],
+    styles: 'input', // Free text input (e.g., "Forehand", "Serve practice")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '10"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  VOLLEYBALL: {
+    // Team sport - series/reps based, not distance based
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast'],
+    styles: 'input', // Free text input (e.g., "Spiking", "Serving drills")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '10"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  GOLF: {
+    // Individual sport - series/reps based, not distance based
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast'],
+    styles: 'input', // Free text input (e.g., "Putting", "Drive practice")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  BOXING: {
+    // Combat sport - series/reps based, not distance based
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive'],
+    styles: 'input', // Free text input (e.g., "Heavy bag", "Speed bag", "Sparring")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '10"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  MARTIAL_ARTS: {
+    // Combat sport - series/reps based, similar to boxing
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive'],
+    styles: 'input', // Free text input (e.g., "Kicks", "Kata", "Sparring")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '10"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  CLIMBING: {
+    // Individual sport - series/reps based
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast'],
+    styles: 'input', // Free text input (e.g., "Bouldering", "Lead climbing")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '30"', '45"', "1'", "1'30\"", "2'", "3'", "5'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  WALKING: {
+    // Distance-based sport (already in DISTANCE_BASED_SPORTS array)
+    meters: ['100', '200', '500', '1000', '1500', '2000', '3000', '5000', '10000', 'input'],
+    speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
+    styles: ['Road', 'Track', 'Trail', 'Beach'],
+    pace100Meters: [], // No pace/100 for walking
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['30"', '45"', "1'", "1'30\"", "2'", "3'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  HIKING: {
+    // Distance-based sport (already in DISTANCE_BASED_SPORTS array)
+    meters: ['500', '1000', '2000', '3000', '5000', '10000', '15000', 'input'],
+    speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
+    styles: ['Trail', 'Mountain', 'Cross-country'],
+    pace100Meters: [], // No pace/100 for hiking
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ["1'", "2'", "3'", "5'", "10'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  DANCING: {
+    // Series/reps based
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast'],
+    styles: 'input', // Free text input (e.g., "Ballet", "Hip hop", "Ballroom")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  CROSSFIT: {
+    // Mixed training - series/reps based
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive'],
+    styles: 'input', // Free text input (e.g., "WOD", "AMRAP", "EMOM")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '10"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  TRIATHLON: {
+    // Multi-sport - can use distance for swim/bike/run portions, but reps for transitions
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast'],
+    styles: 'input', // Free text input (e.g., "Swim-Bike-Run", "Transition practice")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '15"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  TRACK_FIELD: {
+    // Various events - series/reps based for field events, distance for track
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive'],
+    styles: 'input', // Free text input (e.g., "Long jump", "Shot put", "Hurdles")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0"', '15"', '30"', '45"', "1'", "1'30\"", "2'", "3'", "5'"],
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
   }
 } as const;
 
@@ -328,7 +566,19 @@ export const REPS_TYPE_SPORTS = [
   'PILATES',
   'YOGA',
   'TECHNICAL_MOVES',
-  'FREE_MOVES'
+  'FREE_MOVES',
+  'SOCCER',
+  'BASKETBALL',
+  'TENNIS',
+  'VOLLEYBALL',
+  'GOLF',
+  'BOXING',
+  'MARTIAL_ARTS',
+  'CLIMBING',
+  'DANCING',
+  'CROSSFIT',
+  'TRIATHLON',
+  'TRACK_FIELD'
 ] as const;
 
 // Helper function to check if a sport uses series-based tracking

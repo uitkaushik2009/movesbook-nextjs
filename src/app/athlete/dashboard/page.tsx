@@ -242,10 +242,12 @@ export default function AthleteDashboard() {
 
   return (
     <div className="bg-gray-50 flex flex-col" style={{ minHeight: '100vh' }}>
-      <ModernNavbar />
+      <div className="print:hidden">
+        <ModernNavbar />
+      </div>
       
       {/* Display Options Toolbar */}
-      <div className={`bg-white border-b px-4 py-1 transition-all duration-300 ${showToolbar ? '' : 'overflow-hidden'}`}>
+      <div className={`bg-white border-b px-4 py-1 transition-all duration-300 print:hidden ${showToolbar ? '' : 'overflow-hidden'}`}>
         <div className={`flex items-center justify-between flex-wrap gap-2 transition-all duration-300 ${showToolbar ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
           <div className="flex items-center gap-4 flex-wrap">
             <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -407,7 +409,7 @@ export default function AthleteDashboard() {
         <div className="flex-1 flex gap-0">
           {/* Left Sidebar - Always Visible */}
           {showLeftSidebar && (
-            <div className="w-80 flex-shrink-0 sticky top-0 self-start">
+            <div className="w-80 flex-shrink-0 sticky top-0 self-start print:hidden">
               <DarkSidebar
                 userType={user?.userType || ''}
                 entities={myClubs}
@@ -448,7 +450,7 @@ export default function AthleteDashboard() {
 
           {/* Right Sidebar - Hidden when Personal Settings is active */}
           {!(activeTab === 'my-page' && activeSection === 'personal-settings') && showRightSidebar && (
-            <div className="w-80 flex-shrink-0">
+            <div className="w-80 flex-shrink-0 print:hidden">
               <div className="bg-white rounded-lg shadow-sm border p-4 h-full flex flex-col overflow-y-auto">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('sidebar_quick_actions')}</h3>
                 <div className="space-y-2">
@@ -696,7 +698,9 @@ export default function AthleteDashboard() {
         </div>
       </div>
 
-      <SimpleFooter />
+      <div className="print:hidden">
+        <SimpleFooter />
+      </div>
     </div>
   );
 }
@@ -784,43 +788,53 @@ function AthleteOverview({ t }: { t: (key: string) => string }) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex flex-col">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">{t('dashboard_activity_overview')}</h2>
-      <div className="grid grid-cols-3 gap-6 mb-8">
-        <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-white shadow-lg">
+    <div className="bg-white rounded-lg shadow-sm border p-6 flex-1 flex flex-col print-content activity-overview">
+      {/* Print Header - Only visible when printing */}
+      <div className="hidden print:block mb-6 pb-4 border-b-2 border-gray-300">
+        <h1 className="text-2xl font-bold text-gray-900 mb-1">{t('dashboard_activity_overview')}</h1>
+        <p className="text-sm text-gray-600">Generated on {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      </div>
+
+      {/* Screen Header */}
+      <div className="flex items-center justify-between mb-6 print:hidden">
+        <h2 className="text-2xl font-bold text-gray-900">{t('dashboard_activity_overview')}</h2>
+      </div>
+
+      <div className="grid grid-cols-3 gap-6 mb-8 page-break-avoid">
+        <div className="stat-card bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-white shadow-lg">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium opacity-90">{t('dashboard_this_week')}</h3>
-            <Calendar className="w-5 h-5 opacity-90" />
+            <Calendar className="w-5 h-5 opacity-90 print:hidden" />
           </div>
           <p className="text-3xl font-bold mt-3">{stats.thisWeekWorkouts} {t('dashboard_workouts_count')}</p>
         </div>
-        <div className="bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl text-white shadow-lg">
+        <div className="stat-card bg-gradient-to-br from-green-500 to-green-600 p-6 rounded-xl text-white shadow-lg">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium opacity-90">Total Workouts</h3>
-            <Target className="w-5 h-5 opacity-90" />
+            <Target className="w-5 h-5 opacity-90 print:hidden" />
           </div>
           <p className="text-3xl font-bold mt-3">{stats.thisMonthWorkouts}</p>
         </div>
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-xl text-white shadow-lg">
+        <div className="stat-card bg-gradient-to-br from-purple-500 to-purple-600 p-6 rounded-xl text-white shadow-lg">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-medium opacity-90">Total Moveframes</h3>
-            <Award className="w-5 h-5 opacity-90" />
+            <Award className="w-5 h-5 opacity-90 print:hidden" />
           </div>
           <p className="text-3xl font-bold mt-3">{stats.totalMoveframes}</p>
         </div>
       </div>
-      <div className="flex-1">
+      <div className="flex-1 page-break-avoid">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard_recent_activity_feed')}</h3>
         {recentWorkouts.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
-            <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50" />
+            <Calendar className="w-16 h-16 mx-auto mb-4 opacity-50 print:hidden" />
             <p className="text-lg">No workouts planned yet</p>
-            <p className="text-sm mt-2">Click "My Workouts" to start planning</p>
+            <p className="text-sm mt-2 print:hidden">Click "My Workouts" to start planning</p>
           </div>
         ) : (
           <div className="space-y-4">
             {recentWorkouts.map((workout) => (
-              <div key={workout.id} className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200">
+              <div key={workout.id} className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 page-break-avoid">
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-semibold text-gray-900">{workout.name || 'Workout Session'}</h4>
@@ -828,7 +842,7 @@ function AthleteOverview({ t }: { t: (key: string) => string }) {
                       {new Date(workout.date).toLocaleDateString()} • {workout.moveframeCount} moveframes
                     </p>
                   </div>
-                  <Activity className="w-6 h-6 text-blue-500" />
+                  <Activity className="w-6 h-6 text-blue-500 print:hidden" />
                 </div>
               </div>
             ))}

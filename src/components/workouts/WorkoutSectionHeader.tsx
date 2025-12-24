@@ -23,6 +23,7 @@ interface WorkoutSectionHeaderProps {
   onAthleteSelect: () => void;
   onWeekFilterClear: () => void;
   onAddDay: () => void;
+  onCreatePlan?: () => void; // For Section B: Create yearly plan button
   onClose: () => void;
   onWeeksPerPageChange?: (weeks: number) => void;
   onPrevPage?: () => void;
@@ -47,6 +48,7 @@ export default function WorkoutSectionHeader({
   onAthleteSelect,
   onWeekFilterClear,
   onAddDay,
+  onCreatePlan,
   onClose,
   onWeeksPerPageChange,
   onPrevPage,
@@ -56,7 +58,7 @@ export default function WorkoutSectionHeader({
   // Section labels
   const getSectionLabel = (section: SectionId): string => {
     switch (section) {
-      case 'A': return '2-3 Weeks';
+      case 'A': return '3 Weeks Plan';
       case 'B': return 'Year';
       case 'C': return 'Done';
       case 'D': return 'Archive';
@@ -67,7 +69,7 @@ export default function WorkoutSectionHeader({
   // Section title
   const getSectionTitle = (section: SectionId): string => {
     switch (section) {
-      case 'A': return 'Current 2-3 Weeks';
+      case 'A': return '3 Weeks Plan';
       case 'B': return 'Yearly Plan';
       case 'C': return 'Workouts Done';
       case 'D': return 'Archive & Templates';
@@ -150,8 +152,8 @@ export default function WorkoutSectionHeader({
               </button>
             )}
             
-            {/* Add Day Button - Available for sections A, B & C */}
-            {(activeSection === 'A' || activeSection === 'B' || activeSection === 'C') && (
+            {/* Add Day Button - Available for sections A & C */}
+            {(activeSection === 'A' || activeSection === 'C') && (
               <button
                 onClick={onAddDay}
                 disabled={!canAddDay}
@@ -164,6 +166,18 @@ export default function WorkoutSectionHeader({
               >
                 <Plus className="w-4 h-4" />
                 Add Day
+              </button>
+            )}
+            
+            {/* Create Plan Button - Only for Section B */}
+            {activeSection === 'B' && onCreatePlan && (
+              <button
+                onClick={onCreatePlan}
+                className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                title="Create yearly plan from start date"
+              >
+                <Plus className="w-4 h-4" />
+                Create Plan
               </button>
             )}
             
@@ -222,34 +236,6 @@ export default function WorkoutSectionHeader({
                     <option value={8}>Weeks {currentPageStart} - {Math.min(currentPageStart + 7, totalWeeks)}</option>
                     <option value={13}>Weeks {currentPageStart} - {Math.min(currentPageStart + 12, totalWeeks)} (3 months)</option>
                   </select>
-                </div>
-                
-                {/* Pagination Buttons */}
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={onPrevPage}
-                    disabled={currentPageStart <= 1}
-                    className={`px-3 py-1.5 rounded flex items-center gap-1 text-sm font-medium transition-colors ${
-                      currentPageStart <= 1
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    Previous
-                  </button>
-                  <button
-                    onClick={onNextPage}
-                    disabled={currentPageStart + weeksPerPage > totalWeeks}
-                    className={`px-3 py-1.5 rounded flex items-center gap-1 text-sm font-medium transition-colors ${
-                      currentPageStart + weeksPerPage > totalWeeks
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                  >
-                    Next
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
                 </div>
               </>
             )}

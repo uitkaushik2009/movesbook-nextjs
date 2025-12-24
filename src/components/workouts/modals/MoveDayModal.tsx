@@ -23,15 +23,13 @@ export default function MoveDayModal({
   const [availableDates, setAvailableDates] = useState<Date[]>([]);
 
   useEffect(() => {
-    if (selectedWeek && workoutPlan) {
-      const week = workoutPlan.weeks?.find((w: any) => w.id === selectedWeek);
-      if (week) {
-        const startDate = new Date(week.startDate);
-        const dates = Array.from({ length: 7 }, (_, i) => {
-          const date = new Date(startDate);
-          date.setDate(startDate.getDate() + i);
-          return date;
-        });
+    if (selectedWeek && workoutPlan && workoutPlan.weeks) {
+      const week = workoutPlan.weeks.find((w: any) => w.id === selectedWeek);
+      if (week && week.days && week.days.length > 0) {
+        // Get actual dates from week's days
+        const dates = [...week.days]
+          .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+          .map((day: any) => new Date(day.date));
         setAvailableDates(dates);
       }
     }
@@ -44,7 +42,7 @@ export default function MoveDayModal({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || !sourceDay) return null;
 
   return (
     <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black bg-opacity-50 p-4">
@@ -68,15 +66,15 @@ export default function MoveDayModal({
           <div className="bg-orange-50 p-3 rounded border border-orange-200">
             <p className="text-sm text-gray-700">
               <strong>Moving from:</strong>{' '}
-              {new Date(sourceDay.date).toLocaleDateString('en-US', {
+              {sourceDay?.date ? new Date(sourceDay.date).toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
-              })}
+              }) : 'N/A'}
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              {sourceDay.workouts?.length || 0} workout(s) will be moved
+              {sourceDay?.workouts?.length || 0} workout(s) will be moved
             </p>
             <p className="text-xs text-orange-600 mt-2">
               ⚠️ This will remove the workouts from the current date
@@ -97,11 +95,17 @@ export default function MoveDayModal({
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-orange-500"
             >
               <option value="">Choose a week...</option>
-              {workoutPlan?.weeks?.map((week: any) => (
-                <option key={week.id} value={week.id}>
-                  Week {week.weekNumber} ({new Date(week.startDate).toLocaleDateString()})
-                </option>
-              ))}
+              {workoutPlan?.weeks?.map((week: any) => {
+                const firstDay = week.days?.[0];
+                const weekLabel = firstDay 
+                  ? `Week ${week.weekNumber} (${new Date(firstDay.date).toLocaleDateString()})`
+                  : `Week ${week.weekNumber}`;
+                return (
+                  <option key={week.id} value={week.id}>
+                    {weekLabel}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'CURRENT_WEEKS';
+    const type = searchParams.get('type') || 'TEMPLATE_WEEKS';
     const forceRecreate = searchParams.get('forceRecreate') === 'true';
     
     console.log('GET - Finding NEWEST plan for type:', type, '| Force recreate:', forceRecreate);
@@ -81,9 +81,10 @@ export async function GET(request: NextRequest) {
     const mondayOfThisWeek = getMondayOfWeek(today);
     console.log('📅 Monday of this week:', mondayOfThisWeek.toLocaleDateString());
     
-    // IMPORTANT: Section A (CURRENT_WEEKS) is a VIEW of Section B (YEARLY_PLAN)
-    // It shows: previous week, current week, next week from the Year plan
-    const actualPlanType = type === 'CURRENT_WEEKS' ? 'YEARLY_PLAN' : type;
+    // NEW LOGIC: Section A uses TEMPLATE_WEEKS (generic template weeks with no dates)
+    // Section B uses YEARLY_PLAN (full year from start date)
+    // Legacy support: CURRENT_WEEKS maps to TEMPLATE_WEEKS for backward compatibility
+    const actualPlanType = type === 'CURRENT_WEEKS' ? 'TEMPLATE_WEEKS' : type;
     
     // Date filter based on section type
     // NOTE: For Section A (CURRENT_WEEKS), we don't filter by date because
@@ -91,13 +92,9 @@ export async function GET(request: NextRequest) {
     let dateFilter: any = {};
     
     if (type === 'YEARLY_PLAN') {
-      // Section B: Only show future dates beyond the current 3-week window
-      const threeWeeksFromMonday = new Date(mondayOfThisWeek);
-      threeWeeksFromMonday.setDate(threeWeeksFromMonday.getDate() + 21); // Day 22 onwards
-      dateFilter = {
-        gte: threeWeeksFromMonday
-      };
-      console.log(`Section B date filter: from ${threeWeeksFromMonday.toISOString()} onwards`);
+      // Section B: Show ALL weeks (no date filter)
+      // User sets their own start date, so show all 52 weeks from that date
+      console.log(`Section B: No date filter, showing all 52 weeks from user's chosen start date`);
     } else if (type === 'WORKOUTS_DONE') {
       // Section C: Show past completed workouts (before today)
       dateFilter = {
@@ -186,11 +183,9 @@ export async function GET(request: NextRequest) {
         if (totalDays === 0) {
           isPlanEmpty = true;
           console.log('⚠️ Plan has weeks but no days!');
-        } else if ((type === 'CURRENT_WEEKS' || type === 'YEARLY_PLAN') && plan.weeks.length < 10) {
-          // For Section A/B, we need at least 10 weeks to function properly
-          needsRecreation = true;
-          console.log(`⚠️ Plan has only ${plan.weeks.length} weeks, need at least 10 for Section A/B`);
         }
+        // Note: Don't check week count for YEARLY_PLAN because date filtering may reduce visible weeks
+        // The plan itself has all 52 weeks, but the API only returns weeks matching the date filter
       }
       
       // Check if plan starts on Monday
@@ -203,21 +198,11 @@ export async function GET(request: NextRequest) {
           console.log(`⚠️ Plan does not start on Monday! It starts on day ${dayOfWeek} (${planStart.toLocaleDateString('en-US', { weekday: 'long' })})`);
         }
         
-        // For YEARLY_PLAN, check if it starts from Monday of previous week (new logic)
+        // For YEARLY_PLAN, accept any start date as long as it's a Monday
+        // User can create a plan starting from any date (past, present, or future)
+        // We only check that it starts on Monday (already checked above)
         if (actualPlanType === 'YEARLY_PLAN' && !needsRecreation) {
-          const expectedStart = new Date(mondayOfThisWeek);
-          expectedStart.setDate(expectedStart.getDate() - 7); // Should start one week before current Monday
-          expectedStart.setHours(0, 0, 0, 0);
-          const daysDiff = Math.abs((planStart.getTime() - expectedStart.getTime()) / (1000 * 60 * 60 * 24));
-          
-          console.log(`   Plan start: ${planStart.toLocaleDateString()}, Expected (Monday of previous week): ${expectedStart.toLocaleDateString()}, Diff: ${daysDiff} days`);
-          
-          // If plan doesn't start EXACTLY on Monday of previous week, recreate it
-          // Changed from > 7 to >= 1 to be more strict
-          if (daysDiff >= 1) {
-            needsRecreation = true;
-            console.log(`   ⚠️ Plan starts on wrong date (${daysDiff} days from expected), forcing recreation`);
-          }
+          console.log(`   ✓ Yearly Plan starts on ${planStart.toLocaleDateString()} - keeping it`);
         }
       }
     }
@@ -275,8 +260,15 @@ export async function GET(request: NextRequest) {
       let endDate = new Date();
       let numberOfWeeks = 0;
       
-      if (type === 'CURRENT_WEEKS' || type === 'YEARLY_PLAN') {
-        // Section A & B: Both use YEARLY_PLAN
+      if (type === 'TEMPLATE_WEEKS') {
+        // Section A: 3 generic template weeks (no real dates, use dummy dates)
+        // Use year 2000 as a neutral/template year
+        startDate = new Date('2000-01-03'); // Monday, Jan 3, 2000
+        endDate = new Date('2000-01-23'); // Sunday, Jan 23, 2000
+        numberOfWeeks = 3; // Always 3 template weeks
+        console.log(`✓ Template Weeks Plan: 3 generic weeks for planning templates`);
+      } else if (type === 'CURRENT_WEEKS' || type === 'YEARLY_PLAN') {
+        // Section B: YEARLY_PLAN
         // Start from Monday of PREVIOUS week (so Section A can show Week 1 as previous week)
         // Section A will dynamically filter to show: previous week, current week, next week
         startDate = new Date(mondayOfThisWeek);
@@ -334,7 +326,8 @@ export async function GET(request: NextRequest) {
       const newPlan = await prisma.workoutPlan.create({
         data: {
           userId: decoded.userId,
-          name: actualPlanType === 'YEARLY_PLAN' ? 'Yearly Plan' : 
+          name: actualPlanType === 'TEMPLATE_WEEKS' ? '3 Weeks Plan' :
+                actualPlanType === 'YEARLY_PLAN' ? 'Yearly Plan' : 
                 actualPlanType === 'WORKOUTS_DONE' ? 'Workouts Done' : 'Archive',
           type: actualPlanType as any,
           startDate,
@@ -439,8 +432,23 @@ export async function GET(request: NextRequest) {
       plan.weeks = plan.weeks.filter((week: any) => week.days && week.days.length > 0);
     }
     
-    // SECTION A: Filter to show only previous week, current week, next week
-    if (type === 'CURRENT_WEEKS' && plan && plan.weeks) {
+    // LEGACY SUPPORT: For old CURRENT_WEEKS requests, just show all template weeks
+    // NEW TEMPLATE_WEEKS: Show all 3 template weeks (no filtering needed)
+    if ((type === 'CURRENT_WEEKS' || type === 'TEMPLATE_WEEKS') && plan && plan.weeks) {
+      // For template weeks, just ensure they're numbered 1, 2, 3
+      if (type === 'TEMPLATE_WEEKS') {
+        plan.weeks = plan.weeks.slice(0, 3).map((week: any, index: number) => ({
+          ...week,
+          weekNumber: index + 1,
+          days: week.days?.map((day: any) => ({
+            ...day,
+            weekNumber: index + 1
+          }))
+        }));
+        console.log(`✓ Template Weeks: Showing ${plan.weeks.length} generic weeks`);
+      }
+      // Legacy CURRENT_WEEKS logic (date-based filtering)
+      else if (type === 'CURRENT_WEEKS' && plan && plan.weeks) {
       console.log('📅 Filtering for Section A: Finding previous, current, and next week...');
       console.log('📅 Today:', today.toISOString(), '/', today.toLocaleDateString());
       
@@ -554,6 +562,7 @@ export async function GET(request: NextRequest) {
         });
         console.log('⚠️ Could not determine current week, showing first 3 weeks renumbered as 1, 2, 3');
       }
+      } // End of CURRENT_WEEKS else-if
     }
 
     return NextResponse.json({ plan });
@@ -627,12 +636,12 @@ export async function POST(request: NextRequest) {
     });
     console.log('Plan created with ID:', plan.id, 'starting on', startDate.toLocaleDateString('en-US', { weekday: 'long' }));
 
-    // Generate weeks - For Section A (CURRENT_WEEKS), create all 3 weeks immediately
+    // Generate weeks - For Section A (TEMPLATE_WEEKS), create all 3 weeks immediately
     // For others, create first 10 weeks (or all if <= 10)
     let weeksToCreate;
-    if (type === 'CURRENT_WEEKS') {
+    if (type === 'TEMPLATE_WEEKS' || type === 'CURRENT_WEEKS') {
       weeksToCreate = numberOfWeeks; // Always create all weeks for Section A (3 weeks)
-      console.log(`Section A: Creating all ${weeksToCreate} weeks with all days`);
+      console.log(`Section A (Template Weeks): Creating all ${weeksToCreate} weeks with all days`);
     } else {
       weeksToCreate = Math.min(numberOfWeeks, 10); // Create first 10 weeks for other sections
       console.log(`Will create ${weeksToCreate} weeks (requested ${numberOfWeeks}, creating initial batch)`);

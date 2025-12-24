@@ -69,6 +69,9 @@ import CopyMoveframeModal from '@/components/workouts/modals/CopyMoveframeModal'
 import MoveMoveframeModal from '@/components/workouts/modals/MoveMoveframeModal';
 import ColumnSettingsModal from '@/components/workouts/ColumnSettingsModal';
 import BulkAddMovelapModal from '@/components/workouts/BulkAddMovelapModal';
+import CreateYearlyPlanModal from '@/components/workouts/modals/CreateYearlyPlanModal';
+import DayPrintModal from '@/components/workouts/modals/DayPrintModal';
+import WeekTotalsModal from '@/components/workouts/modals/WeekTotalsModal';
 import ExportSharePrint from '@/components/workouts/ExportSharePrint';
 import { useColumnSettings } from '@/hooks/useColumnSettings';
 import DragDropConfirmModal, { DragAction, DropPosition } from '@/components/workouts/modals/DragDropConfirmModal';
@@ -214,6 +217,15 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   // ==================== MODAL MODE STATE ====================
   const [workoutModalMode, setWorkoutModalMode] = useState<'add' | 'edit'>('add');
   const [showWorkoutInfoModal, setShowWorkoutInfoModal] = useState(false);
+  const [showCreateYearlyPlanModal, setShowCreateYearlyPlanModal] = useState(false);
+  const [showDayPrintModal, setShowDayPrintModal] = useState(false);
+  const [dayToPrint, setDayToPrint] = useState<any>(null);
+  const [autoPrintDay, setAutoPrintDay] = useState(false);
+  const [showCopyWeekModal, setShowCopyWeekModal] = useState(false);
+  const [showMoveWeekModal, setShowMoveWeekModal] = useState(false);
+  const [showWeekTotalsModal, setShowWeekTotalsModal] = useState(false);
+  const [currentWeek, setCurrentWeek] = useState<any>(null);
+  const [autoPrintWeek, setAutoPrintWeek] = useState(false);
   // Use moveframeModalMode from the hook instead of local state
   const moveframeModalMode = modes.moveframeModalMode;
   const setMoveframeModalMode = setters.setMoveframeModalMode;
@@ -422,6 +434,68 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       showMessage('success', SUCCESS_MESSAGES.MOVELAP_ADDED(activeMoveframe.letter || activeMoveframe.code));
     } else {
       showMessage('error', response.error || ERROR_MESSAGES.GENERIC_ERROR);
+    }
+  };
+
+  /**
+   * CREATE YEARLY PLAN - Handler for creating yearly plan from start date
+   */
+  const handleCreateYearlyPlan = async (startDate: Date) => {
+    // Close modal immediately to prevent overlapping
+    setShowCreateYearlyPlanModal(false);
+    
+    try {
+      showMessage('info', 'Creating yearly plan...');
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showMessage('error', 'Please log in first');
+        return;
+      }
+
+      const response = await fetch('/api/workouts/plan/create-yearly', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ startDate: startDate.toISOString() })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        console.log('✅ Plan created! Response data:', data);
+        console.log('📊 Plan has', data.plan?.weeks?.length, 'weeks');
+        showMessage('success', data.message || 'Yearly plan created successfully!');
+        
+        // Use the plan data directly from the response instead of reloading
+        if (data.plan && data.plan.weeks) {
+          console.log('📊 Setting workoutPlan directly from create response');
+          console.log('   Plan ID:', data.plan.id);
+          console.log('   Weeks:', data.plan.weeks.length);
+          console.log('   First week days:', data.plan.weeks[0]?.days?.length);
+          
+          updateWorkoutPlan(data.plan);
+          setCurrentPageStart(1);
+          setViewMode('table');
+          
+          console.log('✅ Data set successfully! WorkoutPlan now has', data.plan.weeks.length, 'weeks');
+        } else {
+          console.warn('⚠️ Plan created but no weeks in response, reloading...');
+          // Fallback: reload from API
+          setCurrentPageStart(1);
+          setViewMode('table');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await loadWorkoutData('B');
+        }
+      } else {
+        console.error('❌ Failed:', data.error);
+        showMessage('error', data.error || 'Failed to create yearly plan');
+      }
+    } catch (error) {
+      console.error('Error creating yearly plan:', error);
+      showMessage('error', 'Failed to create yearly plan');
     }
   };
 
@@ -865,6 +939,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           setViewMode('calendar');
         }}
             onAddDay={() => modalActions.openAddDayModal()}
+            onCreatePlan={() => setShowCreateYearlyPlanModal(true)}
             onClose={onClose}
         onWeeksPerPageChange={(weeks: number) => {
           setWeeksPerPage(weeks);
@@ -880,6 +955,15 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           />
         );
       })()}
+      
+      {/* ==================== CREATE YEARLY PLAN MODAL ==================== */}
+      {showCreateYearlyPlanModal && (
+        <CreateYearlyPlanModal
+          isOpen={showCreateYearlyPlanModal}
+          onClose={() => setShowCreateYearlyPlanModal(false)}
+          onConfirm={handleCreateYearlyPlan}
+        />
+      )}
 
       {/* Workout area - full width */}
       <div className="flex-1 flex overflow-hidden">
@@ -892,31 +976,201 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
               </div>
             ) : viewMode === 'tree' ? (
-              <WorkoutTreeView
-                workoutPlan={
-                  // Apply pagination filter for Section B
-                  activeSection === 'B' && workoutPlan
-                    ? {
-                        ...workoutPlan,
-                        weeks: workoutPlan.weeks?.filter((week: any) => {
-                          const weekNum = week.weekNumber;
-                          return weekNum >= currentPageStart && weekNum < currentPageStart + weeksPerPage;
-                        }) || []
-                      }
-                    : workoutPlan
-                }
-                activeSection={activeSection}
-                onWeekClick={(weekNumber) => {
-                  setSelectedWeekForTable(weekNumber);
-                  setViewMode('table');
-                }}
-                onDayClick={(day) => {
-                  setSelectedDay(day.id);
-                  setAddWorkoutDay(day);
-                  setSelectedWeekForTable(day.weekNumber);
-                  setViewMode('table'); // Switch to table view
-                }}
-              />
+              <div className="flex flex-col h-full">
+                {/* Tree View Week Navigation Header - Same as Table View */}
+                {(activeSection === 'A' || activeSection === 'B') && workoutPlan && workoutPlan.weeks && workoutPlan.weeks.length > 0 && (
+                  <div className="sticky top-0 z-50 bg-white shadow-lg p-4 border-b-2 border-gray-300">
+                    <div className="flex items-center justify-between gap-2">
+                      {/* Left side buttons */}
+                      <div className="flex items-center gap-2">
+                        {/* Previous Week Button */}
+                        <button
+                          onClick={() => {
+                            const newStart = Math.max(1, currentPageStart - weeksPerPage);
+                            setCurrentPageStart(newStart);
+                          }}
+                          disabled={currentPageStart <= 1}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                            currentPageStart <= 1
+                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                              : 'bg-blue-500 text-white hover:bg-blue-600'
+                          }`}
+                        >
+                          ← Previous
+                        </button>
+
+                        {/* Expand/Collapse All Button */}
+                        <button
+                          onClick={() => {
+                            const allWeeks = workoutPlan.weeks || [];
+                            if (expandedWeeks.size === 0) {
+                              // Expand all weeks
+                              allWeeks.forEach((week: any) => {
+                                if (!expandedWeeks.has(week.id)) {
+                                  toggleWeekExpansion(week.id);
+                                }
+                              });
+                            } else {
+                              // Collapse all weeks
+                              allWeeks.forEach((week: any) => {
+                                if (expandedWeeks.has(week.id)) {
+                                  toggleWeekExpansion(week.id);
+                                }
+                              });
+                            }
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors bg-purple-500 text-white hover:bg-purple-600"
+                        >
+                          {expandedWeeks.size === 0 ? 'Expand All' : 'Collapse All'}
+                        </button>
+                      </div>
+
+                      {/* Center: Week Info */}
+                      <div className="flex-1 flex items-center justify-center gap-6">
+                        <div className="text-lg font-bold text-gray-900">
+                          {activeSection === 'B' && weeksPerPage > 1
+                            ? `Weeks ${currentPageStart} - ${Math.min(currentPageStart + weeksPerPage - 1, workoutPlan?.weeks?.length || 0)}`
+                            : activeSection === 'A'
+                            ? `3 Weeks Plan`
+                            : `Week ${currentPageStart}`}
+                        </div>
+
+                        {/* Week action buttons */}
+                        <div className="flex items-center gap-2">
+                          {/* Edit Button - Switch to table view to edit items */}
+                          <button
+                            onClick={() => {
+                              setViewMode('table');
+                              showMessage('info', 'Now you can edit days, workouts, moveframes, and movelaps');
+                            }}
+                            className="flex items-center gap-1 px-4 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex-shrink-0"
+                            title="Switch to table view to edit items"
+                          >
+                            Edit
+                          </button>
+
+                          {/* Copy Button - Copy first week in range */}
+                          <button
+                            onClick={() => {
+                              const firstWeek = workoutPlan.weeks?.find((w: any) => w.weekNumber === currentPageStart);
+                              if (firstWeek) {
+                                setShowCopyWeekModal(true);
+                                setCurrentWeek(firstWeek);
+                                showMessage('info', `Copying Week ${firstWeek.weekNumber}`);
+                              } else {
+                                showMessage('error', 'No week selected to copy');
+                              }
+                            }}
+                            className="flex items-center gap-1 px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex-shrink-0"
+                            title="Copy the first week in the displayed range"
+                          >
+                            Copy
+                          </button>
+
+                          {/* Move Button - Move first week in range */}
+                          <button
+                            onClick={() => {
+                              const firstWeek = workoutPlan.weeks?.find((w: any) => w.weekNumber === currentPageStart);
+                              if (firstWeek) {
+                                setShowMoveWeekModal(true);
+                                setCurrentWeek(firstWeek);
+                                showMessage('info', `Moving Week ${firstWeek.weekNumber}`);
+                              } else {
+                                showMessage('error', 'No week selected to move');
+                              }
+                            }}
+                            className="flex items-center gap-1 px-4 py-2 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors flex-shrink-0"
+                            title="Move the first week in the displayed range"
+                          >
+                            Move
+                          </button>
+
+                          {/* Overview Button - Show week totals for first week */}
+                          <button
+                            onClick={() => {
+                              const firstWeek = workoutPlan.weeks?.find((w: any) => w.weekNumber === currentPageStart);
+                              if (firstWeek) {
+                                setCurrentWeek(firstWeek);
+                                setShowWeekTotalsModal(true);
+                              } else {
+                                showMessage('error', 'No week selected for overview');
+                              }
+                            }}
+                            className="flex items-center gap-1 px-4 py-2 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors flex-shrink-0"
+                            title="View overview and totals for the first week"
+                          >
+                            Overview
+                          </button>
+
+                          {/* Print Button - Print first week */}
+                          <button
+                            onClick={() => {
+                              const firstWeek = workoutPlan.weeks?.find((w: any) => w.weekNumber === currentPageStart);
+                              if (firstWeek) {
+                                setCurrentWeek(firstWeek);
+                                setAutoPrintWeek(true);
+                                setShowWeekTotalsModal(true);
+                              } else {
+                                showMessage('error', 'No week selected to print');
+                              }
+                            }}
+                            className="flex items-center gap-1 px-4 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors flex-shrink-0"
+                            title="Print the first week in the displayed range"
+                          >
+                            Print
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Right: Next Button */}
+                      <button
+                        onClick={() => {
+                          const totalWeeks = workoutPlan?.weeks?.length || 0;
+                          const newStart = Math.min(totalWeeks - weeksPerPage + 1, currentPageStart + weeksPerPage);
+                          setCurrentPageStart(newStart);
+                        }}
+                        disabled={currentPageStart + weeksPerPage > (workoutPlan?.weeks?.length || 0)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                          currentPageStart + weeksPerPage > (workoutPlan?.weeks?.length || 0)
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'bg-blue-500 text-white hover:bg-blue-600'
+                        }`}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Tree View Content */}
+                <div className="flex-1 overflow-y-auto">
+                  <WorkoutTreeView
+                    workoutPlan={
+                      // Apply pagination filter for Section A and B
+                      (activeSection === 'A' || activeSection === 'B') && workoutPlan
+                        ? {
+                            ...workoutPlan,
+                            weeks: workoutPlan.weeks?.filter((week: any) => {
+                              const weekNum = week.weekNumber;
+                              return weekNum >= currentPageStart && weekNum < currentPageStart + weeksPerPage;
+                            }) || []
+                          }
+                        : workoutPlan
+                    }
+                    activeSection={activeSection}
+                    onWeekClick={(weekNumber) => {
+                      setSelectedWeekForTable(weekNumber);
+                      setViewMode('table');
+                    }}
+                    onDayClick={(day) => {
+                      setSelectedDay(day.id);
+                      setAddWorkoutDay(day);
+                      setSelectedWeekForTable(day.weekNumber);
+                      setViewMode('table'); // Switch to table view
+                    }}
+                  />
+                </div>
+              </div>
             ) : viewMode === 'calendar' ? (
               <WorkoutCalendarView
                 workoutPlan={workoutPlan}
@@ -1030,19 +1284,53 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    }
                  }}
                  onShareDay={(day) => {
-                   // TODO: Implement share functionality
-                   showMessage('info', 'Share functionality coming soon!');
-                   console.log('Share day:', day);
+                   const dayDate = new Date(day.date).toLocaleDateString('en-US', { 
+                     weekday: 'long', 
+                     year: 'numeric', 
+                     month: 'long', 
+                     day: 'numeric' 
+                   });
+                   
+                   let shareText = `📅 Workout Plan for ${dayDate}\n\n`;
+                   
+                   if (day.workouts && day.workouts.length > 0) {
+                     day.workouts.forEach((workout: any, idx: number) => {
+                       shareText += `🏋️ Workout ${idx + 1}: ${workout.name || 'Unnamed Workout'}\n`;
+                       
+                       if (workout.moveframes && workout.moveframes.length > 0) {
+                         workout.moveframes.forEach((mf: any) => {
+                           shareText += `  • ${mf.sport}: ${mf.description || 'No description'}\n`;
+                         });
+                       }
+                       shareText += '\n';
+                     });
+                   } else {
+                     shareText += 'No workouts planned for this day.\n';
+                   }
+                   
+                   shareText += `\n✨ Created with MovesBook`;
+                   
+                   // Copy to clipboard
+                   navigator.clipboard.writeText(shareText)
+                     .then(() => {
+                       showMessage('success', 'Workout plan copied to clipboard! You can now paste and share it.');
+                     })
+                     .catch((error) => {
+                       console.error('Error copying to clipboard:', error);
+                       // Fallback: show the text in an alert
+                       alert(`Copy this workout plan:\n\n${shareText}`);
+                       showMessage('info', 'Could not copy automatically. Please copy from the dialog.');
+                     });
                  }}
                  onExportPdfDay={(day) => {
-                   // TODO: Implement PDF export functionality
-                   showMessage('info', 'PDF export functionality coming soon!');
-                   console.log('Export PDF for day:', day);
+                   setDayToPrint(day);
+                   setAutoPrintDay(true);
+                   setShowDayPrintModal(true);
                  }}
                  onPrintDay={(day) => {
-                   // TODO: Implement print functionality
-                   showMessage('info', 'Print functionality coming soon!');
-                   console.log('Print day:', day);
+                   setDayToPrint(day);
+                   setAutoPrintDay(false);
+                   setShowDayPrintModal(true);
                  }}
                 onEditWorkout={(workout, day) => {
                   setEditingWorkout(workout);
@@ -1054,6 +1342,37 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   setActiveWorkout(workout);
                   setActiveDay(day);
                   modalActions.openCopyWorkoutModal();
+                }}
+                onPasteWorkout={async (day) => {
+                  if (!copiedWorkout) {
+                    showMessage('error', 'No workout copied. Please copy a workout first.');
+                    return;
+                  }
+                  
+                  try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch('/api/workouts/copy', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                      },
+                      body: JSON.stringify({
+                        sourceWorkoutId: copiedWorkout.id,
+                        targetDayId: day.id
+                      })
+                    });
+                    
+                    if (!response.ok) {
+                      const error = await response.json();
+                      throw new Error(error.error || 'Failed to paste workout');
+                    }
+                    
+                    showMessage('success', 'Workout pasted successfully');
+                    await loadWorkoutData(activeSection);
+                  } catch (error: any) {
+                    showMessage('error', error.message || 'Failed to paste workout');
+                  }
                 }}
                 onMoveWorkout={(workout, day) => {
                   setCopiedWorkout(workout);
@@ -1520,7 +1839,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    console.log('📍 Inserting new moveframe at index:', moveframeInsertIndex);
                    
                    // Fetch fresh workout plan data directly from API
-                   const planResponse = await fetch(`/api/workouts/plan?type=CURRENT_WEEKS`, {
+                   const planType = sectionHelpers.getPlanType(activeSection);
+                   const planResponse = await fetch(`/api/workouts/plan?type=${planType}`, {
                      headers: {
                        'Authorization': `Bearer ${token}`
                      }
@@ -2493,6 +2813,104 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           conflictMessage={dragModalConfig.conflictMessage}
           showPositionChoice={dragModalConfig.showPositionChoice}
         />
+      )}
+
+      {/* Day Print/PDF Export Modal */}
+      {showDayPrintModal && dayToPrint && (
+        <DayPrintModal
+          isOpen={showDayPrintModal}
+          onClose={() => {
+            setShowDayPrintModal(false);
+            setDayToPrint(null);
+            setAutoPrintDay(false);
+          }}
+          day={dayToPrint}
+          autoPrint={autoPrintDay}
+        />
+      )}
+
+      {/* Week Totals Modal (Overview & Print) */}
+      {showWeekTotalsModal && currentWeek && (
+        <WeekTotalsModal
+          isOpen={showWeekTotalsModal}
+          onClose={() => {
+            setShowWeekTotalsModal(false);
+            setCurrentWeek(null);
+            setAutoPrintWeek(false);
+          }}
+          week={currentWeek}
+          autoPrint={autoPrintWeek}
+        />
+      )}
+
+      {/* Copy Week Modal - Coming Soon */}
+      {showCopyWeekModal && currentWeek && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Copy Week</h2>
+              <button
+                onClick={() => {
+                  setShowCopyWeekModal(false);
+                  setCurrentWeek(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <p className="text-gray-600 mb-4">
+              Copy Week {currentWeek.weekNumber} functionality is coming in the next update.
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              Use the table view Copy buttons to copy individual days, workouts, moveframes, or movelaps.
+            </p>
+            <button
+              onClick={() => {
+                setShowCopyWeekModal(false);
+                setCurrentWeek(null);
+              }}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Move Week Modal - Coming Soon */}
+      {showMoveWeekModal && currentWeek && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Move Week</h2>
+              <button
+                onClick={() => {
+                  setShowMoveWeekModal(false);
+                  setCurrentWeek(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <p className="text-gray-600 mb-4">
+              Move Week {currentWeek.weekNumber} functionality is coming in the next update.
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              Use the table view Move buttons to move individual days, workouts, moveframes, or movelaps.
+            </p>
+            <button
+              onClick={() => {
+                setShowMoveWeekModal(false);
+                setCurrentWeek(null);
+              }}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              OK
+            </button>
+          </div>
+        </div>
       )}
     </DndContext>
    );

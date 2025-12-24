@@ -178,3 +178,12 @@ th.sticky-options-header {
   z-index: 25 !important;
   background-color: #2563eb !important;
 }
+
+/* Thick black line between weeks */
+tr.week-separator-thick {
+  border-bottom: 4px solid black !important;
+}
+
+tr.week-separator-thick td {
+  border-bottom: 4px solid black !important;
+}

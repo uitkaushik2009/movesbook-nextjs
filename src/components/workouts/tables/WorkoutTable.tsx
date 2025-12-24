@@ -35,6 +35,7 @@ interface WorkoutTableProps {
   onAddMovelap?: (moveframe: any) => void;
   onAddMovelapAfter?: (movelap: any, index: number, moveframe: any, workout: any, day: any) => void;
   onCopyWorkout?: (workout: any, day: any) => void;
+  onPasteWorkout?: (day: any) => void;
   onMoveWorkout?: (workout: any, day: any) => void;
   onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
@@ -70,6 +71,7 @@ export default function WorkoutTable({
   onAddMovelap,
   onAddMovelapAfter,
   onCopyWorkout,
+  onPasteWorkout,
   onMoveWorkout,
   onCopyMoveframe,
   onMoveMoveframe,
@@ -353,6 +355,16 @@ export default function WorkoutTable({
               title="Copy Workout"
             >
               Copy
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onPasteWorkout) onPasteWorkout(day);
+              }}
+              className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors whitespace-nowrap flex-shrink-0"
+              title="Paste Workout"
+            >
+              Paste
             </button>
             <button
               onClick={(e) => {

@@ -45,6 +45,7 @@ interface DayTableViewProps {
   onDeleteMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
   onCopyWorkout?: (workout: any, day: any) => void;
+  onPasteWorkout?: (day: any) => void;
   onMoveWorkout?: (workout: any, day: any) => void;
   onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
@@ -88,6 +89,7 @@ export default function DayTableView({
   onDeleteMoveframe,
   onDeleteMovelap,
   onCopyWorkout,
+  onPasteWorkout,
   onMoveWorkout,
   onCopyMoveframe,
   onMoveMoveframe,
@@ -299,6 +301,12 @@ export default function DayTableView({
 
   const sortedWeeks = [...workoutPlan.weeks].sort((a: any, b: any) => a.weekNumber - b.weekNumber);
   const totalWeeks = sortedWeeks.length;
+  
+  // For Section B, show ALL weeks (already filtered by parent)
+  // For Section A/C, use pagination (show one week at a time)
+  const weeksToDisplay = activeSection === 'B' ? sortedWeeks : [sortedWeeks[currentWeekIndex]].filter(Boolean);
+  
+  // Legacy variables for backward compatibility
   const currentWeek = sortedWeeks[currentWeekIndex];
   const weekDays = currentWeek?.days || [];
   const sortedDays = [...weekDays].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -590,19 +598,21 @@ export default function DayTableView({
           <div className="flex items-center justify-between">
             {/* Left side buttons */}
             <div className="flex items-center gap-2">
-              {/* Previous Week Button - Always visible */}
-              <button
-                onClick={goToPreviousWeek}
-                disabled={currentWeekIndex === 0}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  currentWeekIndex === 0
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                }`}
-              >
-                <ChevronLeft size={20} />
-                Previous Week
-              </button>
+              {/* Previous Week Button - Hidden for Section B (parent handles pagination) */}
+              {activeSection !== 'B' && (
+                <button
+                  onClick={goToPreviousWeek}
+                  disabled={currentWeekIndex === 0}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                    currentWeekIndex === 0
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                >
+                  <ChevronLeft size={20} />
+                  Previous Week
+                </button>
+              )}
 
               {/* Expand/Collapse All Workouts Button */}
               <button
@@ -616,7 +626,9 @@ export default function DayTableView({
 
             <div className="flex-1 flex items-center justify-center gap-6">
               <div className="text-lg font-bold text-gray-900">
-                Week {currentWeek?.weekNumber || currentWeekIndex + 1}
+                {activeSection === 'B' && weeksToDisplay.length > 1
+                  ? `Weeks ${weeksToDisplay[0]?.weekNumber || 1} - ${weeksToDisplay[weeksToDisplay.length - 1]?.weekNumber || 1}`
+                  : `Week ${currentWeek?.weekNumber || currentWeekIndex + 1}`}
               </div>
               
               {/* Set Period Button - Right after week number */}
@@ -693,8 +705,11 @@ export default function DayTableView({
               {/* Overview/Totals Button */}
               <button
                 onClick={() => {
+                  console.log('📊 Overview button clicked');
+                  console.log('📅 Current week:', currentWeek);
                   setAutoPrintWeek(false);
                   setShowWeekTotalsModal(true);
+                  console.log('✅ Modal should open now');
                 }}
                 className="flex items-center gap-1 px-4 py-2 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors flex-shrink-0"
                 title="View complete week overview with all workouts and totals"
@@ -706,8 +721,11 @@ export default function DayTableView({
               {/* Print/PDF Button */}
               <button
                 onClick={() => {
+                  console.log('🖨️ Print button clicked');
+                  console.log('📅 Current week:', currentWeek);
                   setAutoPrintWeek(true);
                   setShowWeekTotalsModal(true);
+                  console.log('✅ Modal should open AND print dialog should appear');
                 }}
                 className="flex items-center gap-1 px-4 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors flex-shrink-0"
                 title="Print week overview"
@@ -717,19 +735,21 @@ export default function DayTableView({
               </button>
             </div>
 
-            {/* Next Week Button - Always visible */}
-            <button
-              onClick={goToNextWeek}
-              disabled={currentWeekIndex >= totalWeeks - 1}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                currentWeekIndex >= totalWeeks - 1
-                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-500 text-white hover:bg-blue-600'
-              }`}
-            >
-              Next Week
-              <ChevronRight size={20} />
-            </button>
+            {/* Next Week Button - Hidden for Section B (parent handles pagination) */}
+            {activeSection !== 'B' && (
+              <button
+                onClick={goToNextWeek}
+                disabled={currentWeekIndex >= totalWeeks - 1}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  currentWeekIndex >= totalWeeks - 1
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-500 text-white hover:bg-blue-600'
+                }`}
+              >
+                Next Week
+                <ChevronRight size={20} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -860,153 +880,167 @@ export default function DayTableView({
             </tr>
           </thead>
           <tbody>
-            {sortedDays.map((day) => (
-              <React.Fragment key={day.id}>
-                {/* Day Row */}
-                <DayRowTable
-                  day={day}
-                  currentWeek={currentWeek}
-                  isExpanded={expandedDaysSet.has(day.id)}
-                  onToggleDay={onToggleDay!}
-                  onToggleWorkout={onToggleWorkout}
-                  onExpandOnlyThisWorkout={onExpandOnlyThisWorkout}
-                  onExpandDayWithAllWorkouts={onExpandDayWithAllWorkouts}
-                  onEditDay={onEditDay}
-                  onAddWorkout={onAddWorkout}
-                  onShowDayInfo={handleShowDayInfo}
-                  onCopyDay={onCopyDay}
-                  onMoveDay={onMoveDay}
-                  onPasteDay={onPasteDay}
-                  onShareDay={onShareDay}
-                  onExportPdfDay={onExportPdfDay}
-                  onPrintDay={onPrintDay}
-                  onDeleteDay={onDeleteDay}
-                />
+            {weeksToDisplay.flatMap((week, weekIdx) => {
+              const weekDays = week?.days || [];
+              const sortedWeekDays = [...weekDays].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+              
+              return sortedWeekDays.map((day, dayIdx) => {
+                const isLastDayOfWeek = dayIdx === sortedWeekDays.length - 1;
+                const isNotLastWeek = weekIdx < weeksToDisplay.length - 1;
+                const isMultiWeekView = weeksToDisplay.length > 1;
+                const shouldShowWeekSeparator = isLastDayOfWeek && isNotLastWeek && isMultiWeekView;
                 
-                {/* Expanded Workouts Section */}
-                  {expandedDaysSet.has(day.id) && (
-                    <tr className="workout-expanded-row">
-                     <td colSpan={32} className="p-0 bg-gray-50" style={{ position: 'relative' }}>
-                      <div className="p-4 workout-details-container">
-                        <div className="mb-2 text-sm font-semibold text-gray-700">
-                          Workouts for {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                        </div>
-                        
-                        {/* Day Info Panel - Shows immediately after day header when toggled */}
-                        {dayInfoOpenForDay === day.id && (
-                          <div className="mb-4 border-l-4 border-cyan-500">
-                            <div className="bg-cyan-50 rounded-lg shadow-sm p-4">
-                               <h3 className="text-base font-bold text-cyan-700 mb-3 flex items-center gap-2">
-                                 <span>ℹ️</span>
-                                 <span>Day Information</span>
-                               </h3>
-                               
-                               {/* All data in single column, left-aligned */}
-                               <div className="space-y-3">
-                                 <div>
-                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Week Number</label>
-                                   <div className="text-sm text-gray-800">{currentWeek?.weekNumber || '—'}</div>
-                                 </div>
+                return (
+                  <React.Fragment key={day.id}>
+                    {/* Day Row */}
+                    <DayRowTable
+                      day={day}
+                      currentWeek={week}
+                      isExpanded={expandedDaysSet.has(day.id)}
+                      isLastDayOfWeek={shouldShowWeekSeparator}
+                      onToggleDay={onToggleDay!}
+                      onToggleWorkout={onToggleWorkout}
+                      onExpandOnlyThisWorkout={onExpandOnlyThisWorkout}
+                      onExpandDayWithAllWorkouts={onExpandDayWithAllWorkouts}
+                      onEditDay={onEditDay}
+                      onAddWorkout={onAddWorkout}
+                      onShowDayInfo={handleShowDayInfo}
+                      onCopyDay={onCopyDay}
+                      onMoveDay={onMoveDay}
+                      onPasteDay={onPasteDay}
+                      onShareDay={onShareDay}
+                      onExportPdfDay={onExportPdfDay}
+                      onPrintDay={onPrintDay}
+                      onDeleteDay={onDeleteDay}
+                    />
+                  
+                  {/* Expanded Workouts Section */}
+                    {expandedDaysSet.has(day.id) && (
+                      <tr className="workout-expanded-row">
+                       <td colSpan={32} className="p-0 bg-gray-50" style={{ position: 'relative' }}>
+                        <div className="p-4 workout-details-container">
+                          <div className="mb-2 text-sm font-semibold text-gray-700">
+                            Workouts for {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                          </div>
+                          
+                          {/* Day Info Panel - Shows immediately after day header when toggled */}
+                          {dayInfoOpenForDay === day.id && (
+                            <div className="mb-4 border-l-4 border-cyan-500">
+                              <div className="bg-cyan-50 rounded-lg shadow-sm p-4">
+                                 <h3 className="text-base font-bold text-cyan-700 mb-3 flex items-center gap-2">
+                                   <span>ℹ️</span>
+                                   <span>Day Information</span>
+                                 </h3>
                                  
-                                 <div>
-                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Day of Week</label>
-                                   <div className="text-sm text-gray-800">
-                                     {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                                 {/* All data in single column, left-aligned */}
+                                 <div className="space-y-3">
+                                   <div>
+                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Week Number</label>
+                                     <div className="text-sm text-gray-800">{week?.weekNumber || '—'}</div>
+                                   </div>
+                                   
+                                   <div>
+                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Day of Week</label>
+                                     <div className="text-sm text-gray-800">
+                                       {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                                     </div>
+                                   </div>
+                                   
+                                   <div>
+                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Date</label>
+                                     <div className="text-sm text-gray-800">
+                                       {new Date(day.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                     </div>
+                                   </div>
+                                   
+                                   <div>
+                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Number of Workouts</label>
+                                     <div className="text-sm text-gray-800">{day.workouts?.length || 0}</div>
+                                   </div>
+                                   
+                                   <div>
+                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Period</label>
+                                     <div className="text-sm text-gray-800">
+                                       {day.period ? (
+                                         <div className="flex items-center gap-2">
+                                           <div 
+                                             className="w-4 h-4 rounded" 
+                                             style={{ backgroundColor: day.period.color }}
+                                           />
+                                           <span>{day.period.name}</span>
+                                         </div>
+                                       ) : '—'}
+                                     </div>
+                                   </div>
+                                   
+                                   <div>
+                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
+                                     <div className="text-sm text-gray-800 whitespace-pre-wrap">
+                                       {day.notes || 'No notes'}
+                                     </div>
                                    </div>
                                  </div>
-                                 
-                                 <div>
-                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Date</label>
-                                   <div className="text-sm text-gray-800">
-                                     {new Date(day.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-                                   </div>
-                                 </div>
-                                 
-                                 <div>
-                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Number of Workouts</label>
-                                   <div className="text-sm text-gray-800">{day.workouts?.length || 0}</div>
-                                 </div>
-                                 
-                                 <div>
-                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Period</label>
-                                   <div className="text-sm text-gray-800">
-                                     {day.period ? (
-                                       <div className="flex items-center gap-2">
-                                         <div 
-                                           className="w-4 h-4 rounded" 
-                                           style={{ backgroundColor: day.period.color }}
-                                         />
-                                         <span>{day.period.name}</span>
-                                       </div>
-                                     ) : '—'}
-                                   </div>
-                                 </div>
-                                 
-                                 <div>
-                                   <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
-                                   <div className="text-sm text-gray-800 whitespace-pre-wrap">
-                                     {day.notes || 'No notes'}
-                                   </div>
-                                 </div>
-                               </div>
+                              </div>
                             </div>
+                          )}
+                          
+                          {day.workouts && day.workouts.length > 0 ? (
+                            <WorkoutHierarchyView
+                              day={{ ...day, weekNumber: week?.weekNumber }}
+                              expandedWorkouts={expandedWorkoutsSet}
+                              expandedMoveframeId={expandedMoveframeId}
+                              onToggleWorkout={onToggleWorkout!}
+                              onExpandOnlyThisWorkout={onExpandOnlyThisWorkout}
+                              onAddWorkout={onAddWorkout}
+                              onEditWorkout={onEditWorkout}
+                              onEditMoveframe={onEditMoveframe}
+                              onEditMovelap={onEditMovelap}
+                              onAddMoveframe={onAddMoveframe}
+                              onAddMoveframeAfter={onAddMoveframeAfter}
+                              onAddMovelap={onAddMovelap}
+                              onAddMovelapAfter={onAddMovelapAfter}
+                              onDeleteWorkout={onDeleteWorkout}
+                              onSaveFavoriteWorkout={onSaveFavoriteWorkout}
+                              onShareWorkout={onShareWorkout}
+                              onExportPdfWorkout={onExportPdfWorkout}
+                              onPrintWorkout={onPrintWorkout}
+                              onDeleteMoveframe={onDeleteMoveframe}
+                              onDeleteMovelap={onDeleteMovelap}
+                              onCopyWorkout={onCopyWorkout}
+                              onPasteWorkout={onPasteWorkout}
+                              onMoveWorkout={onMoveWorkout}
+                              onCopyMoveframe={onCopyMoveframe}
+                              onMoveMoveframe={onMoveMoveframe}
+                              onOpenColumnSettings={onOpenColumnSettings}
+                              reloadWorkouts={reloadWorkouts}
+                              columnSettings={columnSettings}
+                            />
+                          ) : (
+                            <div className="text-center py-4 text-gray-500 text-xs">
+                              No workouts scheduled for this day
+                            </div>
+                          )}
+                          
+                          {/* Add Workout Button - Always visible, centered */}
+                          <div className="flex justify-center mt-4 py-4" style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb' }}>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAddWorkout?.(day);
+                              }}
+                              className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-md shadow-md hover:shadow-lg transition-all duration-150"
+                            >
+                              Add a workout
+                            </button>
                           </div>
-                        )}
-                        
-                        {day.workouts && day.workouts.length > 0 ? (
-                          <WorkoutHierarchyView
-                            day={{ ...day, weekNumber: currentWeek?.weekNumber }}
-                            expandedWorkouts={expandedWorkoutsSet}
-                            expandedMoveframeId={expandedMoveframeId}
-                            onToggleWorkout={onToggleWorkout!}
-                            onExpandOnlyThisWorkout={onExpandOnlyThisWorkout}
-                            onAddWorkout={onAddWorkout}
-                            onEditWorkout={onEditWorkout}
-                            onEditMoveframe={onEditMoveframe}
-                            onEditMovelap={onEditMovelap}
-                            onAddMoveframe={onAddMoveframe}
-                            onAddMoveframeAfter={onAddMoveframeAfter}
-                            onAddMovelap={onAddMovelap}
-                            onAddMovelapAfter={onAddMovelapAfter}
-                            onDeleteWorkout={onDeleteWorkout}
-                            onSaveFavoriteWorkout={onSaveFavoriteWorkout}
-                            onShareWorkout={onShareWorkout}
-                            onExportPdfWorkout={onExportPdfWorkout}
-                            onPrintWorkout={onPrintWorkout}
-                            onDeleteMoveframe={onDeleteMoveframe}
-                            onDeleteMovelap={onDeleteMovelap}
-                            onCopyWorkout={onCopyWorkout}
-                            onMoveWorkout={onMoveWorkout}
-                            onCopyMoveframe={onCopyMoveframe}
-                            onMoveMoveframe={onMoveMoveframe}
-                            onOpenColumnSettings={onOpenColumnSettings}
-                            reloadWorkouts={reloadWorkouts}
-                            columnSettings={columnSettings}
-                          />
-                        ) : (
-                          <div className="text-center py-4 text-gray-500 text-xs">
-                            No workouts scheduled for this day
-                          </div>
-                        )}
-                        
-                        {/* Add Workout Button - Always visible, centered */}
-                        <div className="flex justify-center mt-4 py-4" style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb' }}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onAddWorkout?.(day);
-                            }}
-                            className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-md shadow-md hover:shadow-lg transition-all duration-150"
-                          >
-                            Add a workout
-                          </button>
                         </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </React.Fragment>
-            ))}
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            });
+          })}
           </tbody>
         </table>
           </div>
