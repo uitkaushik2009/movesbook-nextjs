@@ -144,11 +144,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
 
   const menuItems = [
     { href: '/', label: t('nav_home'), icon: Home },
-    { href: '/athletes', label: 'Athletes', icon: Trophy },
-    { href: '/coaches', label: 'Coaches', icon: UserCircle },
-    { href: '/teams', label: 'Teams', icon: Users2 },
-    { href: '/groups', label: 'Groups', icon: Users },
-    { href: '/clubs', label: 'Clubs', icon: Building2 },
+    // Removed non-existent routes: /athletes, /coaches, /teams, /groups, /clubs
     { href: '/testimonials', label: 'Testimonials', icon: MessageCircle },
     { href: '/blog', label: t('nav_blog'), icon: MessageCircle },
     { href: '/news', label: t('nav_news'), icon: Newspaper },

@@ -80,35 +80,48 @@ export async function POST(request: NextRequest) {
 
     console.log('User created:', user.id);
 
-    // Create default settings for user
+    // Load admin defaults for user's language (fallback to 'en')
+    const userLanguage = 'en'; // Default language
+    console.log(`Loading admin defaults for language: ${userLanguage}`);
+
+    const [colorDefaults, toolsDefaults, favouritesDefaults] = await Promise.all([
+      prisma.colorDefaults.findUnique({ where: { language: userLanguage } }),
+      prisma.toolsDefaults.findUnique({ where: { language: userLanguage } }),
+      prisma.favouritesDefaults.findUnique({ where: { language: userLanguage } })
+    ]);
+
+    // Fallback defaults if admin hasn't set them yet
+    const defaultColorSettings = {
+      pageBackground: '#ffffff',
+      dayHeader: '#f3f4f6',
+      moveframeHeader: '#e5e7eb',
+      movelapHeader: '#d1d5db',
+      microlapBackground: '#f9fafb',
+      selectedRow: '#3b82f6',
+      buttonAdd: '#10b981',
+      buttonEdit: '#f59e0b',
+      buttonDelete: '#ef4444',
+      buttonPrint: '#6b7280',
+      alternateRow: '#f9fafc'
+    };
+
+    // Create default settings for user with admin defaults
     await prisma.userSettings.create({
       data: {
         userId: user.id,
-        colorSettings: JSON.stringify({
-          pageBackground: '#ffffff',
-          dayHeader: '#f3f4f6',
-          moveframeHeader: '#e5e7eb',
-          movelapHeader: '#d1d5db',
-          microlapBackground: '#f9fafb',
-          selectedRow: '#3b82f6',
-          buttonAdd: '#10b981',
-          buttonEdit: '#f59e0b',
-          buttonDelete: '#ef4444',
-          buttonPrint: '#6b7280',
-          alternateRow: '#f9fafc'
-        }),
-        toolsSettings: '{}',
-        favouritesSettings: '{}',
+        colorSettings: colorDefaults?.data ? JSON.stringify(colorDefaults.data) : JSON.stringify(defaultColorSettings),
+        toolsSettings: toolsDefaults?.data ? JSON.stringify(toolsDefaults.data) : '{}',
+        favouritesSettings: favouritesDefaults?.data ? JSON.stringify(favouritesDefaults.data) : '{}',
         myBestSettings: '{}',
         adminSettings: '{}',
         workoutPreferences: '{}',
         socialSettings: '{}',
         notificationSettings: '{}',
-        language: 'en'
+        language: userLanguage
       }
     });
 
-    console.log('User settings created');
+    console.log('User settings created with admin defaults');
 
     // Create default main sports
     const defaultSports = [

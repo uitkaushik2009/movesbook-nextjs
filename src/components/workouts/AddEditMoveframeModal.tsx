@@ -832,8 +832,8 @@ export default function AddEditMoveframeModal({
                       );
                     })}
                   </div>
-                </div>
-              )}
+            </div>
+          )}
 
           {/* Sport Selection */}
           <div className={`mb-3 ${mode === 'edit' ? 'relative' : ''}`}>

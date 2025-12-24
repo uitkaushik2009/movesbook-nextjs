@@ -86,15 +86,25 @@ export async function GET(request: NextRequest) {
       where: { userId }
     });
 
-    // If no settings exist, create default settings
+    // If no settings exist, create default settings with admin defaults
     if (!settings) {
+      // Load admin defaults for user's language (default to 'en')
+      const userLanguage = 'en';
+      console.log(`No settings found for user ${userId}, loading admin defaults for language: ${userLanguage}`);
+
+      const [colorDefaults, toolsDefaults, favouritesDefaults] = await Promise.all([
+        prisma.colorDefaults.findUnique({ where: { language: userLanguage } }),
+        prisma.toolsDefaults.findUnique({ where: { language: userLanguage } }),
+        prisma.favouritesDefaults.findUnique({ where: { language: userLanguage } })
+      ]);
+
       settings = await prisma.userSettings.create({
         data: {
           userId,
-          // JSON Settings (all default to empty objects/arrays)
-          colorSettings: '{}',
-          toolsSettings: '{}',
-          favouritesSettings: '{}',
+          // JSON Settings loaded from admin defaults
+          colorSettings: colorDefaults?.data ? JSON.stringify(colorDefaults.data) : '{}',
+          toolsSettings: toolsDefaults?.data ? JSON.stringify(toolsDefaults.data) : '{}',
+          favouritesSettings: favouritesDefaults?.data ? JSON.stringify(favouritesDefaults.data) : '{}',
           myBestSettings: '{}',
           adminSettings: '{}',
           workoutPreferences: '{}',
@@ -128,9 +138,11 @@ export async function GET(request: NextRequest) {
           // Dashboard
           dashboardLayout: 'default',
           // Language
-          language: 'en'
+          language: userLanguage
         }
       });
+
+      console.log('Created user settings with admin defaults');
     }
 
     // Parse all JSON fields
