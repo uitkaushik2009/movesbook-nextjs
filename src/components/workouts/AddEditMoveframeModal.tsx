@@ -2163,9 +2163,14 @@ export default function AddEditMoveframeModal({
                       })()}
                     </div>
                   )}
-                  
-                  {/* Time Field - for all distance-based sports */}
-                  {shouldShowPaceField(sport) && (
+                </div>
+                  );
+                })()}
+
+                {/* 3b. Time Field - for all distance-based sports */}
+                {shouldShowPaceField(sport) && planningMode === 'all' && (
+                  <div className="bg-gray-50 p-2.5 rounded-lg">
+                    <h3 className="font-bold text-xs text-gray-700 mb-2">TIME</h3>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Time (Hh:MM'SS"D): <span className="text-gray-400">(optional)</span> <span className="text-green-600 font-semibold text-[10px]">⚡ Type numbers only</span>
@@ -2191,10 +2196,8 @@ export default function AddEditMoveframeModal({
                       />
                       <p className="mt-0.5 text-[10px] text-green-600">⚡ Fast input: Type <strong>530</strong> → <strong>0h05'30"0</strong> or <strong>1130</strong> → <strong>0h11'30"0</strong></p>
                     </div>
-                  )}
-                </div>
-                  );
-                })()}
+                  </div>
+                )}
 
                 {/* 4. Reset/Pause & Macro */}
                 {/* Only show pause section if NOT in individual planning mode */}
