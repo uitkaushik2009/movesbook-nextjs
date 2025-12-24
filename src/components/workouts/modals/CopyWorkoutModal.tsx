@@ -81,11 +81,19 @@ export default function CopyWorkoutModal({
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500"
             >
               <option value="">Choose a week...</option>
-              {workoutPlan?.weeks?.map((week: any) => (
-                <option key={week.id} value={week.id}>
-                  Week {week.weekNumber} ({new Date(week.startDate).toLocaleDateString()})
-                </option>
-              ))}
+              {workoutPlan?.weeks?.map((week: any) => {
+                // Get first day's date from the week if available
+                const firstDay = week.days?.[0];
+                const dateDisplay = firstDay 
+                  ? new Date(firstDay.date).toLocaleDateString()
+                  : 'No dates';
+                
+                return (
+                  <option key={week.id} value={week.id}>
+                    Week {week.weekNumber} ({dateDisplay})
+                  </option>
+                );
+              })}
             </select>
           </div>
 

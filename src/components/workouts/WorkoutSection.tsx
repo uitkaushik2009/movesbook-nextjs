@@ -805,7 +805,25 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     }
     
     if (action === 'copy') {
-      // Duplicate workout
+      // Copy workout - replace any existing workout in target day
+      // If there's an existing workout in the target day, delete it first
+      if (existingWorkout) {
+        console.log('🗑️ Deleting existing workout before copy:', existingWorkout.id);
+        const deleteResponse = await fetch(`/api/workouts/sessions/${existingWorkout.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!deleteResponse.ok) {
+          const error = await deleteResponse.json();
+          console.error('Failed to delete existing workout:', error);
+          throw new Error('Failed to replace existing workout');
+        }
+      }
+      
+      // Now duplicate the workout to the target day
       const response = await fetch('/api/workouts/sessions/duplicate', {
         method: 'POST',
         headers: {
@@ -1493,17 +1511,31 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    if (confirm(`Are you sure you want to delete this day (${new Date(day.date).toLocaleDateString()})? This will also delete all workouts, moveframes, and movelaps for this day.`)) {
                      try {
                        const token = localStorage.getItem('token');
-                       const response = await fetch(`/api/workouts/days/${day.id}`, {
+                       const response = await fetch(`/api/workouts/days?dayId=${day.id}`, {
                          method: 'DELETE',
                          headers: { 'Authorization': `Bearer ${token}` }
                        });
                        
                        if (response.ok) {
                          showMessage('success', 'Day deleted successfully');
+                         
+                         // Clear any references to this day
+                         if (addWorkoutDay?.id === day.id) {
+                           setAddWorkoutDay(null);
+                         }
+                         if (activeDay?.id === day.id) {
+                           setActiveDay(null);
+                         }
+                         if (selectedDay === day.id) {
+                           setSelectedDay(null);
+                         }
+                         
                          // Refresh workout data to remove deleted day from view
                          await loadWorkoutData(activeSection);
                        } else {
-                         showMessage('error', 'Failed to delete day');
+                         const error = await response.json();
+                         console.error('Failed to delete day:', error);
+                         showMessage('error', error.error || 'Failed to delete day');
                        }
                      } catch (error) {
                        console.error('Error deleting day:', error);
@@ -1522,6 +1554,18 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                       
                       if (response.ok) {
                         showMessage('success', 'Workout deleted successfully');
+                        
+                        // Clear any references to this workout
+                        if (activeWorkout?.id === workout.id) {
+                          setActiveWorkout(null);
+                        }
+                        if (editingWorkout?.id === workout.id) {
+                          setEditingWorkout(null);
+                        }
+                        if (copiedWorkout?.id === workout.id) {
+                          setCopiedWorkout(null);
+                        }
+                        
                         // Refresh workout data to remove deleted workout from view
                         await loadWorkoutData(activeSection);
                       } else {
@@ -1603,6 +1647,18 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        
                        if (response.ok) {
                          showMessage('success', 'Moveframe deleted successfully');
+                         
+                         // Clear any references to this moveframe
+                         if (activeMoveframe?.id === moveframe.id) {
+                           setActiveMoveframe(null);
+                         }
+                         if (editingMoveframe?.id === moveframe.id) {
+                           setEditingMoveframe(null);
+                         }
+                         if (copiedMoveframe?.id === moveframe.id) {
+                           setCopiedMoveframe(null);
+                         }
+                         
                          // Refresh workout data to remove deleted moveframe from view
                          await loadWorkoutData(activeSection);
                        } else {
@@ -1613,7 +1669,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        showMessage('error', 'Error deleting moveframe');
                      }
                    }
-                 }}
+                 }
                  onDeleteMovelap={async (movelap, moveframe, workout, day) => {
                    if (confirm('Are you sure you want to delete this movelap?')) {
                      try {
@@ -1625,6 +1681,15 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        
                        if (response.ok) {
                          showMessage('success', 'Movelap deleted successfully');
+                         
+                         // Clear any references to this movelap
+                         if (activeMovelap?.id === movelap.id) {
+                           setActiveMovelap(null);
+                         }
+                         if (editingMovelap?.id === movelap.id) {
+                           setEditingMovelap(null);
+                         }
+                         
                          // Refresh workout data to remove deleted movelap from view
                          await loadWorkoutData(activeSection);
                        } else {
@@ -1635,7 +1700,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        showMessage('error', 'Error deleting movelap');
                      }
                    }
-                 }}
+                 }
                />
                </StyledTableWrapper>
               </>
@@ -1693,6 +1758,20 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             } else {
               // CREATE new workout
               console.log('Creating workout with data:', workoutData);
+              
+              // Verify the day exists before creating workout
+              if (!workoutData.dayId) {
+                throw new Error('No day selected. Please select a day first.');
+              }
+              
+              // Verify day still exists in current data
+              const dayExists = workoutPlan?.weeks?.some((week: any) => 
+                week.days?.some((day: any) => day.id === workoutData.dayId)
+              );
+              
+              if (!dayExists) {
+                throw new Error('The selected day no longer exists. Please refresh and try again.');
+              }
               
               const response = await fetch('/api/workouts/sessions', {
                 method: 'POST',

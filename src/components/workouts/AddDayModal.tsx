@@ -56,15 +56,20 @@ export default function AddDayModal({ workoutPlanId, onClose, onSave }: AddDayMo
     try {
       // Validate period selection
       if (!dayData.periodId) {
-        alert('Please select a Period for this day.');
+        console.error('❌ Please select a Period for this day.');
         return;
       }
       
       const token = localStorage.getItem('token');
       
-      // Check if week already has 7 days
-      const checkResponse = await fetch(`/api/workouts/plan?type=YEARLY_PLAN`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      // Check if week already has 7 days (with cache-busting timestamp)
+      const timestamp = Date.now();
+      const checkResponse = await fetch(`/api/workouts/plan?type=YEARLY_PLAN&_t=${timestamp}`, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
       
       if (checkResponse.ok) {
@@ -72,7 +77,7 @@ export default function AddDayModal({ workoutPlanId, onClose, onSave }: AddDayMo
         const week = data.plan?.weeks?.find((w: any) => w.weekNumber === dayData.weekNumber);
         
         if (week && week.days && week.days.length >= 7) {
-          alert(`Week ${dayData.weekNumber} already has 7 days. A week cannot have more than 7 days.`);
+          console.error(`❌ Week ${dayData.weekNumber} already has 7 days. A week cannot have more than 7 days.`);
           return;
         }
       }
@@ -98,11 +103,10 @@ export default function AddDayModal({ workoutPlanId, onClose, onSave }: AddDayMo
         onSave();
       } else {
         const error = await response.json();
-        alert(`Failed to add day: ${error.error || 'Unknown error'}`);
+        console.error('❌ Failed to add day:', error.error || 'Unknown error');
       }
     } catch (error) {
-      console.error('Error adding day:', error);
-      alert('Error adding day');
+      console.error('❌ Error adding day:', error);
     }
   };
 
