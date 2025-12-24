@@ -25,15 +25,15 @@ export default function CopyDayModal({
   useEffect(() => {
     if (selectedWeek && workoutPlan) {
       const week = workoutPlan.weeks?.find((w: any) => w.id === selectedWeek);
-      if (week) {
-        // Generate 7 days from the week's start date
-        const startDate = new Date(week.startDate);
-        const dates = Array.from({ length: 7 }, (_, i) => {
-          const date = new Date(startDate);
-          date.setDate(startDate.getDate() + i);
-          return date;
-        });
+      if (week && week.days && week.days.length > 0) {
+        // Use actual dates from the week's days
+        const dates = week.days
+          .map((day: any) => new Date(day.date))
+          .filter((date: Date) => !isNaN(date.getTime()))
+          .sort((a: Date, b: Date) => a.getTime() - b.getTime());
         setAvailableDates(dates);
+      } else {
+        setAvailableDates([]);
       }
     }
   }, [selectedWeek, workoutPlan]);
@@ -111,8 +111,15 @@ export default function CopyDayModal({
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {availableDates.map((date) => {
-                  const dateStr = date.toISOString().split('T')[0];
-                  const isSource = new Date(sourceDay.date).toDateString() === date.toDateString();
+                  // Ensure date is a valid Date object
+                  const dateObj = date instanceof Date ? date : new Date(date);
+                  if (isNaN(dateObj.getTime())) {
+                    console.error('Invalid date in availableDates:', date);
+                    return null;
+                  }
+                  
+                  const dateStr = dateObj.toISOString().split('T')[0];
+                  const isSource = new Date(sourceDay.date).toDateString() === dateObj.toDateString();
                   
                   return (
                     <button
@@ -127,11 +134,11 @@ export default function CopyDayModal({
                           : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50'
                       }`}
                     >
-                      {date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      {dateObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                       {isSource && <span className="block text-xs">(Source)</span>}
                     </button>
                   );
-                })}
+                }).filter(Boolean)}
               </div>
             </div>
           )}

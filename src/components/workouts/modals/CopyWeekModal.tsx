@@ -23,12 +23,12 @@ export default function CopyWeekModal({
 
   const handleCopy = async () => {
     if (!selectedWeekId) {
-      alert('Please select a target week');
+      console.error('❌ Please select a target week');
       return;
     }
 
     if (selectedWeekId === sourceWeek.id) {
-      alert('Cannot copy to the same week');
+      console.error('❌ Cannot copy to the same week');
       return;
     }
 
@@ -39,7 +39,6 @@ export default function CopyWeekModal({
       setSelectedWeekId('');
     } catch (error) {
       console.error('Error copying week:', error);
-      alert('Failed to copy week. Please try again.');
     } finally {
       setIsLoading(false);
     }

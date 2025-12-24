@@ -422,13 +422,15 @@ export async function GET(request: NextRequest) {
       });
       
       // Filter out weeks with no days (after date filtering)
-      if (plan && plan.weeks) {
+      // But keep all weeks for YEARLY_PLAN to show full year structure
+      if (plan && plan.weeks && actualPlanType !== 'YEARLY_PLAN') {
         plan.weeks = plan.weeks.filter((week: any) => week.days && week.days.length > 0);
       }
     }
     
     // Also filter weeks on existing plans
-    if (plan && plan.weeks) {
+    // But keep all weeks for YEARLY_PLAN to show full year structure
+    if (plan && plan.weeks && actualPlanType !== 'YEARLY_PLAN') {
       plan.weeks = plan.weeks.filter((week: any) => week.days && week.days.length > 0);
     }
     

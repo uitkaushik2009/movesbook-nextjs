@@ -462,7 +462,7 @@ export default function DayTableView({
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Authentication required. Please log in again.');
+        console.error('❌ Authentication required');
         return;
       }
 
@@ -484,7 +484,10 @@ export default function DayTableView({
       }
 
       console.log('✅ Week copied successfully');
-      alert('Week copied successfully!');
+      
+      // Close the modal first
+      setShowCopyWeekModal(false);
+      setTargetWeeks([]);
       
       // Reload the workout plan
       if (reloadWorkouts) {
@@ -492,7 +495,6 @@ export default function DayTableView({
       }
     } catch (error) {
       console.error('❌ Error copying week:', error);
-      alert(`Failed to copy week: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -508,7 +510,7 @@ export default function DayTableView({
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Authentication required. Please log in again.');
+        console.error('❌ Authentication required');
         return;
       }
 
@@ -530,7 +532,6 @@ export default function DayTableView({
       }
 
       console.log('✅ Week moved successfully');
-      alert('Week moved successfully!');
       
       // Reload the workout plan
       if (reloadWorkouts) {
@@ -538,7 +539,6 @@ export default function DayTableView({
       }
     } catch (error) {
       console.error('❌ Error moving week:', error);
-      alert(`Failed to move week: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -704,7 +704,7 @@ export default function DayTableView({
                 onClick={async () => {
                   const token = localStorage.getItem('token');
                   if (!token) {
-                    alert('Please log in to copy weeks.');
+                    console.error('❌ Please log in first');
                     return;
                   }
                   
@@ -723,11 +723,10 @@ export default function DayTableView({
                       setTargetWeeks(data.plan?.weeks || []);
                       setShowCopyWeekModal(true);
                     } else {
-                      alert('Failed to load target weeks. Please try again.');
+                      console.error('❌ Failed to load target weeks');
                     }
                   } catch (error) {
                     console.error('Error loading target weeks:', error);
-                    alert('An error occurred while loading available weeks.');
                   }
                 }}
                 className="flex items-center gap-1 px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex-shrink-0"
@@ -737,43 +736,44 @@ export default function DayTableView({
                 Copy
               </button>
               
-              {/* Move Week Button */}
-              <button
-                onClick={async () => {
-                  const token = localStorage.getItem('token');
-                  if (!token) {
-                    alert('Please log in to move weeks.');
-                    return;
-                  }
-                  
-                  try {
-                    // Always fetch from Yearly Plan (Section B)
-                    const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'TEMPLATE_WEEKS';
-                    console.log('📥 Fetching target weeks for Move from:', targetPlanType);
-                    
-                    const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {
-                      headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    
-                    if (response.ok) {
-                      const data = await response.json();
-                      console.log('✅ Loaded target plan:', data.plan?.type, 'with', data.plan?.weeks?.length || 0, 'weeks');
-                      setTargetWeeks(data.plan?.weeks || []);
-                      setShowMoveWeekModal(true);
-                    } else {
-                      alert('Failed to load target weeks. Please try again.');
+              {/* Move Week Button - Only show in Section C (Workouts Done) and D (Archive) */}
+              {activeSection !== 'A' && activeSection !== 'B' && (
+                <button
+                  onClick={async () => {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                      console.error('❌ Please log in first');
+                      return;
                     }
-                  } catch (error) {
-                    console.error('Error loading target weeks:', error);
-                    alert('An error occurred while loading available weeks.');
-                  }
-                }}
-                className="flex items-center gap-1 px-4 py-2 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors flex-shrink-0"
-                title="Move this week"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
-                Move
-              </button>
+                    
+                    try {
+                      // Always fetch from Yearly Plan (Section B)
+                      const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'TEMPLATE_WEEKS';
+                      console.log('📥 Fetching target weeks for Move from:', targetPlanType);
+                      
+                      const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                      });
+                      
+                      if (response.ok) {
+                        const data = await response.json();
+                        console.log('✅ Loaded target plan:', data.plan?.type, 'with', data.plan?.weeks?.length || 0, 'weeks');
+                        setTargetWeeks(data.plan?.weeks || []);
+                        setShowMoveWeekModal(true);
+                      } else {
+                        console.error('❌ Failed to load target weeks');
+                      }
+                    } catch (error) {
+                      console.error('Error loading target weeks:', error);
+                    }
+                  }}
+                  className="flex items-center gap-1 px-4 py-2 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors flex-shrink-0"
+                  title="Move this week"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+                  Move
+                </button>
+              )}
               
               {/* Overview/Totals Button */}
               <button
@@ -834,7 +834,6 @@ export default function DayTableView({
             onClick={() => {
               // TODO: Implement save grid settings
               console.log('Save Grid Settings clicked');
-              alert('Grid settings saved! (Feature in development)');
             }}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
           >
@@ -850,7 +849,7 @@ export default function DayTableView({
               // TODO: Implement reset to default
               console.log('Reset to Default clicked');
               if (confirm('Are you sure you want to reset grid settings to default?')) {
-                alert('Grid settings reset to default! (Feature in development)');
+                console.log('Grid settings reset');
               }
             }}
             className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
@@ -1232,11 +1231,10 @@ export default function DayTableView({
                           await reloadWorkouts();
                         }
                       } else {
-                        alert('Failed to update week period');
+                        console.error('Failed to update week period');
                       }
                     } catch (error) {
                       console.error('Error updating week period:', error);
-                      alert('Error updating week period');
                     }
                   }}
                   className="w-full flex items-center gap-3 px-4 py-3 border-2 rounded-lg hover:bg-gray-50 transition-colors"

@@ -88,7 +88,7 @@ interface WorkoutSectionProps {
 export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   // ==================== SECTION & VIEW STATE ====================
   const [activeSection, setActiveSection] = useState<SectionId>('A');
-  const [viewMode, setViewMode] = useState<ViewMode>('tree');
+  const [viewMode, setViewMode] = useState<ViewMode>('table'); // Default to table view
   const [selectedWeekForTable, setSelectedWeekForTable] = useState<number | null>(null);
   
   // Week grouping for Section B pagination
@@ -511,10 +511,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
 
       if (response.ok && data.success) {
         showMessage('success', data.message || 'Week copied successfully!');
-        // Reload the workout plan to show the changes
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
+        
+        // Close the modal
+        setShowCopyWeekModal(false);
+        setTargetWeeks([]);
+        setCurrentWeek(null);
+        
+        // Reload data for the current active section only to avoid state overwrite
+        await loadWorkoutData(activeSection);
       } else {
         showMessage('error', data.error || 'Failed to copy week');
       }
@@ -647,6 +651,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       
       // Cross-day - show modal
       const existingWorkoutCount = targetDay?.workouts?.length || 0;
+      const existingWorkout = targetDay?.workouts?.[0] || null; // Get first workout if exists
       const hasConflict = existingWorkoutCount >= 3;
       
       setDragModalConfig({
@@ -654,7 +659,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         hasConflict: hasConflict,
         conflictMessage: hasConflict ? 'This day already has 3 workouts (maximum). Choose an action:' : undefined,
         sourceData: { workout: sourceWorkout, sourceDay: sourceDay },
-        targetData: { targetDay, existingWorkout: null }
+        targetData: { targetDay, existingWorkout }
       });
       modalActions.setShowDragModal(true);
     } else if (dragType === 'moveframe' && (dropType === 'workout' || dropType === 'day')) {
@@ -820,7 +825,25 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       
       console.log('✅ Workout copied:', workout.id, '→', targetDay.id);
     } else if (action === 'move') {
-      // Move workout to different day
+      // Move workout to different day - replace any existing workout
+      // If there's an existing workout in the target day, delete it first
+      if (existingWorkout) {
+        console.log('🗑️ Deleting existing workout:', existingWorkout.id);
+        const deleteResponse = await fetch(`/api/workouts/sessions/${existingWorkout.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!deleteResponse.ok) {
+          const error = await deleteResponse.json();
+          console.error('Failed to delete existing workout:', error);
+          throw new Error('Failed to replace existing workout');
+        }
+      }
+      
+      // Now move the workout to the target day
       const response = await fetch('/api/workouts/sessions/move-to-day', {
         method: 'PATCH',
         headers: {
@@ -840,26 +863,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       
       console.log('✅ Workout moved:', workout.id, '→', targetDay.id);
       await loadWorkoutData(activeSection); // Reload to show changes
-    } else if (action === 'switch' && existingWorkout) {
-      // Switch workouts
-      const response = await fetch('/api/workouts/sessions/switch', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          workout1Id: workout.id,
-          workout2Id: existingWorkout.id
-        })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to switch workouts');
-      }
-      
-      console.log('✅ Workouts switched:', workout.id, '↔', existingWorkout.id);
     }
   };
 
@@ -1145,68 +1148,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                             Edit
                           </button>
 
-                          {/* Copy Button - Copy first week in range */}
-                          <button
-                            onClick={async () => {
-                              const firstWeek = workoutPlan.weeks?.find((w: any) => w.weekNumber === currentPageStart);
-                              if (firstWeek) {
-                                setCurrentWeek(firstWeek);
-                                
-                                // Fetch target plan weeks (opposite section)
-                                const token = localStorage.getItem('token');
-                                if (!token) {
-                                  showMessage('error', 'Please log in first');
-                                  return;
-                                }
-                                
-                                try {
-                                  showMessage('info', 'Loading available weeks...');
-                                  const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'TEMPLATE_WEEKS';
-                                  const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {
-                                    headers: { 'Authorization': `Bearer ${token}` }
-                                  });
-                                  
-                                  if (response.ok) {
-                                    const data = await response.json();
-                                    console.log('📥 Loaded target plan:', data.plan?.type, 'with', data.plan?.weeks?.length || 0, 'weeks');
-                                    setTargetWeeks(data.plan?.weeks || []);
-                                    setShowCopyWeekModal(true);
-                                    setCurrentWeek(firstWeek);
-                                    showMessage('success', `Ready to copy Week ${firstWeek.weekNumber}. Found ${data.plan?.weeks?.length || 0} available weeks.`);
-                                  } else {
-                                    showMessage('error', 'Failed to load target weeks');
-                                  }
-                                } catch (error) {
-                                  console.error('Error loading target weeks:', error);
-                                  showMessage('error', 'An error occurred while loading available weeks');
-                                }
-                              } else {
-                                showMessage('error', 'No week selected to copy');
-                              }
-                            }}
-                            className="flex items-center gap-1 px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex-shrink-0"
-                            title="Copy the first week in the displayed range"
-                          >
-                            Copy
-                          </button>
-
-                          {/* Move Button - Move first week in range */}
-                          <button
-                            onClick={() => {
-                              const firstWeek = workoutPlan.weeks?.find((w: any) => w.weekNumber === currentPageStart);
-                              if (firstWeek) {
-                                setShowMoveWeekModal(true);
-                                setCurrentWeek(firstWeek);
-                                showMessage('info', `Moving Week ${firstWeek.weekNumber}`);
-                              } else {
-                                showMessage('error', 'No week selected to move');
-                              }
-                            }}
-                            className="flex items-center gap-1 px-4 py-2 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors flex-shrink-0"
-                            title="Move the first week in the displayed range"
-                          >
-                            Move
-                          </button>
+                          {/* Copy and Move buttons removed from tree view as per user request */}
 
                           {/* Overview Button - Show week totals for first week */}
                           <button
@@ -1439,11 +1381,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        showMessage('success', 'Workout plan copied to clipboard! You can now paste and share it.');
                      })
                      .catch((error) => {
-                       console.error('Error copying to clipboard:', error);
-                       // Fallback: show the text in an alert
-                       alert(`Copy this workout plan:\n\n${shareText}`);
-                       showMessage('info', 'Could not copy automatically. Please copy from the dialog.');
-                     });
+                     console.error('Error copying to clipboard:', error);
+                     showMessage('error', 'Could not copy to clipboard');
+                   });
                  }}
                  onExportPdfDay={(day) => {
                    setDayToPrint(day);
@@ -2082,13 +2022,13 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               
               if (response.ok) {
                 modalActions.setShowImportModal(false);
-                alert(`Successfully imported ${workouts.length} workout(s)!`);
+                showMessage('success', `Successfully imported ${workouts.length} workout(s)!`);
               } else {
-                alert('Failed to import workouts');
+                showMessage('error', 'Failed to import workouts');
               }
              } catch (error) {
                console.error('Error importing workouts:', error);
-               alert('Error importing workouts');
+               showMessage('error', 'Error importing workouts');
              }
            }}
          />
