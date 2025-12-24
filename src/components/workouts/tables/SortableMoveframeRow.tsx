@@ -6,6 +6,7 @@ import { CSS } from '@dnd-kit/utilities';
 import MovelapDetailTable from './MovelapDetailTable';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
+import { getSportDisplayName } from '@/constants/moveframe.constants';
 
 interface SortableMoveframeRowProps {
   moveframe: any;
@@ -108,7 +109,7 @@ export default function SortableMoveframeRow({
   const sectionColor = moveframe.section?.color || '#5b8def';
   const sectionName = moveframe.section?.name || 'Default';
   const sportIcon = getSportIcon(moveframe.sport || 'SWIM', iconType);
-  const sportName = moveframe.sport?.replace(/_/g, ' ') || 'Unknown';
+  const sportName = getSportDisplayName(moveframe.sport || 'SWIM');
   
   // Get annotation colors (if set)
   const hasAnnotation = moveframe.annotationBgColor || moveframe.annotationTextColor;
@@ -198,7 +199,7 @@ export default function SortableMoveframeRow({
       case 'action':
         return (
           <td key="action" className="border border-gray-200 px-1 py-1 text-center text-[10px]">
-            {moveframe.sport || 'SWIM'}
+            {getSportDisplayName(moveframe.sport || 'SWIM')}
           </td>
         );
       
