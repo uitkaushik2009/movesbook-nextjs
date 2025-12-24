@@ -2163,6 +2163,35 @@ export default function AddEditMoveframeModal({
                       })()}
                     </div>
                   )}
+                  
+                  {/* Time Field - for all distance-based sports */}
+                  {shouldShowPaceField(sport) && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        Time (Hh:MM'SS"D): <span className="text-gray-400">(optional)</span> <span className="text-green-600 font-semibold text-[10px]">⚡ Type numbers only</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={time}
+                        onChange={(e) => {
+                          const input = e.target.value;
+                          // Auto-format as user types using fast input
+                          const parsed = parseTimeInput(input);
+                          setTime(parsed);
+                        }}
+                        onBlur={(e) => {
+                          if (e.target.value) {
+                            const formatted = formatTime(e.target.value);
+                            setTime(formatted);
+                          }
+                        }}
+                        className="w-full px-3 py-2 text-lg border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono bg-green-50"
+                        placeholder="530"
+                        title="⚡ Fast input: Type 530 for 0h05'30&quot;0"
+                      />
+                      <p className="mt-0.5 text-[10px] text-green-600">⚡ Fast input: Type <strong>530</strong> → <strong>0h05'30"0</strong> or <strong>1130</strong> → <strong>0h11'30"0</strong></p>
+                    </div>
+                  )}
                 </div>
                   );
                 })()}
