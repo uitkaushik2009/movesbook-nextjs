@@ -1167,10 +1167,12 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                                   });
                                   
                                   if (response.ok) {
-                                    const targetPlan = await response.json();
-                                    setTargetWeeks(targetPlan?.weeks || []);
+                                    const data = await response.json();
+                                    console.log('📥 Loaded target plan:', data.plan?.type, 'with', data.plan?.weeks?.length || 0, 'weeks');
+                                    setTargetWeeks(data.plan?.weeks || []);
                                     setShowCopyWeekModal(true);
-                                    showMessage('success', `Ready to copy Week ${firstWeek.weekNumber}`);
+                                    setCurrentWeek(firstWeek);
+                                    showMessage('success', `Ready to copy Week ${firstWeek.weekNumber}. Found ${data.plan?.weeks?.length || 0} available weeks.`);
                                   } else {
                                     showMessage('error', 'Failed to load target weeks');
                                   }
