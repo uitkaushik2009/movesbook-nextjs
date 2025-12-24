@@ -710,7 +710,7 @@ export default function DayTableView({
                   
                   try {
                     // Always fetch from Yearly Plan (Section B)
-                    const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'THREE_WEEKS_PLAN';
+                    const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'TEMPLATE_WEEKS';
                     console.log('📥 Fetching target weeks for Copy from:', targetPlanType);
                     
                     const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {
@@ -748,7 +748,7 @@ export default function DayTableView({
                   
                   try {
                     // Always fetch from Yearly Plan (Section B)
-                    const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'THREE_WEEKS_PLAN';
+                    const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'TEMPLATE_WEEKS';
                     console.log('📥 Fetching target weeks for Move from:', targetPlanType);
                     
                     const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {

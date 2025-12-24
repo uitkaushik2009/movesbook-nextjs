@@ -1161,7 +1161,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                                 
                                 try {
                                   showMessage('info', 'Loading available weeks...');
-                                  const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'THREE_WEEKS_PLAN';
+                                  const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'TEMPLATE_WEEKS';
                                   const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {
                                     headers: { 'Authorization': `Bearer ${token}` }
                                   });
