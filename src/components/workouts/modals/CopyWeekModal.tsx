@@ -72,16 +72,16 @@ export default function CopyWeekModal({
         <div className="p-6 space-y-6">
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
           <p className="text-sm text-gray-700">
-            <span className="font-semibold">Source:</span> Week {sourceWeek.weekNumber}
+            <span className="font-semibold">Source:</span> Week {sourceWeek.weekNumber} (3 Weeks Plan)
           </p>
           <p className="text-xs text-gray-600 mt-1">
-            This will copy all workouts, moveframes, and movelaps from Week {sourceWeek.weekNumber} to the selected target week.
+            This will copy all workouts, moveframes, and movelaps from Week {sourceWeek.weekNumber} to the selected target week in the Yearly Plan.
           </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Select Target Week
+            Select Target Week (Yearly Plan)
           </label>
           <select
             value={selectedWeekId}
@@ -89,7 +89,7 @@ export default function CopyWeekModal({
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isLoading}
           >
-            <option value="">-- Select a week --</option>
+            <option value="">-- Select a week in Yearly Plan --</option>
             {allWeeks
               .filter((w) => w.id !== sourceWeek.id)
               .map((week) => (
@@ -102,7 +102,7 @@ export default function CopyWeekModal({
 
         <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
           <p className="text-xs text-yellow-800">
-            <strong>⚠️ Warning:</strong> This will replace all existing workouts in the target week with the workouts from Week {sourceWeek.weekNumber}.
+            <strong>⚠️ Warning:</strong> This will replace all existing workouts in the target week (Yearly Plan) with the workouts from Week {sourceWeek.weekNumber} (3 Weeks Plan).
           </p>
         </div>
         </div>

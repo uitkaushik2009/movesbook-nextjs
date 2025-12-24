@@ -73,6 +73,7 @@ import CreateYearlyPlanModal from '@/components/workouts/modals/CreateYearlyPlan
 import ImportFromPlanModal from '@/components/workouts/modals/ImportFromPlanModal';
 import DayPrintModal from '@/components/workouts/modals/DayPrintModal';
 import WeekTotalsModal from '@/components/workouts/modals/WeekTotalsModal';
+import CopyWeekModal from '@/components/workouts/modals/CopyWeekModal';
 import ExportSharePrint from '@/components/workouts/ExportSharePrint';
 import { useColumnSettings } from '@/hooks/useColumnSettings';
 import DragDropConfirmModal, { DragAction, DropPosition } from '@/components/workouts/modals/DragDropConfirmModal';
@@ -227,6 +228,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [showWeekTotalsModal, setShowWeekTotalsModal] = useState(false);
   const [currentWeek, setCurrentWeek] = useState<any>(null);
   const [autoPrintWeek, setAutoPrintWeek] = useState(false);
+  const [targetWeeks, setTargetWeeks] = useState<any[]>([]);
   // Use moveframeModalMode from the hook instead of local state
   const moveframeModalMode = modes.moveframeModalMode;
   const setMoveframeModalMode = setters.setMoveframeModalMode;
@@ -472,6 +474,53 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     } catch (error) {
       console.error('Error importing workouts:', error);
       showMessage('error', 'Failed to import workouts');
+    }
+  };
+
+  /**
+   * COPY WEEK - Handler for copying a week to another week (Section A to Section B)
+   */
+  const handleCopyWeek = async (targetWeekId: string) => {
+    if (!currentWeek) {
+      showMessage('error', 'No source week selected');
+      return;
+    }
+
+    try {
+      showMessage('info', `Copying Week ${currentWeek.weekNumber}...`);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showMessage('error', 'Please log in first');
+        return;
+      }
+
+      const response = await fetch('/api/workouts/weeks/copy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          sourceWeekId: currentWeek.id, 
+          targetWeekId 
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        showMessage('success', data.message || 'Week copied successfully!');
+        // Reload the workout plan to show the changes
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        showMessage('error', data.error || 'Failed to copy week');
+      }
+    } catch (error) {
+      console.error('Error copying week:', error);
+      showMessage('error', 'An error occurred while copying the week');
     }
   };
 
@@ -1098,12 +1147,37 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
 
                           {/* Copy Button - Copy first week in range */}
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               const firstWeek = workoutPlan.weeks?.find((w: any) => w.weekNumber === currentPageStart);
                               if (firstWeek) {
-                                setShowCopyWeekModal(true);
                                 setCurrentWeek(firstWeek);
-                                showMessage('info', `Copying Week ${firstWeek.weekNumber}`);
+                                
+                                // Fetch target plan weeks (opposite section)
+                                const token = localStorage.getItem('token');
+                                if (!token) {
+                                  showMessage('error', 'Please log in first');
+                                  return;
+                                }
+                                
+                                try {
+                                  showMessage('info', 'Loading available weeks...');
+                                  const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'THREE_WEEKS_PLAN';
+                                  const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {
+                                    headers: { 'Authorization': `Bearer ${token}` }
+                                  });
+                                  
+                                  if (response.ok) {
+                                    const targetPlan = await response.json();
+                                    setTargetWeeks(targetPlan?.weeks || []);
+                                    setShowCopyWeekModal(true);
+                                    showMessage('success', `Ready to copy Week ${firstWeek.weekNumber}`);
+                                  } else {
+                                    showMessage('error', 'Failed to load target weeks');
+                                  }
+                                } catch (error) {
+                                  console.error('Error loading target weeks:', error);
+                                  showMessage('error', 'An error occurred while loading available weeks');
+                                }
                               } else {
                                 showMessage('error', 'No week selected to copy');
                               }
@@ -2890,39 +2964,19 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         />
       )}
 
-      {/* Copy Week Modal - Coming Soon */}
+      {/* Copy Week Modal */}
       {showCopyWeekModal && currentWeek && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Copy Week</h2>
-              <button
-                onClick={() => {
-                  setShowCopyWeekModal(false);
-                  setCurrentWeek(null);
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <p className="text-gray-600 mb-4">
-              Copy Week {currentWeek.weekNumber} functionality is coming in the next update.
-            </p>
-            <p className="text-sm text-gray-500 mb-4">
-              Use the table view Copy buttons to copy individual days, workouts, moveframes, or movelaps.
-            </p>
-            <button
-              onClick={() => {
-                setShowCopyWeekModal(false);
-                setCurrentWeek(null);
-              }}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-            >
-              OK
-            </button>
-          </div>
-        </div>
+        <CopyWeekModal
+          isOpen={showCopyWeekModal}
+          sourceWeek={currentWeek}
+          allWeeks={targetWeeks}
+          onClose={() => {
+            setShowCopyWeekModal(false);
+            setCurrentWeek(null);
+            setTargetWeeks([]);
+          }}
+          onCopy={handleCopyWeek}
+        />
       )}
 
       {/* Move Week Modal - Coming Soon */}
