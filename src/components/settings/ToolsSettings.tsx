@@ -14,6 +14,7 @@ import {
   IconType,
   ToolsTab,
   SUPPORTED_LANGUAGES,
+  DEFAULT_SPORTS,
   filterBySearch,
   filterByCategory,
   reorderItems
@@ -281,11 +282,44 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
 
   const handlePasswordSubmit = async () => {
     if (!superAdminPassword.trim()) {
-      alert('❌ Please enter Super Admin password');
+      alert(`❌ Please enter ${isAdmin ? 'Super Admin' : 'your'} password`);
       return;
     }
 
     try {
+      // Verify password first
+      const token = localStorage.getItem('token');
+      console.log('🔐 Token from localStorage:', token ? 'Present' : 'Missing');
+      
+      const verifyEndpoint = isAdmin 
+        ? '/api/admin/super-admin/verify' 
+        : '/api/user/verify-password';
+      
+      console.log('🔐 Using endpoint:', verifyEndpoint);
+      console.log('🔐 Is admin mode:', isAdmin);
+      
+      const verifyHeaders: HeadersInit = { 'Content-Type': 'application/json' };
+      if (!isAdmin && token) {
+        verifyHeaders['Authorization'] = `Bearer ${token}`;
+      }
+      
+      console.log('🔐 Request headers:', verifyHeaders);
+      
+      const verifyResponse = await fetch(verifyEndpoint, {
+        method: 'POST',
+        headers: verifyHeaders,
+        body: JSON.stringify({ password: superAdminPassword })
+      });
+
+      console.log('🔐 Verify response status:', verifyResponse.status);
+      const verifyData = await verifyResponse.json();
+      console.log('🔐 Verify response data:', verifyData);
+      
+      if (!verifyData.valid) {
+        alert(`❌ Invalid password`);
+        return;
+      }
+
       const toolsData = {
         periods,
         sections,
@@ -295,28 +329,61 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         devices
       };
 
-      const response = await fetch('/api/admin/tools-defaults/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          language: selectedLanguage,
-          toolsData,
-          password: superAdminPassword
-        })
-      });
+      if (isAdmin) {
+        // Admin mode: Save as language defaults
+        const response = await fetch('/api/admin/tools-defaults/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            language: selectedLanguage,
+            toolsData,
+            password: superAdminPassword
+          })
+        });
 
-      const data = await response.json();
-      
-      if (response.ok) {
-        alert(`✅ Default tools settings saved for ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}!`);
-        setShowPasswordDialog(false);
-        setSuperAdminPassword('');
+        const data = await response.json();
+        
+        if (response.ok) {
+          const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name;
+          alert(`✅ Success! ALL settings saved as ${languageName.toUpperCase()} defaults!\n\n📋 Saved to ${languageName.toUpperCase()}:\n✓ Periods, Sections, Sports\n✓ Equipment, Exercises, Library, Devices\n\n👥 These settings are now available for ${languageName}-speaking users when they click "Load Admin Defaults" button.`);
+          setShowPasswordDialog(false);
+          setSuperAdminPassword('');
+        } else {
+          console.error('❌ Save failed:', data);
+          alert(`❌ ${data.error || 'Failed to save defaults'}\n\nDetails: ${data.details || 'No additional details'}`);
+        }
       } else {
-        alert(`❌ ${data.error || 'Failed to save defaults'}`);
+        // Personal mode: Save to user's personal settings
+        if (!token) {
+          alert('❌ Please login to save settings');
+          return;
+        }
+
+        const response = await fetch('/api/user/settings/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            toolsSettings: toolsData
+          })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          alert('✅ Personal settings saved successfully!');
+          setShowPasswordDialog(false);
+          setSuperAdminPassword('');
+        } else {
+          console.error('❌ Save failed:', data);
+          alert(`❌ ${data.error || 'Failed to save settings'}\n\nDetails: ${data.details || 'No additional details'}`);
+        }
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('❌ Error saving defaults');
+      alert('❌ Error saving settings');
     }
   };
 
@@ -349,7 +416,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
           setDevices(data.toolsData.devices);
         }
         
-        alert(`✅ ${languageName} default settings loaded successfully!\n\nYou can now edit these items and click "Save as DEFAULT" to update the ${languageName} defaults.`);
+        alert(`✅ ${languageName} default settings loaded successfully!\n\n📋 All settings loaded (ALL TABS):\n• Periods, Sections, Sports\n• Equipment, Exercises, Library, Devices\n\n📝 Next Steps:\n1. Navigate to ANY tab and edit/translate items\n2. Select target language from dropdown (e.g., Russian)\n3. Click "Save to [Language]" to save ALL tabs\n\n💡 Example: Load Spanish → Edit Sports/Periods → Select Russian → Save to RU`);
         setShowLoadDialog(false);
       } else {
         const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name;
@@ -394,8 +461,10 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
     setDraggedSport(null);
   };
 
-  const top5Sports = sports.filter(s => s.isTop5).sort((a, b) => a.order - b.order);
-  const otherSports = sports.filter(s => !s.isTop5).sort((a, b) => a.order - b.order);
+  // Use DEFAULT_SPORTS as fallback if sports array is empty
+  const activeSports = (sports && sports.length > 0) ? sports : DEFAULT_SPORTS;
+  const top5Sports = activeSports.filter(s => s.isTop5).sort((a, b) => a.order - b.order);
+  const otherSports = activeSports.filter(s => !s.isTop5).sort((a, b) => a.order - b.order);
 
   // Handle icon type change
   const handleIconTypeChange = async (newType: IconType) => {
@@ -575,38 +644,60 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
 
       {/* Language Defaults - Admin Only */}
       <div className="grid grid-cols-1 gap-3">
+        
+        {/* Instructions Banner */}
+        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4">
+          <h4 className="font-semibold text-indigo-900 mb-2 flex items-center gap-2">
+            <Globe className="w-5 h-5" />
+            Multi-Language Settings Workflow (All Tabs)
+          </h4>
+          <ol className="text-sm text-indigo-800 space-y-1 ml-6 list-decimal">
+            <li><strong>Load:</strong> Select a language (e.g., Spanish) and click "Load" to load ALL settings</li>
+            <li><strong>Edit:</strong> Translate or modify items in ANY tab (Periods, Sections, Sports, Equipment, etc.)</li>
+            <li><strong>Save:</strong> Select the target language (e.g., Russian) from the dropdown</li>
+            <li><strong>Complete:</strong> Click "Save as DEFAULT" to save ALL tabs to that language</li>
+          </ol>
+          <p className="text-xs text-indigo-600 mt-2 italic">
+            <strong>💡 Example:</strong> Load Spanish → Edit Sports/Periods/Equipment → Select "Russian" → Save to RU (All tabs saved!)
+          </p>
+          <p className="text-xs text-purple-600 mt-2 font-semibold">
+            ✅ This applies to ALL settings: Periods, Sections, Sports, Equipment, Exercises, Library, Devices
+          </p>
+        </div>
 
-        {/* Language Defaults */}
-        <div className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-lg">
-          <div className="flex items-center gap-3">
-            <Globe className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700">Language Defaults:</span>
-            <select
-              value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              {SUPPORTED_LANGUAGES.map(lang => (
-                <option key={lang.code} value={lang.code}>{lang.name}</option>
-              ))}
-            </select>
+        {/* Language Defaults Controls */}
+        <div className="flex items-center justify-between p-4 bg-white border-2 border-gray-300 rounded-lg shadow-sm">
+          <div className="flex items-center gap-4">
+            <Globe className="w-5 h-5 text-gray-500" />
+            <div className="flex flex-col">
+              <span className="text-xs text-gray-500 mb-1">Selected Language:</span>
+              <select
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="px-3 py-2 text-sm font-medium border-2 border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+              >
+                {SUPPORTED_LANGUAGES.map(lang => (
+                  <option key={lang.code} value={lang.code}>{lang.name} ({lang.code.toUpperCase()})</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={loadLanguageDefaults}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
-              title={`Load ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} defaults`}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-md font-medium"
+              title={`Load ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} defaults to screen`}
             >
-              <Download className="w-3.5 h-3.5" />
-              Load ({SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.code.toUpperCase()})
+              <Download className="w-4 h-4" />
+              Load from {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.code.toUpperCase()}
             </button>
             <button
               onClick={saveLanguageDefaults}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-600 text-white rounded hover:bg-orange-700 transition font-semibold"
-              title={`Save current tools as DEFAULT for ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} (requires Super Admin password)`}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-bold shadow-md"
+              title={`Save current screen as DEFAULT for ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}`}
             >
-              <Save className="w-3.5 h-3.5" />
-              Save as DEFAULT
+              <Save className="w-4 h-4" />
+              Save to {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.code.toUpperCase()}
             </button>
           </div>
         </div>
@@ -704,10 +795,17 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         <div className="space-y-6">
           {/* Info Banner */}
           <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-2">Organize Your Sports by Preference</h3>
-            <p className="text-gray-600 text-sm">
-              Drag sports to reorder them. Your <span className="font-semibold text-blue-600">Top 5 sports</span> will appear as quick access shortcuts throughout the app.
-            </p>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-2">Organize Your Sports by Preference</h3>
+                <p className="text-gray-600 text-sm">
+                  Drag sports to reorder them. Your <span className="font-semibold text-blue-600">Top 5 sports</span> will appear as quick access shortcuts throughout the app.
+                </p>
+                <p className="text-blue-600 text-xs mt-2">
+                  <strong>💡 Tip:</strong> Sports listed here and their settings can be loaded in your user settings by pressing the "Load Admin Defaults" button, which will load sports in your current language.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Icon Type Selector */}
@@ -1504,6 +1602,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                     name: '', 
                     brand: '',
                     model: '',
+                    codekey: '',
                     type: 'Watch',
                     compatibility: [],
                     isEnabled: true,
@@ -1556,9 +1655,16 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                         <span className={`w-3 h-3 rounded-full ${device.isEnabled ? 'bg-green-500' : 'bg-gray-400'}`}></span>
                       </div>
                       <p className="text-sm text-gray-600 mb-1">{device.brand} {device.model}</p>
-                      <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
-                        {device.type}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
+                          {device.type}
+                        </span>
+                        {device.codekey && (
+                          <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-mono font-bold rounded border border-orange-300">
+                            {device.codekey}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -1910,20 +2016,29 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   <select
                     onChange={(e) => {
                       const sportId = e.target.value;
-                      if (sportId && !editingEquipment.sports?.includes(sportId)) {
+                      console.log('Sport selected:', sportId);
+                      console.log('Current equipment sports:', editingEquipment.sports);
+                      
+                      if (sportId && editingEquipment && !editingEquipment.sports?.includes(sportId)) {
+                        const updatedSports = [...(editingEquipment.sports || []), sportId];
+                        console.log('Updating sports to:', updatedSports);
+                        
                         setEditingEquipment({
                           ...editingEquipment,
-                          sports: [...(editingEquipment.sports || []), sportId]
+                          sports: updatedSports
                         });
                       }
-                      e.target.value = '';
+                      // Reset select to default
+                      setTimeout(() => {
+                        e.target.value = '';
+                      }, 0);
                     }}
-                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    defaultValue=""
+                    className="w-full px-3 py-2 border border-gray-200 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white cursor-pointer"
+                    value=""
                   >
-                    <option value="">+ Add sport</option>
-                    {sports
-                      .filter(s => !editingEquipment.sports?.includes(s.id))
+                    <option value="" disabled>+ Add sport</option>
+                    {(sports && sports.length > 0 ? sports : DEFAULT_SPORTS)
+                      .filter(s => !editingEquipment?.sports?.includes(s.id))
                       .map(sport => (
                         <option key={sport.id} value={sport.id}>
                           {sport.icon} {sport.name}
@@ -2207,10 +2322,18 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
       {showDeviceDialog && editingDevice && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-2xl p-8 max-w-2xl w-full my-8">
-            <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
-              <span className="text-2xl">📱</span>
-              {editingDevice.id ? 'Edit Device' : 'Add New Compatible Device'}
-            </h3>
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="text-2xl font-bold flex items-center gap-2">
+                <span className="text-2xl">📱</span>
+                {editingDevice.id ? 'Edit Device' : 'Add New Compatible Device'}
+              </h3>
+              {editingDevice.codekey && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-purple-100 border-2 border-purple-300 rounded-lg">
+                  <span className="text-xs font-semibold text-purple-700">CODEKEY:</span>
+                  <span className="text-sm font-bold text-purple-900 tracking-wider">{editingDevice.codekey}</span>
+                </div>
+              )}
+            </div>
             
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-2 gap-4">
@@ -2221,8 +2344,26 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                     value={editingDevice.name}
                     onChange={(e) => setEditingDevice({ ...editingDevice, name: e.target.value })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="e.g., Apple Watch"
+                    placeholder="e.g., GARMIN FORERUNNER 945"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Codekey *</label>
+                  <input
+                    type="text"
+                    value={editingDevice.codekey || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.toUpperCase().replace(/[^A-Z0-9\-_]/g, '');
+                      setEditingDevice({ ...editingDevice, codekey: value });
+                    }}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono font-bold tracking-wider"
+                    placeholder="e.g., GARM-FR945"
+                    maxLength={20}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Unique protocol identifier (uppercase, numbers, - and _ only)
+                  </p>
                 </div>
 
                 <div>
@@ -2324,8 +2465,14 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
             <div className="flex gap-3 mt-8">
               <button
                 onClick={() => {
-                  if (!editingDevice.name || !editingDevice.brand || !editingDevice.syncProtocol) {
-                    alert('Please fill in all required fields (Name, Brand, Sync Protocol)');
+                  if (!editingDevice.name || !editingDevice.brand || !editingDevice.codekey || !editingDevice.syncProtocol) {
+                    alert('Please fill in all required fields (Name, Brand, Codekey, Sync Protocol)');
+                    return;
+                  }
+                  // Check for duplicate codekey
+                  const existingDevice = devices.find(d => d.codekey === editingDevice.codekey && d.id !== editingDevice.id);
+                  if (existingDevice) {
+                    alert(`⚠️ Codekey "${editingDevice.codekey}" is already in use by "${existingDevice.name}".\n\nEach device must have a unique codekey.`);
                     return;
                   }
                   if (editingDevice.id) {
@@ -2354,20 +2501,48 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         </div>
       )}
 
-      {/* Super Admin Password Dialog */}
+      {/* Password Dialog (Admin or Personal) */}
       {showPasswordDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <h3 className="text-xl font-semibold mb-4">🔐 Super Admin Authentication</h3>
+            <h3 className="text-xl font-semibold mb-4">
+              🔐 {isAdmin ? 'Super Admin Authentication' : 'Confirm Your Identity'}
+            </h3>
             <p className="text-gray-600 mb-4">
-              You are about to save the current tools settings as <strong>DEFAULT</strong> for <strong>{SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}</strong>.
+              {isAdmin ? (
+                <>
+                  You are about to save <strong>ALL CURRENT SETTINGS FROM ALL TABS</strong> as <strong>DEFAULT</strong> for <strong>{SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}</strong>.
+                </>
+              ) : (
+                <>
+                  Please enter your password to confirm and save your <strong>personal settings</strong>.
+                </>
+              )}
             </p>
-            <p className="text-sm text-orange-700 bg-orange-50 p-3 rounded-lg mb-4">
-              📌 <strong>Note:</strong> These settings will be automatically loaded when users select {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} as their language for the first time.
-            </p>
+            {isAdmin && (
+              <div className="text-sm text-orange-700 bg-orange-50 p-3 rounded-lg mb-4 space-y-2">
+                <p><strong>📌 What will be saved to {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name.toUpperCase()}:</strong></p>
+                <ul className="list-disc ml-5 space-y-1">
+                  <li><strong>Periods:</strong> All periods from Periods tab</li>
+                  <li><strong>Sections:</strong> All sections from Sections tab</li>
+                  <li><strong>Sports:</strong> All sports from Main Sports tab</li>
+                  <li><strong>Equipment:</strong> All equipment from Personal Equipment tab</li>
+                  <li><strong>Exercises:</strong> All exercises from Exercise Bank tab</li>
+                  <li><strong>Library:</strong> All exercises from My Library tab</li>
+                  <li><strong>Devices:</strong> All devices from Device Enabled tab</li>
+                </ul>
+                <p className="pt-2 font-semibold"><strong>👥 For users:</strong> All these settings will be available when they click "Load Admin Defaults" button.</p>
+              </div>
+            )}
+            {!isAdmin && (
+              <div className="text-sm text-blue-700 bg-blue-50 p-3 rounded-lg mb-4">
+                <p><strong>💾 Saving Your Personal Settings:</strong></p>
+                <p className="mt-1">These settings will be saved to your account only and will not affect other users.</p>
+              </div>
+            )}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Super Admin Password:
+                {isAdmin ? 'Super Admin Password:' : 'Your Password:'}
               </label>
               <input
                 type="password"
@@ -2384,7 +2559,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                 onClick={handlePasswordSubmit}
                 className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-semibold"
               >
-                Save Defaults
+                {isAdmin ? 'Save Defaults' : 'Save My Settings'}
               </button>
               <button
                 onClick={() => {
@@ -2408,11 +2583,17 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
             <p className="text-gray-600 mb-4">
               Load default tools settings for <strong>{SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}</strong>?
             </p>
-            <p className="text-sm text-blue-700 bg-blue-50 p-3 rounded-lg mb-4">
-              📖 <strong>How it works:</strong> This will load the saved {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} defaults. You can then edit them and click "Save as DEFAULT" to update them.
-            </p>
+            <div className="text-sm text-blue-700 bg-blue-50 p-3 rounded-lg mb-3">
+              <p className="font-semibold mb-1">📖 How it works:</p>
+              <ol className="list-decimal ml-5 space-y-1">
+                <li>Loads {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} defaults for ALL tabs</li>
+                <li>You can edit/translate items in any tab (Sports, Equipment, etc.)</li>
+                <li>Select a different language if needed (e.g., Russian)</li>
+                <li>Click "Save to [Language]" to save ALL tabs at once</li>
+              </ol>
+            </div>
             <p className="text-sm text-yellow-700 bg-yellow-50 p-3 rounded-lg mb-4">
-              ⚠️ <strong>Note:</strong> This will replace your current unsaved changes with the {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} defaults.
+              ⚠️ <strong>Note:</strong> This will replace ALL current unsaved changes in ALL tabs with the {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} defaults.
             </p>
             <div className="flex gap-3">
               <button

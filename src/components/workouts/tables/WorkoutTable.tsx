@@ -6,6 +6,7 @@ import { GripVertical, MoreVertical } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
+import { useColorSettings } from '@/hooks/useColorSettings';
 import { isSeriesBasedSport } from '@/constants/moveframe.constants';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 import MoveframesSection from './MoveframesSection';
@@ -81,9 +82,14 @@ export default function WorkoutTable({
 }: WorkoutTableProps) {
   // Get sport icon type from user settings
   const iconType = useSportIconType();
+  const { colors, getBorderStyle } = useColorSettings();
   
   // Track if user clicked the workout number to expand all movelaps
   const [autoExpandAllMovelaps, setAutoExpandAllMovelaps] = React.useState(false);
+
+  // Hover popup state for main/secondary work
+  const [hoveredMoveframe, setHoveredMoveframe] = React.useState<any>(null);
+  const [popupPosition, setPopupPosition] = React.useState<{ x: number; y: number } | null>(null);
 
   // Dropdown state management
   const {
@@ -156,9 +162,10 @@ export default function WorkoutTable({
       totals.series += moveframeRepetitions;
       
       if (isSeries) {
-        // For series-based sports: also calculate total reps (series × reps per series)
-        const repsPerSeries = mf.movelaps?.[0]?.reps || 0;
-        totals.repetitions += moveframeRepetitions * (parseInt(repsPerSeries) || 0);
+        // For series-based sports: sum actual reps from all movelaps (each series can have different reps)
+        (mf.movelaps || []).forEach((lap: any) => {
+          totals.repetitions += parseInt(lap.reps) || 0;
+        });
       } else {
         // For distance-based sports: sum distances and duration from movelaps
         (mf.movelaps || []).forEach((lap: any) => {
@@ -204,34 +211,46 @@ export default function WorkoutTable({
         const totals = sportMap.get(sportName);
         const isSeries = isSeriesBasedSport(sportName);
         
-        // Find all moveframes of this sport across ALL workouts in the day
+        // Find all moveframes of this sport in THIS workout only (not all workouts in the day)
         const allMoveframesOfSport: any[] = [];
-        day.workouts?.forEach((w: any) => {
-          if (w.moveframes) {
-            w.moveframes.forEach((mf: any) => {
+        if (workout.moveframes) {
+          workout.moveframes.forEach((mf: any) => {
               if (mf.sport === sportName) {
                 allMoveframesOfSport.push(mf);
               }
             });
           }
-        });
 
         // Find explicitly set main/secondary work
         let mainWork = allMoveframesOfSport.find((mf: any) => mf.workType === 'MAIN');
         let secondaryWork = allMoveframesOfSport.find((mf: any) => mf.workType === 'SECONDARY');
+        
+        // Debug logging
+        console.log(`🔍 Sport ${sportName} - ${allMoveframesOfSport.length} moveframes:`, 
+          allMoveframesOfSport.map(mf => ({
+            letter: mf.letter,
+            workType: mf.workType,
+            description: mf.description?.substring(0, 30)
+          }))
+        );
+        console.log(`   Main work found:`, mainWork ? `${mainWork.letter} (${mainWork.workType})` : 'None');
+        console.log(`   Secondary work found:`, secondaryWork ? `${secondaryWork.letter} (${secondaryWork.workType})` : 'None');
         
         // Apply automatic fallback logic if no explicit main work is set
         if (!mainWork && allMoveframesOfSport.length > 0) {
           if (allMoveframesOfSport.length === 1) {
             // Only 1 moveframe → it becomes main work
             mainWork = allMoveframesOfSport[0];
+            console.log(`   ⚠️ Fallback: 1 moveframe, using ${mainWork.letter} as main work`);
           } else if (allMoveframesOfSport.length >= 2) {
             // 2+ moveframes → 2nd moveframe becomes main work
             mainWork = allMoveframesOfSport[1];
+            console.log(`   ⚠️ Fallback: ${allMoveframesOfSport.length} moveframes, using ${mainWork.letter} (2nd) as main work`);
             
             // If 3+ moveframes → 3rd moveframe becomes secondary work
             if (allMoveframesOfSport.length >= 3 && !secondaryWork) {
               secondaryWork = allMoveframesOfSport[2];
+              console.log(`   ⚠️ Fallback: Using ${secondaryWork.letter} (3rd) as secondary work`);
             }
           }
         }
@@ -244,11 +263,13 @@ export default function WorkoutTable({
           duration: totals ? (isSeries ? totals.repetitions.toString() : formatDuration(totals.durationMinutes)) : '',
           k: totals ? totals.k : '',
           mainWork: mainWork?.description || '',
-          secondaryWork: secondaryWork?.description || ''
+          secondaryWork: secondaryWork?.description || '',
+          mainWorkMoveframe: mainWork || null,
+          secondaryWorkMoveframe: secondaryWork || null
         });
       } else {
         // Empty slot
-        sportsArray.push({ name: '', icon: '', isSeriesBased: false, distance: 0, duration: '', k: '', mainWork: '', secondaryWork: '' });
+        sportsArray.push({ name: '', icon: '', isSeriesBased: false, distance: 0, duration: '', k: '', mainWork: '', secondaryWork: '', mainWorkMoveframe: null, secondaryWorkMoveframe: null });
       }
     }
     
@@ -263,7 +284,8 @@ export default function WorkoutTable({
     ? `${Math.round(workout.completionRate)}% + ${Math.round(workout.bonusRate || 0)}%`
     : '85% + 20%';
 
-  console.log(`🏋️ WorkoutTable rendering for workout ${workout.id}, isExpanded: ${isExpanded}`);
+  // Debug: Log workout rendering (disabled for performance)
+  // console.log(`🏋️ WorkoutTable rendering for workout ${workout.id}, isExpanded: ${isExpanded}`);
 
   return (
       <div 
@@ -271,7 +293,14 @@ export default function WorkoutTable({
         className={`mb-4 ${isDropOver ? 'ring-4 ring-yellow-400 ring-opacity-75 rounded' : ''}`}
       >
         {/* WORKOUT HEADER BAR - Contains title, day info, and action buttons */}
-        <div className="bg-cyan-400 text-white px-4 py-2 rounded-t-lg border border-cyan-500">
+        <div 
+          className="px-4 py-2 rounded-t-lg" 
+          style={{
+            backgroundColor: workoutIndex % 3 === 0 ? colors.workoutHeader : (workoutIndex % 3 === 1 ? colors.workout2Header : colors.workout3Header),
+            color: workoutIndex % 3 === 0 ? colors.workoutHeaderText : (workoutIndex % 3 === 1 ? colors.workout2HeaderText : colors.workout3HeaderText),
+            border: getBorderStyle('workout') || '1px solid #e5e7eb'
+          }}
+        >
           {/* All Controls on Left Side */}
           <div className="flex items-center gap-3 flex-wrap">
             {/* Checkbox */}
@@ -313,7 +342,7 @@ export default function WorkoutTable({
               <span>|</span>
               <span className="font-medium whitespace-nowrap">{day.period?.name || 'No Period'}</span>
               <span>•</span>
-              <span className="whitespace-nowrap">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              <span className="whitespace-nowrap">{new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}</span>
               {day.weather && (
                 <>
                   <span>•</span>
@@ -469,33 +498,55 @@ export default function WorkoutTable({
         
         {/* WORKOUT TABLE CONTAINER - Scrollable wrapper */}
         <div className="overflow-x-auto">
-          <table className="border-collapse bg-white shadow-sm text-sm w-auto">
+          <table 
+            className="border-collapse shadow-sm text-sm" 
+            style={{ 
+              tableLayout: 'auto', 
+              width: 'max-content',
+              backgroundColor: colors.workoutHeader
+            }}
+          >
           {/* COLUMN HEADERS */}
-          <thead className="bg-cyan-400 text-white">
+          <thead 
+            style={{
+              backgroundColor: workoutIndex % 3 === 0 ? colors.workoutHeader : (workoutIndex % 3 === 1 ? colors.workout2Header : colors.workout3Header),
+              color: workoutIndex % 3 === 0 ? colors.workoutHeaderText : (workoutIndex % 3 === 1 ? colors.workout2HeaderText : colors.workout3HeaderText)
+            }}
+          >
             <tr>
               <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '50px' }}>No</th>
               <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '80px' }}>Match</th>
               
               {/* Dynamic headers for each sport */}
               {sports.map((sport, index) => (
-                <React.Fragment key={index}>
-                  <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '160px' }}>Sport</th>
-                  <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '90px' }}>Dist & Time</th>
-                  <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '50px' }}>K</th>
-                  <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '200px' }}>Main work</th>
-                  <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '200px' }}>Secondary work</th>
-                </React.Fragment>
+                  <React.Fragment key={index}>
+                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '120px' }}>Sport</th>
+                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '150px' }}>Dist & Time</th>
+                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '50px' }}>K</th>
+                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '300px' }}>Main work</th>
+                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '300px' }}>Secondary work</th>
+                  </React.Fragment>
               ))}
             </tr>
           </thead>
           
           <tbody>
             {/* WORKOUT DATA ROW - Shows sport totals */}
-            <tr className="bg-blue-50 hover:bg-blue-100">
+            <tr 
+              className="transition-colors hover:opacity-90"
+              style={{
+                backgroundColor: colors.alternateRow,
+                color: colors.alternateRowText
+              }}
+            >
               {/* Workout number column */}
               <td 
                 className="border border-gray-200 px-2 text-xs text-center font-bold align-middle"
-                style={{ backgroundColor: isExpanded ? '#DBEAFE' : '#FEE2E2', height: '60px' }}
+                style={{ 
+                  backgroundColor: isExpanded ? colors.selectedRow : colors.alternateRow,
+                  color: isExpanded ? colors.selectedRowText : colors.alternateRowText,
+                  height: '60px' 
+                }}
               >
                 <span className="text-gray-600 select-none">{workoutIndex + 1}</span>
               </td>
@@ -504,7 +555,7 @@ export default function WorkoutTable({
               </td>
               
               {/* Sport 1 */}
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '120px', height: '60px' }}>
                 <div className="flex items-center justify-center gap-2">
                   {sports[0].icon && (useImageIcons ? 
                     <img src={sports[0].icon} alt={sports[0].name} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
@@ -513,22 +564,52 @@ export default function WorkoutTable({
                   <span className="font-medium whitespace-nowrap">{sports[0].name}</span>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '150px', height: '60px' }}>
                 <div className="text-[10px] leading-tight">
                   <div className="text-red-600 font-semibold">{sports[0].distance > 0 ? sports[0].distance : ''}</div>
                   <div className="mt-1">{sports[0].duration}</div>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>{sports[0].k}</td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle" style={{ width: '200px', height: '60px' }}>
-                <div className="line-clamp-2 leading-tight">{sports[0].mainWork}</div>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[0].k}</td>
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
+                onMouseEnter={(e) => {
+                  if (sports[0].mainWorkMoveframe) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredMoveframe(sports[0].mainWorkMoveframe);
+                    setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredMoveframe(null);
+                  setPopupPosition(null);
+                }}
+              >
+                <div className="line-clamp-2 leading-tight">
+                  {sports[0].mainWork && sports[0].mainWork.includes('<') ? (
+                    <div dangerouslySetInnerHTML={{ __html: sports[0].mainWork }} />
+                  ) : (
+                    sports[0].mainWork
+                  )}
+                </div>
               </td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle" style={{ width: '200px', height: '60px' }}>
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
+                onMouseEnter={(e) => {
+                  if (sports[0].secondaryWorkMoveframe) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredMoveframe(sports[0].secondaryWorkMoveframe);
+                    setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredMoveframe(null);
+                  setPopupPosition(null);
+                }}
+              >
                 <div className="line-clamp-2 leading-tight">{sports[0].secondaryWork}</div>
               </td>
               
               {/* Sport 2 */}
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '120px', height: '60px' }}>
                 <div className="flex items-center justify-center gap-2">
                   {sports[1].icon && (useImageIcons ? 
                     <img src={sports[1].icon} alt={sports[1].name} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
@@ -537,22 +618,52 @@ export default function WorkoutTable({
                   <span className="font-medium whitespace-nowrap">{sports[1].name}</span>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '150px', height: '60px' }}>
                 <div className="text-[10px] leading-tight">
                   <div className="text-red-600 font-semibold">{sports[1].distance > 0 ? sports[1].distance : ''}</div>
                   <div className="mt-1">{sports[1].duration}</div>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>{sports[1].k}</td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle" style={{ width: '200px', height: '60px' }}>
-                <div className="line-clamp-2 leading-tight">{sports[1].mainWork}</div>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[1].k}</td>
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
+                onMouseEnter={(e) => {
+                  if (sports[1].mainWorkMoveframe) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredMoveframe(sports[1].mainWorkMoveframe);
+                    setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredMoveframe(null);
+                  setPopupPosition(null);
+                }}
+              >
+                <div className="line-clamp-2 leading-tight">
+                  {sports[1].mainWork && sports[1].mainWork.includes('<') ? (
+                    <div dangerouslySetInnerHTML={{ __html: sports[1].mainWork }} />
+                  ) : (
+                    sports[1].mainWork
+                  )}
+                </div>
               </td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle" style={{ width: '200px', height: '60px' }}>
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
+                onMouseEnter={(e) => {
+                  if (sports[1].secondaryWorkMoveframe) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredMoveframe(sports[1].secondaryWorkMoveframe);
+                    setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredMoveframe(null);
+                  setPopupPosition(null);
+                }}
+              >
                 <div className="line-clamp-2 leading-tight">{sports[1].secondaryWork}</div>
               </td>
               
               {/* Sport 3 */}
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '120px', height: '60px' }}>
                 <div className="flex items-center justify-center gap-2">
                   {sports[2].icon && (useImageIcons ? 
                     <img src={sports[2].icon} alt={sports[2].name} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
@@ -561,22 +672,52 @@ export default function WorkoutTable({
                   <span className="font-medium whitespace-nowrap">{sports[2].name}</span>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '150px', height: '60px' }}>
                 <div className="text-[10px] leading-tight">
                   <div className="text-red-600 font-semibold">{sports[2].distance > 0 ? sports[2].distance : ''}</div>
                   <div className="mt-1">{sports[2].duration}</div>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>{sports[2].k}</td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle" style={{ width: '200px', height: '60px' }}>
-                <div className="line-clamp-2 leading-tight">{sports[2].mainWork}</div>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[2].k}</td>
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
+                onMouseEnter={(e) => {
+                  if (sports[2].mainWorkMoveframe) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredMoveframe(sports[2].mainWorkMoveframe);
+                    setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredMoveframe(null);
+                  setPopupPosition(null);
+                }}
+              >
+                <div className="line-clamp-2 leading-tight">
+                  {sports[2].mainWork && sports[2].mainWork.includes('<') ? (
+                    <div dangerouslySetInnerHTML={{ __html: sports[2].mainWork }} />
+                  ) : (
+                    sports[2].mainWork
+                  )}
+                </div>
               </td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle" style={{ width: '200px', height: '60px' }}>
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
+                onMouseEnter={(e) => {
+                  if (sports[2].secondaryWorkMoveframe) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredMoveframe(sports[2].secondaryWorkMoveframe);
+                    setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredMoveframe(null);
+                  setPopupPosition(null);
+                }}
+              >
                 <div className="line-clamp-2 leading-tight">{sports[2].secondaryWork}</div>
               </td>
               
               {/* Sport 4 */}
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '120px', height: '60px' }}>
                 <div className="flex items-center justify-center gap-2">
                   {sports[3].icon && (useImageIcons ? 
                     <img src={sports[3].icon} alt={sports[3].name} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
@@ -585,17 +726,47 @@ export default function WorkoutTable({
                   <span className="font-medium whitespace-nowrap">{sports[3].name}</span>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '150px', height: '60px' }}>
                 <div className="text-[10px] leading-tight">
                   <div className="text-red-600 font-semibold">{sports[3].distance > 0 ? sports[3].distance : ''}</div>
                   <div className="mt-1">{sports[3].duration}</div>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ height: '60px' }}>{sports[3].k}</td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle" style={{ width: '200px', height: '60px' }}>
-                <div className="line-clamp-2 leading-tight">{sports[3].mainWork}</div>
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[3].k}</td>
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
+                onMouseEnter={(e) => {
+                  if (sports[3].mainWorkMoveframe) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredMoveframe(sports[3].mainWorkMoveframe);
+                    setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredMoveframe(null);
+                  setPopupPosition(null);
+                }}
+              >
+                <div className="line-clamp-2 leading-tight">
+                  {sports[3].mainWork && sports[3].mainWork.includes('<') ? (
+                    <div dangerouslySetInnerHTML={{ __html: sports[3].mainWork }} />
+                  ) : (
+                    sports[3].mainWork
+                  )}
+                </div>
               </td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle" style={{ width: '200px', height: '60px' }}>
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
+                onMouseEnter={(e) => {
+                  if (sports[3].secondaryWorkMoveframe) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setHoveredMoveframe(sports[3].secondaryWorkMoveframe);
+                    setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredMoveframe(null);
+                  setPopupPosition(null);
+                }}
+              >
                 <div className="line-clamp-2 leading-tight">{sports[3].secondaryWork}</div>
               </td>
             </tr>
@@ -628,6 +799,155 @@ export default function WorkoutTable({
             columnSettings={columnSettings}
           />
         </div>
+      )}
+
+      {/* Hover Popup for Main/Secondary Work */}
+      {hoveredMoveframe && popupPosition && ReactDOM.createPortal(
+        <div 
+          className="fixed z-[9999] bg-white border-2 border-blue-500 rounded-lg shadow-2xl p-4 max-w-md animate-fadeIn"
+          style={{
+            left: `${popupPosition.x}px`,
+            top: `${popupPosition.y - 10}px`,
+            transform: 'translate(-50%, -100%)',
+            pointerEvents: 'none'
+          }}
+        >
+          <div className="text-xs space-y-2">
+            {/* Moveframe Letter */}
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+              <div 
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                style={{ backgroundColor: hoveredMoveframe.section?.color || '#6366f1' }}
+              >
+                {hoveredMoveframe.letter || 'A'}
+              </div>
+              <div>
+                <div className="font-bold text-sm text-gray-900">{hoveredMoveframe.sport || 'Unknown'}</div>
+                <div className="text-xs text-gray-500">{hoveredMoveframe.section?.name || 'Section'}</div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <div className="font-semibold text-gray-700 mb-1">Description:</div>
+              <div className="text-gray-900 bg-gray-50 p-2 rounded max-h-[150px] overflow-y-auto">
+                {hoveredMoveframe.description ? (
+                  <div dangerouslySetInnerHTML={{ __html: hoveredMoveframe.description }} />
+                ) : (
+                  'No description'
+                )}
+              </div>
+            </div>
+
+            {/* All Moveframe Details */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Repetitions */}
+              {hoveredMoveframe.repetitions && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Repetitions</span>
+                  <span className="font-semibold text-blue-600">{hoveredMoveframe.repetitions}</span>
+                </div>
+              )}
+
+              {/* Movelaps Count */}
+              <div className="flex flex-col">
+                <span className="text-gray-500 text-[10px]">Movelaps</span>
+                <span className="font-semibold text-purple-600">
+                  {hoveredMoveframe.movelaps?.length || 0}
+                </span>
+              </div>
+
+              {/* Pause */}
+              {hoveredMoveframe.pause && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Pause</span>
+                  <span className="font-semibold text-orange-600">{hoveredMoveframe.pause}</span>
+                </div>
+              )}
+
+              {/* Macro Rest */}
+              {hoveredMoveframe.macroRest && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Macro Rest</span>
+                  <span className="font-semibold text-orange-600">{hoveredMoveframe.macroRest}</span>
+                </div>
+              )}
+
+              {/* Macro Final */}
+              {hoveredMoveframe.macroFinal && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Macro Final</span>
+                  <span className="font-semibold text-green-600">{hoveredMoveframe.macroFinal}</span>
+                </div>
+              )}
+
+              {/* Alarm */}
+              {hoveredMoveframe.alarm && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Alarm</span>
+                  <span className="font-semibold text-red-600">{hoveredMoveframe.alarm}</span>
+                </div>
+              )}
+
+              {/* Code */}
+              {hoveredMoveframe.code && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Code</span>
+                  <span className="font-semibold text-gray-700 font-mono text-[10px]">{hoveredMoveframe.code}</span>
+                </div>
+              )}
+
+              {/* Total Distance */}
+              {hoveredMoveframe.totalDistance > 0 && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Total Distance</span>
+                  <span className="font-semibold text-blue-600">{hoveredMoveframe.totalDistance}m</span>
+                </div>
+              )}
+
+              {/* Total Reps */}
+              {hoveredMoveframe.totalReps > 0 && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Total Reps</span>
+                  <span className="font-semibold text-purple-600">{hoveredMoveframe.totalReps}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Notes */}
+            {hoveredMoveframe.notes && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="font-semibold text-gray-700 mb-1 text-[10px]">Notes:</div>
+                <div className="text-gray-900 bg-yellow-50 p-2 rounded text-[10px]">
+                  {hoveredMoveframe.notes}
+                </div>
+              </div>
+            )}
+
+            {/* Movelaps Details */}
+            {hoveredMoveframe.movelaps && hoveredMoveframe.movelaps.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="font-semibold text-gray-700 mb-1 text-[10px]">Movelaps ({hoveredMoveframe.movelaps.length}):</div>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {hoveredMoveframe.movelaps.map((lap: any, idx: number) => (
+                    <div key={idx} className="bg-gray-50 p-1.5 rounded text-[10px]">
+                      <div className="font-semibold text-gray-700">#{idx + 1}</div>
+                      <div className="grid grid-cols-2 gap-1 text-[9px]">
+                        {lap.distance && <div>Distance: <span className="font-semibold">{lap.distance}m</span></div>}
+                        {lap.reps && <div>Reps: <span className="font-semibold">{lap.reps}</span></div>}
+                        {lap.time && <div>Time: <span className="font-semibold">{lap.time}</span></div>}
+                        {lap.pace && <div>Pace: <span className="font-semibold">{lap.pace}</span></div>}
+                        {lap.speed && <div>Speed: <span className="font-semibold">{lap.speed}</span></div>}
+                        {lap.pause && <div>Pause: <span className="font-semibold">{lap.pause}</span></div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

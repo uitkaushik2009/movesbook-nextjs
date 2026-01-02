@@ -60,6 +60,20 @@ export async function POST(request: NextRequest) {
     const dayOfWeek = dayDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const adjustedDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek; // Convert to 1-7 (Monday-Sunday)
 
+    // Determine storageZone based on the workout plan type
+    const plan = await prisma.workoutPlan.findUnique({
+      where: { id: workoutPlanId },
+      select: { type: true }
+    });
+
+    let storageZone: 'A' | 'B' | 'C' | 'D' = 'B';
+    if (plan) {
+      if (plan.type === 'TEMPLATE_WEEKS') storageZone = 'A';
+      else if (plan.type === 'YEARLY_PLAN') storageZone = 'B';
+      else if (plan.type === 'WORKOUTS_DONE') storageZone = 'C';
+      else if (plan.type === 'ARCHIVE') storageZone = 'D';
+    }
+
     // Create the day
     const day = await prisma.workoutDay.create({
       data: {
@@ -69,6 +83,7 @@ export async function POST(request: NextRequest) {
         weekNumber,
         dayOfWeek: adjustedDayOfWeek,
         periodId: finalPeriodId,
+        storageZone,
         weather: '',
         feelingStatus: '5',
         notes: ''

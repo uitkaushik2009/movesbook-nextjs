@@ -362,39 +362,65 @@ export default function FavouritesSettings() {
 
   const handlePasswordSubmit = async () => {
     if (!superAdminPassword.trim()) {
-      alert('❌ Please enter Super Admin password');
+      alert('❌ Please enter your password');
       return;
     }
 
     try {
+      // Verify user password
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        alert('❌ Please login to save settings');
+        return;
+      }
+      
+      const verifyResponse = await fetch('/api/user/verify-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ password: superAdminPassword })
+      });
+
+      const verifyData = await verifyResponse.json();
+      
+      if (!verifyData.valid) {
+        alert(`❌ Invalid password`);
+        return;
+      }
+
       const favouritesData = {
         weeklyPlans,
         workouts,
         moveframes
       };
 
-      const response = await fetch('/api/admin/favourites-defaults/save', {
+      // Save to user's personal settings
+      const response = await fetch('/api/user/settings/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
-          language: selectedLanguage,
-          favouritesData,
-          password: superAdminPassword
+          favouritesSettings: favouritesData
         })
       });
 
       const data = await response.json();
       
       if (response.ok) {
-        alert(`✅ Default favourites saved for ${supportedLanguages.find(l => l.code === selectedLanguage)?.name}!`);
+        alert('✅ Personal favourites saved successfully!');
         setShowPasswordDialog(false);
         setSuperAdminPassword('');
       } else {
-        alert(`❌ ${data.error || 'Failed to save defaults'}`);
+        alert(`❌ ${data.error || 'Failed to save settings'}`);
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('❌ Error saving defaults');
+      alert('❌ Error saving settings');
     }
   };
 
@@ -1535,20 +1561,21 @@ export default function FavouritesSettings() {
         </div>
       )}
 
-      {/* Super Admin Password Dialog */}
+      {/* User Password Dialog */}
       {showPasswordDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full">
-            <h3 className="text-xl font-semibold mb-4">🔐 Super Admin Authentication</h3>
+            <h3 className="text-xl font-semibold mb-4">🔐 Confirm Your Identity</h3>
             <p className="text-gray-600 mb-4">
-              You are about to save default favourites for <strong>{supportedLanguages.find(l => l.code === selectedLanguage)?.name}</strong>.
+              Please enter your password to confirm and save your <strong>personal favourites</strong>.
             </p>
-            <p className="text-sm text-gray-500 mb-4">
-              These favourites will be automatically loaded when users select this language for the first time.
-            </p>
+            <div className="text-sm text-blue-700 bg-blue-50 p-3 rounded-lg mb-4">
+              <p><strong>💾 Saving Your Personal Favourites:</strong></p>
+              <p className="mt-1">These favourites will be saved to your account only and will not affect other users.</p>
+            </div>
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Super Admin Password:
+                Your Password:
               </label>
               <input
                 type="password"
@@ -1556,16 +1583,16 @@ export default function FavouritesSettings() {
                 onChange={(e) => setSuperAdminPassword(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
                 placeholder="Enter password"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
               />
             </div>
             <div className="flex gap-3">
               <button
                 onClick={handlePasswordSubmit}
-                className="flex-1 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-semibold"
+                className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
               >
-                Save Defaults
+                Save My Favourites
               </button>
               <button
                 onClick={() => {

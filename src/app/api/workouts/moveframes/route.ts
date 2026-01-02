@@ -34,7 +34,8 @@ export async function POST(request: NextRequest) {
       annotationBgColor,
       annotationTextColor,
       annotationBold,
-      movelaps
+      movelaps,
+      manualMode
     } = body;
     
     // Validate required fields
@@ -46,15 +47,17 @@ export async function POST(request: NextRequest) {
       console.error('Missing sport');
       return NextResponse.json({ error: 'sport is required' }, { status: 400 });
     }
-    // Movelaps are required for all types
-    if (!movelaps || !Array.isArray(movelaps) || movelaps.length === 0) {
+    // Movelaps are required for all types EXCEPT ANNOTATION and manual mode
+    if (type !== 'ANNOTATION' && !manualMode && (!movelaps || !Array.isArray(movelaps) || movelaps.length === 0)) {
       console.error('Invalid movelaps:', movelaps);
       return NextResponse.json({ error: 'movelaps must be a non-empty array' }, { status: 400 });
     }
     
     console.log('Validated - workoutSessionId:', workoutSessionId);
     console.log('Validated - sport:', sport);
-    console.log('Validated - movelaps count:', movelaps.length);
+    console.log('Validated - type:', type);
+    console.log('Validated - manualMode:', manualMode);
+    console.log('Validated - movelaps count:', movelaps?.length || 0);
 
     // Ensure we have a valid sectionId - create default section if needed
     let finalSectionId = sectionId;
@@ -104,6 +107,7 @@ export async function POST(request: NextRequest) {
       notes: notes || null,
       macroFinal: macroFinal || null,
       alarm: alarm ? parseInt(alarm) : null,
+      manualMode: manualMode || false,
       annotationText: annotationText || null,
       annotationBgColor: annotationBgColor || null,
       annotationTextColor: annotationTextColor || null,

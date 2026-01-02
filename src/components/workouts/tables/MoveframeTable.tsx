@@ -4,6 +4,7 @@ import React from 'react';
 import { Settings, GripVertical } from 'lucide-react';
 import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useTableColumns } from '@/hooks/useTableColumns';
+import { useColorSettings } from '@/hooks/useColorSettings';
 import TableColumnConfig from '../TableColumnConfig';
 
 interface MoveframeTableProps {
@@ -40,6 +41,7 @@ export default function MoveframeTable({
     setIsConfigModalOpen,
     columns
   } = useTableColumns('moveframe');
+  const { colors, getBorderStyle } = useColorSettings();
 
   // Draggable hook for moveframe dragging
   const {
@@ -126,42 +128,73 @@ export default function MoveframeTable({
   return (
     <>
       <div className="mb-2 ml-4">
-        <table className="border-collapse bg-purple-50 shadow-sm text-sm" style={{ tableLayout: 'fixed', width: '900px' }}>
+        <table 
+          className="border-collapse shadow-sm text-sm" 
+          style={{ 
+            tableLayout: 'fixed', 
+            width: '900px',
+            backgroundColor: colors.moveframeHeader,
+            border: getBorderStyle('moveframe') || '1px solid #e5e7eb'
+          }}
+        >
           {/* Title Row */}
-          <thead className="bg-purple-200">
+          <thead style={{ backgroundColor: colors.moveframeHeader }}>
             <tr>
-              <th colSpan={visibleColumnCount + 1} className="border border-gray-200 px-2 py-1 text-left text-sm">
+              <th colSpan={visibleColumnCount + 1} className="border border-gray-200 px-2 py-1 text-left text-sm" style={{ color: colors.moveframeHeaderText }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={onToggleExpand}
-                      className="text-purple-700 hover:bg-purple-300 rounded p-1"
+                      className="hover:opacity-70 rounded p-1"
+                      style={{ color: colors.moveframeHeaderText }}
                     >
                       {isExpanded ? '▼' : '►'}
                     </button>
                   <span className="font-bold text-sm">
                     Moveframes of workout #{workoutIndex + 1}
                   </span>
-                  <span className="text-purple-700 ml-2 text-sm">
-                    {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                  <span className="ml-2 text-sm" style={{ color: colors.moveframeHeaderText }}>
+                    {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="font-bold text-xs">Options:</span>
+                  <span className="font-bold text-xs" style={{ color: colors.moveframeHeaderText }}>Options:</span>
                   <div className="flex gap-1">
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
                           onEdit();
                         }}
-                        className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                        className="px-2 py-1 text-xs rounded transition-colors"
+                        style={{
+                          backgroundColor: colors.buttonEdit,
+                          color: colors.buttonEditHeaderText
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonEditHover}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonEdit}
                       >
                         MF Info
                       </button>
-                      <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                      <button 
+                        className="px-2 py-1 text-xs rounded transition-colors"
+                        style={{
+                          backgroundColor: colors.buttonAdd,
+                          color: colors.buttonAddHeaderText
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonAddHover}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonAdd}
+                      >
                         Copy
                       </button>
-                      <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                      <button 
+                        className="px-2 py-1 text-xs rounded transition-colors"
+                        style={{
+                          backgroundColor: colors.buttonAdd,
+                          color: colors.buttonAddHeaderText
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonAddHover}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonAdd}
+                      >
                         Move
                       </button>
                       <button 
@@ -169,7 +202,13 @@ export default function MoveframeTable({
                           e.stopPropagation();
                           onDelete();
                         }}
-                        className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                        className="px-2 py-1 text-xs rounded transition-colors"
+                        style={{
+                          backgroundColor: colors.buttonDelete,
+                          color: colors.buttonDeleteHeaderText
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonDeleteHover}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonDelete}
                       >
                         Del
                       </button>
@@ -177,7 +216,11 @@ export default function MoveframeTable({
                 </div>
                   <button
                     onClick={() => setIsConfigModalOpen(true)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-purple-300 hover:bg-purple-400 rounded"
+                    className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-opacity hover:opacity-80"
+                    style={{
+                      backgroundColor: colors.buttonPrint,
+                      color: colors.buttonPrintHeaderText
+                    }}
                     title="Configure columns"
                   >
                     <Settings size={14} />
@@ -187,7 +230,7 @@ export default function MoveframeTable({
               </th>
             </tr>
             {/* Column Headers */}
-            <tr className="bg-purple-300">
+            <tr style={{ backgroundColor: colors.moveframeHeader, filter: 'brightness(0.95)' }}>
               {/* Drag Handle Header */}
               <th 
                 className="border border-gray-200 px-1 py-1 text-center text-xs font-bold w-6"

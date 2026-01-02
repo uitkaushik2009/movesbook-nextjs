@@ -17,6 +17,8 @@ export interface SportSummary {
   descriptions?: string[]; // All moveframe descriptions
   mainWork?: string; // Main work moveframe description
   secondaryWork?: string; // Secondary work moveframe description
+  mainWorkMoveframe?: any | null; // Full main work moveframe object
+  secondaryWorkMoveframe?: any | null; // Full secondary work moveframe object
 }
 
 /**
@@ -35,7 +37,7 @@ export function calculateSportSummaries(
     return [];
   }
 
-  const sportMap = new Map<string, SportSummary & { series: number; repetitions: number; descriptions: string[]; mainWork: string; secondaryWork: string; moveframes: any[] }>();
+  const sportMap = new Map<string, SportSummary & { series: number; repetitions: number; descriptions: string[]; mainWork: string; secondaryWork: string; moveframes: any[]; mainWorkMoveframe: any | null; secondaryWorkMoveframe: any | null }>();
 
   day.workouts.forEach((workout: any) => {
     if (workout.moveframes) {
@@ -59,7 +61,9 @@ export function calculateSportSummaries(
             descriptions: [],
             mainWork: '',
             secondaryWork: '',
-            moveframes: []
+            moveframes: [],
+            mainWorkMoveframe: null,
+            secondaryWorkMoveframe: null
           });
         }
 
@@ -73,14 +77,21 @@ export function calculateSportSummaries(
           summary.descriptions.push(moveframe.description);
         }
         
-        // Set main work description if this moveframe is marked as MAIN
+        // Debug: Log moveframe workType
+        console.log(`   📋 Moveframe ${moveframe.letter || '?'} - Sport: ${moveframe.sport}, workType: ${moveframe.workType || 'undefined'}`);
+        
+        // Set main work description and moveframe object if this moveframe is marked as MAIN
         if (moveframe.workType === 'MAIN' && moveframe.description) {
           summary.mainWork = moveframe.description;
+          summary.mainWorkMoveframe = moveframe;
+          console.log(`   ✅ Set as MAIN work for ${moveframe.sport}`);
         }
         
-        // Set secondary work description if this moveframe is marked as SECONDARY
+        // Set secondary work description and moveframe object if this moveframe is marked as SECONDARY
         if (moveframe.workType === 'SECONDARY' && moveframe.description) {
           summary.secondaryWork = moveframe.description;
+          summary.secondaryWorkMoveframe = moveframe;
+          console.log(`   ✅ Set as SECONDARY work for ${moveframe.sport}`);
         }
         
         // For ALL sports: sum the repetitions/series from each moveframe
@@ -116,9 +127,11 @@ export function calculateSportSummaries(
       if (moveframes.length === 1) {
         // Only 1 moveframe → it becomes main work
         summary.mainWork = moveframes[0].description || '';
+        summary.mainWorkMoveframe = moveframes[0];
       } else if (moveframes.length >= 2) {
         // 2+ moveframes → 2nd moveframe becomes main work
         summary.mainWork = moveframes[1].description || '';
+        summary.mainWorkMoveframe = moveframes[1];
       }
     }
     
@@ -126,6 +139,7 @@ export function calculateSportSummaries(
     if (!summary.secondaryWork && moveframes.length >= 3) {
       // 3+ moveframes → 3rd moveframe becomes secondary work
       summary.secondaryWork = moveframes[2].description || '';
+      summary.secondaryWorkMoveframe = moveframes[2];
     }
   });
 

@@ -49,20 +49,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate sports array
-    if (!sports || !Array.isArray(sports) || sports.length === 0) {
-      return NextResponse.json(
-        { error: 'At least one sport is required' },
-        { status: 400 }
-      );
-    }
-
-    if (sports.length > 4) {
+    // Validate sports array (if provided)
+    // NOTE: Sports are now optional - they will be auto-loaded from moveframes
+    if (sports && Array.isArray(sports) && sports.length > 4) {
       return NextResponse.json(
         { error: 'Maximum 4 sports allowed per workout' },
         { status: 400 }
       );
     }
+    
+    // Ensure sports is always an array (even if empty)
+    const sportsList = sports && Array.isArray(sports) ? sports.filter(s => s) : [];
 
     // Check existing workouts for this day
     const existingWorkouts = await prisma.workoutSession.findMany({
@@ -132,7 +129,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create workout session with sports
+    // Create workout session with sports (if any)
     const session = await prisma.workoutSession.create({
       data: {
         workoutDayId,
@@ -143,11 +140,13 @@ export async function POST(request: NextRequest) {
         location: location || '',
         notes: notes || (includeStretching ? `${symbol || ''} Includes stretching` : symbol || ''),
         status: status as any || 'PLANNED_FUTURE',
-        sports: {
-          create: sports.map((sport: string) => ({
-            sport: sport as any
-          }))
-        }
+        ...(sportsList.length > 0 && {
+          sports: {
+            create: sportsList.map((sport: string) => ({
+              sport: sport as any
+            }))
+          }
+        })
       },
       include: {
         moveframes: {

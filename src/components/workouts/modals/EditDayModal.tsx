@@ -56,12 +56,20 @@ export default function EditDayModal({
   const getPeriodInfo = () => {
     console.log('🔍 Getting period info...');
     console.log('  - day.periodId:', day.periodId);
-    console.log('  - day.periodName:', day.periodName);
-    console.log('  - day.periodColor:', day.periodColor);
+    console.log('  - day.period:', day.period);
     
-    // First try to get from day's direct properties
+    // First try to get from day.period (nested object from Prisma)
+    if (day.period && day.period.name && day.period.color) {
+      console.log('✅ Using nested period object');
+      return {
+        name: day.period.name,
+        color: day.period.color
+      };
+    }
+    
+    // Fallback: try flat properties (backward compatibility)
     if (day.periodName && day.periodColor) {
-      console.log('✅ Using direct properties');
+      console.log('✅ Using flat properties');
       return {
         name: day.periodName,
         color: day.periodColor

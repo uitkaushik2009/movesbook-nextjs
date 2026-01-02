@@ -2,6 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
+import { DISTANCE_BASED_SPORTS } from '@/constants/moveframe.constants';
 
 interface WeekTotalsModalProps {
   isOpen: boolean;
@@ -36,6 +37,73 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
     return `0:${mins.toString().padStart(2, '0')}`;
   };
 
+  // Calculate daily summaries - each sport gets its own row
+  const calculateDailySummaries = () => {
+    if (!week || !week.days) return [];
+
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const rows: any[] = [];
+    
+    week.days.forEach((day: any, index: number) => {
+      const workoutsCount = day.workouts?.length || 0;
+      
+      // Group data by sport for this day
+      const sportDataMap = new Map<string, { distance: number; series: number }>();
+      
+      day.workouts?.forEach((workout: any) => {
+        workout.moveframes?.forEach((mf: any) => {
+          const sport = mf.sport || 'UNKNOWN';
+          
+          if (!sportDataMap.has(sport)) {
+            sportDataMap.set(sport, { distance: 0, series: 0 });
+          }
+          
+          const sportData = sportDataMap.get(sport)!;
+          const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
+          
+          if (isDistanceBased) {
+            mf.movelaps?.forEach((lap: any) => {
+              sportData.distance += parseInt(lap.distance) || 0;
+            });
+          } else {
+            // For series-based sports, count total reps/series
+            sportData.series += mf.movelaps?.length || 0;
+          }
+        });
+      });
+
+      const dayName = dayNames[index] || `Day ${index + 1}`;
+      
+      // If day has sports, create a row for each sport
+      if (sportDataMap.size > 0) {
+        const sportsArray = Array.from(sportDataMap.entries());
+        sportsArray.forEach(([sport, data], sportIndex) => {
+          const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
+          rows.push({
+            dayName: sportIndex === 0 ? dayName : '', // Only show day name on first row
+            workoutsCount: sportIndex === 0 ? workoutsCount : null, // Only show workout count on first row
+            sport: sport.replace(/_/g, ' '),
+            totalDistance: isDistanceBased ? data.distance : null,
+            totalSeries: !isDistanceBased ? data.series : null,
+            rowSpan: sportIndex === 0 ? sportsArray.length : 0 // For potential rowspan usage
+          });
+        });
+      } else {
+        // Day with no workouts
+        rows.push({
+          dayName,
+          workoutsCount: 0,
+          sport: '—',
+          totalDistance: null,
+          totalSeries: null,
+          rowSpan: 1
+        });
+      }
+    });
+    
+    return rows;
+  };
+
   // Calculate totals by sport
   const calculateWeekTotals = () => {
     const sportMap = new Map<string, { 
@@ -43,6 +111,7 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
       durationMinutes: number; 
       moveframeCount: number;
       workoutCount: number;
+      totalSeries: number;
     }>();
 
     let totalWorkouts = 0;
@@ -71,7 +140,8 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
               distance: 0, 
               durationMinutes: 0, 
               moveframeCount: 0,
-              workoutCount: 0
+              workoutCount: 0,
+              totalSeries: 0
             });
           }
         });
@@ -82,20 +152,28 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
             distance: 0, 
             durationMinutes: 0, 
             moveframeCount: 0,
-            workoutCount: 0
+            workoutCount: 0,
+            totalSeries: 0
           };
 
           totalMoveframes++;
           currentTotals.moveframeCount += 1;
 
+          const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
+
           (mf.movelaps || []).forEach((lap: any) => {
-            const distance = parseInt(lap.distance) || 0;
-            const duration = parseFloat(lap.time) || 0;
-            
-            currentTotals.distance += distance;
-            currentTotals.durationMinutes += duration;
-            totalDistance += distance;
-            totalDuration += duration;
+            if (isDistanceBased) {
+              const distance = parseInt(lap.distance) || 0;
+              const duration = parseFloat(lap.time) || 0;
+              
+              currentTotals.distance += distance;
+              currentTotals.durationMinutes += duration;
+              totalDistance += distance;
+              totalDuration += duration;
+            } else {
+              // For series-based sports, count reps/series
+              currentTotals.totalSeries += 1;
+            }
           });
 
           sportMap.set(sport, currentTotals);
@@ -120,6 +198,7 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
   };
 
   const { sportTotals, totalWorkouts, totalMoveframes, totalDistance, totalDuration } = calculateWeekTotals();
+  const dailySummaries = calculateDailySummaries();
 
   const handlePrint = React.useCallback(() => {
     console.log('🖨️ handlePrint called');
@@ -185,7 +264,7 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
           th, td {
             padding: 4pt 5pt;
             border: 1px solid #999;
-            text-align: left;
+            text-align: center;
           }
           th {
             background: #f3f4f6;
@@ -201,6 +280,32 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
           }
           button {
             display: none;
+          }
+          .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12pt;
+          }
+          .bg-blue-600 {
+            background-color: #2563eb !important;
+          }
+          .bg-blue-100 {
+            background-color: #dbeafe !important;
+          }
+          .bg-blue-50 {
+            background-color: #eff6ff !important;
+          }
+          .text-white {
+            color: white !important;
+          }
+          .h-px {
+            height: 1px;
+          }
+          .bg-gray-400 {
+            background-color: #9ca3af !important;
+          }
+          .h-4 {
+            height: 12pt;
           }
         </style>
       </head>
@@ -314,67 +419,110 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
             </div>
           </div>
 
-          {/* Sport Totals Summary Table */}
-          <div className="mb-3 print-summary flex justify-center">
-            <div className="w-full">
-              <h2 className="text-base font-bold text-gray-900 mb-2 border-b border-gray-300 pb-1 text-center">Week Summary by Sport</h2>
-              <table className="border-collapse border border-gray-300 text-sm mx-auto" style={{ width: 'auto', tableLayout: 'fixed' }}>
-              <colgroup>
-                <col style={{ width: '120px' }} />
-                <col style={{ width: '60px' }} />
-                <col style={{ width: '60px' }} />
-                <col style={{ width: '80px' }} />
-                <col style={{ width: '60px' }} />
-              </colgroup>
-              <thead className="bg-gray-200">
-                <tr>
-                  <th className="border border-gray-300 px-2 py-2 text-left font-semibold text-xs">Sport</th>
-                  <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Work</th>
-                  <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">MF</th>
-                  <th className="border border-gray-300 px-1 py-2 text-right font-semibold text-xs">Dist(m)</th>
-                  <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sportTotals.length > 0 ? (
-                  <>
-                    {sportTotals.map((sportData, index) => (
-                      <tr key={index} className="hover:bg-gray-50">
-                        <td className="border border-gray-300 px-2 py-2 font-medium text-xs truncate">
-                          {sportData.sport.replace(/_/g, ' ')}
-                        </td>
-                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">
-                          {sportData.workoutCount}
-                        </td>
-                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">
-                          {sportData.moveframeCount}
-                        </td>
-                        <td className="border border-gray-300 px-1 py-2 text-right text-xs">
-                          {sportData.distance.toLocaleString()}
-                        </td>
-                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">
-                          {formatTime(sportData.durationMinutes)}
-                        </td>
-                      </tr>
-                    ))}
-                    {/* Grand Total Row */}
-                    <tr className="bg-gray-100 font-bold">
-                      <td className="border border-gray-300 px-2 py-2 text-xs">TOTAL</td>
-                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">{totalWorkouts}</td>
-                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">{totalMoveframes}</td>
-                      <td className="border border-gray-300 px-1 py-2 text-right text-xs">{totalDistance.toLocaleString()}</td>
-                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">{formatTime(totalDuration)}</td>
-                    </tr>
-                  </>
-                ) : (
+          {/* Two-Column Summary Layout */}
+          <div className="mb-3 print-summary grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* LEFT: Daily Summary Table */}
+            <div>
+              <h2 className="text-base font-bold text-gray-900 mb-2 border-b border-gray-300 pb-1">Daily Summary</h2>
+              <table className="border-collapse border border-gray-300 text-sm w-full">
+                <thead className="bg-gray-200">
                   <tr>
-                    <td colSpan={5} className="border border-gray-300 px-3 py-3 text-center text-gray-500">
-                      No data available
-                    </td>
+                    <th className="border border-gray-300 px-2 py-2 text-center font-semibold text-xs">Day</th>
+                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">WO</th>
+                    <th className="border border-gray-300 px-2 py-2 text-center font-semibold text-xs">Sport</th>
+                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Dist(m)</th>
+                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Series</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {dailySummaries.map((row, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      {row.dayName && (
+                        <td className="border border-gray-300 px-2 py-2 font-medium text-xs text-center">
+                          {row.dayName}
+                        </td>
+                      )}
+                      {!row.dayName && <td className="border border-gray-300 px-2 py-2 text-xs text-center"></td>}
+                      
+                      {row.workoutsCount !== null ? (
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                          {row.workoutsCount || '—'}
+                        </td>
+                      ) : (
+                        <td className="border border-gray-300 px-1 py-2 text-xs text-center"></td>
+                      )}
+                      
+                      <td className="border border-gray-300 px-2 py-2 text-xs text-center">
+                        {row.sport}
+                      </td>
+                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                        {row.totalDistance !== null ? row.totalDistance.toLocaleString() : '—'}
+                      </td>
+                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                        {row.totalSeries !== null ? row.totalSeries : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* RIGHT: Week Summary by Sport Table */}
+            <div>
+              <h2 className="text-base font-bold text-gray-900 mb-2 border-b border-gray-300 pb-1">Week Summary by Sport</h2>
+              <table className="border-collapse border border-gray-300 text-sm w-full">
+                <thead className="bg-gray-200">
+                  <tr>
+                    <th className="border border-gray-300 px-2 py-2 text-center font-semibold text-xs">Sport</th>
+                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">MF</th>
+                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Dist(m)</th>
+                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Series</th>
+                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sportTotals.length > 0 ? (
+                    <>
+                      {sportTotals.map((sportData, index) => {
+                        const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sportData.sport as any);
+                        return (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="border border-gray-300 px-2 py-2 font-medium text-xs text-center">
+                              {sportData.sport.replace(/_/g, ' ')}
+                            </td>
+                            <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                              {sportData.moveframeCount}
+                            </td>
+                            <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                              {isDistanceBased ? sportData.distance.toLocaleString() : '—'}
+                            </td>
+                            <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                              {!isDistanceBased ? sportData.totalSeries : '—'}
+                            </td>
+                            <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                              {isDistanceBased ? formatTime(sportData.durationMinutes) : '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {/* Grand Total Row */}
+                      <tr className="bg-gray-100 font-bold">
+                        <td className="border border-gray-300 px-2 py-2 text-xs text-center">TOTAL</td>
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">{totalMoveframes}</td>
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">{totalDistance.toLocaleString()}</td>
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">—</td>
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">{formatTime(totalDuration)}</td>
+                      </tr>
+                    </>
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="border border-gray-300 px-3 py-3 text-center text-gray-500">
+                        No data available
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -385,131 +533,146 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
             {week.days.map((day: any, dayIndex: number) => (
               <div key={day.id} className="border-2 border-gray-400 rounded overflow-hidden print-day-section">
                 <div className="px-2 py-1 print-day-header">
-                  <h3 className="font-bold text-sm text-gray-900">
-                    Day {dayIndex + 1}: {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                  <h3 className="font-bold text-sm text-gray-900 text-center">
+                    Day {dayIndex + 1}: {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
                   </h3>
                 </div>
 
                 {day.workouts && day.workouts.length > 0 ? (
-                  <div className="p-1 space-y-2 bg-gray-50">
+                  <div className="p-1 space-y-4 bg-gray-50">
                     {day.workouts.map((workout: any, workoutIndex: number) => (
-                      <div key={workout.id} className="border border-gray-300 rounded bg-white">
-                        <div className="px-2 py-1 flex items-center justify-between">
-                          <span className="font-semibold text-xs text-gray-900">
-                            Workout {workout.sessionNumber}: {workout.name}
-                          </span>
-                          <span className="text-xs text-gray-700 font-medium">{workout.code}</span>
-                        </div>
+                      <React.Fragment key={workout.id}>
+                        {/* Thin separator row between workouts (not before first workout) */}
+                        {workoutIndex > 0 && (
+                          <div className="h-px bg-gray-400 my-2"></div>
+                        )}
+                        
+                        <div className="border border-gray-300 rounded bg-white">
+                          {/* Blue header for workout */}
+                          <div className="px-2 py-1 flex items-center justify-between bg-blue-600">
+                            <span className="font-semibold text-xs text-white">
+                              Workout {workout.sessionNumber}: {workout.name}
+                            </span>
+                            <span className="text-xs text-white font-medium">{workout.code}</span>
+                          </div>
 
-                        {workout.moveframes && workout.moveframes.length > 0 ? (
-                          <div className="overflow-x-auto">
-                            <table className="text-xs border-collapse" style={{ width: 'auto', tableLayout: 'fixed' }}>
-                              <colgroup>
-                                <col style={{ width: '40px' }} />
-                                <col style={{ width: '100px' }} />
-                                <col style={{ width: '80px' }} />
-                                <col style={{ width: '250px' }} />
-                                <col style={{ width: '50px' }} />
-                              </colgroup>
-                              <thead className="bg-purple-200">
-                                <tr>
-                                  <th className="border border-gray-300 px-1 py-1 text-left font-semibold text-xs">MF</th>
-                                  <th className="border border-gray-300 px-1 py-1 text-left font-semibold text-xs">Sport</th>
-                                  <th className="border border-gray-300 px-1 py-1 text-left font-semibold text-xs">Type</th>
-                                  <th className="border border-gray-300 px-1 py-1 text-left font-semibold text-xs">Description</th>
-                                  <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Laps</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {workout.moveframes.map((mf: any) => (
-                                  <React.Fragment key={mf.id}>
-                                    <tr className="hover:bg-gray-50">
-                                      <td className="border border-gray-300 px-1 py-1 font-bold text-center bg-purple-50 text-xs">
-                                        {mf.letter}
-                                      </td>
-                                      <td className="border border-gray-300 px-1 py-1 text-xs truncate">
-                                        {mf.sport.replace(/_/g, ' ')}
-                                      </td>
-                                      <td className="border border-gray-300 px-1 py-1 text-xs">
-                                        {mf.type}
-                                      </td>
-                                      <td className="border border-gray-300 px-1 py-1 text-xs">
-                                        {mf.description}
-                                      </td>
-                                      <td className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">
-                                        {mf.movelaps?.length || 0}
-                                      </td>
-                                    </tr>
-                                    
-                                    {mf.movelaps && mf.movelaps.length > 0 && (
-                                      <tr>
-                                        <td colSpan={5} className="border border-gray-300 p-0">
-                                          <table className="text-xs bg-gray-50" style={{ width: 'auto', tableLayout: 'fixed' }}>
-                                            <colgroup>
-                                              <col style={{ width: '30px' }} />
-                                              <col style={{ width: '60px' }} />
-                                              <col style={{ width: '50px' }} />
-                                              <col style={{ width: '60px' }} />
-                                              <col style={{ width: '80px' }} />
-                                              <col style={{ width: '70px' }} />
-                                              <col style={{ width: '60px' }} />
-                                              <col style={{ width: '60px' }} />
-                                            </colgroup>
-                                            <thead className="bg-gray-200">
-                                              <tr>
-                                                <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">#</th>
-                                                <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Dist</th>
-                                                <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Reps</th>
-                                                <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Speed</th>
-                                                <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Style</th>
-                                                <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Time</th>
-                                                <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Pace</th>
-                                                <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Pause</th>
-                                              </tr>
-                                            </thead>
-                                            <tbody>
-                                              {mf.movelaps.map((ml: any) => (
-                                                <tr key={ml.id} className="bg-white hover:bg-gray-50">
-                                                  <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                                                    {ml.repetitionNumber}
-                                                  </td>
-                                                  <td className="border border-gray-300 px-1 py-1 text-center text-xs truncate">
-                                                    {ml.distance || '—'}
-                                                  </td>
-                                                  <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                                                    {ml.reps || '—'}
-                                                  </td>
-                                                  <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                                                    {ml.speed || '—'}
-                                                  </td>
-                                                  <td className="border border-gray-300 px-1 py-1 text-center text-xs truncate">
-                                                    {ml.style || '—'}
-                                                  </td>
-                                                  <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                                                    {ml.time || '—'}
-                                                  </td>
-                                                  <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                                                    {ml.pace || '—'}
-                                                  </td>
-                                                  <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                                                    {ml.pause || '—'}
-                                                  </td>
-                                                </tr>
-                                              ))}
-                                            </tbody>
-                                          </table>
+                          {workout.moveframes && workout.moveframes.length > 0 ? (
+                            <div className="overflow-x-auto">
+                              <table className="text-xs border-collapse w-full">
+                                <colgroup>
+                                  <col style={{ width: '40px' }} />
+                                  <col style={{ width: '100px' }} />
+                                  <col style={{ width: '80px' }} />
+                                  <col style={{ width: '250px' }} />
+                                  <col style={{ width: '50px' }} />
+                                </colgroup>
+                                <thead className="bg-blue-100">
+                                  <tr>
+                                    <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">MF</th>
+                                    <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Sport</th>
+                                    <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Type</th>
+                                    <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Description</th>
+                                    <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Laps</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {workout.moveframes.map((mf: any, mfIndex: number) => (
+                                    <React.Fragment key={mf.id}>
+                                      {/* Double space between moveframes (not before first) */}
+                                      {mfIndex > 0 && (
+                                        <tr className="h-4">
+                                          <td colSpan={5} className="border-none bg-white"></td>
+                                        </tr>
+                                      )}
+                                      
+                                      <tr className="hover:bg-gray-50">
+                                        <td className="border border-gray-300 px-1 py-1 font-bold text-center bg-blue-50 text-xs">
+                                          {mf.letter}
+                                        </td>
+                                        <td className="border border-gray-300 px-1 py-1 text-xs text-center">
+                                          {mf.sport.replace(/_/g, ' ')}
+                                        </td>
+                                        <td className="border border-gray-300 px-1 py-1 text-xs text-center">
+                                          {mf.type}
+                                        </td>
+                                        <td className="border border-gray-300 px-1 py-1 text-xs text-center">
+                                          {mf.description}
+                                        </td>
+                                        <td className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">
+                                          {mf.movelaps?.length || 0}
                                         </td>
                                       </tr>
-                                    )}
-                                  </React.Fragment>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        ) : (
-                          <div className="p-3 text-center text-gray-500 text-sm">No moveframes</div>
-                        )}
-                      </div>
+                                      
+                                      {mf.movelaps && mf.movelaps.length > 0 && (
+                                        <tr>
+                                          <td colSpan={5} className="border border-gray-300 p-0">
+                                            <table className="text-xs bg-gray-50 w-full">
+                                              <colgroup>
+                                                <col style={{ width: '30px' }} />
+                                                <col style={{ width: '60px' }} />
+                                                <col style={{ width: '50px' }} />
+                                                <col style={{ width: '60px' }} />
+                                                <col style={{ width: '80px' }} />
+                                                <col style={{ width: '70px' }} />
+                                                <col style={{ width: '60px' }} />
+                                                <col style={{ width: '60px' }} />
+                                              </colgroup>
+                                              <thead className="bg-gray-200">
+                                                <tr>
+                                                  <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">#</th>
+                                                  <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Dist</th>
+                                                  <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Reps</th>
+                                                  <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Speed</th>
+                                                  <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Style</th>
+                                                  <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Time</th>
+                                                  <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Pace</th>
+                                                  <th className="border border-gray-300 px-1 py-1 text-center font-semibold text-xs">Pause</th>
+                                                </tr>
+                                              </thead>
+                                              <tbody>
+                                                {mf.movelaps.map((ml: any) => (
+                                                  <tr key={ml.id} className="bg-white hover:bg-gray-50">
+                                                    <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+                                                      {ml.repetitionNumber}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+                                                      {ml.distance || '—'}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+                                                      {ml.reps || '—'}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+                                                      {ml.speed || '—'}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+                                                      {ml.style || '—'}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+                                                      {ml.time || '—'}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+                                                      {ml.pace || '—'}
+                                                    </td>
+                                                    <td className="border border-gray-300 px-1 py-1 text-center text-xs">
+                                                      {ml.pause || '—'}
+                                                    </td>
+                                                  </tr>
+                                                ))}
+                                              </tbody>
+                                            </table>
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </React.Fragment>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="p-3 text-center text-gray-500 text-sm">No moveframes</div>
+                          )}
+                        </div>
+                      </React.Fragment>
                     ))}
                   </div>
                 ) : (
@@ -725,6 +888,7 @@ export default function WeekTotalsModal({ isOpen, week, onClose, autoPrint = fal
             padding: 4pt 5pt !important;
             border: 1px solid #999 !important;
             font-size: 9pt !important;
+            text-align: center !important;
           }
         }
       `}</style>

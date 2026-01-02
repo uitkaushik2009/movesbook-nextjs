@@ -30,16 +30,16 @@ export function useWorkoutExpansion({
    * When a day is expanded, its workouts become visible
    */
   const toggleDayExpansion = (dayId: string) => {
-    console.log(`📅 toggleDayExpansion called for day: ${dayId}`);
+    // console.log(`📅 toggleDayExpansion called for day: ${dayId}`);
     setExpandedDays(prev => {
       const newSet = new Set(prev);
       const wasExpanded = newSet.has(dayId);
       if (wasExpanded) {
         newSet.delete(dayId);
-        console.log(`📉 Collapsed DAY ${dayId}. This HIDES ALL WORKOUTS in this day!`);
+        // console.log(`📉 Collapsed DAY ${dayId}. This HIDES ALL WORKOUTS in this day!`);
       } else {
         newSet.add(dayId);
-        console.log(`📈 Expanded DAY ${dayId}. Workouts will be visible.`);
+        // console.log(`📈 Expanded DAY ${dayId}. Workouts will be visible.`);
       }
       return newSet;
     });
@@ -50,19 +50,19 @@ export function useWorkoutExpansion({
    * When a workout is expanded, its moveframes become visible
    */
   const toggleWorkoutExpansion = (workoutId: string) => {
-    console.log(`🔄 toggleWorkoutExpansion called for workout: ${workoutId}`);
-    console.log(`🔄 Current expandedWorkouts before toggle:`, Array.from(expandedWorkouts));
+    // console.log(`🔄 toggleWorkoutExpansion called for workout: ${workoutId}`);
+    // console.log(`🔄 Current expandedWorkouts before toggle:`, Array.from(expandedWorkouts));
     setExpandedWorkouts(prev => {
       const newSet = new Set(prev);
       const wasExpanded = newSet.has(workoutId);
       if (wasExpanded) {
         newSet.delete(workoutId);
-        console.log(`📉 Collapsed workout ${workoutId}. Remaining expanded: ${newSet.size}`);
+        // console.log(`📉 Collapsed workout ${workoutId}. Remaining expanded: ${newSet.size}`);
       } else {
         newSet.add(workoutId);
-        console.log(`📈 Expanded workout ${workoutId}. Total expanded: ${newSet.size}`);
+        // console.log(`📈 Expanded workout ${workoutId}. Total expanded: ${newSet.size}`);
       }
-      console.log('🔄 New expandedWorkouts after toggle:', Array.from(newSet));
+      // console.log('🔄 New expandedWorkouts after toggle:', Array.from(newSet));
       return newSet;
     });
   };
@@ -217,23 +217,32 @@ export function useWorkoutExpansion({
    * Only runs once per section/athlete combination
    */
   useEffect(() => {
-    if (!workoutPlan || !workoutPlan.weeks) {
-      console.log('⏳ Waiting for workoutPlan to load...');
-      return;
-    }
-    
     // Create a unique key for current section + athlete combo
     const currentKey = `${activeSection}-${selectedAthleteId || 'self'}`;
     
-    // Only auto-expand if this is a new section/athlete combo
+    // If section changed, IMMEDIATELY clear old state to prevent showing stale data
     if (currentKey !== lastAutoExpandKey) {
-      console.log(`🔓 Auto-expanding for new key: ${currentKey} (was: ${lastAutoExpandKey})`);
-      expandAll();
+      // console.log(`🔄 Section changed to: ${currentKey} (was: ${lastAutoExpandKey})`);
+      // console.log(`🧹 Clearing old expansion state immediately...`);
+      setExpandedDays(new Set());
+      setExpandedWorkouts(new Set());
+      setExpandedWeeks(new Set());
       setLastAutoExpandKey(currentKey);
-    } else {
-      console.log(`✅ Skipping auto-expand, key unchanged: ${currentKey}`);
     }
-  }, [workoutPlan, activeSection, selectedAthleteId, lastAutoExpandKey]);
+    
+    if (!workoutPlan || !workoutPlan.weeks) {
+      // console.log('⏳ Waiting for workoutPlan to load...');
+      return;
+    }
+    
+    // Only auto-expand if this is a new section/athlete combo
+    if (currentKey === lastAutoExpandKey && expandedDays.size === 0) {
+      // console.log(`🔓 Auto-expanding for new key: ${currentKey}`);
+      expandAll();
+    } else {
+      // console.log(`✅ Skipping auto-expand, already expanded or unchanged`);
+    }
+  }, [workoutPlan, activeSection, selectedAthleteId, lastAutoExpandKey, expandedDays.size]);
 
   // ==================== RETURN VALUES ====================
   return {

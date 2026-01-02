@@ -85,7 +85,51 @@ export default function WeeklyInfoModal({
     // Focus the editor first
     editorRef.current.focus();
     
-    // Execute the command
+    // Handle alignment commands specially (execCommand is deprecated for these)
+    if (command.startsWith('justify')) {
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        console.warn('⚠️ No selection for alignment');
+        return;
+      }
+      
+      // Get the alignment value
+      let textAlign = 'left';
+      if (command === 'justifyCenter') textAlign = 'center';
+      else if (command === 'justifyRight') textAlign = 'right';
+      else if (command === 'justifyFull') textAlign = 'justify';
+      
+      // Get the container node
+      let node = selection.anchorNode;
+      while (node && node !== editorRef.current) {
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const element = node as HTMLElement;
+          // Apply style to block-level element
+          if (element.tagName === 'P' || element.tagName === 'DIV' || element.tagName === 'H1' || 
+              element.tagName === 'H2' || element.tagName === 'H3' || element.tagName === 'UL' || 
+              element.tagName === 'OL' || element.tagName === 'LI') {
+            element.style.textAlign = textAlign;
+            console.log('✅ Applied alignment:', { tag: element.tagName, textAlign });
+            return;
+          }
+        }
+        node = node.parentNode;
+      }
+      
+      // If no suitable parent found, wrap selection in a div and apply alignment
+      try {
+        const range = selection.getRangeAt(0);
+        const wrapper = document.createElement('div');
+        wrapper.style.textAlign = textAlign;
+        range.surroundContents(wrapper);
+        console.log('✅ Applied alignment with wrapper:', textAlign);
+      } catch (e) {
+        console.error('❌ Failed to apply alignment:', e);
+      }
+      return;
+    }
+    
+    // Execute the command normally for other commands
     const success = document.execCommand(command, false, value);
     
     console.log('🎨 execCommand:', { command, value, success });
@@ -251,30 +295,25 @@ export default function WeeklyInfoModal({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {/* Row 1: Period Name Selector */}
+          {/* Row 1: Period Name Display (Read-only) */}
           <div className="flex items-center gap-3">
             <label className="text-sm font-semibold text-gray-700 whitespace-nowrap">
               - Name of the Period
             </label>
-            <select
-              value={periodId}
-              onChange={(e) => setPeriodId(e.target.value)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-pink-500 text-sm"
-            >
-              <option value="">Select period...</option>
-              {periods.map((period) => (
-                <option key={period.id} value={period.id}>
-                  {period.name}
-                </option>
-              ))}
-            </select>
-            {selectedPeriod && (
-              <div
-                className="w-6 h-6 rounded border border-gray-400 flex-shrink-0"
-                style={{ backgroundColor: selectedPeriod.color }}
-                title={selectedPeriod.name}
-              />
-            )}
+            <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-gray-100 border border-gray-300 rounded text-sm">
+              {selectedPeriod ? (
+                <>
+                  <div
+                    className="w-5 h-5 rounded border border-gray-400 flex-shrink-0"
+                    style={{ backgroundColor: selectedPeriod.color }}
+                  />
+                  <span className="font-medium text-gray-900">{selectedPeriod.name}</span>
+                  <span className="text-gray-500 text-xs ml-auto">(Set in Personal Settings)</span>
+                </>
+              ) : (
+                <span className="text-gray-500 italic">No period assigned</span>
+              )}
+            </div>
           </div>
 
           {/* Row 2: Rich Text Editor */}

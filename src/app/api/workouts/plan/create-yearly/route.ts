@@ -150,16 +150,18 @@ export async function POST(request: NextRequest) {
 
         await prisma.workoutDay.upsert({
           where: {
-            userId_date: {
+            userId_date_storageZone: {
               userId: decoded.userId,
-              date: dayDate
+              date: dayDate,
+              storageZone: 'B'
             }
           },
           update: {
             workoutWeekId: week.id,
             dayOfWeek,
             weekNumber: i + 1,
-            periodId: defaultPeriod.id
+            periodId: defaultPeriod.id,
+            storageZone: 'B' // Yearly Plan = Section B
           },
           create: {
             workoutWeekId: week.id,
@@ -168,6 +170,7 @@ export async function POST(request: NextRequest) {
             weekNumber: i + 1,
             date: dayDate,
             periodId: defaultPeriod.id,
+            storageZone: 'B', // Yearly Plan = Section B
             weather: '',
             feelingStatus: '5',
             notes: ''

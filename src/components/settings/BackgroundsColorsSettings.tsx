@@ -58,16 +58,16 @@ export default function BackgroundsColorsSettings() {
     const newColors = { ...colors, [key]: value };
     setColors(newColors);
 
-    // Save to database
+    // Save to database immediately so settings persist after page refresh
     try {
       setSaveStatus('saving');
-      await updateDbSetting('colorSettings', newColors);
+      await updateDbSetting('colorSettings' as any, newColors);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (error) {
-      console.error('Error saving color settings:', error);
-      // Fallback to localStorage
-      localStorage.setItem('colorSettings', JSON.stringify(newColors));
+      console.error('Failed to save color settings:', error);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
     }
   };
 
@@ -112,13 +112,13 @@ export default function BackgroundsColorsSettings() {
     }
   };
 
-  // Load default settings
-  const loadDefaultSettings = async () => {
+  // Enable default settings - Apply saved defaults to the grid
+  const enableDefaultSettings = async () => {
     try {
       // Fetch from database
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('❌ Please log in to load your default settings');
+        alert('❌ Please log in to enable your default settings');
         return;
       }
 
@@ -134,18 +134,22 @@ export default function BackgroundsColorsSettings() {
         const workoutPrefs = settings.workoutPreferences || {};
         
         if (workoutPrefs.defaultColorSettings) {
-          setColors(workoutPrefs.defaultColorSettings);
-          alert('✅ Default settings loaded!');
-        } else {
-          alert('ℹ️ No default settings found. Using application defaults.');
+          const defaultColors = workoutPrefs.defaultColorSettings;
           setColors(defaultColors);
+          
+          // Apply to grid by saving to colorSettings
+          await updateDbSetting('colorSettings', defaultColors);
+          
+          alert('✅ Default color settings enabled and applied to the grid!');
+        } else {
+          alert('ℹ️ No default settings found. Please save your colors as default first.');
         }
       } else {
-        alert('❌ Failed to load default settings');
+        alert('❌ Failed to enable default settings');
       }
     } catch (error) {
-      console.error('Error loading default settings:', error);
-      alert('❌ Error loading default settings');
+      console.error('Error enabling default settings:', error);
+      alert('❌ Error enabling default settings');
     }
   };
 
@@ -377,6 +381,16 @@ export default function BackgroundsColorsSettings() {
           </div>
         </div>
 
+        {/* Workflow Instructions */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+          <h4 className="text-sm font-bold text-blue-900 mb-2">📋 How to Apply Colors to Grid:</h4>
+          <ol className="text-xs text-blue-800 space-y-1 ml-4 list-decimal">
+            <li>Edit and create your color settings above</li>
+            <li>Click <strong>"Save as Default"</strong> to save your settings</li>
+            <li>Click <strong>"Enable Default Settings"</strong> to apply colors to the grid</li>
+          </ol>
+        </div>
+
         {/* Default Settings */}
         <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
           <Save className="w-4 h-4 text-gray-500" />
@@ -384,18 +398,18 @@ export default function BackgroundsColorsSettings() {
           <button
             onClick={saveAsDefault}
             className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors font-medium"
-            title="Save current colors as your default settings"
+            title="Step 2: Save current colors as your default settings"
           >
             <Save className="w-4 h-4" />
             Save as Default
           </button>
           <button
-            onClick={loadDefaultSettings}
+            onClick={enableDefaultSettings}
             className="flex items-center gap-1.5 px-4 py-2 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors font-medium"
-            title="Load your saved default settings"
+            title="Step 3: Enable your saved default settings and apply to grid"
           >
             <Download className="w-4 h-4" />
-            Load Default Settings
+            Enable Default Settings
           </button>
         </div>
       </div>
@@ -1700,34 +1714,59 @@ export default function BackgroundsColorsSettings() {
                     : '3px solid transparent'
                 }}
               >
-                Monday - Week 1
+                Week 1
               </div>
 
-              {/* Row 2: Day Header */}
-              <div
-                className="p-3 rounded-lg font-bold"
-                style={{
-                  backgroundColor: colors.dayHeader,
-                  color: colors.dayHeaderText,
-                  boxSizing: 'border-box',
-                  border: colors.dayBorderEnabled
-                    ? `${
-                        colors.dayBorderWidth === 'very-thin' ? '1px' :
-                        colors.dayBorderWidth === 'thin' ? '2px' :
-                        colors.dayBorderWidth === 'thick' ? '4px' : '3px'
-                      } solid ${colors.dayBorderColor || '#000000'}`
-                    : '3px solid transparent'
-                }}
-              >
-                Tuesday - Week 1
+              {/* Row 2: Day 1 (Monday) - indented, uses dayHeader colors */}
+              <div className="flex justify-end">
+                <div
+                  className="p-3 rounded-lg font-bold"
+                  style={{
+                    width: '92%',
+                    backgroundColor: colors.dayHeader,
+                    color: colors.dayHeaderText,
+                    boxSizing: 'border-box',
+                    border: colors.dayBorderEnabled
+                      ? `${
+                          colors.dayBorderWidth === 'very-thin' ? '1px' :
+                          colors.dayBorderWidth === 'thin' ? '2px' :
+                          colors.dayBorderWidth === 'thick' ? '4px' : '3px'
+                        } solid ${colors.dayBorderColor || '#000000'}`
+                      : '3px solid transparent'
+                  }}
+                >
+                  Monday - week 1
+                </div>
               </div>
 
-              {/* Row 3: Workout 1 - 92% width, right-sided */}
+              {/* Row 3: Day 2 (Tuesday) - indented, uses dayAlternateRow colors */}
+              <div className="flex justify-end">
+                <div
+                  className="p-3 rounded-lg font-bold"
+                  style={{
+                    width: '92%',
+                    backgroundColor: colors.dayAlternateRow,
+                    color: colors.dayAlternateRowText,
+                    boxSizing: 'border-box',
+                    border: colors.dayBorderEnabled
+                      ? `${
+                          colors.dayBorderWidth === 'very-thin' ? '1px' :
+                          colors.dayBorderWidth === 'thin' ? '2px' :
+                          colors.dayBorderWidth === 'thick' ? '4px' : '3px'
+                        } solid ${colors.dayBorderColor || '#000000'}`
+                      : '3px solid transparent'
+                  }}
+                >
+                  Tuesday - week 1
+                </div>
+              </div>
+
+              {/* Row 4: Workout 1 - indented to Tuesday, 84% width (92% of 92%) */}
               <div className="flex justify-end">
                 <div
                   className="p-3 rounded-lg"
                   style={{
-                    width: '92%',
+                    width: '84%',
                     backgroundColor: colors.workoutHeader,
                     color: colors.workoutHeaderText,
                     boxSizing: 'border-box',
@@ -1792,12 +1831,12 @@ export default function BackgroundsColorsSettings() {
                 </div>
               </div>
 
-              {/* Row 4: Workout 2 - 92% width, right-sided */}
+              {/* Row 5: Workout 2 - indented to Tuesday, 84% width (92% of 92%) */}
               <div className="flex justify-end">
                 <div
                   className="p-3 rounded-lg"
                   style={{
-                    width: '92%',
+                    width: '84%',
                     backgroundColor: colors.workout2Header,
                     color: colors.workout2HeaderText,
                     boxSizing: 'border-box',
@@ -1822,12 +1861,12 @@ export default function BackgroundsColorsSettings() {
                 </div>
               </div>
 
-              {/* Row 5: Moveframe A - 84% width, right-sided */}
+              {/* Row 6: Moveframe A - indented to Workout, 77% width (92% of 84%) */}
               <div className="flex justify-end">
                 <div
                   className="p-2.5 rounded font-semibold text-sm"
                   style={{
-                    width: '84%',
+                    width: '77%',
                     backgroundColor: colors.moveframeHeader,
                     color: colors.moveframeHeaderText,
                     boxSizing: 'border-box',
@@ -1844,12 +1883,12 @@ export default function BackgroundsColorsSettings() {
                 </div>
               </div>
 
-              {/* Row 6: Moveframe B (Alternate) - 84% width, right-sided */}
+              {/* Row 7: Moveframe B (Alternate) - indented to Workout, 77% width (92% of 84%) */}
               <div className="flex justify-end">
                 <div
                   className="p-2.5 rounded font-semibold text-sm"
                   style={{
-                    width: '84%',
+                    width: '77%',
                     backgroundColor: colors.alternateRowMoveframe,
                     color: colors.alternateRowTextMoveframe,
                     boxSizing: 'border-box',

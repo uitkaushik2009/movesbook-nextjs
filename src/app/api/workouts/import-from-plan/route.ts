@@ -108,6 +108,9 @@ export async function POST(request: NextRequest) {
           where: { userId: decoded.userId }
         });
 
+        // Determine storageZone - import-from-plan creates days in WORKOUTS_DONE (Section C)
+        const storageZone: 'A' | 'B' | 'C' | 'D' = 'C';
+
         targetDay = await prisma.workoutDay.create({
           data: {
             workoutWeekId: targetWeek.id,
@@ -116,6 +119,7 @@ export async function POST(request: NextRequest) {
             weekNumber,
             date: workoutDate,
             periodId: period?.id || sourceWorkout.workoutDay.periodId,
+            storageZone,
             weather: sourceWorkout.workoutDay.weather,
             feelingStatus: sourceWorkout.workoutDay.feelingStatus,
             notes: sourceWorkout.workoutDay.notes

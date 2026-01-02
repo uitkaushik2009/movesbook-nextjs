@@ -88,16 +88,17 @@ model CoachAthlete {
 }
 
 model WorkoutPlan {
-  id        String          @id @default(cuid())
-  userId    String
-  name      String
-  type      WorkoutPlanType
-  startDate DateTime
-  endDate   DateTime
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  weeks     WorkoutWeek[]
+  id          String          @id @default(cuid())
+  userId      String
+  name        String
+  type        WorkoutPlanType
+  storageZone String?         // A, B, C to differentiate independent weekly plans
+  startDate   DateTime
+  endDate     DateTime
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weeks       WorkoutWeek[]
 
   @@index([userId], map: "workout_plans_userId_fkey")
   @@map("workout_plans")
@@ -141,7 +142,7 @@ model WorkoutDay {
   workoutWeek        WorkoutWeek      @relation(fields: [workoutWeekId], references: [id], onDelete: Cascade)
   workouts           WorkoutSession[]
 
-  @@unique([userId, date])
+  @@unique([userId, date, storageZone])
   @@index([userId, date])
   @@index([userId, storageZone, date])
   @@index([periodId], map: "workout_days_periodId_fkey")
@@ -218,6 +219,8 @@ model Moveframe {
   annotationTextColor String?
   annotationBold      Boolean?       @default(false)
   workType            WorkType?      @default(NONE)
+  manualMode          Boolean?       @default(false)
+  favourite           Boolean?       @default(false)
   section             WorkoutSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   workoutSession      WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
   movelaps            Movelap[]
@@ -307,11 +310,12 @@ model UserSettings {
   myBestSettings       String    @db.Text
   notificationSettings String    @db.Text
   socialSettings       String    @db.Text
-  sportIconType        String    @default("emoji")
-  toolsSettings        String    @db.Text
-  workoutPreferences   String    @db.Text
-  yearlyPlanStartDate  DateTime? // Start date for Section B (Yearly Plan)
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sportIconType            String    @default("emoji")
+  toolsSettings            String    @db.Text
+  workoutPreferences       String    @db.Text
+  yearlyPlanStartDate      DateTime? // Start date for Section B (Yearly Plan)
+  templateWeeksStartDate   DateTime? // Start date for Section A (3 Weeks Plan)
+  user                     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
 }

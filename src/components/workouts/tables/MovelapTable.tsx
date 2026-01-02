@@ -3,6 +3,7 @@
 import React from 'react';
 import { Settings } from 'lucide-react';
 import { useTableColumns } from '@/hooks/useTableColumns';
+import { useColorSettings } from '@/hooks/useColorSettings';
 import TableColumnConfig from '../TableColumnConfig';
 
 interface MovelapTableProps {
@@ -37,6 +38,7 @@ export default function MovelapTable({
     setIsConfigModalOpen,
     columns
   } = useTableColumns('movelap');
+  const { colors, getBorderStyle } = useColorSettings();
 
   // Helper function to get cell value
   const getCellValue = (column: any, movelap: any) => {
@@ -90,32 +92,60 @@ export default function MovelapTable({
   return (
     <>
       <div className="mb-2 ml-8">
-        <table className="border-collapse bg-white shadow-sm text-sm" style={{ tableLayout: 'fixed', width: '1000px' }}>
+        <table 
+          className="border-collapse shadow-sm text-sm" 
+          style={{ 
+            tableLayout: 'fixed', 
+            width: '1000px',
+            backgroundColor: colors.movelapHeader,
+            border: getBorderStyle('movelap') || '1px solid #e5e7eb'
+          }}
+        >
           {/* Title Row */}
-          <thead className="bg-yellow-200">
+          <thead style={{ backgroundColor: colors.movelapHeader }}>
             <tr>
-              <th colSpan={visibleColumnCount + 1} className="border border-gray-200 px-2 py-1 text-left text-sm">
+              <th colSpan={visibleColumnCount + 1} className="border border-gray-200 px-2 py-1 text-left text-sm" style={{ color: colors.movelapHeaderText }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-sm">
                       Movelaps of the moveframe {moveframeCode} of workout #{workoutIndex + 1}
                     </span>
-                    <span className="text-yellow-700 text-sm">
-                      {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    <span className="text-sm" style={{ color: colors.movelapHeaderText }}>
+                      {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="font-bold text-xs">Options:</span>
+                    <span className="font-bold text-xs" style={{ color: colors.movelapHeaderText }}>Options:</span>
                     <div className="flex gap-1">
-                      <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                      <button 
+                        className="px-2 py-1 text-xs rounded transition-colors"
+                        style={{
+                          backgroundColor: colors.buttonAdd,
+                          color: colors.buttonAddHeaderText
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonAddHover}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonAdd}
+                      >
                         Copy
                       </button>
-                      <button className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600">
+                      <button 
+                        className="px-2 py-1 text-xs rounded transition-colors"
+                        style={{
+                          backgroundColor: colors.buttonDelete,
+                          color: colors.buttonDeleteHeaderText
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonDeleteHover}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonDelete}
+                      >
                         Clear
                       </button>
                   <button
                     onClick={() => setIsConfigModalOpen(true)}
-                    className="flex items-center gap-1 px-2 py-1 text-xs bg-yellow-300 hover:bg-yellow-400 rounded"
+                    className="flex items-center gap-1 px-2 py-1 text-xs rounded transition-opacity hover:opacity-80"
+                    style={{
+                      backgroundColor: colors.buttonPrint,
+                      color: colors.buttonPrintHeaderText
+                    }}
                     title="Configure columns"
                   >
                     <Settings size={14} />
@@ -127,7 +157,7 @@ export default function MovelapTable({
               </th>
             </tr>
             {/* Column Headers */}
-            <tr className="bg-yellow-300">
+            <tr style={{ backgroundColor: colors.movelapHeader, filter: 'brightness(0.95)' }}>
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
@@ -145,7 +175,11 @@ export default function MovelapTable({
             {movelaps.map((movelap, index) => (
               <tr 
                 key={movelap.id || index} 
-                className={`hover:bg-blue-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
+                className="transition-colors hover:opacity-90"
+                style={{
+                  backgroundColor: index % 2 === 0 ? colors.movelapHeader : colors.alternateRowMovelap,
+                  color: index % 2 === 0 ? colors.movelapHeaderText : colors.alternateRowTextMovelap
+                }}
               >
                 {visibleColumns.map((column) => (
                   <td

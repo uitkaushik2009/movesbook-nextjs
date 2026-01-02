@@ -214,7 +214,7 @@ export const DEFAULT_MOVEFRAME_COLUMNS: ColumnConfig[] = [
   },
   {
     id: 'repetitions',
-    label: 'Rip',
+    label: 'Rip\\Sets',
     align: 'center',
     visible: true,
     dataKey: 'movelaps.length'

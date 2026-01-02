@@ -367,6 +367,8 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
     setIsLoggingIn(true);
     setLoginError('');
 
+    console.log('🔐 Login attempt:', { username: loginUsername, passwordLength: loginPassword.length });
+
     try {
       // First try regular user login
       let response = await fetch('/api/auth/login', {
@@ -378,7 +380,12 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
         })
       });
 
+      console.log('📥 Response status:', response.status);
       let data = await response.json();
+      console.log('📦 Response data:', JSON.stringify(data, null, 2));
+      if (!response.ok) {
+        console.error('❌ Login error:', data.error || data.message || 'Unknown error');
+      }
 
       // If regular login fails, try admin login
       if (!response.ok) {

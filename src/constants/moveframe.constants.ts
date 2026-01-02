@@ -95,9 +95,10 @@ export const SPORT_CONFIGS = {
   BODY_BUILDING: {
     // Sector+Exercise+Picture (from procedure)
     speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive', 'Negative'],
-    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
       [REST_TYPES.SET_TIME]: ['0', '0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
       [REST_TYPES.RESTART_PULSE]: 'input'
     },
     macroFinals: MACRO_FINAL_OPTIONS,
@@ -179,9 +180,10 @@ export const SPORT_CONFIGS = {
     repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
     repsRange: { min: 1, max: 99 },
     timeRange: { min: '00\'01"', max: '09\'59"' },
-    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
       [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
       [REST_TYPES.RESTART_PULSE]: 'input'
     },
     macroFinals: MACRO_FINAL_OPTIONS,
@@ -196,9 +198,10 @@ export const SPORT_CONFIGS = {
     repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
     repsRange: { min: 1, max: 99 },
     timeRange: { min: '00\'01"', max: '09\'59"' },
-    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
       [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
       [REST_TYPES.RESTART_PULSE]: 'input'
     },
     macroFinals: MACRO_FINAL_OPTIONS,
@@ -213,9 +216,10 @@ export const SPORT_CONFIGS = {
     repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
     repsRange: { min: 1, max: 99 },
     timeRange: { min: '00\'01"', max: '09\'59"' },
-    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
       [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
       [REST_TYPES.RESTART_PULSE]: 'input'
     },
     macroFinals: MACRO_FINAL_OPTIONS,
@@ -230,9 +234,10 @@ export const SPORT_CONFIGS = {
     repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
     repsRange: { min: 1, max: 99 },
     timeRange: { min: '00\'01"', max: '09\'59"' },
-    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
       [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
       [REST_TYPES.RESTART_PULSE]: 'input'
     },
     macroFinals: MACRO_FINAL_OPTIONS,
@@ -247,9 +252,10 @@ export const SPORT_CONFIGS = {
     repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
     repsRange: { min: 1, max: 99 },
     timeRange: { min: '00\'01"', max: '09\'59"' },
-    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
       [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
       [REST_TYPES.RESTART_PULSE]: 'input'
     },
     macroFinals: MACRO_FINAL_OPTIONS,
@@ -265,9 +271,10 @@ export const SPORT_CONFIGS = {
     repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
     repsRange: { min: 1, max: 99 },
     timeRange: { min: '00\'01"', max: '09\'59"' },
-    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_PULSE],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
       [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
       [REST_TYPES.RESTART_PULSE]: 'input'
     },
     macroFinals: MACRO_FINAL_OPTIONS,
@@ -593,6 +600,19 @@ export const hasRepsTypeSelection = (sport: string): boolean => {
 
 // Helper function to get pace label based on sport and meters
 export const getPaceLabel = (sport: string, meters: string): string => {
+  // Special handling for specific sports
+  if (sport === 'BIKE') {
+    return 'Speed\\h'; // Speed km/h (decimal format: 00.0 to 99.9)
+  }
+  
+  if (sport === 'ROWING') {
+    return 'Speed\\500m'; // Speed per 500m (time format: 0'00")
+  }
+  
+  if (sport === 'SKI') {
+    return 'Pace\\Refdist'; // Pace per reference distance (time format: 0'00")
+  }
+  
   const config = getSportConfig(sport);
   
   // Check if this sport has pace100Meters definition
@@ -652,6 +672,33 @@ export function sportHasStyles(sport: string): boolean {
 // Helper function to check if sport has row/min field (ROWING specific)
 export function sportHasRowPerMin(sport: string): boolean {
   return sport === 'ROWING';
+}
+
+// Sports that require an exercise/drill name input
+export const SPORTS_WITH_EXERCISE_NAME = [
+  'BODY_BUILDING',
+  'GYMNASTIC',
+  'STRETCHING',
+  'PILATES',
+  'YOGA',
+  'TECHNICAL_MOVES',
+  'FREE_MOVES',
+  'SOCCER',
+  'BASKETBALL',
+  'TENNIS',
+  'VOLLEYBALL',
+  'GOLF',
+  'BOXING',
+  'MARTIAL_ARTS',
+  'CLIMBING',
+  'DANCING',
+  'CROSSFIT',
+  'TRIATHLON'
+] as const;
+
+// Helper function to check if sport requires exercise/drill name
+export function sportNeedsExerciseName(sport: string): boolean {
+  return SPORTS_WITH_EXERCISE_NAME.includes(sport as any);
 }
 
 // Helper function to get pause options based on rest type

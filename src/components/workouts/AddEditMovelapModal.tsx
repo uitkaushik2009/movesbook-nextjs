@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Copy } from 'lucide-react';
 
 interface AddEditMovelapModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (movelapData: any) => void;
+  onCopyToAll?: (fieldName: string, fieldValue: any) => Promise<void>;
   mode: 'add' | 'edit';
   moveframe: any;
   existingMovelap?: any;
@@ -63,6 +64,7 @@ export default function AddEditMovelapModal({
   isOpen,
   onClose,
   onSave,
+  onCopyToAll,
   mode,
   moveframe,
   existingMovelap
@@ -99,6 +101,35 @@ export default function AddEditMovelapModal({
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [copyingField, setCopyingField] = useState<string | null>(null);
+
+  // Copy button component
+  const CopyButton = ({ fieldName, fieldValue, disabled }: { fieldName: string; fieldValue: any; disabled?: boolean }) => {
+    const isCopying = copyingField === fieldName;
+    
+    if (!onCopyToAll || mode === 'add' || disabled) return null;
+    
+    return (
+      <button
+        type="button"
+        onClick={async () => {
+          setCopyingField(fieldName);
+          try {
+            await onCopyToAll(fieldName, fieldValue);
+          } catch (error) {
+            console.error('Error copying to all:', error);
+          } finally {
+            setCopyingField(null);
+          }
+        }}
+        disabled={isCopying}
+        className="ml-2 p-1.5 text-xs text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Copy this value to all other movelaps"
+      >
+        <Copy size={14} />
+      </button>
+    );
+  };
 
   // Fast input parsing functions
   const parsePaceInput = (input: string): string => {
@@ -340,16 +371,19 @@ export default function AddEditMovelapModal({
             <label className="block text-sm font-bold text-gray-700 mb-2">
               Sequence: <span className="text-red-500">*</span>
             </label>
-            <input
-              type="number"
-              value={sequence}
-              onChange={(e) => setSequence(parseInt(e.target.value) || 1)}
-              min="1"
-              className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-            <span className="ml-2 text-sm text-gray-500">
-              (#{sequence} of {(moveframe.movelaps?.length || 0) + (mode === 'add' ? 1 : 0)})
-            </span>
+            <div className="flex items-center">
+              <input
+                type="number"
+                value={sequence}
+                onChange={(e) => setSequence(parseInt(e.target.value) || 1)}
+                min="1"
+                className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <CopyButton fieldName="repetitionNumber" fieldValue={sequence} disabled={true} />
+              <span className="ml-2 text-sm text-gray-500">
+                (#{sequence} of {(moveframe.movelaps?.length || 0) + (mode === 'add' ? 1 : 0)})
+              </span>
+            </div>
           </div>
 
           {/* Two Column Layout */}
@@ -368,72 +402,87 @@ export default function AddEditMovelapModal({
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Muscular Sector:
                       </label>
-                      <select
-                        value={muscularSector}
-                        onChange={(e) => setMuscularSector(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select...</option>
-                        {(config as any).muscularSectors?.map((m: string) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center">
+                        <select
+                          value={muscularSector}
+                          onChange={(e) => setMuscularSector(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select...</option>
+                          {(config as any).muscularSectors?.map((m: string) => (
+                            <option key={m} value={m}>
+                              {m}
+                            </option>
+                          ))}
+                        </select>
+                        <CopyButton fieldName="muscularSector" fieldValue={muscularSector} />
+                      </div>
                     </div>
                     <div className="mb-3">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Exercise:
                       </label>
-                      <input
-                        type="text"
-                        value={exercise}
-                        onChange={(e) => setExercise(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        placeholder="e.g., Bench Press, Squat..."
-                      />
+                      <div className="flex items-center">
+                        <input
+                          type="text"
+                          value={exercise}
+                          onChange={(e) => setExercise(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          placeholder="e.g., Bench Press, Squat..."
+                        />
+                        <CopyButton fieldName="exercise" fieldValue={exercise} />
+                      </div>
                     </div>
                     <div className="mb-3">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Reps: <span className="text-red-500">*</span>
                       </label>
-                      <input
-                        type="number"
-                        value={reps}
-                        onChange={(e) => setReps(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        placeholder="12"
-                      />
+                      <div className="flex items-center">
+                        <input
+                          type="number"
+                          value={reps}
+                          onChange={(e) => setReps(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          placeholder="12"
+                        />
+                        <CopyButton fieldName="reps" fieldValue={reps} />
+                      </div>
                       {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
                     </div>
                     <div className="mb-3">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Weight:
                       </label>
-                      <input
-                        type="text"
-                        value={weight}
-                        onChange={(e) => setWeight(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        placeholder="12 kg, 50 lbs, etc."
-                      />
+                      <div className="flex items-center">
+                        <input
+                          type="text"
+                          value={weight}
+                          onChange={(e) => setWeight(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          placeholder="12 kg, 50 lbs, etc."
+                        />
+                        <CopyButton fieldName="weight" fieldValue={weight} />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Tempo/Speed:
                       </label>
-                      <select
-                        value={speed}
-                        onChange={(e) => setSpeed(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select...</option>
-                        {config.speeds.map((s: string) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center">
+                        <select
+                          value={speed}
+                          onChange={(e) => setSpeed(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select...</option>
+                          {config.speeds.map((s: string) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                        <CopyButton fieldName="speed" fieldValue={speed} />
+                      </div>
                     </div>
                   </>
                 ) : (
@@ -452,26 +501,32 @@ export default function AddEditMovelapModal({
                               <label className="block text-xs font-medium text-gray-700 mb-1">
                                 Reps: <span className="text-red-500">*</span>
                               </label>
-                              <input
-                                type="number"
-                                value={reps}
-                                onChange={(e) => setReps(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                placeholder="12"
-                              />
+                              <div className="flex items-center">
+                                <input
+                                  type="number"
+                                  value={reps}
+                                  onChange={(e) => setReps(e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                  placeholder="12"
+                                />
+                                <CopyButton fieldName="reps" fieldValue={reps} />
+                              </div>
                               {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
                             </div>
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">
                                 Tools:
                               </label>
-                              <input
-                                type="text"
-                                value={tools}
-                                onChange={(e) => setTools(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                placeholder="Enter tools (alphanumeric)"
-                              />
+                              <div className="flex items-center">
+                                <input
+                                  type="text"
+                                  value={tools}
+                                  onChange={(e) => setTools(e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Enter tools (alphanumeric)"
+                                />
+                                <CopyButton fieldName="tools" fieldValue={tools} />
+                              </div>
                             </div>
                           </>
                         );
@@ -492,20 +547,23 @@ export default function AddEditMovelapModal({
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Distance (m): <span className="text-red-500">*</span>
                       </label>
-                      {'distances' in config && (
-                        <select
-                          value={distance}
-                          onChange={(e) => setDistance(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select...</option>
-                          {config.distances.map((d: string) => (
-                            <option key={d} value={d}>
-                              {d}m
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                      <div className="flex items-center">
+                        {'distances' in config && (
+                          <select
+                            value={distance}
+                            onChange={(e) => setDistance(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Select...</option>
+                            {config.distances.map((d: string) => (
+                              <option key={d} value={d}>
+                                {d}m
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <CopyButton fieldName="distance" fieldValue={distance} />
+                      </div>
                       {errors.distance && <p className="mt-1 text-xs text-red-500">{errors.distance}</p>}
                     </div>
 
@@ -513,18 +571,21 @@ export default function AddEditMovelapModal({
                     {(sport === 'SWIM' || sport === 'RUN') && 'styles' in config && (
                       <div className="mb-3">
                         <label className="block text-xs font-medium text-gray-700 mb-1">Style:</label>
-                        <select
-                          value={style}
-                          onChange={(e) => setStyle(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select...</option>
-                          {config.styles.map((s: string) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="flex items-center">
+                          <select
+                            value={style}
+                            onChange={(e) => setStyle(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Select...</option>
+                            {config.styles.map((s: string) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                          <CopyButton fieldName="style" fieldValue={style} />
+                        </div>
                       </div>
                     )}
 
@@ -533,33 +594,39 @@ export default function AddEditMovelapModal({
                       <>
                         <div className="mb-3">
                           <label className="block text-xs font-medium text-gray-700 mb-1">R1 (Range 1):</label>
-                          <select
-                            value={r1}
-                            onChange={(e) => setR1(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">Select...</option>
-                            {config.ranges.map((r: string) => (
-                              <option key={r} value={r}>
-                                {r}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="flex items-center">
+                            <select
+                              value={r1}
+                              onChange={(e) => setR1(e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Select...</option>
+                              {config.ranges.map((r: string) => (
+                                <option key={r} value={r}>
+                                  {r}
+                                </option>
+                              ))}
+                            </select>
+                            <CopyButton fieldName="r1" fieldValue={r1} />
+                          </div>
                         </div>
                         <div className="mb-3">
                           <label className="block text-xs font-medium text-gray-700 mb-1">R2 (Range 2):</label>
-                          <select
-                            value={r2}
-                            onChange={(e) => setR2(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">Select...</option>
-                            {config.ranges.map((r: string) => (
-                              <option key={r} value={r}>
-                                {r}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="flex items-center">
+                            <select
+                              value={r2}
+                              onChange={(e) => setR2(e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Select...</option>
+                              {config.ranges.map((r: string) => (
+                                <option key={r} value={r}>
+                                  {r}
+                                </option>
+                              ))}
+                            </select>
+                            <CopyButton fieldName="r2" fieldValue={r2} />
+                          </div>
                         </div>
                       </>
                     )}
@@ -567,18 +634,21 @@ export default function AddEditMovelapModal({
                     {/* Speed - For all distance-based sports */}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Speed/Zone:</label>
-                      <select
-                        value={speed}
-                        onChange={(e) => setSpeed(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select...</option>
-                        {config.speeds.map((s: string) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="flex items-center">
+                        <select
+                          value={speed}
+                          onChange={(e) => setSpeed(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select...</option>
+                          {config.speeds.map((s: string) => (
+                            <option key={s} value={s}>
+                              {s}
+                            </option>
+                          ))}
+                        </select>
+                        <CopyButton fieldName="speed" fieldValue={speed} />
+                      </div>
                     </div>
                           </>
                         );
@@ -598,13 +668,16 @@ export default function AddEditMovelapModal({
                         (Type: 530 → 0h05'30"0)
                       </span>
                     </label>
-                    <input
-                      type="text"
-                      value={time}
-                      onChange={handleTimeChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      placeholder="Type: 530 for 0h05'30&quot;0"
-                    />
+                    <div className="flex items-center">
+                      <input
+                        type="text"
+                        value={time}
+                        onChange={handleTimeChange}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="Type: 530 for 0h05'30&quot;0"
+                      />
+                      <CopyButton fieldName="time" fieldValue={time} />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -613,13 +686,16 @@ export default function AddEditMovelapModal({
                         (Type: 130 → 1'30"0)
                       </span>
                     </label>
-                    <input
-                      type="text"
-                      value={pace}
-                      onChange={handlePaceChange}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      placeholder="Type: 130 for 1'30&quot;0"
-                    />
+                    <div className="flex items-center">
+                      <input
+                        type="text"
+                        value={pace}
+                        onChange={handlePaceChange}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        placeholder="Type: 130 for 1'30&quot;0"
+                      />
+                      <CopyButton fieldName="pace" fieldValue={pace} />
+                    </div>
                   </div>
                 </div>
               )}
@@ -634,49 +710,58 @@ export default function AddEditMovelapModal({
                 {sport === 'BODY_BUILDING' && 'restTypes' in config && (
                   <div className="mb-3">
                     <label className="block text-xs font-medium text-gray-700 mb-1">Rest Type:</label>
-                    <select
-                      value={restType}
-                      onChange={(e) => setRestType(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">Select...</option>
-                      {config.restTypes.map((rt: string) => (
-                        <option key={rt} value={rt}>
-                          {rt.replace(/_/g, ' ')}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex items-center">
+                      <select
+                        value={restType}
+                        onChange={(e) => setRestType(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select...</option>
+                        {config.restTypes.map((rt: string) => (
+                          <option key={rt} value={rt}>
+                            {rt.replace(/_/g, ' ')}
+                          </option>
+                        ))}
+                      </select>
+                      <CopyButton fieldName="restType" fieldValue={restType} />
+                    </div>
                   </div>
                 )}
                 
                 <div className="mb-3">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Pause:</label>
-                  <select
-                    value={pause}
-                    onChange={(e) => setPause(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select...</option>
-                    {config.pauses.map((p: string) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center">
+                    <select
+                      value={pause}
+                      onChange={(e) => setPause(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select...</option>
+                      {config.pauses.map((p: string) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    <CopyButton fieldName="pause" fieldValue={pause} />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Macro Final:</label>
-                  <select
-                    value={macroFinal}
-                    onChange={(e) => setMacroFinal(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  >
-                    {MACRO_FINALS.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center">
+                    <select
+                      value={macroFinal}
+                      onChange={(e) => setMacroFinal(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                      {MACRO_FINALS.map((m) => (
+                        <option key={m} value={m}>
+                          {m}
+                        </option>
+                      ))}
+                    </select>
+                    <CopyButton fieldName="macroFinal" fieldValue={macroFinal} />
+                  </div>
                 </div>
               </div>
 
@@ -684,32 +769,38 @@ export default function AddEditMovelapModal({
                 <h3 className="font-bold text-sm text-gray-700 mb-3">🔔 ALERTS</h3>
                 <div className="mb-3">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Alarm:</label>
-                  <select
-                    value={alarm}
-                    onChange={(e) => setAlarm(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">None</option>
-                    {ALARMS.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center">
+                    <select
+                      value={alarm}
+                      onChange={(e) => setAlarm(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">None</option>
+                      {ALARMS.map((a) => (
+                        <option key={a} value={a}>
+                          {a}
+                        </option>
+                      ))}
+                    </select>
+                    <CopyButton fieldName="alarm" fieldValue={alarm} />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Sound:</label>
-                  <select
-                    value={sound}
-                    onChange={(e) => setSound(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  >
-                    {SOUNDS.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center">
+                    <select
+                      value={sound}
+                      onChange={(e) => setSound(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    >
+                      {SOUNDS.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    <CopyButton fieldName="sound" fieldValue={sound} />
+                  </div>
                 </div>
               </div>
             </div>
@@ -717,7 +808,10 @@ export default function AddEditMovelapModal({
 
           {/* Notes */}
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Notes:</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+              Notes:
+              <CopyButton fieldName="notes" fieldValue={notes} />
+            </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}

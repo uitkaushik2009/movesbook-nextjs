@@ -224,13 +224,22 @@ export default function WorkoutTreeView({
                         {isDayExpanded && workoutCount > 0 && (
                           <div style={{ backgroundColor: colors.pageBackground || '#f9fafb' }}>
                             {day.workouts.map((workout: any, workoutIndex: number) => {
-                              // Get unique sports from moveframes
-                              const sports = new Set<string>();
+                              // Get unique sports from moveframes and calculate total distance per sport
+                              const sportDistances = new Map<string, number>();
                               let totalMoveframes = 0;
                               
                               if (workout.moveframes) {
                                 workout.moveframes.forEach((mf: any) => {
-                                  if (mf.sport) sports.add(mf.sport);
+                                  if (mf.sport) {
+                                    // Sum up distances from all movelaps for this sport
+                                    let sportDistance = sportDistances.get(mf.sport) || 0;
+                                    if (mf.movelaps) {
+                                      mf.movelaps.forEach((lap: any) => {
+                                        sportDistance += lap.distance || 0;
+                                      });
+                                    }
+                                    sportDistances.set(mf.sport, sportDistance);
+                                  }
                                 });
                                 totalMoveframes = workout.moveframes.length;
                               }
@@ -245,8 +254,8 @@ export default function WorkoutTreeView({
                                     className="w-full flex items-center justify-between px-4 py-2.5 border-t hover:bg-opacity-90 transition-all"
                                     style={{
                                       paddingLeft: '3rem', // Indent from day
-                                      backgroundColor: colors.workoutHeader,
-                                      color: colors.workoutHeaderText,
+                                      backgroundColor: workoutIndex % 3 === 0 ? colors.workoutHeader : (workoutIndex % 3 === 1 ? colors.workout2Header : colors.workout3Header),
+                                      color: workoutIndex % 3 === 0 ? colors.workoutHeaderText : (workoutIndex % 3 === 1 ? colors.workout2HeaderText : colors.workout3HeaderText),
                                       borderTop: getBorderStyle('workout') || '1.5px solid rgba(0,0,0,0.1)',
                                       fontWeight: '600'
                                     }}
@@ -264,28 +273,33 @@ export default function WorkoutTreeView({
                                       </span>
                                     </div>
                                     <div className="flex items-center gap-2 flex-wrap">
-                                      {Array.from(sports).slice(0, 3).map((sport) => {
+                                      {Array.from(sportDistances.entries()).slice(0, 3).map(([sport, distance]) => {
                                         const sportIcon = getSportIcon(sport, iconType);
                                         return (
                                           <div
                                             key={sport}
-                                            className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium"
+                                            className="flex items-center gap-2 px-3 py-1 rounded text-sm font-semibold"
                                             style={{ 
                                               backgroundColor: 'rgba(255,255,255,0.25)',
                                               border: '1px solid rgba(0,0,0,0.1)'
                                             }}
                                           >
                                             {useImageIcons ? (
-                                              <img src={sportIcon} alt={sport} className="w-3 h-3 object-cover rounded" />
+                                              <img src={sportIcon} alt={sport} className="w-4 h-4 object-cover rounded" />
                                             ) : (
-                                              <span className="text-xs">{sportIcon}</span>
+                                              <span className="text-base">{sportIcon}</span>
                                             )}
-                                            <span className="text-[10px]">{sport}</span>
+                                            <span className="text-xs">{sport}</span>
+                                            {distance > 0 && (
+                                              <span className="text-sm font-bold ml-1 text-blue-900">
+                                                {distance.toFixed(0)}m
+                                              </span>
+                                            )}
                                           </div>
                                         );
                                       })}
-                                      {sports.size > 3 && (
-                                        <span className="text-xs opacity-60 font-medium">+{sports.size - 3}</span>
+                                      {sportDistances.size > 3 && (
+                                        <span className="text-xs opacity-60 font-medium">+{sportDistances.size - 3}</span>
                                       )}
                                     </div>
                                   </button>
@@ -293,10 +307,11 @@ export default function WorkoutTreeView({
                                   {/* Expanded Moveframes */}
                                   {isWorkoutExpanded && workout.moveframes && workout.moveframes.length > 0 && (
                                     <div>
-                                      {workout.moveframes.map((moveframe: any) => {
+                                      {workout.moveframes.map((moveframe: any, moveframeIndex: number) => {
                                         const isMoveframeExpanded = expandedMoveframes.has(moveframe.id);
                                         const sportIcon = getSportIcon(moveframe.sport, iconType);
                                         const movelapsCount = moveframe.movelaps?.length || 0;
+                                        const isEvenMoveframe = moveframeIndex % 2 === 0;
 
                                         return (
                                           <div key={moveframe.id}>
@@ -306,8 +321,8 @@ export default function WorkoutTreeView({
                                               className="w-full flex items-center justify-between px-4 py-1.5 border-t hover:bg-opacity-90 transition-all"
                                               style={{
                                                 paddingLeft: '5rem', // Double indent
-                                                backgroundColor: colors.moveframeHeader || '#f3f4f6',
-                                                color: colors.moveframeHeaderText || '#374151',
+                                                backgroundColor: isEvenMoveframe ? colors.moveframeHeader : colors.alternateRowMoveframe,
+                                                color: isEvenMoveframe ? colors.moveframeHeaderText : colors.alternateRowTextMoveframe,
                                                 borderTop: getBorderStyle('moveframe') || '1px solid rgba(0,0,0,0.08)',
                                                 fontWeight: '500'
                                               }}
@@ -345,9 +360,9 @@ export default function WorkoutTreeView({
                                                       className="flex items-center gap-3 px-4 py-1.5 border-t text-xs hover:bg-opacity-80 transition-all cursor-default"
                                                       style={{
                                                         paddingLeft: '7rem', // Triple indent
-                                                        backgroundColor: isEvenLap ? '#f9fafb' : '#ffffff',
-                                                        color: isEvenLap ? '#374151' : '#1f2937',
-                                                        borderTop: '0.5px solid rgba(0,0,0,0.05)'
+                                                        backgroundColor: isEvenLap ? colors.movelapHeader : colors.alternateRowMovelap,
+                                                        color: isEvenLap ? colors.movelapHeaderText : colors.alternateRowTextMovelap,
+                                                        borderTop: getBorderStyle('movelap') || '0.5px solid rgba(0,0,0,0.05)'
                                                       }}
                                                     >
                                                       <span className="w-6 text-center font-medium text-gray-500">

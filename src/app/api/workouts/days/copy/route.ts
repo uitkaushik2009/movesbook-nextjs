@@ -68,6 +68,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine storageZone from the target week's plan
+    const targetWeek = await prisma.workoutWeek.findUnique({
+      where: { id: targetWeekId },
+      include: { workoutPlan: { select: { type: true } } }
+    });
+
+    let storageZone: 'A' | 'B' | 'C' | 'D' = sourceDay.storageZone || 'B';
+    if (targetWeek?.workoutPlan) {
+      if (targetWeek.workoutPlan.type === 'TEMPLATE_WEEKS') storageZone = 'A';
+      else if (targetWeek.workoutPlan.type === 'YEARLY_PLAN') storageZone = 'B';
+      else if (targetWeek.workoutPlan.type === 'WORKOUTS_DONE') storageZone = 'C';
+      else if (targetWeek.workoutPlan.type === 'ARCHIVE') storageZone = 'D';
+    }
+
     // Create new day with copied data
     const newDay = await prisma.workoutDay.create({
       data: {
@@ -77,6 +91,7 @@ export async function POST(request: NextRequest) {
         weekNumber: sourceDay.weekNumber,
         dayOfWeek: sourceDay.dayOfWeek,
         periodId: sourceDay.periodId,
+        storageZone,
         weather: sourceDay.weather,
         feelingStatus: sourceDay.feelingStatus,
         notes: `${sourceDay.notes || ''} (Copied from ${new Date(sourceDay.date).toLocaleDateString()})`,

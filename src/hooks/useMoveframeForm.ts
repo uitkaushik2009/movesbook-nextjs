@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getSportConfig } from '@/constants/moveframe.constants';
+import { getSportConfig, sportNeedsExerciseName, DISTANCE_BASED_SPORTS } from '@/constants/moveframe.constants';
 
 export interface IndividualRepetitionPlan {
   index: number;
@@ -294,13 +294,22 @@ export function useMoveframeForm({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!sport) {
-      newErrors.sport = 'Sport is required';
+    // Skip validation for ANNOTATION type - only annotation text is needed
+    if (type === 'ANNOTATION') {
+      setErrors(newErrors);
+      return true;
     }
 
-    // Workout Section is required only for STANDARD and BATTERY modes
-    if ((type === 'STANDARD' || type === 'BATTERY') && !sectionId) {
-      newErrors.sectionId = 'Workout section is required';
+    // Skip sport and section validation in manual mode
+    if (!manualMode) {
+      if (!sport) {
+        newErrors.sport = 'Sport is required';
+      }
+
+      // Workout Section is required only for STANDARD and BATTERY modes
+      if ((type === 'STANDARD' || type === 'BATTERY') && !sectionId) {
+        newErrors.sectionId = 'Workout section is required';
+      }
     }
 
     if (type === 'STANDARD' && !manualMode) {
@@ -344,31 +353,65 @@ export function useMoveframeForm({
    * Generate moveframe description based on current fields
    */
   const generateDescription = () => {
-    if (manualMode && manualPriority) {
+    // For ANNOTATION type, return the annotation text
+    if (type === 'ANNOTATION') {
+      return annotationText || '';
+    }
+
+    // For manual mode, return the HTML content as description
+    if (manualMode) {
       return manualContent;
     }
 
+    // Use individual plan values if in individual planning mode
+    const effectivePause = (planningMode === 'individual' && individualPlans.length > 0) 
+      ? individualPlans[0].pause 
+      : pause;
+    
+    const effectiveMacroFinal = (planningMode === 'individual' && individualPlans.length > 0) 
+      ? individualPlans[0].macroFinal 
+      : macroFinal;
+
     if (sport === 'BODY_BUILDING') {
-      const macroFinalText = macroFinal ? ` M${macroFinal}` : '';
+      const macroFinalText = effectiveMacroFinal ? ` M${effectiveMacroFinal}` : '';
       const sectorText = muscularSector ? `${muscularSector} - ` : '';
       const exerciseText = exercise || 'Exercise';
       const setsCount = parseInt(repetitions) || 1;
       const repsPerSet = parseInt(reps) || 0;
       const tempoText = speed ? ` ${speed}` : ''; // Tempo, not speed (no A2/B3 format)
-      const pauseText = pause ? ` P${pause}` : '';
+      const pauseText = effectivePause ? ` P${effectivePause}` : '';
       // Format: "Shoulders - Bench Press: 3 sets x 10 reps Very slow P30" M0'"
       return `${sectorText}${exerciseText}: ${setsCount} sets x ${repsPerSet} reps${tempoText}${pauseText}${macroFinalText}`;
     }
 
-    const dist = distance === 'custom' ? customDistance : distance;
-    const repsCount = parseInt(repetitions) || 1;
-    const repsText = ` x ${repsCount}`; // Always show repetitions
-    const styleText = style ? ` ${style}` : '';
-    const speedText = speed ? ` ${speed}` : '';
-    const pauseText = pause ? ` P${pause}` : '';
-    const macroFinalText = macroFinal ? ` M${macroFinal}` : ''; // Always show macro final if present
+    // Check if this is a distance-based sport
+    const isDistanceSport = DISTANCE_BASED_SPORTS.includes(sport as any);
     
-    return `${dist}m${repsText}${styleText}${speedText}${pauseText}${macroFinalText}`;
+    if (isDistanceSport) {
+      // Distance-based sports (SWIM, RUN, BIKE, etc.)
+      const dist = (distance === 'custom' || distance === 'input') ? customDistance : distance;
+      const repsCount = parseInt(repetitions) || 1;
+      const repsText = ` x ${repsCount}`; // Always show repetitions
+      const styleText = style ? ` ${style}` : '';
+      const speedText = speed ? ` ${speed}` : '';
+      const pauseText = effectivePause ? ` P${effectivePause}` : '';
+      const macroFinalText = effectiveMacroFinal ? ` M${effectiveMacroFinal}` : '';
+      
+      return `${dist}m${repsText}${styleText}${speedText}${pauseText}${macroFinalText}`;
+    } else {
+      // Non-distance sports (series-based) with exercise/drill names
+      const exerciseText = exercise || 'Exercise';
+      const setsCount = parseInt(repetitions) || 1;
+      const repsPerSet = parseInt(reps) || 1;
+      const repsTypeText = repsType === 'Time' ? 'Time' : 'reps';
+      const styleText = style ? ` ${style}` : '';
+      const speedText = speed ? ` ${speed}` : '';
+      const pauseText = effectivePause ? ` P${effectivePause}` : '';
+      const macroFinalText = effectiveMacroFinal ? ` M${effectiveMacroFinal}` : '';
+      
+      // Format: "Exercise name: 3 sets x 10 reps P30" M0'"
+      return `${exerciseText}: ${setsCount} sets x ${repsPerSet} ${repsTypeText}${styleText}${speedText}${pauseText}${macroFinalText}`;
+    }
   };
 
   /**
@@ -382,23 +425,27 @@ export function useMoveframeForm({
       notesValue = manualContent;
     }
 
+    // For manual mode, provide defaults for required fields
+    const effectiveSport = sport || (manualMode ? 'FREE_MOVES' : 'SWIM');
+    const effectiveSectionId = sectionId || null;
+
     return {
-      sport,
+      sport: effectiveSport,
       type,
       description: generateDescription(),
       
-      // Annotation fields (separate from type)
-      annotationText: annotationText || null,
-      annotationBgColor: annotationBgColor || null,
-      annotationTextColor: annotationTextColor || null,
-      annotationBold: annotationBold || false,
+      // Annotation fields (ONLY for ANNOTATION type)
+      annotationText: type === 'ANNOTATION' ? (annotationText || null) : null,
+      annotationBgColor: type === 'ANNOTATION' ? (annotationBgColor || null) : null,
+      annotationTextColor: type === 'ANNOTATION' ? (annotationTextColor || null) : null,
+      annotationBold: type === 'ANNOTATION' ? (annotationBold || false) : false,
       
       // Planning mode
       planningMode,
       individualPlans: planningMode === 'individual' ? individualPlans : [],
       
       // Standard fields
-      distance: distance === 'custom' ? parseInt(customDistance) : parseInt(distance),
+      distance: (distance === 'custom' || distance === 'input') ? parseInt(customDistance) : parseInt(distance),
       repetitions: parseInt(repetitions),
       speed,
       style,
@@ -410,12 +457,12 @@ export function useMoveframeForm({
       macroFinal,
       alarm: parseInt(alarm),
       sound,
-      reps: sport === 'BODY_BUILDING' ? parseInt(reps) : null,
-      r1: sport === 'BIKE' ? r1 : null,
-      r2: sport === 'BIKE' ? r2 : null,
-      muscularSector: sport === 'BODY_BUILDING' ? muscularSector : null,
-      exercise: (sport === 'BODY_BUILDING' || sport === 'FREE_MOVES') ? exercise : null,
-      sectionId: sectionId || null, // Workout section (for ALL sports)
+      reps: effectiveSport === 'BODY_BUILDING' ? parseInt(reps) : null,
+      r1: effectiveSport === 'BIKE' ? r1 : null,
+      r2: effectiveSport === 'BIKE' ? r2 : null,
+      muscularSector: effectiveSport === 'BODY_BUILDING' ? muscularSector : null,
+      exercise: sportNeedsExerciseName(effectiveSport) ? exercise : null,
+      sectionId: effectiveSectionId, // Workout section (for ALL sports)
       
       // Manual mode
       manualMode,
@@ -501,7 +548,7 @@ export function useMoveframeForm({
     } else {
       resetForm();
     }
-  }, [mode, existingMoveframe, isOpen]);
+  }, [mode, existingMoveframe, isOpen, workout?.id]); // Reset when workout changes!
 
   /**
    * Initialize individual plans when planning mode changes to 'individual'

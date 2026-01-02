@@ -73,25 +73,33 @@ export function useWorkoutData({
    * Load workout data for active section
    * @param section - Optional section ID to load (defaults to initialSection)
    */
-  const loadWorkoutData = useCallback(async (section?: SectionId) => {
+  const loadWorkoutData = useCallback(async (section?: SectionId, subSection?: 'A' | 'B' | 'C') => {
     const targetSection = section || initialSection;
     setIsLoading(true);
     
+    // Clear old data immediately to prevent Section A/B/C data overlap
+    setWorkoutPlan(null);
+    
     try {
       const planType = sectionHelpers.getPlanType(targetSection);
-      console.log('🔄 Loading workout data for section:', targetSection, 'type:', planType);
       
-      const response = await workoutPlanApi.get(planType);
+      // For Section A, use the subsection (A, B, or C) to get independent plans
+      const storageSection = targetSection === 'A' && subSection ? subSection : targetSection;
+      
+      console.log('🔄 Loading workout data for section:', targetSection, 'subsection:', subSection, 'storageSection:', storageSection, 'type:', planType);
+      
+      // Pass storage section parameter for TEMPLATE_WEEKS to get independent plans
+      const response = await workoutPlanApi.get(planType, false, storageSection);
 
       if (response.success && response.data) {
         const { plan } = response.data;
         console.log('✅ Plan loaded:', plan?.id);
         console.log('📊 Number of weeks:', plan?.weeks?.length);
         
-        // Check if Section A has less than 3 weeks - if so, force recreation
-        if (targetSection === 'A' && plan?.weeks && plan.weeks.length < 3) {
-          console.warn(`⚠️ Section A has only ${plan.weeks.length} weeks! Force recreating plan...`);
-          const recreateResponse = await workoutPlanApi.get(planType, true); // forceRecreate = true
+        // Check if any weekly plan has less than 3 weeks - if so, force recreation
+        if ((targetSection === 'A' || targetSection === 'B' || targetSection === 'C') && plan?.weeks && plan.weeks.length < 3) {
+          console.warn(`⚠️ Section ${targetSection} (storage: ${storageSection}) has only ${plan.weeks.length} weeks! Force recreating plan...`);
+          const recreateResponse = await workoutPlanApi.get(planType, true, storageSection); // forceRecreate = true
           if (recreateResponse.success && recreateResponse.data) {
             setWorkoutPlan(recreateResponse.data.plan);
             console.log('✅ Plan recreated successfully with', recreateResponse.data.plan?.weeks?.length, 'weeks');
@@ -105,10 +113,10 @@ export function useWorkoutData({
           console.log('✅ First week:', plan.weeks[0]);
           console.log('✅ First week days:', plan.weeks[0].days);
         } else {
-          // Only warn for sections A and B where weeks are expected to be pre-created
-          if (targetSection === 'A' || targetSection === 'B') {
+          // Only warn for sections A, B, C where weeks are expected to be pre-created
+          if (targetSection === 'A' || targetSection === 'B' || targetSection === 'C') {
             console.warn('⚠️ No weeks found in plan! Force recreating...');
-            const recreateResponse = await workoutPlanApi.get(planType, true);
+            const recreateResponse = await workoutPlanApi.get(planType, true, storageSection);
             if (recreateResponse.success && recreateResponse.data) {
               setWorkoutPlan(recreateResponse.data.plan);
               console.log('✅ Plan recreated successfully');
@@ -116,7 +124,7 @@ export function useWorkoutData({
             setIsLoading(false);
             return;
           } else {
-            // Sections C and D are expected to start empty
+            // Other sections are expected to start empty
             console.log(`ℹ️ Section ${targetSection} plan is empty (expected)`);
           }
         }

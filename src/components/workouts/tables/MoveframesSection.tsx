@@ -177,7 +177,7 @@ export default function MoveframesSection({
       section: <th key="section" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Period</th>,
       sport: <th key="sport" className="border border-gray-200 px-1 py-1 text-left text-[10px]">Sport of the moveframe</th>,
       description: <th key="description" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Moveframe description</th>,
-      rip: <th key="rip" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rip</th>,
+      rip: <th key="rip" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rip\Sets</th>,
       macro: <th key="macro" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Macro</th>,
       alarm: <th key="alarm" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Alarm & Sound</th>,
       annotation: <th key="annotation" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Annotation</th>,

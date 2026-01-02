@@ -25,7 +25,6 @@ td.sticky-col-5,
 td.sticky-col-6,
 td.sticky-col-7,
 td.sticky-col-8,
-td.sticky-col-9,
 td.sticky-options-col {
   background-clip: padding-box !important;
 }
@@ -56,6 +55,9 @@ td.sticky-options-col {
   background: #2563eb;
 }
 
+/* Table header rows - NOT sticky to avoid conflicts with sticky columns */
+/* Sticky behavior is handled by the wrapper elements above the table */
+
 /* Frozen LEFT columns - Sticky positioning */
 td.sticky-col-1,
 td.sticky-col-2,
@@ -65,7 +67,6 @@ td.sticky-col-5,
 td.sticky-col-6,
 td.sticky-col-7,
 td.sticky-col-8,
-td.sticky-col-9,
 th.sticky-header-1,
 th.sticky-header-2,
 th.sticky-header-3,
@@ -73,68 +74,66 @@ th.sticky-header-4,
 th.sticky-header-5,
 th.sticky-header-6,
 th.sticky-header-7,
-th.sticky-header-8,
-th.sticky-header-9 {
+th.sticky-header-8 {
   position: -webkit-sticky !important;
   position: sticky !important;
-  z-index: 15 !important;
+  z-index: 15 !important; /* Sticky columns for horizontal scrolling */
 }
 
-/* Column 1 - No workouts (0px) */
+/* Column 1 - Check (0px, width: 50px) */
 td.sticky-col-1,
 th.sticky-header-1 { 
   left: 0px !important;
 }
 
-/* Column 2 - Color cycle (50px) */
+/* Column 2 - Color (50px, width: 50px) */
 td.sticky-col-2,
 th.sticky-header-2 { 
   left: 50px !important;
 }
 
-/* Column 3 - Name cycle (100px = 50 + 50) */
+/* Column 3 - Period Name (100px = 50 + 50, width: 90px) */
 td.sticky-col-3,
 th.sticky-header-3 { 
   left: 100px !important;
 }
 
-/* Column 4 - Week n. (190px = 50 + 50 + 90) */
+/* Column 4 - Week (190px = 50 + 50 + 90, width: 60px) */
 td.sticky-col-4,
 th.sticky-header-4 { 
   left: 190px !important;
 }
 
-/* Column 5 - Day wk (250px = 50 + 50 + 90 + 60) */
+/* Column 5 - Day (250px = 50 + 50 + 90 + 60, width: 50px) */
 td.sticky-col-5,
 th.sticky-header-5 { 
   left: 250px !important;
 }
 
-/* Column 6 - Dayname (300px = 50 + 50 + 90 + 60 + 50) */
+/* Column 6 - Dayname OR Match done (300px = 50 + 50 + 90 + 60 + 50, width: 80px for Dayname, 60px for Match done) */
+/* For 3 weeks plans (A,B,C): Column 6 = Match done at 300px */
+/* For other sections: Column 6 = Dayname at 300px */
 td.sticky-col-6,
 th.sticky-header-6 { 
   left: 300px !important;
 }
 
-/* Column 7 - Date (380px = 50 + 50 + 90 + 60 + 50 + 80) */
+/* Column 7 - Match done OR Workouts */
+/* For 3 weeks plans (A,B,C): Column 7 = Workouts at 360px (300 + 60) */
+/* For other sections: Column 7 = Match done at 380px (300 + 80) */
 td.sticky-col-7,
 th.sticky-header-7 { 
-  left: 380px !important;
+  left: 360px !important; /* For 3 weeks plans */
 }
 
-/* Column 8 - Match done (460px = 50 + 50 + 90 + 60 + 50 + 80 + 80) */
+/* Column 8 - Workouts (440px = 50 + 50 + 90 + 60 + 50 + 80 + 60, width: 80px) */
+/* Only used for non-3-weeks sections */
 td.sticky-col-8,
 th.sticky-header-8 { 
-  left: 460px !important;
+  left: 440px !important;
 }
 
-/* Column 9 - Workouts (520px = 50 + 50 + 90 + 60 + 50 + 80 + 80 + 60) */
-td.sticky-col-9,
-th.sticky-header-9 { 
-  left: 520px !important;
-}
-
-/* Headers - Higher z-index and blue background */
+/* Headers - Higher z-index to stay on top */
 th.sticky-header-1,
 th.sticky-header-2,
 th.sticky-header-3,
@@ -142,10 +141,8 @@ th.sticky-header-4,
 th.sticky-header-5,
 th.sticky-header-6,
 th.sticky-header-7,
-th.sticky-header-8,
-th.sticky-header-9 {
-  z-index: 30 !important;
-  background-color: #2563eb !important;
+th.sticky-header-8 {
+  z-index: 15 !important; /* Same as sticky columns for horizontal scrolling */
 }
 
 /* Data cells - Inherit row background color */
@@ -156,8 +153,7 @@ td.sticky-col-4,
 td.sticky-col-5,
 td.sticky-col-6,
 td.sticky-col-7,
-td.sticky-col-8,
-td.sticky-col-9 {
+td.sticky-col-8 {
   background-color: inherit !important;
 }
 
@@ -175,8 +171,7 @@ td.sticky-options-col {
 }
 
 th.sticky-options-header {
-  z-index: 25 !important;
-  background-color: #2563eb !important;
+  z-index: 15 !important; /* Same as other sticky columns */
 }
 
 /* Thick black line between weeks */

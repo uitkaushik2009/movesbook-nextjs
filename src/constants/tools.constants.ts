@@ -63,6 +63,7 @@ export interface Device {
   name: string;
   brand: string;
   model: string;
+  codekey: string; // Unique code identifier for protocol mapping (e.g., GARM-FR945)
   type: 'Watch' | 'Tracker' | 'Monitor' | 'Scale' | 'Sensor' | 'Other';
   compatibility: string[];
   isEnabled: boolean;

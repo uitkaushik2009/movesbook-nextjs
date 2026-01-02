@@ -30,16 +30,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Convert toolsData to JSON string for storage
+    const dataString = JSON.stringify(toolsData);
+    
     // Save to Prisma database using upsert (create or update)
     await prisma.toolsDefaults.upsert({
       where: { language },
       update: {
-        data: toolsData,
+        data: dataString,
         updatedAt: new Date()
       },
       create: {
         language,
-        data: toolsData
+        data: dataString
       }
     });
 
@@ -51,9 +54,18 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error saving tools defaults:', error);
+    console.error('❌ Error saving tools defaults:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Internal server error',
+        details: error instanceof Error ? error.stack : String(error)
+      },
       { status: 500 }
     );
   } finally {

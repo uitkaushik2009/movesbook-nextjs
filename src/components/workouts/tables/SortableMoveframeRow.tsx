@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import { GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
@@ -106,6 +107,11 @@ export default function SortableMoveframeRow({
     (sum: number, lap: any) => sum + (parseInt(lap.distance) || 0),
     0
   );
+  
+  // Debug: Log movelaps count to verify updates
+  React.useEffect(() => {
+    console.log(`🔢 Moveframe ${moveframe.letter} - Rip count: ${movelapsCount}, Movelaps:`, moveframe.movelaps);
+  }, [moveframe.movelaps, movelapsCount, moveframe.letter]);
   const sectionColor = moveframe.section?.color || '#5b8def';
   const sectionName = moveframe.section?.name || 'Default';
   const sportIcon = getSportIcon(moveframe.sport || 'SWIM', iconType);
@@ -115,6 +121,14 @@ export default function SortableMoveframeRow({
   const hasAnnotation = moveframe.annotationBgColor || moveframe.annotationTextColor;
   const annotationBgColor = moveframe.annotationBgColor || null;
   const annotationTextColor = moveframe.annotationTextColor || null;
+
+  // Hover popup state for moveframe letter
+  const [hoveredMoveframe, setHoveredMoveframe] = React.useState<any>(null);
+  const [popupPosition, setPopupPosition] = React.useState<{ x: number; y: number } | null>(null);
+  
+  // Manual content popup state
+  const [showManualPopup, setShowManualPopup] = React.useState(false);
+  const [manualPopupContent, setManualPopupContent] = React.useState('');
   
   // Calculate macro time (total time for all movelaps)
   const macroTime = (moveframe.movelaps || []).reduce((sum: number, lap: any) => {
@@ -274,37 +288,63 @@ export default function SortableMoveframeRow({
         );
       
       case 'mf':
-        const workTypeColor = moveframe.workType === 'MAIN' ? 'text-red-600' : moveframe.workType === 'SECONDARY' ? 'text-blue-600' : '';
+        // Colored circle around letter based on work type
+        const getWorkTypeStyle = () => {
+          if (moveframe.workType === 'MAIN') {
+            return 'border-2 border-red-500 bg-red-50 text-red-700';
+          } else if (moveframe.workType === 'SECONDARY') {
+            return 'border-2 border-blue-500 bg-blue-50 text-blue-700';
+          }
+          return 'border border-gray-300';
+        };
+        
+        const isMfManualMode = moveframe.manualMode === true;
+        const mfHasHtmlContent = moveframe.description && moveframe.description.includes('<');
+        
         return (
           <td 
             key="mf" 
-            className={`border border-gray-200 px-1 py-1 text-center font-bold text-xs cursor-pointer hover:bg-blue-100 transition-colors ${workTypeColor}`}
+            className="border border-gray-200 px-1 py-1 text-center cursor-pointer hover:bg-blue-100 transition-colors"
             onDoubleClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
+              // Set work type on double click (for all moveframes)
               if (onSetWorkType) {
                 onSetWorkType(moveframe);
               }
             }}
-            onClick={(e) => {
-              e.stopPropagation();
+            onMouseEnter={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setHoveredMoveframe(moveframe);
+              setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
             }}
-            title="Double-click to set work type (Main/Secondary)"
+            onMouseLeave={() => {
+              setHoveredMoveframe(null);
+              setPopupPosition(null);
+            }}
+            title="Double-click to set work type (Main/Secondary) | Hover to see full details"
+          >
+            <div 
+              className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs ${getWorkTypeStyle()}`}
           >
             {moveframe.letter || String.fromCharCode(65 + mfIndex)}
+            </div>
           </td>
         );
       
       case 'section':
+        // Show day's period information (period name and color)
+        const periodName = day?.period?.name || day?.periodName || 'No period';
+        const periodColor = day?.period?.color || day?.periodColor || '#999999';
         return (
           <td key="section" className="border border-gray-200 px-1 py-1 text-center text-[10px]">
             <div className="flex items-center justify-center gap-1">
               <div
                 className="w-3 h-3 rounded-full border border-gray-400 flex-shrink-0"
-                style={{ backgroundColor: sectionColor }}
-                title={`Section: ${sectionName}`}
+                style={{ backgroundColor: periodColor }}
+                title={`Period: ${periodName}`}
               />
-              <span className="text-[10px]">{sectionName}</span>
+              <span className="text-[10px]">{periodName}</span>
             </div>
           </td>
         );
@@ -328,12 +368,27 @@ export default function SortableMoveframeRow({
         );
       
       case 'description':
+        // Check if this is a manual mode moveframe
+        const isManualMode = moveframe.manualMode === true;
+        const hasHtmlContent = moveframe.description && moveframe.description.includes('<');
+        
+        // Function to truncate HTML content to first 2 lines
+        const getTruncatedPreview = (html: string) => {
+          // Strip HTML tags for line counting
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = html;
+          const text = tempDiv.textContent || tempDiv.innerText || '';
+          const lines = text.split('\n').filter(line => line.trim());
+          const preview = lines.slice(0, 2).join('\n');
+          return preview || text.slice(0, 100) + (text.length > 100 ? '...' : '');
+        };
+        
         return (
           <td 
             key="description" 
             className={`border border-gray-200 px-1 py-1 text-center text-[10px] ${
               moveframe.type === 'ANNOTATION' && moveframe.annotationBold ? 'font-bold' : ''
-            }`}
+            } ${isManualMode && hasHtmlContent ? 'cursor-pointer hover:bg-blue-50' : ''}`}
             style={
               moveframe.type === 'ANNOTATION' 
                 ? {
@@ -342,8 +397,20 @@ export default function SortableMoveframeRow({
                   }
                 : {}
             }
+            onClick={(e) => {
+              if (isManualMode && hasHtmlContent) {
+                e.stopPropagation();
+                setManualPopupContent(moveframe.description);
+                setShowManualPopup(true);
+              }
+            }}
+            title={isManualMode && hasHtmlContent ? "Click to view full content" : ""}
           >
-            {moveframe.description && moveframe.description.includes('<') ? (
+            {isManualMode && hasHtmlContent ? (
+              <div className="text-left line-clamp-2 text-xs">
+                {getTruncatedPreview(moveframe.description)}
+              </div>
+            ) : hasHtmlContent ? (
               <div dangerouslySetInnerHTML={{ __html: moveframe.description }} />
             ) : (
               moveframe.description || moveframe.annotationText || 'No description'
@@ -353,7 +420,14 @@ export default function SortableMoveframeRow({
       
       case 'rip':
         return (
-          <td key="rip" className="border border-gray-200 px-1 py-1 text-center text-red-600 font-semibold text-xs">
+          <td 
+            key="rip" 
+            className="rip-column border border-gray-200 px-1 py-1 text-center font-semibold text-xs"
+            style={{
+              backgroundColor: '#ffffff',
+              color: moveframe.type === 'ANNOTATION' ? '#6b7280' : '#dc2626' // red-600 or gray-500
+            }}
+          >
             {moveframe.type === 'ANNOTATION' ? '—' : movelapsCount}
           </td>
         );
@@ -469,15 +543,58 @@ export default function SortableMoveframeRow({
                 Delete
               </button>
               <button
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation();
-                  // Save functionality can be added here if needed
-                  alert('Save functionality - to be implemented');
+                  try {
+                    const token = localStorage.getItem('token');
+                    if (!token) {
+                      alert('Please log in to save favorites');
+                      return;
+                    }
+
+                    console.log(`📌 Toggling favorite for moveframe ${moveframe.id}:`, {
+                      currentStatus: moveframe.favourite,
+                      newStatus: !moveframe.favourite
+                    });
+
+                    const response = await fetch(`/api/workouts/moveframes/${moveframe.id}`, {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                      },
+                      body: JSON.stringify({
+                        favourite: !moveframe.favourite
+                      })
+                    });
+
+                    console.log(`📌 Save favorite response status: ${response.status}`);
+
+                    if (response.ok) {
+                      const data = await response.json();
+                      console.log('✅ Moveframe favorite updated:', data);
+                      alert(moveframe.favourite ? 'Removed from favorites!' : 'Saved to favorites!');
+                      if (onRefresh) {
+                        onRefresh();
+                      }
+                    } else {
+                      const data = await response.json().catch(() => ({ error: 'Unknown error' }));
+                      console.error('❌ Error response:', data);
+                      alert(`Error: ${data.error || data.details || 'Failed to update favorite status'}`);
+                    }
+                  } catch (error: any) {
+                    console.error('❌ Error saving to favorites:', error);
+                    alert(`Failed to save to favorites: ${error.message}`);
+                  }
                 }}
-                className="px-2 py-1 text-[10px] bg-purple-500 text-white rounded hover:bg-purple-600"
-                title="Save changes"
+                className={`px-2 py-1 text-[10px] text-white rounded transition-all ${
+                  moveframe.favourite 
+                    ? 'bg-yellow-500 hover:bg-yellow-600' 
+                    : 'bg-purple-500 hover:bg-purple-600'
+                }`}
+                title={moveframe.favourite ? 'Remove from favorites' : 'Save to favorites'}
               >
-                Save
+                {moveframe.favourite ? '★ In Favs' : 'Save in Favs'}
               </button>
             </div>
           </td>
@@ -533,6 +650,217 @@ export default function SortableMoveframeRow({
             </div>
           </td>
         </tr>
+      )}
+
+      {/* Hover Popup for Moveframe Letter */}
+      {hoveredMoveframe && popupPosition && ReactDOM.createPortal(
+        <div 
+          className="fixed z-[9999] bg-white border-2 border-blue-500 rounded-lg shadow-2xl p-4 max-w-md animate-fadeIn"
+          style={{
+            left: `${popupPosition.x}px`,
+            top: `${popupPosition.y - 10}px`,
+            transform: 'translate(-50%, -100%)',
+            pointerEvents: 'none'
+          }}
+        >
+          <div className="text-xs space-y-2">
+            {/* Moveframe Letter */}
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+              <div 
+                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                style={{ backgroundColor: hoveredMoveframe.section?.color || '#6366f1' }}
+              >
+                {hoveredMoveframe.letter || 'A'}
+              </div>
+              <div>
+                <div className="font-bold text-sm text-gray-900">{hoveredMoveframe.sport || 'Unknown'}</div>
+                <div className="text-xs text-gray-500">{hoveredMoveframe.section?.name || 'Section'}</div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div>
+              <div className="font-semibold text-gray-700 mb-1">Description:</div>
+              <div className="text-gray-900 bg-gray-50 p-2 rounded max-h-[150px] overflow-y-auto">
+                {hoveredMoveframe.description ? (
+                  <div dangerouslySetInnerHTML={{ __html: hoveredMoveframe.description }} />
+                ) : (
+                  'No description'
+                )}
+              </div>
+            </div>
+
+            {/* All Moveframe Details */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Repetitions */}
+              {hoveredMoveframe.repetitions && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Repetitions</span>
+                  <span className="font-semibold text-blue-600">{hoveredMoveframe.repetitions}</span>
+                </div>
+              )}
+
+              {/* Movelaps Count */}
+              <div className="flex flex-col">
+                <span className="text-gray-500 text-[10px]">Movelaps</span>
+                <span className="font-semibold text-purple-600">
+                  {hoveredMoveframe.movelaps?.length || 0}
+                </span>
+              </div>
+
+              {/* Pause */}
+              {hoveredMoveframe.pause && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Pause</span>
+                  <span className="font-semibold text-orange-600">{hoveredMoveframe.pause}</span>
+                </div>
+              )}
+
+              {/* Macro Rest */}
+              {hoveredMoveframe.macroRest && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Macro Rest</span>
+                  <span className="font-semibold text-orange-600">{hoveredMoveframe.macroRest}</span>
+                </div>
+              )}
+
+              {/* Macro Final */}
+              {hoveredMoveframe.macroFinal && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Macro Final</span>
+                  <span className="font-semibold text-green-600">{hoveredMoveframe.macroFinal}</span>
+                </div>
+              )}
+
+              {/* Alarm */}
+              {hoveredMoveframe.alarm && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Alarm</span>
+                  <span className="font-semibold text-red-600">{hoveredMoveframe.alarm}</span>
+                </div>
+              )}
+
+              {/* Code */}
+              {hoveredMoveframe.code && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Code</span>
+                  <span className="font-semibold text-gray-700 font-mono text-[10px]">{hoveredMoveframe.code}</span>
+                </div>
+              )}
+
+              {/* Total Distance */}
+              {hoveredMoveframe.totalDistance > 0 && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Total Distance</span>
+                  <span className="font-semibold text-blue-600">{hoveredMoveframe.totalDistance}m</span>
+                </div>
+              )}
+
+              {/* Total Reps */}
+              {hoveredMoveframe.totalReps > 0 && (
+                <div className="flex flex-col">
+                  <span className="text-gray-500 text-[10px]">Total Reps</span>
+                  <span className="font-semibold text-purple-600">{hoveredMoveframe.totalReps}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Notes */}
+            {hoveredMoveframe.notes && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="font-semibold text-gray-700 mb-1 text-[10px]">Notes:</div>
+                <div className="text-gray-900 bg-yellow-50 p-2 rounded text-[10px]">
+                  {hoveredMoveframe.notes}
+                </div>
+              </div>
+            )}
+
+            {/* Movelaps Details */}
+            {hoveredMoveframe.movelaps && hoveredMoveframe.movelaps.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-gray-200">
+                <div className="font-semibold text-gray-700 mb-1 text-[10px]">Movelaps ({hoveredMoveframe.movelaps.length}):</div>
+                <div className="max-h-32 overflow-y-auto space-y-1">
+                  {hoveredMoveframe.movelaps.map((lap: any, idx: number) => (
+                    <div key={idx} className="bg-gray-50 p-1.5 rounded text-[10px]">
+                      <div className="font-semibold text-gray-700">#{idx + 1}</div>
+                      <div className="grid grid-cols-2 gap-1 text-[9px]">
+                        {lap.distance && <div>Distance: <span className="font-semibold">{lap.distance}m</span></div>}
+                        {lap.reps && <div>Reps: <span className="font-semibold">{lap.reps}</span></div>}
+                        {lap.time && <div>Time: <span className="font-semibold">{lap.time}</span></div>}
+                        {lap.pace && <div>Pace: <span className="font-semibold">{lap.pace}</span></div>}
+                        {lap.speed && <div>Speed: <span className="font-semibold">{lap.speed}</span></div>}
+                        {lap.pause && <div>Pause: <span className="font-semibold">{lap.pause}</span></div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Manual Content Popup Modal */}
+      {showManualPopup && ReactDOM.createPortal(
+        <div 
+          className="fixed inset-0 z-[10000] flex items-center justify-center bg-black bg-opacity-50"
+          onClick={() => setShowManualPopup(false)}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-2xl p-6 max-w-4xl max-h-[80vh] overflow-y-auto m-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-300">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                  style={{ backgroundColor: sectionColor }}
+                >
+                  {moveframe.letter || 'A'}
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">
+                    {sportName} - Manual Moveframe
+                  </h3>
+                  <p className="text-sm text-gray-500">{sectionName}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowManualPopup(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl font-bold px-3 py-1 rounded hover:bg-gray-100"
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Full Content */}
+            <div className="prose max-w-none">
+              <div 
+                className="text-gray-900 bg-gray-50 p-4 rounded border border-gray-200"
+                style={{
+                  lineHeight: '1.8',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  fontSize: '14px'
+                }}
+                dangerouslySetInnerHTML={{ __html: manualPopupContent }}
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="mt-4 pt-3 border-t border-gray-300 flex justify-end">
+              <button
+                onClick={() => setShowManualPopup(false)}
+                className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </React.Fragment>
   );

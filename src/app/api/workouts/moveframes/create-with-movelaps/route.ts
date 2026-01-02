@@ -28,7 +28,13 @@ export async function POST(request: NextRequest) {
       type,
       description,
       notes,
-      movelaps
+      movelaps,
+      annotationText,
+      annotationBgColor,
+      annotationTextColor,
+      annotationBold,
+      manualMode,
+      macroFinal
     } = body;
 
     // Validation
@@ -68,16 +74,37 @@ export async function POST(request: NextRequest) {
     // Create moveframe with movelaps in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create the moveframe
+      const moveframeType = type || 'STANDARD';
+      console.log('🔍 Creating moveframe with data:', {
+        manualMode: manualMode || false,
+        hasNotes: !!notes,
+        notesLength: notes?.length || 0,
+        type: moveframeType
+      });
+
       const moveframe = await tx.moveframe.create({
         data: {
           workoutSessionId,
           sectionId,
           letter,
           sport,
-          type: type || 'STANDARD',
+          type: moveframeType,
           description,
-          notes: notes || null
+          notes: notes || null,
+          manualMode: manualMode || false,
+          macroFinal: macroFinal || null,
+          // Annotation fields: only save if type is ANNOTATION
+          annotationText: moveframeType === 'ANNOTATION' ? (annotationText || null) : null,
+          annotationBgColor: moveframeType === 'ANNOTATION' ? (annotationBgColor || null) : null,
+          annotationTextColor: moveframeType === 'ANNOTATION' ? (annotationTextColor || null) : null,
+          annotationBold: moveframeType === 'ANNOTATION' ? (annotationBold !== undefined ? annotationBold : false) : false
         }
+      });
+
+      console.log('✅ Moveframe created:', {
+        id: moveframe.id,
+        manualMode: moveframe.manualMode,
+        hasNotes: !!moveframe.notes
       });
 
       // Create all movelaps (skip if empty array for ANNOTATION type)

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { SPORT_OPTIONS, WORKOUT_SYMBOLS } from '@/constants/workout.constants';
+import { isSeriesBasedSport } from '@/constants/moveframe.constants';
 
 interface WorkoutInfoModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export default function WorkoutInfoModal({
 
   const [mainSport, setMainSport] = useState(workout.mainSport || '');
   const [isSavingMainSport, setIsSavingMainSport] = useState(false);
+  const [workoutNotes, setWorkoutNotes] = useState(workout.notes || '');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   const workoutSymbol = WORKOUT_SYMBOLS[workout.sessionNumber as 1 | 2 | 3] || { symbol: '○', label: 'Circle' };
   
@@ -52,59 +55,93 @@ export default function WorkoutInfoModal({
       setIsSavingMainSport(false);
     }
   };
+
+  const handleNotesChange = async (newNotes: string) => {
+    setWorkoutNotes(newNotes);
+    setIsSavingNotes(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`/api/workouts/sessions/${workout.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ notes: newNotes || null })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update workout notes');
+      }
+    } catch (error) {
+      console.error('Error updating workout notes:', error);
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
   
   // Calculate sports from moveframes (not from workout.sports)
   // Exclude STRETCHING if includeStretching is false
   const calculateSportsFromMoveframes = () => {
     const sportMap = new Map<string, {
       distance: number;
-      durationSeconds: number;
+      durationMinutes: number;
+      series: number;
+      repetitions: number; // Total reps for series-based sports
       moveframeCount: number;
       movelapCount: number;
-      seriesCount: number; // Total series/repetitions from all moveframes
     }>();
 
     // Aggregate from moveframes
     (workout.moveframes || []).forEach((mf: any) => {
       const sport = mf.sport || 'UNKNOWN';
+      const isSeries = isSeriesBasedSport(sport);
+      
       const currentTotals = sportMap.get(sport) || {
         distance: 0,
-        durationSeconds: 0,
+        durationMinutes: 0,
+        series: 0,
+        repetitions: 0,
         moveframeCount: 0,
-        movelapCount: 0,
-        seriesCount: 0
+        movelapCount: 0
       };
 
       currentTotals.moveframeCount += 1;
       currentTotals.movelapCount += (mf.movelaps || []).length;
       
-      // For ALL sports: sum the repetitions/series from each moveframe
-      // For distance-based sports: repetitions = number of laps planned
-      // For series-based sports: repetitions = number of series planned
+      // For ALL sports: sum the series from each moveframe
       const moveframeRepetitions = parseInt(mf.repetitions) || 0;
-      currentTotals.seriesCount += moveframeRepetitions;
+      currentTotals.series += moveframeRepetitions;
       
-      // Calculate distance and duration from movelaps
-      (mf.movelaps || []).forEach((lap: any) => {
-        currentTotals.distance += parseInt(lap.distance) || 0;
-        
-        // Parse time in format like "1h23'45\"6" or "1'30\"5"
-        const timeStr = lap.time || '';
-        if (timeStr) {
-          let totalSeconds = 0;
-          const hoursMatch = timeStr.match(/(\d+)h/);
-          const minutesMatch = timeStr.match(/(\d+)'/);
-          const secondsMatch = timeStr.match(/(\d+)"/);
-          const decimalsMatch = timeStr.match(/"(\d+)/);
+      if (isSeries) {
+        // For series-based sports: sum actual reps from all movelaps
+        (mf.movelaps || []).forEach((lap: any) => {
+          currentTotals.repetitions += parseInt(lap.reps) || 0;
+        });
+      } else {
+        // For distance-based sports: sum distances and duration from movelaps
+        (mf.movelaps || []).forEach((lap: any) => {
+          // Add distance
+          currentTotals.distance += parseInt(lap.distance) || 0;
           
-          if (hoursMatch) totalSeconds += parseInt(hoursMatch[1]) * 3600;
-          if (minutesMatch) totalSeconds += parseInt(minutesMatch[1]) * 60;
-          if (secondsMatch) totalSeconds += parseInt(secondsMatch[1]);
-          if (decimalsMatch) totalSeconds += parseFloat(`0.${decimalsMatch[1]}`);
-          
-          currentTotals.durationSeconds += totalSeconds;
-        }
-      });
+          // Add duration (parse time in format like "00:05:30" or minutes)
+          const timeStr = lap.time?.toString() || '';
+          if (timeStr) {
+            if (timeStr.includes(':')) {
+              const parts = timeStr.split(':');
+              const hours = parseInt(parts[0]) || 0;
+              const minutes = parseInt(parts[1]) || 0;
+              const seconds = parseInt(parts[2]) || 0;
+              currentTotals.durationMinutes += (hours * 60) + minutes + (seconds / 60);
+            } else {
+              currentTotals.durationMinutes += parseFloat(timeStr) || 0;
+            }
+          }
+        });
+      }
 
       sportMap.set(sport, currentTotals);
     });
@@ -112,9 +149,12 @@ export default function WorkoutInfoModal({
     // Convert to array with sport details
     let sportsArray = Array.from(sportMap.entries()).map(([sportValue, totals]) => {
       const sportOption = SPORT_OPTIONS.find(s => s.value === sportValue);
+      const isSeries = isSeriesBasedSport(sportValue);
+      
       return {
         sport: sportValue,
         details: sportOption,
+        isSeriesBased: isSeries,
         ...totals
       };
     });
@@ -167,7 +207,7 @@ export default function WorkoutInfoModal({
             <p className="text-sm text-blue-50 mt-1 flex items-center gap-2">
               <span className="font-medium">{day.period?.name || 'No Period'}</span>
               <span className="text-blue-200">•</span>
-              <span>{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+              <span>{new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}</span>
             </p>
           </div>
           <button
@@ -202,6 +242,33 @@ export default function WorkoutInfoModal({
                 <span className="text-sm text-gray-900 font-semibold">#{workout.sessionNumber}</span>
               </div>
             </div>
+          </div>
+
+          {/* Workout Annotations */}
+          <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-4 rounded-lg border border-amber-200">
+            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+              <span>📝</span>
+              <span>Workout Annotations</span>
+            </h3>
+            <div className="relative">
+              <textarea
+                value={workoutNotes}
+                onChange={(e) => setWorkoutNotes(e.target.value)}
+                onBlur={() => handleNotesChange(workoutNotes)}
+                disabled={isSavingNotes}
+                placeholder="Add notes or annotations specific to this workout..."
+                rows={4}
+                className="w-full px-3 py-2.5 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm transition-all bg-white resize-none"
+              />
+              {isSavingNotes && (
+                <span className="absolute right-3 bottom-3 text-xs text-gray-500 bg-white px-2 py-1 rounded shadow-sm">
+                  Saving...
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              These notes are specific to this workout only (not the entire day).
+            </p>
           </div>
 
           {/* Main Sport (Editable) */}
@@ -242,7 +309,7 @@ export default function WorkoutInfoModal({
               <span>Sports from Moveframes ({sports.length}/4)</span>
             </h3>
             <p className="text-xs text-gray-500 mb-3">
-              These sports are automatically loaded from moveframes and cannot be edited directly.
+              These sports are automatically loaded from moveframes (read-only). To change sports, add/edit moveframes.
               {workout.includeStretching === false && ' (Stretching excluded)'}
             </p>
             {sports.length > 0 ? (
@@ -270,22 +337,42 @@ export default function WorkoutInfoModal({
                             <span className="text-gray-500">Moveframes:</span>
                             <span className="font-semibold text-purple-600">{sport.moveframeCount}</span>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-500">Series/Reps:</span>
-                            <span className="font-semibold text-purple-600">{sport.seriesCount}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-500">Distance:</span>
-                            <span className="font-semibold text-blue-600">
-                              {sport.distance > 0 ? `${sport.distance}m` : '—'}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-500">Duration:</span>
-                            <span className="font-semibold text-green-600">
-                              {sport.durationSeconds > 0 ? formatDuration(sport.durationSeconds) : '—'}
-                            </span>
-                          </div>
+                          
+                          {sport.isSeriesBased ? (
+                            // Series-based sports (Gymnastic, Stretching, etc.)
+                            <>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">Series:</span>
+                                <span className="font-semibold text-purple-600">{sport.series}</span>
+                              </div>
+                              <div className="flex items-center gap-1 col-span-2">
+                                <span className="text-gray-500">Total Reps:</span>
+                                <span className="font-semibold text-blue-600">
+                                  {sport.repetitions > 0 ? sport.repetitions : '—'}
+                                </span>
+                              </div>
+                            </>
+                          ) : (
+                            // Distance-based sports (Swim, Bike, Run, etc.)
+                            <>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">Movelaps:</span>
+                                <span className="font-semibold text-purple-600">{sport.movelapCount}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">Distance:</span>
+                                <span className="font-semibold text-blue-600">
+                                  {sport.distance > 0 ? `${sport.distance}m` : '—'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="text-gray-500">Duration:</span>
+                                <span className="font-semibold text-green-600">
+                                  {sport.durationMinutes > 0 ? formatDuration(sport.durationMinutes * 60) : '—'}
+                                </span>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -376,13 +463,13 @@ export default function WorkoutInfoModal({
                 <div className="bg-white p-3 rounded-lg border border-indigo-200">
                   <div className="text-xs text-gray-500 mb-1">Total Distance</div>
                   <div className="text-2xl font-bold text-blue-600">
-                    {sports.reduce((sum, s) => sum + s.distance, 0)}m
+                    {sports.reduce((sum, s) => sum + (s.isSeriesBased ? 0 : s.distance), 0)}m
                   </div>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-indigo-200">
                   <div className="text-xs text-gray-500 mb-1">Total Duration</div>
                   <div className="text-2xl font-bold text-green-600">
-                    {formatDuration(sports.reduce((sum, s) => sum + s.durationSeconds, 0))}
+                    {formatDuration(sports.reduce((sum, s) => sum + (s.isSeriesBased ? 0 : s.durationMinutes * 60), 0))}
                   </div>
                 </div>
               </div>

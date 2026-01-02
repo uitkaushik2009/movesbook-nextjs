@@ -123,7 +123,7 @@ export default function MoveframeInfoPanel({
                 </div>
                 <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full">
                   <Clock size={14} />
-                  <span>{new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                  <span>{new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}</span>
                 </div>
                 <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full">
                   <span>Workout #{workout.sessionNumber}</span>
@@ -229,10 +229,15 @@ export default function MoveframeInfoPanel({
               {/* Description */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <p className="text-gray-700">
-                    {moveframe.description || 'No description provided'}
-                  </p>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-[300px] overflow-y-auto">
+                  {moveframe.description ? (
+                    <div 
+                      className="text-gray-700 prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: moveframe.description }}
+                    />
+                  ) : (
+                    <p className="text-gray-700">No description provided</p>
+                  )}
                 </div>
               </div>
 
@@ -253,7 +258,7 @@ export default function MoveframeInfoPanel({
                     </div>
                   </div>
                   <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                    <div className="text-purple-600 text-sm font-medium mb-1">Total reps</div>
+                    <div className="text-purple-600 text-sm font-medium mb-1">Total sets</div>
                     <div className="text-2xl font-bold text-purple-900">
                       {completedMovelaps}/{totalMovelaps}
                     </div>

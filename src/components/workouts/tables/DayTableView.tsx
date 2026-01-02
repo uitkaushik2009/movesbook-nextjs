@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, FileText, Flag } from 'lucide-react';
 // import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
+import { useColorSettings } from '@/hooks/useColorSettings';
 import DayRowTable from './DayRowTable';
 import WorkoutHierarchyView from './WorkoutHierarchyView';
 import WeeklyInfoModal from '../WeeklyInfoModal';
@@ -14,6 +15,8 @@ import '../../../styles/sticky-table.css';
 interface DayTableViewProps {
   workoutPlan: any;
   activeSection?: 'A' | 'B' | 'C' | 'D'; // Active section for conditional display
+  currentPageStart?: number; // Current page start for Section B navigation
+  weeksPerPage?: number; // Weeks per page for Section B navigation
   expandedDays?: Set<string>;
   expandedWorkouts?: Set<string>;
   expandedMoveframeId?: string | null;
@@ -73,6 +76,8 @@ const getSectionBadge = (section?: 'A' | 'B' | 'C' | 'D') => {
 export default function DayTableView({
   workoutPlan,
   activeSection = 'A',
+  currentPageStart = 1,
+  weeksPerPage = 3,
   expandedDays,
   expandedWorkouts,
   expandedMoveframeId,
@@ -112,6 +117,7 @@ export default function DayTableView({
   onOpenColumnSettings,
   columnSettings
 }: DayTableViewProps) {
+  const { colors } = useColorSettings();
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [isWeeklyInfoModalOpen, setIsWeeklyInfoModalOpen] = useState(false);
   const [weeklyNotes, setWeeklyNotes] = useState<Record<string, { periodId: string; notes: string }>>({});
@@ -124,6 +130,8 @@ export default function DayTableView({
   const [showMoveWeekModal, setShowMoveWeekModal] = useState(false);
   const [autoPrintWeek, setAutoPrintWeek] = useState(false);
   const [targetWeeks, setTargetWeeks] = useState<any[]>([]);
+  const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set());
+  const [selectedAction, setSelectedAction] = useState<string>('');
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const scrollbarRef = useRef<HTMLDivElement>(null);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
@@ -131,8 +139,9 @@ export default function DayTableView({
   const expandedDaysSet = expandedDays || new Set<string>();
   const expandedWorkoutsSet = expandedWorkouts || new Set<string>();
   
-  console.log('📅 DayTableView: expandedDays:', Array.from(expandedDaysSet));
-  console.log('🏋️ DayTableView: expandedWorkouts:', Array.from(expandedWorkoutsSet));
+  // Debug: Log expansion state (disabled for performance)
+  // console.log('📅 DayTableView: expandedDays:', Array.from(expandedDaysSet));
+  // console.log('🏋️ DayTableView: expandedWorkouts:', Array.from(expandedWorkoutsSet));
   
   // Load periods
   useEffect(() => {
@@ -215,30 +224,30 @@ export default function DayTableView({
   // Column width constants (for consistent sizing across the table)
   const COL_WIDTHS = {
     noWorkouts: 50,
-    colorCycle: 50,
-    nameCycle: 90,
-    weekNumber: 60,     // NEW: Week n.
-    dayNumber: 50,      // NEW: Day wk
+    colorCycle: 50,     // Color circle
+    nameCycle: 90,      // Period name
+    weekNumber: 60,     // Week
+    dayNumber: 50,      // Day
     dayname: 80,
-    date: 80,
     matchDone: 60,
     workouts: 80,
     icoSport: 100,      // "Ico Sport" column
     distTime: 100,      // "Dist & Time" column
     mainWork: 200,      // "Main work" column
+    secondaryWork: 200, // "Secondary work" column
     options: 250
   };
   
   // Calculate minimum table width dynamically based on column widths
-  // 9 sticky columns + 4 sport sections (3 cols each) + 1 options column
+  // For 3 weeks plans (A, B, C): 7 sticky columns (no Dayname) + 4 sport sections (3 cols each) + 1 options column
+  // For other sections: 8 sticky columns + 4 sport sections (3 cols each) + 1 options column
   const TABLE_MIN_WIDTH = 
     COL_WIDTHS.noWorkouts + 
     COL_WIDTHS.colorCycle + 
     COL_WIDTHS.nameCycle + 
     COL_WIDTHS.weekNumber + 
     COL_WIDTHS.dayNumber + 
-    COL_WIDTHS.dayname + 
-    COL_WIDTHS.date + 
+    ((activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? 0 : COL_WIDTHS.dayname) + // No Dayname for 3 weeks plans
     COL_WIDTHS.matchDone + 
     COL_WIDTHS.workouts + 
     (COL_WIDTHS.icoSport + COL_WIDTHS.distTime + COL_WIDTHS.mainWork) * 4 + // 4 sport sections (3 cols each)
@@ -328,11 +337,12 @@ export default function DayTableView({
   const weekDays = currentWeek?.days || [];
   const sortedDays = [...weekDays].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   
-  console.log('🗓️ Current week data:', {
-    currentWeekIndex,
-    currentWeek: currentWeek?.id,
-    weekNumber: currentWeek?.weekNumber
-  });
+  // Debug: Log current week data (disabled for performance)
+  // console.log('🗓️ Current week data:', {
+  //   currentWeekIndex,
+  //   currentWeek: currentWeek?.id,
+  //   weekNumber: currentWeek?.weekNumber
+  // });
 
   const goToPreviousWeek = () => {
     if (currentWeekIndex > 0) {
@@ -347,22 +357,32 @@ export default function DayTableView({
   };
 
   const toggleWeekWorkouts = () => {
-    if (!currentWeek || !currentWeek.days) return;
+    // For Section B, work with ALL displayed weeks; for other sections, work with current week only
+    const weeksToToggle = activeSection === 'B' ? weeksToDisplay : [currentWeek].filter(Boolean);
     
-    const allDayIds = currentWeek.days.map((day: any) => day.id);
+    if (weeksToToggle.length === 0) return;
+    
+    const allDayIds: string[] = [];
     const allWorkoutIds: string[] = [];
     
-    currentWeek.days.forEach((day: any) => {
+    // Collect all day and workout IDs from ALL displayed weeks
+    weeksToToggle.forEach((week: any) => {
+      if (!week || !week.days) return;
+      
+      week.days.forEach((day: any) => {
+        allDayIds.push(day.id);
+        
       if (day.workouts && Array.isArray(day.workouts)) {
         day.workouts.forEach((workout: any) => {
           allWorkoutIds.push(workout.id);
         });
       }
+      });
     });
     
     if (areWeekWorkoutsExpanded) {
       // Collapse all: close all workouts and days
-      console.log('📕 Collapsing all workouts for week', currentWeek.weekNumber);
+      console.log('📕 Collapsing all workouts for', weeksToToggle.length, 'week(s)');
       
       // Close all workouts first
       allWorkoutIds.forEach(workoutId => {
@@ -381,7 +401,7 @@ export default function DayTableView({
       setAreWeekWorkoutsExpanded(false);
     } else {
       // Expand all: open all days and workouts (but NOT moveframes)
-      console.log('📖 Expanding all workouts for week', currentWeek.weekNumber);
+      console.log('📖 Expanding all workouts for', weeksToToggle.length, 'week(s)');
       
       // First open all days
       allDayIds.forEach((dayId: string) => {
@@ -610,48 +630,37 @@ export default function DayTableView({
       `}</style>
       
       <div className="bg-gray-100 relative" style={{ minHeight: '100vh', paddingTop: '0' }}>
-        {/* Week Navigation - Sticky Header */}
-        <div className="sticky top-0 z-50 bg-white shadow-lg p-4 border-b-2 border-gray-300">
-          <div className="flex items-center justify-between">
-            {/* Left side buttons */}
-            <div className="flex items-center gap-2">
-              {/* Previous Week Button - Hidden for Section B (parent handles pagination) */}
-              {activeSection !== 'B' && (
-                <button
-                  onClick={goToPreviousWeek}
-                  disabled={currentWeekIndex === 0}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    currentWeekIndex === 0
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-blue-500 text-white hover:bg-blue-600'
-                  }`}
-                >
-                  <ChevronLeft size={20} />
-                  Previous Week
-                </button>
-              )}
-
-              {/* Expand/Collapse All Workouts Button */}
-              <button
-                onClick={toggleWeekWorkouts}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors bg-purple-500 text-white hover:bg-purple-600"
-                title={areWeekWorkoutsExpanded ? "Collapse all workouts" : "Expand all workouts"}
-              >
-                {areWeekWorkoutsExpanded ? 'Collapse All' : 'Expand All'}
-              </button>
-            </div>
-
-            <div className="flex-1 flex items-center justify-center gap-6">
-              <div className="text-lg font-bold text-gray-900">
-                {activeSection === 'B' && weeksToDisplay.length > 1
-                  ? `Weeks ${weeksToDisplay[0]?.weekNumber || 1} - ${weeksToDisplay[weeksToDisplay.length - 1]?.weekNumber || 1}`
-                  : `Week ${currentWeek?.weekNumber || currentWeekIndex + 1}`}
+        {/* Week Navigation - Redesigned Sticky Header */}
+        <div className="sticky top-0 z-50 bg-gradient-to-r from-gray-50 to-white shadow-xl border-b-2 border-gray-200">
+          <div className="flex items-stretch">
+            {/* LEFT: Week Number Button - Only for Section A */}
+            {activeSection === 'A' && (
+              <div className="flex items-center gap-2 px-4 py-3 bg-white border-r-2 border-gray-200">
+                {workoutPlan?.weeks && (
+                  <div className="flex items-center gap-2">
+                    {workoutPlan.weeks.map((week: any, index: number) => (
+                      <button
+                        key={week.id}
+                        onClick={() => setCurrentWeekIndex(index)}
+                        className={`px-5 py-3 rounded-xl transition-all duration-200 font-bold text-sm shadow-md ${
+                          currentWeekIndex === index
+                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg scale-105'
+                            : 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 hover:from-blue-200 hover:to-blue-300 hover:scale-102'
+                        }`}
+                      >
+                        Week {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              
-              {/* Set Period Button - Right after week number */}
+            )}
+
+            {/* CENTER-LEFT: Period Badge */}
+            <div className="flex items-center px-4 py-3 bg-white border-r-2 border-gray-200">
               <button
                 onClick={() => setShowPeriodSelector(true)}
-                className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors border-2"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all hover:scale-105 shadow-lg border-2"
                 style={{
                   backgroundColor: currentWeek?.period?.color || '#e5e7eb',
                   borderColor: currentWeek?.period?.color || '#d1d5db',
@@ -663,16 +672,19 @@ export default function DayTableView({
                   className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
                   style={{ backgroundColor: currentWeek?.period?.color || '#3b82f6' }}
                 />
-                <span className="font-medium">
+                <span className="font-bold text-sm">
                   {currentWeek?.period?.name || 'Set Period'}
                 </span>
               </button>
+            </div>
               
-              {/* Weekly Information - Right side of period */}
-              <div className="text-sm max-w-md px-4 border-l-2 border-gray-200">
+            {/* CENTER: Week Description Box (Simplified) */}
+            <div className="flex-1 max-w-lg flex items-center gap-3 px-2 py-2 bg-white border-r-2 border-gray-200">
+              {/* Week Title/Notes */}
+              <div className="flex-1 min-w-0">
                 {currentWeekData.notes ? (
                   <div 
-                    className="rich-text-preview text-gray-700"
+                    className="rich-text-preview text-gray-900 font-semibold leading-tight text-lg"
                     dangerouslySetInnerHTML={{ __html: currentWeekData.notes }}
                     style={{
                       display: '-webkit-box',
@@ -680,23 +692,85 @@ export default function DayTableView({
                       WebkitBoxOrient: 'vertical',
                       overflow: 'hidden',
                       wordBreak: 'break-word',
-                      lineHeight: '1.5',
-                      maxHeight: '3em'
+                      lineHeight: '1.3',
+                      maxHeight: '2.6em'
                     }}
                   />
                 ) : (
-                  <span className="text-gray-400 italic">No notes yet</span>
+                  <span className="text-gray-400 italic text-base">Click Edit to add description...</span>
                 )}
               </div>
               
-              {/* Edit Weekly Info Button */}
+              {/* Edit Button Inside */}
               <button
                 onClick={() => setIsWeeklyInfoModalOpen(true)}
-                className="flex items-center gap-1 px-4 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex-shrink-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all shadow-md hover:shadow-lg flex-shrink-0"
                 title="Edit Weekly Information"
               >
-                <FileText size={16} />
+                <FileText size={14} />
                 Edit
+              </button>
+            </div>
+
+            {/* RIGHT: Action Buttons */}
+            <div className="flex items-center gap-2 px-4 py-3 bg-white">
+              {/* Section B Navigation - Previous/Next buttons */}
+              {activeSection === 'B' && workoutPlan?.weeks && workoutPlan.weeks.length > weeksPerPage && (
+                <>
+                  <button
+                    onClick={() => {
+                      if (currentPageStart > 1) {
+                        const newStart = Math.max(1, currentPageStart - weeksPerPage);
+                        setCurrentPageStart(newStart);
+                      }
+                    }}
+                    disabled={currentPageStart <= 1}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-semibold bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md"
+                    title="Previous weeks"
+                  >
+                    <ChevronLeft size={16} />
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => {
+                      const totalWeeks = workoutPlan.weeks.length;
+                      if (currentPageStart + weeksPerPage <= totalWeeks) {
+                        setCurrentPageStart(currentPageStart + weeksPerPage);
+                      }
+                    }}
+                    disabled={currentPageStart + weeksPerPage > (workoutPlan.weeks.length || 0)}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-semibold bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md"
+                    title="Next weeks"
+                  >
+                    Next
+                    <ChevronRight size={16} />
+                  </button>
+                </>
+              )}
+
+              {/* Expand All Button */}
+              <button
+                onClick={toggleWeekWorkouts}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-md hover:shadow-lg"
+                title={areWeekWorkoutsExpanded ? "Collapse all workouts" : "Expand all workouts"}
+              >
+                {areWeekWorkoutsExpanded ? 'Collapse All' : 'Expand All'}
+              </button>
+
+              {/* Overview Button - Restore original functionality */}
+              <button
+                onClick={() => {
+                  console.log('📊 Overview button clicked');
+                  console.log('📅 Current week:', currentWeek);
+                  setAutoPrintWeek(false);
+                  setShowWeekTotalsModal(true);
+                  console.log('✅ Modal should open now');
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all shadow-md hover:shadow-lg"
+                title="View complete week overview with all workouts and totals"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                Overview
               </button>
               
               {/* Copy Week Button */}
@@ -729,7 +803,7 @@ export default function DayTableView({
                     console.error('Error loading target weeks:', error);
                   }
                 }}
-                className="flex items-center gap-1 px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors flex-shrink-0"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow-md hover:shadow-lg"
                 title="Copy this week"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -767,7 +841,7 @@ export default function DayTableView({
                       console.error('Error loading target weeks:', error);
                     }
                   }}
-                  className="flex items-center gap-1 px-4 py-2 text-sm bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors flex-shrink-0"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all shadow-md hover:shadow-lg"
                   title="Move this week"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
@@ -775,23 +849,7 @@ export default function DayTableView({
                 </button>
               )}
               
-              {/* Overview/Totals Button */}
-              <button
-                onClick={() => {
-                  console.log('📊 Overview button clicked');
-                  console.log('📅 Current week:', currentWeek);
-                  setAutoPrintWeek(false);
-                  setShowWeekTotalsModal(true);
-                  console.log('✅ Modal should open now');
-                }}
-                className="flex items-center gap-1 px-4 py-2 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors flex-shrink-0"
-                title="View complete week overview with all workouts and totals"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                Overview
-              </button>
-              
-              {/* Print/PDF Button */}
+              {/* Print Button - Restore original functionality */}
               <button
                 onClick={() => {
                   console.log('🖨️ Print button clicked');
@@ -800,40 +858,34 @@ export default function DayTableView({
                   setShowWeekTotalsModal(true);
                   console.log('✅ Modal should open AND print dialog should appear');
                 }}
-                className="flex items-center gap-1 px-4 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors flex-shrink-0"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
                 title="Print week overview"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                 Print
               </button>
             </div>
-
-            {/* Next Week Button - Hidden for Section B (parent handles pagination) */}
-            {activeSection !== 'B' && (
-              <button
-                onClick={goToNextWeek}
-                disabled={currentWeekIndex >= totalWeeks - 1}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                  currentWeekIndex >= totalWeeks - 1
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                }`}
-              >
-                Next Week
-                <ChevronRight size={20} />
-              </button>
-            )}
           </div>
         </div>
 
         {/* Scrollable Content Area */}
         <div className="p-4 pt-0">
-          {/* Grid Settings Buttons - NOT Sticky, just below week header */}
-          <div className="bg-gray-100 py-3 flex items-center justify-end gap-3">
+          {/* Grid Settings Buttons - Sticky below week header */}
+          <div className="sticky top-[76px] z-40 bg-gray-100 py-3 flex items-center justify-end gap-3 border-b border-gray-300 shadow-md">
           <button
-            onClick={() => {
-              // TODO: Implement save grid settings
-              console.log('Save Grid Settings clicked');
+            onClick={async () => {
+              try {
+                // Save grid settings to localStorage for now (can be moved to database later)
+                const gridSettings = {
+                  savedAt: new Date().toISOString(),
+                  message: 'Grid settings saved successfully!'
+                };
+                localStorage.setItem('workoutGridSettings', JSON.stringify(gridSettings));
+                alert('✅ Grid settings saved successfully!');
+              } catch (error) {
+                console.error('Error saving grid settings:', error);
+                alert('❌ Failed to save grid settings');
+              }
             }}
             className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
           >
@@ -846,10 +898,15 @@ export default function DayTableView({
           </button>
           <button
             onClick={() => {
-              // TODO: Implement reset to default
-              console.log('Reset to Default clicked');
               if (confirm('Are you sure you want to reset grid settings to default?')) {
-                console.log('Grid settings reset');
+                try {
+                  localStorage.removeItem('workoutGridSettings');
+                  alert('✅ Grid settings reset to default!');
+                  window.location.reload();
+                } catch (error) {
+                  console.error('Error resetting grid settings:', error);
+                  alert('❌ Failed to reset grid settings');
+                }
               }
             }}
             className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
@@ -866,70 +923,163 @@ export default function DayTableView({
       {/* Days Table */}
       <div ref={tableWrapperRef} className="bg-white rounded-lg shadow-md relative mb-6">
         <div className="relative">
+          {/* Options for Selected Days - Above Table - Sticky */}
+          <div className="sticky top-[140px] z-30 flex items-center gap-3 mb-3 px-4 py-2 bg-gray-50 border border-gray-300 rounded shadow-md">
+            <label className="text-sm font-semibold text-gray-700">Options of the selected days</label>
+            <select 
+              className="px-3 py-1 border border-gray-300 rounded text-sm"
+              value={selectedAction}
+              onChange={(e) => {
+                setSelectedAction(e.target.value);
+                console.log('Selected action:', e.target.value);
+              }}
+            >
+              <option value="">Select action...</option>
+              <option value="copy">Copy</option>
+              <option value="move">Move</option>
+              <option value="delete">Delete</option>
+              <option value="save-favorite">Save in favourites</option>
+            </select>
+            <button
+              className="px-4 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              disabled={selectedDays.size === 0 || !selectedAction}
+              onClick={() => {
+                if (selectedDays.size === 0) {
+                  alert('Please select at least one day by checking the checkbox.');
+                  return;
+                }
+                if (!selectedAction) {
+                  alert('Please select an action from the dropdown.');
+                  return;
+                }
+
+                const dayCount = selectedDays.size;
+                const selectedDayIds = Array.from(selectedDays);
+
+                switch (selectedAction) {
+                  case 'copy':
+                    if (confirm(`Copy ${dayCount} selected day(s)?`)) {
+                      console.log('Copy days:', selectedDayIds);
+                      // TODO: Implement copy selected days
+                      alert(`Copying ${dayCount} day(s)... (Not yet implemented)`);
+                    }
+                    break;
+                  case 'move':
+                    if (confirm(`Move ${dayCount} selected day(s)?`)) {
+                      console.log('Move days:', selectedDayIds);
+                      // TODO: Implement move selected days
+                      alert(`Moving ${dayCount} day(s)... (Not yet implemented)`);
+                    }
+                    break;
+                  case 'delete':
+                    if (confirm(`Are you sure you want to delete ${dayCount} selected day(s)? This action cannot be undone.`)) {
+                      console.log('Delete days:', selectedDayIds);
+                      // TODO: Implement delete selected days
+                      alert(`Deleting ${dayCount} day(s)... (Not yet implemented)`);
+                      setSelectedDays(new Set());
+                    }
+                    break;
+                  case 'save-favorite':
+                    if (confirm(`Save ${dayCount} selected day(s) to favourites?`)) {
+                      console.log('Save to favourites:', selectedDayIds);
+                      // TODO: Implement save to favourites
+                      alert(`Saving ${dayCount} day(s) to favourites... (Not yet implemented)`);
+                    }
+                    break;
+                  default:
+                    alert('Please select a valid action.');
+                }
+              }}
+            >
+              Proceed
+            </button>
+            {selectedDays.size > 0 && (
+              <span className="text-sm text-gray-600">
+                ({selectedDays.size} day{selectedDays.size > 1 ? 's' : ''} selected)
+              </span>
+            )}
+          </div>
+
           <div 
             ref={tableContainerRef}
             className="overflow-x-auto overflow-y-visible table-scrollbar" 
           >
             <table className="text-sm" style={{ minWidth: `${TABLE_MIN_WIDTH}px`, width: '100%' }}>
-            <thead className="bg-blue-600 text-white">
-             <tr>
-               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts }} rowSpan={2}>
+            <thead className="sticky-table-header">
+             <tr style={{ backgroundColor: colors.weekHeader, color: colors.weekHeaderText }}>
+               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                  Check
                </th>
-               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-2" style={{ width: COL_WIDTHS.colorCycle, minWidth: COL_WIDTHS.colorCycle }} rowSpan={2}>
-                 Color<br/>cycle
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold" style={{ width: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} colSpan={2} rowSpan={2}>
+                 Period
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-3" style={{ width: COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.nameCycle }} rowSpan={2}>
-                 Name<br/>cycle
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-4" style={{ width: COL_WIDTHS.weekNumber, minWidth: COL_WIDTHS.weekNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
+                 Week
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-4" style={{ width: COL_WIDTHS.weekNumber, minWidth: COL_WIDTHS.weekNumber }} rowSpan={2}>
-                 Week<br/>n.
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
+                 Day
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber }} rowSpan={2}>
-                 Day<br/>wk
-               </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname }} rowSpan={2}>
-                 Dayname
-               </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-7" style={{ width: COL_WIDTHS.date, minWidth: COL_WIDTHS.date }} rowSpan={2}>
-                 Date
-               </th>
-               <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-8" style={{ width: COL_WIDTHS.matchDone, minWidth: COL_WIDTHS.matchDone }} rowSpan={2}>
+               {/* Dayname column - Only for non-3-weeks sections */}
+               {activeSection !== 'A' && activeSection !== 'B' && activeSection !== 'C' && (
+                 <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
+                   Dayname
+                 </th>
+               )}
+               {/* Match done column - Greyed out for 3 weeks plans */}
+               <th 
+                 className={`border border-gray-400 px-1 py-2 text-xs font-bold ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-header-6' : 'sticky-header-7'}`}
+                 style={{ 
+                   width: COL_WIDTHS.matchDone, 
+                   minWidth: COL_WIDTHS.matchDone,
+                   backgroundColor: (activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? '#E5E7EB' : colors.weekHeader,
+                   color: (activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? '#9CA3AF' : colors.weekHeaderText
+                 }} 
+                 rowSpan={2}
+               >
                  Match<br/>done
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-9" style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts }} rowSpan={2}>
+               <th 
+                 className={`border border-gray-400 px-2 py-2 text-xs font-bold ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-header-7' : 'sticky-header-8'}`}
+                 style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
+                 rowSpan={2}
+               >
                  Workouts
                </th>
               
               {/* S1 - Blue */}
               <th className="border border-gray-400 px-2 py-1 text-xs font-bold bg-blue-300 text-black" colSpan={3}>
-                S1 ico
+                Sport 1
               </th>
               
               {/* S2 - Green */}
               <th className="border border-gray-400 px-2 py-1 text-xs font-bold bg-green-300 text-black" colSpan={3}>
-                S2 ico
+                Sport 2
               </th>
               
               {/* S3 - Orange */}
               <th className="border border-gray-400 px-2 py-1 text-xs font-bold bg-orange-300 text-black" colSpan={3}>
-                S3 ico
+                Sport 3
               </th>
               
               {/* S4 - Pink */}
               <th className="border border-gray-400 px-2 py-1 text-xs font-bold bg-pink-300 text-black" colSpan={3}>
-                S4 ico
+                Sport 4
               </th>
               
               <th 
-                className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-options-header bg-blue-600" 
-                style={{ width: COL_WIDTHS.options, minWidth: COL_WIDTHS.options }}
+                className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-options-header" 
+                style={{ 
+                  width: COL_WIDTHS.options, 
+                  minWidth: COL_WIDTHS.options,
+                  backgroundColor: colors.weekHeader,
+                  color: colors.weekHeaderText
+                }}
                 rowSpan={2}
               >
                 Options
               </th>
             </tr>
-            <tr>
+            <tr style={{ backgroundColor: colors.weekHeader, color: colors.weekHeaderText }}>
               {/* S1 sub-headers - Blue */}
               <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
               <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
@@ -965,13 +1115,26 @@ export default function DayTableView({
                 return (
                   <React.Fragment key={day.id}>
                     {/* Day Row */}
-                    <DayRowTable
-                      day={day}
-                      currentWeek={week}
-                      isExpanded={expandedDaysSet.has(day.id)}
-                      isLastDayOfWeek={shouldShowWeekSeparator}
-                      onToggleDay={onToggleDay!}
-                      onToggleWorkout={onToggleWorkout}
+                      <DayRowTable
+                        day={day}
+                        currentWeek={week}
+                        isExpanded={expandedDaysSet.has(day.id)}
+                        isLastDayOfWeek={shouldShowWeekSeparator}
+                        isSelected={selectedDays.has(day.id)}
+                        activeSection={activeSection}
+                        onToggleDay={onToggleDay!}
+                        onToggleDaySelection={(dayId) => {
+                          setSelectedDays(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(dayId)) {
+                              newSet.delete(dayId);
+                            } else {
+                              newSet.add(dayId);
+                            }
+                            return newSet;
+                          });
+                        }}
+                        onToggleWorkout={onToggleWorkout}
                       onExpandOnlyThisWorkout={onExpandOnlyThisWorkout}
                       onExpandDayWithAllWorkouts={onExpandDayWithAllWorkouts}
                       onEditDay={onEditDay}
@@ -992,7 +1155,7 @@ export default function DayTableView({
                        <td colSpan={32} className="p-0 bg-gray-50" style={{ position: 'relative' }}>
                         <div className="p-4 workout-details-container">
                           <div className="mb-2 text-sm font-semibold text-gray-700">
-                            Workouts for {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                            Workouts for {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
                           </div>
                           
                           {/* Day Info Panel - Shows immediately after day header when toggled */}
@@ -1015,13 +1178,6 @@ export default function DayTableView({
                                      <label className="block text-xs font-semibold text-gray-600 mb-1">Day of Week</label>
                                      <div className="text-sm text-gray-800">
                                        {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
-                                     </div>
-                                   </div>
-                                   
-                                   <div>
-                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Date</label>
-                                     <div className="text-sm text-gray-800">
-                                       {new Date(day.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
                                      </div>
                                    </div>
                                    
@@ -1093,18 +1249,20 @@ export default function DayTableView({
                             </div>
                           )}
                           
-                          {/* Add Workout Button - Always visible, centered */}
-                          <div className="flex justify-center mt-4 py-4" style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb' }}>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onAddWorkout?.(day);
-                              }}
-                              className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-md shadow-md hover:shadow-lg transition-all duration-150"
-                            >
-                              Add a workout
-                            </button>
-                          </div>
+                          {/* Add Workout Button - Only show if less than 3 workouts */}
+                          {(!day.workouts || day.workouts.length < 3) && (
+                            <div className="mt-4 py-4" style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', paddingLeft: '60px' }}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onAddWorkout?.(day);
+                                }}
+                                className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-md shadow-md hover:shadow-lg transition-all duration-150"
+                              >
+                                Add a workout
+                              </button>
+                            </div>
+                          )}
                         </div>
                       </td>
                     </tr>

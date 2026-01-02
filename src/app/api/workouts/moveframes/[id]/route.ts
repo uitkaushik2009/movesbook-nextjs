@@ -88,7 +88,9 @@ export async function PATCH(
       annotationText,
       annotationBgColor,
       annotationTextColor,
-      annotationBold
+      annotationBold,
+      manualMode,
+      favourite
     } = body;
 
     console.log('📝 Updating moveframe:', params.id, body);
@@ -127,10 +129,13 @@ export async function PATCH(
         notes: notes !== undefined ? notes : undefined,
         macroFinal: macroFinal !== undefined ? macroFinal : undefined,
         alarm: alarm !== undefined ? (alarm ? parseInt(alarm) : null) : undefined,
-        annotationText: annotationText !== undefined ? annotationText : undefined,
-        annotationBgColor: annotationBgColor !== undefined ? annotationBgColor : undefined,
-        annotationTextColor: annotationTextColor !== undefined ? annotationTextColor : undefined,
-        annotationBold: annotationBold !== undefined ? annotationBold : undefined
+        manualMode: manualMode !== undefined ? manualMode : undefined,
+        favourite: favourite !== undefined ? favourite : undefined,
+        // Annotation fields: only save if type is ANNOTATION, otherwise clear them
+        annotationText: type === 'ANNOTATION' ? (annotationText || null) : null,
+        annotationBgColor: type === 'ANNOTATION' ? (annotationBgColor || null) : null,
+        annotationTextColor: type === 'ANNOTATION' ? (annotationTextColor || null) : null,
+        annotationBold: type === 'ANNOTATION' ? (annotationBold || false) : false
       },
       include: {
         movelaps: {
@@ -145,8 +150,19 @@ export async function PATCH(
     return NextResponse.json(moveframe);
   } catch (error: any) {
     console.error('❌ Error updating moveframe:', error);
+    console.error('❌ Error stack:', error.stack);
+    console.error('❌ Error details:', {
+      name: error.name,
+      message: error.message,
+      code: error.code
+    });
     return NextResponse.json(
-      { error: 'Failed to update moveframe', details: error.message },
+      { 
+        error: 'Failed to update moveframe', 
+        details: error.message,
+        errorName: error.name,
+        errorCode: error.code
+      },
       { status: 500 }
     );
   }

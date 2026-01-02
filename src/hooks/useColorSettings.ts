@@ -141,17 +141,27 @@ export function useColorSettings() {
   const [colors, setColors] = useState<ColorSettings>(defaultColors);
 
   useEffect(() => {
-    if (dbSettings && !loading && dbSettings.colorSettings) {
-      try {
-        const loadedColors = typeof dbSettings.colorSettings === 'string'
-          ? JSON.parse(dbSettings.colorSettings)
-          : dbSettings.colorSettings;
+    if (dbSettings && !loading) {
+      if (dbSettings.colorSettings) {
+        try {
+          const loadedColors = typeof dbSettings.colorSettings === 'string'
+            ? JSON.parse(dbSettings.colorSettings)
+            : dbSettings.colorSettings;
 
-        if (loadedColors && Object.keys(loadedColors).length > 0) {
-          setColors({ ...defaultColors, ...loadedColors });
+          if (loadedColors && Object.keys(loadedColors).length > 0) {
+            console.log('✅ Color settings loaded from database:', {
+              weekHeader: loadedColors.weekHeader,
+              dayHeader: loadedColors.dayHeader,
+              workoutHeader: loadedColors.workoutHeader,
+              totalKeys: Object.keys(loadedColors).length
+            });
+            setColors({ ...defaultColors, ...loadedColors });
+          }
+        } catch (error) {
+          console.error('❌ Failed to parse color settings:', error);
         }
-      } catch (error) {
-        console.error('Failed to parse color settings:', error);
+      } else {
+        console.log('ℹ️ No custom color settings found, using defaults');
       }
     }
   }, [dbSettings, loading]);

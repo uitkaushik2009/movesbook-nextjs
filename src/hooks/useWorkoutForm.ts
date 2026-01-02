@@ -82,19 +82,12 @@ export function useWorkoutForm({
 
   /**
    * Generate default workout name
-   * Format: "<workout number in words> workout of <day name> - <month abbr> <day number>"
-   * Example: "Second workout of Tuesday Dec 16"
+   * Format: "Workout <number>"
+   * Example: "Workout 1", "Workout 2", "Workout 3"
+   * Note: Date is not included to allow templates for 3WEEKS PLANS
    */
   const generateDefaultName = () => {
-    const workoutNumberWords = ['First', 'Second', 'Third'];
-    const workoutWord = workoutNumberWords[workoutNumber - 1] || `${workoutNumber}th`;
-    
-    const date = new Date(day.date);
-    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-    const monthAbbr = date.toLocaleDateString('en-US', { month: 'short' });
-    const dayNumber = date.getDate();
-    
-    return `${workoutWord} workout of ${dayName} ${monthAbbr} ${dayNumber}`;
+    return `Workout ${workoutNumber}`;
   };
 
   /**
@@ -230,12 +223,10 @@ export function useWorkoutForm({
 
   /**
    * Validate sports selection
+   * NOTE: Sports are now auto-loaded from moveframes, so validation is not required
    */
   const validateSports = (sports: (string | null)[]) => {
-    const selectedCount = sports.filter(s => s !== null).length;
-    if (selectedCount === 0) {
-      return { valid: false, message: 'Please select at least one sport' };
-    }
+    // Always valid - sports will be loaded from moveframes
     return { valid: true, message: '' };
   };
 

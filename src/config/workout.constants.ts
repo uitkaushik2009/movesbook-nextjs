@@ -7,47 +7,48 @@
 export const WORKOUT_SECTIONS = {
   A: {
     id: 'A' as const,
-    name: '3 Weeks Plan',
-    description: '3 generic template weeks for planning',
+    name: 'Create Template Plans',
+    description: 'Create 3-week training templates (Plans A, B, C) that can be copied to Yearly Plan',
     planType: 'TEMPLATE_WEEKS',
     maxWeeks: 3,
     maxDays: 21,
     canAddDays: true,
     isEditable: true,
-    icon: 'Calendar'
+    icon: 'Calendar',
+    subSections: ['A', 'B', 'C'] // Has Weekly Plans A, B, C as subsections
   },
   B: {
     id: 'B' as const,
     name: 'Yearly Plan',
-    description: 'Full year training plan (52 weeks)',
+    description: 'Your complete yearly training plan - copy templates from Section A here',
     planType: 'YEARLY_PLAN',
     maxWeeks: 52,
     maxDays: 364,
-    canAddDays: false, // Plan is created via "Create Plan" button with start date
+    canAddDays: true,
     isEditable: true,
-    icon: 'CalendarRange'
+    icon: 'Calendar'
   },
   C: {
     id: 'C' as const,
-    name: 'Workouts Done',
-    description: 'Historical completed workouts',
+    name: 'Done',
+    description: 'Completed workouts tracking',
     planType: 'WORKOUTS_DONE',
-    maxWeeks: null,
-    maxDays: null,
+    maxWeeks: 52,
+    maxDays: 364,
     canAddDays: true,
-    isEditable: false,
-    icon: 'CheckCircle'
+    isEditable: true,
+    icon: 'Calendar'
   },
   D: {
     id: 'D' as const,
     name: 'Archive',
-    description: 'Archived training data',
-    planType: 'ARCHIVE',
-    maxWeeks: null,
-    maxDays: null,
-    canAddDays: false,
-    isEditable: false,
-    icon: 'Archive'
+    description: 'Archived workouts and historical data',
+    planType: 'WORKOUTS_DONE',
+    maxWeeks: 52,
+    maxDays: 364,
+    canAddDays: true,
+    isEditable: true,
+    icon: 'Calendar'
   }
 } as const;
 

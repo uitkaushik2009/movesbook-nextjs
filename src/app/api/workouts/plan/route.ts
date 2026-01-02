@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
+// Disable caching for this API route
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 
 // Helper function to get the Monday of the current week
 function getMondayOfWeek(date: Date): Date {
@@ -67,9 +71,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const type = searchParams.get('type') || 'TEMPLATE_WEEKS';
+    const section = searchParams.get('section') || 'A'; // Section A, B, or C
     const forceRecreate = searchParams.get('forceRecreate') === 'true';
     
-    console.log('GET - Finding NEWEST plan for type:', type, '| Force recreate:', forceRecreate);
+    console.log('GET - Finding NEWEST plan for type:', type, 'section:', section, '| Force recreate:', forceRecreate);
 
     // Calculate date ranges for sections
     const today = new Date();
@@ -108,19 +113,33 @@ export async function GET(request: NextRequest) {
       console.log(`Section ${type}: No date filter, showing all days in plan`);
     }
 
+    // Determine storage zone for this plan type
+    // For TEMPLATE_WEEKS, use the section (A, B, or C) as the storage zone
+    let planStorageZone: 'A' | 'B' | 'C' | 'D' = section as 'A' | 'B' | 'C';
+    
+    if (actualPlanType === 'WORKOUTS_DONE') {
+      planStorageZone = 'C';
+    } else if (actualPlanType === 'ARCHIVE') {
+      planStorageZone = 'D';
+    }
+
     // Get or create workout plan - ORDER BY NEWEST FIRST!
-    // Note: For CURRENT_WEEKS, we fetch from YEARLY_PLAN
+    // For TEMPLATE_WEEKS (Sections A, B, C), filter by both type AND storageZone
     let plan = await prisma.workoutPlan.findFirst({
       where: {
         userId: decoded.userId,
-        type: actualPlanType as any
+        type: actualPlanType as any,
+        ...(actualPlanType === 'TEMPLATE_WEEKS' ? { storageZone: planStorageZone } : {})
       },
       include: {
         weeks: {
           include: {
             period: true, // Include week-level period
             days: {
-              where: Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
+              where: {
+                storageZone: planStorageZone,  // CRITICAL: Only load days from this section!
+                ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {})
+              },
               include: {
                 period: true,
                 workouts: {
@@ -154,19 +173,24 @@ export async function GET(request: NextRequest) {
     
     if (plan) {
       const planStartDate = new Date(plan.startDate);
+      const totalDaysInPlan = plan.weeks.reduce((sum, week) => sum + (week.days?.length || 0), 0);
       console.log('📊 Existing plan details:', {
         id: plan.id,
+        type: plan.type,
         startDate: plan.startDate,
         startDateFormatted: planStartDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' }),
         endDate: plan.endDate,
         weeksCount: plan.weeks?.length || 0,
+        totalDays: totalDaysInPlan,
         createdAt: plan.createdAt,
         firstWeekDates: plan.weeks?.[0]?.days?.[0]?.date ? 
           `${new Date(plan.weeks[0].days[0].date).toLocaleDateString()} to ${new Date(plan.weeks[0].days[plan.weeks[0].days.length - 1].date).toLocaleDateString()}` 
           : 'N/A'
       });
       console.log(`   Monday of current week should be: ${mondayOfThisWeek.toLocaleDateString()}`);
+      if (type === 'YEARLY_PLAN') {
       console.log(`   Plan SHOULD start from: ${new Date(mondayOfThisWeek.getTime() - 7 * 24 * 60 * 60 * 1000).toLocaleDateString()} (previous Monday)`);
+      }
     }
 
     // Check if plan is empty or doesn't start on Monday
@@ -207,38 +231,68 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Check if plan was created recently (within last 5 seconds) to prevent race condition
+    const isRecentlyCreated = plan && (
+      (Date.now() - new Date(plan.createdAt).getTime()) < 5000
+    );
+
     // If plan is empty, doesn't start on Monday, or force recreate is requested, delete and recreate it
-    if (plan && (isPlanEmpty || needsRecreation || forceRecreate)) {
+    // IMPORTANT: For TEMPLATE_WEEKS, only recreate if explicitly forced - don't auto-recreate to prevent data loss
+    // ALSO: Don't recreate if plan was just created (prevents race condition from parallel API calls)
+    const shouldRecreate = plan && !isRecentlyCreated && (
+      forceRecreate || 
+      (type !== 'TEMPLATE_WEEKS' && (isPlanEmpty || needsRecreation))
+    );
+    
+    if (shouldRecreate) {
       const reason = forceRecreate ? 'force recreate requested' : 
                      isPlanEmpty ? 'empty plan' : 
                      'plan does not start on Monday';
       console.log(`🗑️ Deleting plan (${reason}) to recreate with correct data...`);
       
-      // Calculate the date range for cleanup
-      // For YEARLY_PLAN, start from Monday of previous week (since that's where the plan starts)
-      const cleanupStartDate = (type === 'CURRENT_WEEKS' || type === 'YEARLY_PLAN') 
-        ? new Date(mondayOfThisWeek.getTime() - (7 * 24 * 60 * 60 * 1000)) // Previous Monday
-        : mondayOfThisWeek;
-      const cleanupEndDate = new Date(cleanupStartDate);
-      if (type === 'CURRENT_WEEKS') {
-        cleanupEndDate.setDate(cleanupEndDate.getDate() + 27); // 4 weeks (previous + current + next + buffer)
-      } else {
+      // Calculate the date range for cleanup based on plan type
+      let cleanupStartDate: Date;
+      let cleanupEndDate: Date;
+      
+      if (actualPlanType === 'TEMPLATE_WEEKS') {
+        // TEMPLATE_WEEKS: 3 rolling weeks (previous, current, next)
+        cleanupStartDate = new Date(mondayOfThisWeek.getTime() - (7 * 24 * 60 * 60 * 1000)); // Previous Monday
+        cleanupEndDate = new Date(cleanupStartDate);
+        cleanupEndDate.setDate(cleanupEndDate.getDate() + 27); // 4 weeks buffer
+      } else if (actualPlanType === 'YEARLY_PLAN') {
+        // For YEARLY_PLAN, start from Monday of previous week
+        cleanupStartDate = new Date(mondayOfThisWeek.getTime() - (7 * 24 * 60 * 60 * 1000));
+        cleanupEndDate = new Date(cleanupStartDate);
         cleanupEndDate.setDate(cleanupEndDate.getDate() + 400); // Yearly plan range
+      } else {
+        // For other sections, use current week
+        cleanupStartDate = mondayOfThisWeek;
+        cleanupEndDate = new Date(cleanupStartDate);
+        cleanupEndDate.setDate(cleanupEndDate.getDate() + 400);
       }
       
       console.log(`   Date range cleanup: ${cleanupStartDate.toLocaleDateString()} to ${cleanupEndDate.toLocaleDateString()}`);
       
-      // Step 1: Delete ALL workout days for this user in the date range (including orphaned ones)
+      // Determine storage zone for cleanup
+      let cleanupStorageZone: 'A' | 'B' | 'C' | 'D' = planStorageZone; // Use the section-specific storage zone
+      if (actualPlanType === 'YEARLY_PLAN') {
+        cleanupStorageZone = 'B';
+      } else if (actualPlanType === 'WORKOUTS_DONE') {
+        cleanupStorageZone = 'C';
+      }
+
+      // Step 1: Delete workout days ONLY for this storageZone in the date range
       const deletedDaysInRange = await prisma.workoutDay.deleteMany({
         where: {
           userId: decoded.userId,
+          storageZone: cleanupStorageZone,
           date: {
             gte: cleanupStartDate,
             lte: cleanupEndDate
           }
         }
       });
-      console.log(`   ✓ Deleted ${deletedDaysInRange.count} workout days in date range`);
+      console.log(`   ✓ Deleted ${deletedDaysInRange.count} workout days in storageZone ${cleanupStorageZone}`);
       
       // Step 2: Delete all weeks from this plan
       const deletedWeeks = await prisma.workoutWeek.deleteMany({
@@ -260,14 +314,18 @@ export async function GET(request: NextRequest) {
       let endDate = new Date();
       let numberOfWeeks = 0;
       
-      if (type === 'TEMPLATE_WEEKS') {
-        // Section A: 3 generic template weeks (no real dates, use dummy dates)
-        // Use year 2000 as a neutral/template year
-        startDate = new Date('2000-01-03'); // Monday, Jan 3, 2000
-        endDate = new Date('2000-01-23'); // Sunday, Jan 23, 2000
-        numberOfWeeks = 3; // Always 3 template weeks
-        console.log(`✓ Template Weeks Plan: 3 generic weeks for planning templates`);
-      } else if (type === 'CURRENT_WEEKS' || type === 'YEARLY_PLAN') {
+      if (actualPlanType === 'TEMPLATE_WEEKS') {
+        // Section A: 3 weeks rolling plan (previous week, current week, next week)
+        // Uses REAL current dates - overlapping with Section B is OK due to storageZone
+        startDate = new Date(mondayOfThisWeek);
+        startDate.setDate(startDate.getDate() - 7); // Start from previous Monday
+        console.log(`✓ Section A (3 Weeks): Previous, Current, Next week starting ${startDate.toLocaleDateString()}`);
+        
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 20); // 3 weeks = 21 days (0-20)
+        numberOfWeeks = 3; // Always 3 weeks
+        console.log(`✓ Section A (3 Weeks Plan): ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+      } else if (actualPlanType === 'YEARLY_PLAN') {
         // Section B: YEARLY_PLAN
         // Start from Monday of PREVIOUS week (so Section A can show Week 1 as previous week)
         // Section A will dynamically filter to show: previous week, current week, next week
@@ -277,7 +335,7 @@ export async function GET(request: NextRequest) {
         endDate.setDate(endDate.getDate() + 364); // 52 weeks = 364 days
         numberOfWeeks = 52; // Create all 52 weeks for yearly plan
         console.log(`✓ Year Plan will start on Monday of PREVIOUS week: ${startDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}`);
-      } else if (type === 'WORKOUTS_DONE') {
+      } else if (actualPlanType === 'WORKOUTS_DONE') {
         // Section C: Historical data, no pre-created weeks
         // Use a past date range (last year to today)
         startDate = new Date(today);
@@ -285,7 +343,7 @@ export async function GET(request: NextRequest) {
         endDate = new Date(today);
         numberOfWeeks = 0; // Don't create weeks automatically
         console.log(`✓ Section C (Workouts Done): Date range ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
-      } else if (type === 'ARCHIVE') {
+      } else if (actualPlanType === 'ARCHIVE') {
         // Section D: Archive, no pre-created weeks
         // Use a wide date range for flexibility
         startDate = new Date(today);
@@ -323,17 +381,33 @@ export async function GET(request: NextRequest) {
       }
 
       // Create plan with weeks and days
+      console.log(`🆕 Creating NEW plan with type: '${actualPlanType}', name: '${actualPlanType === 'TEMPLATE_WEEKS' ? '3 Weeks Plan' : actualPlanType === 'YEARLY_PLAN' ? 'Yearly Plan' : actualPlanType === 'WORKOUTS_DONE' ? 'Workouts Done' : 'Archive'}', weeks: ${numberOfWeeks}`);
+      
       const newPlan = await prisma.workoutPlan.create({
         data: {
           userId: decoded.userId,
-          name: actualPlanType === 'TEMPLATE_WEEKS' ? '3 Weeks Plan' :
+          name: actualPlanType === 'TEMPLATE_WEEKS' ? `Weekly Plan ${section}` :
                 actualPlanType === 'YEARLY_PLAN' ? 'Yearly Plan' : 
                 actualPlanType === 'WORKOUTS_DONE' ? 'Workouts Done' : 'Archive',
           type: actualPlanType as any,
+          storageZone: actualPlanType === 'TEMPLATE_WEEKS' ? planStorageZone : null,
           startDate,
           endDate
         }
       });
+      
+      console.log(`✅ Created plan ${newPlan.id} with type: ${newPlan.type}`);
+
+      // Determine storage zone based on plan type
+      // For TEMPLATE_WEEKS, use the section-specific storage zone
+      let dayStorageZone: 'A' | 'B' | 'C' | 'D' = planStorageZone; // Use the section's storage zone
+      if (actualPlanType === 'YEARLY_PLAN') {
+        dayStorageZone = 'B';
+      } else if (actualPlanType === 'WORKOUTS_DONE') {
+        dayStorageZone = 'C';
+      } else if (actualPlanType === 'ARCHIVE') {
+        dayStorageZone = 'D';
+      }
 
       // Create weeks and days (only for sections that need pre-created structure)
       if (numberOfWeeks > 0) {
@@ -353,19 +427,21 @@ export async function GET(request: NextRequest) {
             const dayDate = new Date(weekStartDate);
             dayDate.setDate(weekStartDate.getDate() + (dayOfWeek - 1));
             
-            // Use upsert to avoid duplicate key violations on userId + date
+            // Use upsert with userId + date + storageZone to allow same date in different sections
             await prisma.workoutDay.upsert({
               where: {
-                userId_date: {
+                userId_date_storageZone: {
                   userId: decoded.userId,
-                  date: dayDate
+                  date: dayDate,
+                  storageZone: dayStorageZone
                 }
               },
               update: {
                 workoutWeekId: week.id,
                 dayOfWeek,
                 weekNumber: i + 1,
-                periodId: defaultPeriod.id
+                periodId: defaultPeriod.id,
+                storageZone: dayStorageZone
               },
               create: {
                 workoutWeekId: week.id,
@@ -374,6 +450,7 @@ export async function GET(request: NextRequest) {
                 weekNumber: i + 1,
                 date: dayDate,
                 periodId: defaultPeriod.id,
+                storageZone: dayStorageZone,
                 weather: '',
                 feelingStatus: '5',
                 notes: ''
@@ -387,7 +464,22 @@ export async function GET(request: NextRequest) {
         console.log(`Created empty plan for ${type} (no pre-created weeks/days)`);
       }
 
-      // Fetch the complete plan with all includes and date filter
+      // Determine storage zone for loading days
+      let loadStorageZone: 'A' | 'B' | 'C' | 'D' = 'B';
+      if (actualPlanType === 'TEMPLATE_WEEKS') {
+        loadStorageZone = 'A';
+      } else if (actualPlanType === 'YEARLY_PLAN') {
+        loadStorageZone = 'B';
+      } else if (actualPlanType === 'WORKOUTS_DONE') {
+        loadStorageZone = 'C';
+      } else if (actualPlanType === 'ARCHIVE') {
+        loadStorageZone = 'D';
+      }
+
+      console.log(`📦 Loading newly created plan ${newPlan.id} with storageZone filter: ${loadStorageZone}`);
+      console.log(`📦 Date filter:`, Object.keys(dateFilter).length > 0 ? dateFilter : 'NONE');
+      
+      // Fetch the complete plan with all includes, date filter, and storageZone filter
       plan = await prisma.workoutPlan.findUnique({
         where: { id: newPlan.id },
         include: {
@@ -395,7 +487,10 @@ export async function GET(request: NextRequest) {
             include: {
               period: true, // Include week-level period
               days: {
-                where: Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
+                where: {
+                  storageZone: loadStorageZone,  // CRITICAL: Only load days from this section!
+                  ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {})
+                },
                 include: {
                   period: true,
                   workouts: {
@@ -421,10 +516,19 @@ export async function GET(request: NextRequest) {
         }
       });
       
+      console.log(`📦 Loaded plan has ${plan?.weeks?.length || 0} weeks BEFORE filtering`);
+      if (plan?.weeks) {
+        plan.weeks.forEach((week: any, idx: number) => {
+          console.log(`   Week ${idx + 1}: ${week.days?.length || 0} days`);
+        });
+      }
+      
       // Filter out weeks with no days (after date filtering)
       // But keep all weeks for YEARLY_PLAN to show full year structure
       if (plan && plan.weeks && actualPlanType !== 'YEARLY_PLAN') {
+        const beforeFilterCount = plan.weeks.length;
         plan.weeks = plan.weeks.filter((week: any) => week.days && week.days.length > 0);
+        console.log(`📦 After filtering: ${beforeFilterCount} weeks → ${plan.weeks.length} weeks`);
       }
     }
     
@@ -627,11 +731,19 @@ export async function POST(request: NextRequest) {
 
     // Create plan
     console.log('Creating workout plan...');
+    // Determine storageZone for TEMPLATE_WEEKS plans
+    let storageZoneForPlan = null;
+    if (type === 'TEMPLATE_WEEKS') {
+      // Default to 'A' if not specified, but should be passed in request
+      storageZoneForPlan = 'A'; // This should ideally come from request body
+    }
+
     const plan = await prisma.workoutPlan.create({
       data: {
         userId: decoded.userId,
         name,
         type: type as any,
+        storageZone: storageZoneForPlan,
         startDate: startDate, // Already a Date object adjusted to Monday
         endDate
       }
@@ -665,6 +777,18 @@ export async function POST(request: NextRequest) {
         const weekStartDate = new Date(startDate);
         weekStartDate.setDate(weekStartDate.getDate() + (i * 7));
         
+        // Determine storage zone based on plan type
+        let storageZone: 'A' | 'B' | 'C' | 'D' = 'B'; // Default
+        if (type === 'TEMPLATE_WEEKS') {
+          storageZone = 'A';
+        } else if (type === 'YEARLY_PLAN') {
+          storageZone = 'B';
+        } else if (type === 'WORKOUTS_DONE') {
+          storageZone = 'C';
+        } else if (type === 'ARCHIVE') {
+          storageZone = 'D';
+        }
+        
         for (let dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
           const dayDate = new Date(weekStartDate);
           dayDate.setDate(weekStartDate.getDate() + (dayOfWeek - 1));
@@ -681,7 +805,8 @@ export async function POST(request: NextRequest) {
               workoutWeekId: week.id,
               dayOfWeek,
               weekNumber: i + 1,
-              periodId: defaultPeriod.id
+              periodId: defaultPeriod.id,
+              storageZone // Update storage zone
             },
             create: {
               workoutWeekId: week.id,
@@ -690,6 +815,7 @@ export async function POST(request: NextRequest) {
               weekNumber: i + 1,
               date: dayDate,
               periodId: defaultPeriod.id,
+              storageZone, // Set correct storage zone
               weather: '',
               feelingStatus: '5',
               notes: ''

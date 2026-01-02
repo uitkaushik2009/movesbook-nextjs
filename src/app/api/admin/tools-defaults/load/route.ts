@@ -21,10 +21,13 @@ export async function GET(request: NextRequest) {
 
     if (defaults) {
       console.log(`✅ Loaded tools defaults from database for language: ${language}`);
+      
+      // Parse the JSON string back to object
+      const parsedData = JSON.parse(defaults.data);
 
       return NextResponse.json({
         success: true,
-        toolsData: defaults.data,
+        toolsData: parsedData,
         language
       });
     } else {

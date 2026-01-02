@@ -59,9 +59,13 @@ export default function SetWorkTypeModal({ moveframe, onClose, onSave }: SetWork
           <p className="text-sm text-gray-600 mb-4">
             Sport: <span className="font-semibold">{moveframe.sport}</span>
           </p>
-          <p className="text-sm text-gray-600 mb-4">
-            Description: <span className="font-semibold">{moveframe.description}</span>
-          </p>
+          <div className="text-sm text-gray-600 mb-4">
+            Description: {moveframe.description && moveframe.description.includes('<') ? (
+              <div className="font-semibold inline-block" dangerouslySetInnerHTML={{ __html: moveframe.description }} />
+            ) : (
+              <span className="font-semibold">{moveframe.description || 'No description'}</span>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3 mb-6">

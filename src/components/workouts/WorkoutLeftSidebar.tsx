@@ -23,10 +23,10 @@ export default function WorkoutLeftSidebar({
 }: WorkoutLeftSidebarProps) {
   
   const sections = [
-    { id: 'A' as const, title: 'Section A: Current', subtitle: '2-3 Weeks', icon: '📅' },
-    { id: 'B' as const, title: 'Section B: Yearly', subtitle: 'Full Year', icon: '📆' },
-    { id: 'C' as const, title: 'Section C: Done', subtitle: 'Completed', icon: '✅' },
-    { id: 'D' as const, title: 'Section D: Archive', subtitle: 'Historical', icon: '📁' }
+    { id: 'A' as const, title: 'Create Template Plans', subtitle: 'Plans A, B, C', icon: '📝' },
+    { id: 'B' as const, title: 'Yearly Plan', subtitle: '52 Weeks', icon: '📅' },
+    { id: 'C' as const, title: 'Done', subtitle: 'Completed', icon: '✅' },
+    { id: 'D' as const, title: 'Archive', subtitle: 'Historical', icon: '📦' }
   ];
   
   return (

@@ -1,0 +1,13 @@
+@echo off
+echo Fixing Prisma Client for favourite field...
+echo.
+echo Step 1: Deleting old Prisma Client...
+rmdir /s /q "node_modules\.prisma\client" 2>nul
+echo.
+echo Step 2: Regenerating Prisma Client...
+call npx prisma generate
+echo.
+echo Step 3: Done! Please restart your dev server now.
+echo Press any key to exit...
+pause >nul
+

@@ -195,7 +195,7 @@ export default function AddWorkoutModal({
             <p id="modal-description" className="text-xs text-blue-50 mt-0.5 flex items-center gap-2">
               <span className="font-medium">{day.period?.name || 'No Period'}</span>
               <span className="text-blue-200">•</span>
-              <span>{new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              <span>{new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}</span>
             </p>
           </div>
           <button
@@ -318,11 +318,11 @@ export default function AddWorkoutModal({
 
           {/* Section 2: Sports Selection */}
           <div className="space-y-3 bg-gradient-to-br from-gray-50 to-blue-50 p-3 rounded-lg border border-gray-200">
-            {/* Main Sport (Sport 0) - Freely Selectable */}
+            {/* Main Type of Activity - Freely Selectable */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1">
                 <span>⭐</span>
-                <span>Main Sport</span>
+                <span>Main Type of Activity</span>
                 <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-normal">Optional - Note Only</span>
               </label>
               <select
@@ -337,7 +337,7 @@ export default function AddWorkoutModal({
                     : 'bg-white hover:border-gray-400 border-gray-300'
                 }`}
               >
-                <option value="">Select main sport (optional)...</option>
+                <option value="">Select main type of activity (optional)...</option>
                 {SPORT_OPTIONS.map((sport) => (
                   <option key={sport.value} value={sport.value}>
                     {sport.icon} {sport.label}
@@ -345,7 +345,7 @@ export default function AddWorkoutModal({
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                This is just a note and doesn't affect the workout moveframes
+                This can be selected independently from the 4 sports below. Used for manual mode or FREE_MOVES.
               </p>
             </div>
 
@@ -368,55 +368,30 @@ export default function AddWorkoutModal({
               </span>
             </div>
 
-            {/* Sports Grid (2x2 on desktop, 1 column on mobile) */}
+            {/* Sports Grid (2x2 on desktop, 1 column on mobile) - READ ONLY */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {[0, 1, 2, 3].map((index) => {
                 const selectedSport = SPORT_OPTIONS.find(s => s.value === formData.sports[index]);
-                const isFromMoveframe = isSportFromMoveframe(index);
-                const canSelect = canManuallySelectSport(index);
-                const isDisabled = !canSelect && !formData.sports[index];
                 
                 return (
                   <div key={index} className="relative">
                     <label className="block text-xs font-medium text-gray-600 mb-1.5 flex items-center gap-1">
                       <span className="text-blue-500">●</span>
                       <span>Sport {index + 1}</span>
-                      {isFromMoveframe && (
-                        <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded" title="Auto-loaded from moveframes">
-                          📋 Auto
-                        </span>
-                      )}
+                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded" title="Loaded from moveframes">
+                        📋 From Moveframes
+                      </span>
                     </label>
-                    <div className="relative">
-                      <select
-                        value={formData.sports[index] || ''}
-                        onChange={(e) => handleSportChange(index, e.target.value || null)}
-                        disabled={isFromMoveframe || isDisabled || isViewMode}
-                        className={`w-full px-3 py-2.5 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm transition-all ${
-                          isFromMoveframe
-                            ? 'bg-blue-50 cursor-not-allowed border-blue-300 text-blue-800 font-medium'
-                            : isDisabled || isViewMode
-                            ? 'bg-gray-100 cursor-not-allowed text-gray-400'
-                            : selectedSport 
-                              ? `${selectedSport.color} border-current font-medium`
-                              : 'bg-white hover:border-gray-400'
-                        } ${!validation.sports.valid && index === 0 ? 'border-red-500' : 'border-gray-300'}`}
-                      >
-                        <option value="">{isFromMoveframe ? 'From moveframes' : 'Select sport...'}</option>
-                        {SPORT_OPTIONS.map((sport) => (
-                          <option key={sport.value} value={sport.value}>
-                            {sport.icon} {sport.label}
-                          </option>
-                        ))}
-                      </select>
-                      {formData.sports[index] && !isFromMoveframe && !isViewMode && (
-                        <button
-                          onClick={() => handleSportChange(index, null)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 hover:bg-red-100 rounded-full transition-colors"
-                          title="Clear selection"
-                        >
-                          <X className="w-4 h-4 text-red-500" />
-                        </button>
+                    {/* Read-only display - no dropdown */}
+                    <div className={`w-full px-3 py-2.5 border rounded-lg text-sm ${
+                      selectedSport
+                        ? 'bg-blue-50 border-blue-300 text-blue-800 font-medium'
+                        : 'bg-gray-50 border-gray-200 text-gray-400 italic'
+                    }`}>
+                      {selectedSport ? (
+                        <span>{selectedSport.icon} {selectedSport.label}</span>
+                      ) : (
+                        <span>— Not set yet —</span>
                       )}
                     </div>
                   </div>
@@ -424,48 +399,21 @@ export default function AddWorkoutModal({
               })}
             </div>
 
-            {!validation.sports.valid && (
-              <p id="sports-error" className="text-xs text-red-600 flex items-center gap-1" role="alert">
-                <span>⚠️</span>
-                <span>{validation.sports.message}</span>
-              </p>
-            )}
+            {/* Sports validation removed - sports are auto-loaded from moveframes */}
             
-            {/* Info message for auto-loaded sports */}
-            {mode === 'add' && moveframeSports.length > 0 && (
-              <div className="text-xs text-blue-600 bg-blue-50 p-2.5 rounded flex items-start gap-2 border border-blue-200">
-                <span className="text-sm flex-shrink-0">ℹ️</span>
-                <div className="space-y-1">
-                  <div className="font-semibold text-blue-700">Sports auto-loaded from day's moveframes</div>
-                  <div className="text-blue-600">
-                    {moveframeSports.length < 4 && (
-                      <>
-                        <div>• {moveframeSports.length} sport{moveframeSports.length > 1 ? 's' : ''} from moveframes (cannot be changed)</div>
-                        <div>• You can select {4 - moveframeSports.length} more sport{4 - moveframeSports.length > 1 ? 's' : ''} manually</div>
-                      </>
-                    )}
-                    {moveframeSports.length >= 4 && (
-                      <div>• Maximum 4 sports reached from moveframes</div>
-                    )}
-                  </div>
+            {/* Info message for sports */}
+            <div className="text-xs text-blue-600 bg-blue-50 p-2.5 rounded flex items-start gap-2 border border-blue-200">
+              <span className="text-sm flex-shrink-0">ℹ️</span>
+              <div className="space-y-1">
+                <div className="font-semibold text-blue-700">How Sports Work</div>
+                <div className="text-blue-600 space-y-0.5">
+                  <div>• These 4 sports are automatically loaded from your moveframes</div>
+                  <div>• To add/change sports, create moveframes with those sports</div>
+                  <div>• Stretching doesn't count toward the 4-sport limit (if excluded in settings)</div>
+                  <div>• "Main Type of Activity" can be selected freely for manual mode</div>
                 </div>
               </div>
-            )}
-            
-            {/* Help text for sport selection */}
-            {mode === 'add' && moveframeSports.length === 0 && (
-              <div className="text-xs text-gray-600 bg-gray-50 p-2.5 rounded flex items-start gap-2 border border-gray-200">
-                <span className="text-sm flex-shrink-0">💡</span>
-                <div>
-                  <div className="font-medium text-gray-700">Sport Selection Rules:</div>
-                  <div className="text-gray-600 mt-0.5 space-y-0.5">
-                    <div>• Maximum 4 sports per workout</div>
-                    <div>• Sports from moveframes are auto-loaded and locked</div>
-                    <div>• Stretching doesn't count toward the 4-sport limit</div>
-                  </div>
-                </div>
-              </div>
-            )}
+            </div>
 
             {/* Include Stretching Checkbox */}
             <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">

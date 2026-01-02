@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
         console.log(`User not found in new table, checking legacy table for: ${loginIdentifier}`);
         
         const legacyUser = await prisma.$queryRaw<any[]>`
-          SELECT id, username, email, password, 
+          SELECT id, username, email, password, alternate_pass, staff_password,
                  COALESCE(firstname, '') as firstname,
                  COALESCE(lastname, '') as lastname,
                  role_id,
@@ -61,9 +61,31 @@ export async function POST(request: NextRequest) {
       if (legacyUser.length > 0) {
         const legacy = legacyUser[0];
         console.log(`Found user in legacy table: ${legacy.username}`);
+        console.log(`Checking password fields: main=${!!legacy.password}, alternate=${!!legacy.alternate_pass}, staff=${!!legacy.staff_password}`);
 
-        // Verify password with legacy hash first
-        const isPasswordValid = await verifyPassword(password, legacy.password || '');
+        // Try multiple password fields from old PHP system
+        let isPasswordValid = false;
+        let whichPasswordWorked = '';
+        
+        // 1. Try main password
+        if (legacy.password) {
+          isPasswordValid = await verifyPassword(password, legacy.password);
+          if (isPasswordValid) whichPasswordWorked = 'main';
+        }
+        
+        // 2. Try alternate password
+        if (!isPasswordValid && legacy.alternate_pass) {
+          isPasswordValid = await verifyPassword(password, legacy.alternate_pass);
+          if (isPasswordValid) whichPasswordWorked = 'alternate';
+        }
+        
+        // 3. Try plaintext staff password
+        if (!isPasswordValid && legacy.staff_password) {
+          isPasswordValid = password === legacy.staff_password;
+          if (isPasswordValid) whichPasswordWorked = 'staff';
+        }
+        
+        console.log(`Password verification result: ${isPasswordValid ? `✅ matched ${whichPasswordWorked}` : '❌ no match'}`);
         
         if (!isPasswordValid) {
           return NextResponse.json(

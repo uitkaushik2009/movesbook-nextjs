@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Drag and Drop
 import {
@@ -71,8 +72,10 @@ import ColumnSettingsModal from '@/components/workouts/ColumnSettingsModal';
 import BulkAddMovelapModal from '@/components/workouts/BulkAddMovelapModal';
 import CreateYearlyPlanModal from '@/components/workouts/modals/CreateYearlyPlanModal';
 import ImportFromPlanModal from '@/components/workouts/modals/ImportFromPlanModal';
+import CopyFromTemplateModal from '@/components/workouts/modals/CopyFromTemplateModal';
 import DayPrintModal from '@/components/workouts/modals/DayPrintModal';
 import WeekTotalsModal from '@/components/workouts/modals/WeekTotalsModal';
+import WeeklyInfoModal from '@/components/workouts/WeeklyInfoModal';
 import CopyWeekModal from '@/components/workouts/modals/CopyWeekModal';
 import ExportSharePrint from '@/components/workouts/ExportSharePrint';
 import { useColumnSettings } from '@/hooks/useColumnSettings';
@@ -81,6 +84,13 @@ import DragDropConfirmModal, { DragAction, DropPosition } from '@/components/wor
 // Icons
 import { X, Download, Plus, Table, Calendar } from 'lucide-react';
 
+// Extracted Handlers
+import * as workoutHandlers from './handlers/workoutHandlers';
+import * as moveframeHandlers from './handlers/moveframeHandlers';
+import * as movelapHandlers from './handlers/movelapHandlers';
+import * as dragDropHandlers from './handlers/dragDropHandlers';
+import * as dayWeekHandlers from './handlers/dayWeekHandlers';
+
 interface WorkoutSectionProps {
   onClose: () => void;
 }
@@ -88,6 +98,7 @@ interface WorkoutSectionProps {
 export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   // ==================== SECTION & VIEW STATE ====================
   const [activeSection, setActiveSection] = useState<SectionId>('A');
+  const [activeSubSection, setActiveSubSection] = useState<'A' | 'B' | 'C'>('A'); // For Section A subsections
   const [viewMode, setViewMode] = useState<ViewMode>('table'); // Default to table view
   const [selectedWeekForTable, setSelectedWeekForTable] = useState<number | null>(null);
   
@@ -97,20 +108,19 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   
   // Reset view mode when section changes
   useEffect(() => {
-    // Section A: Only Tree and Table (default to Tree)
-    // Section B: Tree, Table, and Calendar
-    // Section C & D: Only Tree and Table (default to Tree)
-    if (activeSection === 'A' || activeSection === 'C' || activeSection === 'D') {
-      // If currently on calendar view, switch to tree view
-      if (viewMode === 'calendar') {
-        setViewMode('tree');
-      }
-    }
+    // Section A, B, C: All support Tree, Table, and Calendar views
     // Clear week filter when changing sections
     setSelectedWeekForTable(null);
     // Reset pagination when changing sections
     setCurrentPageStart(1);
   }, [activeSection]);
+  
+  // Reload data when subsection changes (for Section A only)
+  useEffect(() => {
+    if (activeSection === 'A') {
+      loadWorkoutData(activeSection, activeSubSection);
+    }
+  }, [activeSubSection]);
   
   // ==================== USE CUSTOM HOOK FOR DATA MANAGEMENT ====================
   const {
@@ -220,12 +230,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [workoutModalMode, setWorkoutModalMode] = useState<'add' | 'edit'>('add');
   const [showWorkoutInfoModal, setShowWorkoutInfoModal] = useState(false);
   const [showCreateYearlyPlanModal, setShowCreateYearlyPlanModal] = useState(false);
+  const [showCopyFromTemplateModal, setShowCopyFromTemplateModal] = useState(false);
   const [showDayPrintModal, setShowDayPrintModal] = useState(false);
   const [dayToPrint, setDayToPrint] = useState<any>(null);
   const [autoPrintDay, setAutoPrintDay] = useState(false);
   const [showCopyWeekModal, setShowCopyWeekModal] = useState(false);
   const [showMoveWeekModal, setShowMoveWeekModal] = useState(false);
   const [showWeekTotalsModal, setShowWeekTotalsModal] = useState(false);
+  const [isWeeklyInfoModalOpen, setIsWeeklyInfoModalOpen] = useState(false);
   const [currentWeek, setCurrentWeek] = useState<any>(null);
   const [autoPrintWeek, setAutoPrintWeek] = useState(false);
   const [targetWeeks, setTargetWeeks] = useState<any[]>([]);
@@ -258,7 +270,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     useSensor(KeyboardSensor)
   );
 
-  const [virtualStartDate, setVirtualStartDate] = useState<Date | null>(null);
   const [availableWorkouts, setAvailableWorkouts] = useState<Workout[]>([]);
   // Auto-expansion tracking for newly added items
   const [autoExpandDayId, setAutoExpandDayId] = useState<string | null>(null);
@@ -275,6 +286,63 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   // ==================== HELPER FUNCTIONS (Using Utilities) ====================
   const canAddDays = () => sectionHelpers.canAddDays(activeSection);
   const isDateAllowedForSection = (date: Date) => sectionHelpers.isDateAllowedForSection(date, activeSection);
+
+  // Create dependency object for handlers
+  const getHandlerDeps = () => ({
+    token: localStorage.getItem('token'),
+    showMessage,
+    loadWorkoutData,
+    activeSection
+  });
+
+  // Helper function to generate movelaps from moveframe data
+  const generateMovelaps = (moveframeData: any): any[] => {
+    const movelaps: any[] = [];
+    
+    // Only create movelaps for non-ANNOTATION types and non-manual mode
+    if (moveframeData.type === 'ANNOTATION' || moveframeData.manualMode) {
+      return movelaps;
+    }
+    
+    const repsCount = parseInt(moveframeData.repetitions) || 1;
+    
+    // Check if we're using individual planning mode
+    const hasIndividualPlans = moveframeData.planningMode === 'individual' && 
+                              moveframeData.individualPlans && 
+                              moveframeData.individualPlans.length > 0;
+    
+    for (let i = 0; i < repsCount; i++) {
+      // If using individual plans, get values from the specific plan
+      const plan = hasIndividualPlans ? moveframeData.individualPlans[i] : null;
+      
+      movelaps.push({
+        repetitionNumber: i + 1,
+        distance: moveframeData.distance?.toString() || null,
+        speed: plan?.speed || moveframeData.speed || null,
+        style: moveframeData.style || null,
+        pace: moveframeData.pace || null,
+        time: plan?.time || moveframeData.time || null,
+        reps: plan?.reps || moveframeData.reps || null,
+        weight: plan?.weight || null,
+        tools: plan?.tools || null,
+        r1: moveframeData.r1 || null,
+        r2: moveframeData.r2 || null,
+        muscularSector: moveframeData.muscularSector || null,
+        exercise: moveframeData.exercise || null,
+        restType: null,
+        pause: plan?.pause || moveframeData.pause || null,
+        macroFinal: plan?.macroFinal || moveframeData.macroFinal || null,
+        alarm: moveframeData.alarm || null,
+        sound: moveframeData.sound || null,
+        notes: moveframeData.notes || null,
+        status: 'PENDING',
+        isSkipped: false,
+        isDisabled: false
+      });
+    }
+    
+    return movelaps;
+  };
 
   // ==================== LOAD DATA ON SECTION CHANGE ====================
   useEffect(() => {
@@ -587,6 +655,59 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     } catch (error) {
       console.error('Error creating yearly plan:', error);
       showMessage('error', 'Failed to create yearly plan');
+    }
+  };
+
+  /**
+   * COPY FROM TEMPLATE - Handler for copying weeks from template plans to yearly plan
+   */
+  const handleCopyFromTemplate = async (
+    templatePlan: 'A' | 'B' | 'C', 
+    selectedWeeks: number[], 
+    targetStartWeek: number
+  ) => {
+    try {
+      showMessage('info', `Copying ${selectedWeeks.length} week(s) from Weekly Plan ${templatePlan}...`);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        showMessage('error', 'Please log in first');
+        return;
+      }
+
+      // Copy each selected week to the target week in yearly plan
+      for (let i = 0; i < selectedWeeks.length; i++) {
+        const sourceWeekNum = selectedWeeks[i];
+        const targetWeekNum = targetStartWeek + i;
+        
+        const response = await fetch('/api/workouts/weeks/copy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            sourceSection: templatePlan,
+            sourceWeekNumber: sourceWeekNum,
+            targetSection: 'B', // Yearly Plan
+            targetWeekNumber: targetWeekNum
+          })
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || `Failed to copy week ${sourceWeekNum}`);
+        }
+      }
+
+      showMessage('success', `Successfully copied ${selectedWeeks.length} week(s) to Yearly Plan!`);
+      
+      // Reload yearly plan data
+      await loadWorkoutData('B');
+      
+    } catch (error: any) {
+      console.error('Error copying from template:', error);
+      showMessage('error', error.message || 'Failed to copy from template');
     }
   };
 
@@ -1024,15 +1145,17 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         return (
           <WorkoutSectionHeader
             activeSection={activeSection}
+            activeSubSection={activeSubSection}
+            onSubSectionChange={setActiveSubSection}
             viewMode={viewMode}
             selectedWeekForTable={selectedWeekForTable}
-            virtualStartDate={virtualStartDate}
             userType={userType ?? undefined}
             selectedAthlete={selectedAthlete}
             canAddDay={canAddDay}
             weeksPerPage={weeksPerPage}
             currentPageStart={currentPageStart}
             totalWeeks={workoutPlan?.weeks?.length || 0}
+            workoutPlan={workoutPlan}
             onSectionChange={setActiveSection}
         onViewModeChange={(mode) => {
           setViewMode(mode);
@@ -1040,8 +1163,15 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             setSelectedWeekForTable(null);
           }
         }}
-        onImportClick={() => modalActions.openImportModal()}
-        onStartDateClick={() => modalActions.openStartDatePicker()}
+        onImportClick={() => {
+          // For Section B (Yearly Plan), open Copy from Template modal
+          // For Section C (Done), open Import from Yearly Plan modal
+          if (activeSection === 'B') {
+            setShowCopyFromTemplateModal(true);
+          } else {
+            modalActions.openImportModal();
+          }
+        }}
         onAthleteSelect={() => modalActions.openAthleteSelector()}
         onWeekFilterClear={() => {
           setSelectedWeekForTable(null);
@@ -1074,6 +1204,21 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         />
       )}
 
+      {/* ==================== COPY FROM TEMPLATE MODAL ==================== */}
+      {showCopyFromTemplateModal && (
+        <CopyFromTemplateModal
+          isOpen={showCopyFromTemplateModal}
+          onClose={() => setShowCopyFromTemplateModal(false)}
+          onConfirm={handleCopyFromTemplate}
+          yearlyPlanWeeks={workoutPlan?.weeks || []}
+          onNavigateToTemplate={(template) => {
+            setActiveSection('A');
+            setActiveSubSection(template);
+            setShowCopyFromTemplateModal(false);
+          }}
+        />
+      )}
+
       {/* ==================== IMPORT FROM PLAN MODAL ==================== */}
       {modals.showImportModal && (
         <ImportFromPlanModal
@@ -1095,133 +1240,264 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               </div>
             ) : viewMode === 'tree' ? (
               <div className="flex flex-col h-full">
-                {/* Tree View Week Navigation Header - Same as Table View */}
+                {/* CSS for rich text preview */}
+                <style>{`
+                  .rich-text-preview b,
+                  .rich-text-preview strong {
+                    font-weight: bold !important;
+                  }
+                  .rich-text-preview i,
+                  .rich-text-preview em {
+                    font-style: italic !important;
+                  }
+                  .rich-text-preview u {
+                    text-decoration: underline !important;
+                  }
+                  .rich-text-preview s,
+                  .rich-text-preview strike {
+                    text-decoration: line-through !important;
+                  }
+                  .rich-text-preview ul {
+                    list-style-type: disc;
+                    padding-left: 1.5em;
+                  }
+                  .rich-text-preview ol {
+                    list-style-type: decimal;
+                    padding-left: 1.5em;
+                  }
+                  .rich-text-preview a {
+                    color: #3b82f6;
+                    text-decoration: underline;
+                  }
+                  .rich-text-preview img {
+                    max-width: 100%;
+                    height: auto;
+                  }
+                `}</style>
+                
+                {/* Tree View Week Navigation Header */}
                 {(activeSection === 'A' || activeSection === 'B') && workoutPlan && workoutPlan.weeks && workoutPlan.weeks.length > 0 && (
-                  <div className="sticky top-0 z-50 bg-white shadow-lg p-4 border-b-2 border-gray-300">
-                    <div className="flex items-center justify-between gap-2">
-                      {/* Left side buttons */}
-                      <div className="flex items-center gap-2">
-                        {/* Previous Week Button */}
+                  <div className="sticky top-0 z-50 bg-white shadow-lg border-b-2 border-gray-300">
+                    <div className="flex items-center gap-2">
+                      {/* Left: Period Badge (Display Only) */}
+                      <div className="flex items-center px-4 py-3 bg-white border-r-2 border-gray-200">
+                        {(() => {
+                          const firstWeek = workoutPlan.weeks?.[0] as any;
+                          const period = firstWeek?.period;
+                          return (
+                            <div
+                              className="flex items-center gap-2 px-4 py-2 rounded-xl shadow-lg border-2"
+                              style={{
+                                backgroundColor: period?.color || '#e5e7eb',
+                                borderColor: period?.color || '#d1d5db',
+                                color: '#000000'
+                              }}
+                            >
+                              <div
+                                className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
+                                style={{ backgroundColor: period?.color || '#3b82f6' }}
+                              />
+                              <span className="font-bold text-sm">
+                                {period?.name || 'Set Period'}
+                              </span>
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Center: Week Description Box (Simplified) */}
+                      <div className="flex-1 max-w-lg flex items-center gap-3 px-2 py-2 bg-white border-r-2 border-gray-200">
+                        {/* Week Title/Notes */}
+                        <div className="flex-1 min-w-0">
+                          {(() => {
+                            const firstWeek = workoutPlan.weeks?.[0] as any;
+                            const weekNotes = firstWeek?.notes;
+                            
+                            // Display notes if available, otherwise show default text
+                            if (weekNotes) {
+                              return (
+                                <div 
+                                  className="rich-text-preview text-gray-900 font-semibold leading-tight text-lg"
+                                  dangerouslySetInnerHTML={{ __html: weekNotes }}
+                                  style={{
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    wordBreak: 'break-word',
+                                    lineHeight: '1.3',
+                                    maxHeight: '2.6em'
+                                  }}
+                                />
+                              );
+                            } else {
+                              return (
+                                <span className="text-gray-400 italic text-base">Click Edit to add description...</span>
+                              );
+                            }
+                          })()}
+                        </div>
+                        
+                        {/* Edit Button Inside */}
                         <button
                           onClick={() => {
-                            const newStart = Math.max(1, currentPageStart - weeksPerPage);
-                            setCurrentPageStart(newStart);
+                            const firstWeek = workoutPlan.weeks?.[0];
+                            if (firstWeek) {
+                              setCurrentWeek(firstWeek);
+                              setIsWeeklyInfoModalOpen(true);
+                            } else {
+                              showMessage('error', 'No week to edit');
+                            }
                           }}
-                          disabled={currentPageStart <= 1}
-                          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                            currentPageStart <= 1
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : 'bg-blue-500 text-white hover:bg-blue-600'
-                          }`}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all shadow-md hover:shadow-lg flex-shrink-0"
+                          title="Edit week description and notes"
                         >
-                          ← Previous
+                          <FileText size={14} />
+                          Edit
                         </button>
+                      </div>
 
-                        {/* Expand/Collapse All Button */}
+                      {/* Right: Action Buttons */}
+                      <div className="flex items-center gap-2 px-4 py-3 bg-white">
+                        {/* Section B Navigation - Previous/Next buttons */}
+                        {activeSection === 'B' && workoutPlan?.weeks && workoutPlan.weeks.length > weeksPerPage && (
+                          <>
+                            <button
+                              onClick={() => {
+                                if (currentPageStart > 1) {
+                                  const newStart = Math.max(1, currentPageStart - weeksPerPage);
+                                  setCurrentPageStart(newStart);
+                                }
+                              }}
+                              disabled={currentPageStart <= 1}
+                              className="flex items-center gap-1 px-3 py-2 text-sm font-semibold bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md"
+                              title="Previous weeks"
+                            >
+                              <ChevronLeft size={16} />
+                              Previous
+                            </button>
+                            <button
+                              onClick={() => {
+                                const totalWeeks = workoutPlan.weeks.length;
+                                if (currentPageStart + weeksPerPage <= totalWeeks) {
+                                  setCurrentPageStart(currentPageStart + weeksPerPage);
+                                }
+                              }}
+                              disabled={currentPageStart + weeksPerPage > (workoutPlan.weeks.length || 0)}
+                              className="flex items-center gap-1 px-3 py-2 text-sm font-semibold bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md"
+                              title="Next weeks"
+                            >
+                              Next
+                              <ChevronRight size={16} />
+                            </button>
+                          </>
+                        )}
+
+                        {/* Expand All Button */}
                         <button
                           onClick={() => {
                             const allWeeks = workoutPlan.weeks || [];
                             if (expandedWeeks.size === 0) {
                               // Expand all weeks
                               allWeeks.forEach((week: any) => {
-                                if (!expandedWeeks.has(week.id)) {
-                                  toggleWeekExpansion(week.id);
-                                }
+                                toggleWeekExpansion(week.id);
                               });
                             } else {
                               // Collapse all weeks
                               allWeeks.forEach((week: any) => {
-                                if (expandedWeeks.has(week.id)) {
-                                  toggleWeekExpansion(week.id);
-                                }
+                                toggleWeekExpansion(week.id);
                               });
                             }
                           }}
-                          className="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors bg-purple-500 text-white hover:bg-purple-600"
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-md hover:shadow-lg"
+                          title={expandedWeeks.size === 0 ? "Expand all workouts" : "Collapse all workouts"}
                         >
                           {expandedWeeks.size === 0 ? 'Expand All' : 'Collapse All'}
                         </button>
-                      </div>
 
-                      {/* Center: Week Info */}
-                      <div className="flex-1 flex items-center justify-center gap-6">
-                        <div className="text-lg font-bold text-gray-900">
-                          {activeSection === 'B' && weeksPerPage > 1
-                            ? `Weeks ${currentPageStart} - ${Math.min(currentPageStart + weeksPerPage - 1, workoutPlan?.weeks?.length || 0)}`
-                            : activeSection === 'A'
-                            ? `3 Weeks Plan`
-                            : `Week ${currentPageStart}`}
-                        </div>
-
-                        {/* Week action buttons */}
-                        <div className="flex items-center gap-2">
-                          {/* Edit Button - Switch to table view to edit items */}
-                          <button
-                            onClick={() => {
-                              setViewMode('table');
-                              showMessage('info', 'Now you can edit days, workouts, moveframes, and movelaps');
-                            }}
-                            className="flex items-center gap-1 px-4 py-2 text-sm bg-green-500 text-white rounded hover:bg-green-600 transition-colors flex-shrink-0"
-                            title="Switch to table view to edit items"
-                          >
-                            Edit
-                          </button>
-
-                          {/* Copy and Move buttons removed from tree view as per user request */}
-
-                          {/* Overview Button - Show week totals for first week */}
-                          <button
-                            onClick={() => {
-                              const firstWeek = workoutPlan.weeks?.find((w: any) => w.weekNumber === currentPageStart);
-                              if (firstWeek) {
-                                setCurrentWeek(firstWeek);
-                                setShowWeekTotalsModal(true);
+                        {/* Copy Week Button */}
+                        <button
+                          onClick={async () => {
+                            const firstWeek = workoutPlan.weeks?.[0];
+                            if (!firstWeek) {
+                              showMessage('error', 'No week to copy');
+                              return;
+                            }
+                            
+                            setCurrentWeek(firstWeek);
+                            
+                            const token = localStorage.getItem('token');
+                            if (!token) {
+                              console.error('❌ Please log in first');
+                              return;
+                            }
+                            
+                            try {
+                              // Same logic as table view: Section A -> copy to YEARLY_PLAN, Section B -> copy to TEMPLATE_WEEKS
+                              const targetPlanType = activeSection === 'A' ? 'YEARLY_PLAN' : 'TEMPLATE_WEEKS';
+                              console.log('📥 Fetching target weeks for Copy from:', targetPlanType);
+                              
+                              const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {
+                                headers: { 'Authorization': `Bearer ${token}` }
+                              });
+                              
+                              if (response.ok) {
+                                const data = await response.json();
+                                console.log('✅ Loaded target plan:', data.plan?.type, 'with', data.plan?.weeks?.length || 0, 'weeks');
+                                setTargetWeeks(data.plan?.weeks || []);
+                                setShowCopyWeekModal(true);
                               } else {
-                                showMessage('error', 'No week selected for overview');
+                                console.error('❌ Failed to load target weeks');
                               }
-                            }}
-                            className="flex items-center gap-1 px-4 py-2 text-sm bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors flex-shrink-0"
-                            title="View overview and totals for the first week"
-                          >
-                            Overview
-                          </button>
+                            } catch (error) {
+                              console.error('Error loading target weeks:', error);
+                            }
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow-md hover:shadow-lg"
+                          title="Copy this week"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                          Copy
+                        </button>
 
-                          {/* Print Button - Print first week */}
-                          <button
-                            onClick={() => {
-                              const firstWeek = workoutPlan.weeks?.find((w: any) => w.weekNumber === currentPageStart);
-                              if (firstWeek) {
-                                setCurrentWeek(firstWeek);
-                                setAutoPrintWeek(true);
-                                setShowWeekTotalsModal(true);
-                              } else {
-                                showMessage('error', 'No week selected to print');
-                              }
-                            }}
-                            className="flex items-center gap-1 px-4 py-2 text-sm bg-gray-700 text-white rounded hover:bg-gray-800 transition-colors flex-shrink-0"
-                            title="Print the first week in the displayed range"
-                          >
-                            Print
-                          </button>
-                        </div>
+                        {/* Overview Button */}
+                        <button
+                          onClick={() => {
+                            const firstWeek = workoutPlan.weeks?.[0];
+                            if (firstWeek) {
+                              setCurrentWeek(firstWeek);
+                              setAutoPrintWeek(false);
+                              setShowWeekTotalsModal(true);
+                            } else {
+                              showMessage('error', 'No week selected for overview');
+                            }
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all shadow-md hover:shadow-lg"
+                          title="View overview and totals for the first week"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                          Overview
+                        </button>
+
+                        {/* Print Button */}
+                        <button
+                          onClick={() => {
+                            const firstWeek = workoutPlan.weeks?.[0];
+                            if (firstWeek) {
+                              setCurrentWeek(firstWeek);
+                              setAutoPrintWeek(true);
+                              setShowWeekTotalsModal(true);
+                            } else {
+                              showMessage('error', 'No week selected to print');
+                            }
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
+                          title="Print the first week in the displayed range"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                          Print
+                        </button>
                       </div>
-
-                      {/* Right: Next Button */}
-                      <button
-                        onClick={() => {
-                          const totalWeeks = workoutPlan?.weeks?.length || 0;
-                          const newStart = Math.min(totalWeeks - weeksPerPage + 1, currentPageStart + weeksPerPage);
-                          setCurrentPageStart(newStart);
-                        }}
-                        disabled={currentPageStart + weeksPerPage > (workoutPlan?.weeks?.length || 0)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                          currentPageStart + weeksPerPage > (workoutPlan?.weeks?.length || 0)
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            : 'bg-blue-500 text-white hover:bg-blue-600'
-                        }`}
-                      >
-                        Next →
-                      </button>
                     </div>
                   </div>
                 )}
@@ -1302,16 +1578,28 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                          }) || []
                        }
                      : activeSection === 'B' && workoutPlan
-                     ? {
-                         ...workoutPlan,
-                         weeks: workoutPlan.weeks?.filter((week: any) => {
+                     ? (() => {
+                         console.log('📊 Section B Table View - Filtering weeks:', {
+                           totalWeeks: workoutPlan.weeks?.length,
+                           currentPageStart,
+                           weeksPerPage,
+                           filterRange: `${currentPageStart} to ${currentPageStart + weeksPerPage - 1}`
+                         });
+                         const filteredWeeks = workoutPlan.weeks?.filter((week: any) => {
                            const weekNum = week.weekNumber;
                            return weekNum >= currentPageStart && weekNum < currentPageStart + weeksPerPage;
-                         }) || []
-                       }
+                         }) || [];
+                         console.log('📊 Filtered weeks count:', filteredWeeks.length);
+                         return {
+                           ...workoutPlan,
+                           weeks: filteredWeeks
+                         };
+                       })()
                      : workoutPlan
                  }
                  activeSection={activeSection}
+                 currentPageStart={currentPageStart}
+                 weeksPerPage={weeksPerPage}
                  expandedDays={expandedDays}
                  expandedWorkouts={expandedWorkouts}
                  expandedMoveframeId={autoExpandMoveframeId}
@@ -1717,7 +2005,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           existingWorkouts={addWorkoutDay.workouts || []}
           mode={workoutModalMode}
           existingWorkout={editingWorkout}
-          activeSection={activeSection === 'D' ? 'A' : activeSection as 'A' | 'B' | 'C'}
+          activeSection={activeSection as 'A' | 'B' | 'C'}
           onClose={() => {
             modalActions.closeAddWorkoutModal();
             setAddWorkoutDay(null);
@@ -1729,78 +2017,17 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             setWorkoutModalMode('edit');
           }}
           onSave={async (workoutData) => {
-            const token = localStorage.getItem('token');
+            const deps = getHandlerDeps();
             
             if (workoutModalMode === 'edit' && editingWorkout) {
               // UPDATE existing workout
-              console.log('Updating workout with data:', workoutData);
-              
-              const response = await fetch(`/api/workouts/sessions/${editingWorkout.id}`, {
-                method: 'PATCH',
-                headers: { 
-                  'Authorization': `Bearer ${token}`, 
-                  'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify({
-                  name: workoutData.name,
-                  code: workoutData.code,
-                  sports: workoutData.sports,
-                  symbol: workoutData.symbol,
-                  includeStretching: workoutData.includeStretching
-                })
-              });
-              
-              if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to update workout');
-              }
-              
-              showMessage('success', 'Workout updated successfully');
+              await workoutHandlers.updateWorkout(editingWorkout.id, workoutData, deps);
             } else {
               // CREATE new workout
-              console.log('Creating workout with data:', workoutData);
-              
-              // Verify the day exists before creating workout
-              if (!workoutData.dayId) {
-                throw new Error('No day selected. Please select a day first.');
-              }
-              
-              // Verify day still exists in current data
               const dayExists = workoutPlan?.weeks?.some((week: any) => 
                 week.days?.some((day: any) => day.id === workoutData.dayId)
-              );
-              
-              if (!dayExists) {
-                throw new Error('The selected day no longer exists. Please refresh and try again.');
-              }
-              
-              const response = await fetch('/api/workouts/sessions', {
-                method: 'POST',
-                headers: { 
-                  'Authorization': `Bearer ${token}`, 
-                  'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify({
-                  workoutDayId: workoutData.dayId,
-                  sessionNumber: workoutData.sessionNumber,
-                  name: workoutData.name,
-                  code: workoutData.code,
-                  sports: workoutData.sports,
-                  symbol: workoutData.symbol,
-                  includeStretching: workoutData.includeStretching,
-                  status: 'PLANNED_FUTURE',
-                  time: '',
-                  location: '',
-                  notes: ''
-                })
-              });
-              
-              if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || 'Failed to create workout');
-              }
-              
-              showMessage('success', 'Workout added successfully');
+              ) ?? false;
+              await workoutHandlers.createWorkout(workoutData, dayExists, deps);
             }
             
             // Keep day and its parent week expanded (for new workouts)
@@ -1857,6 +2084,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
        {modals.showAddMoveframeModal && activeWorkout && activeDay && (
          <AddEditMoveframeModal
            isOpen={modals.showAddMoveframeModal}
+            onSetInsertIndex={(index) => setMoveframeInsertIndex(index)}
             onClose={() => {
               modalActions.setShowAddMoveframeModal(false);
             setActiveWorkout(null);
@@ -1871,116 +2099,108 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
              console.log(`📤 ${moveframeModalMode === 'edit' ? 'Updating' : 'Creating'} moveframe with data:`, moveframeData);
              
              try {
-               const token = localStorage.getItem('token');
+               const deps = getHandlerDeps();
                
                if (moveframeModalMode === 'edit' && editingMoveframe) {
-                 // UPDATE existing moveframe
-                 const response = await fetch(`/api/workouts/moveframes/${editingMoveframe.id}`, {
-                   method: 'PATCH',
-                   headers: {
-                     'Content-Type': 'application/json',
-                     'Authorization': `Bearer ${token}`
-                   },
-                  body: JSON.stringify({
-                    sport: moveframeData.sport,
-                    type: moveframeData.type,
-                    description: moveframeData.description,
-                    notes: moveframeData.notes,
-                    macroFinal: moveframeData.macroFinal,
-                    alarm: moveframeData.alarm
-                  })
-                 });
-                 
-                 if (!response.ok) {
-                   const errorData = await response.json();
-                   console.error('❌ API Error:', errorData);
-                   throw new Error(errorData.error || 'Failed to update moveframe');
+                // UPDATE existing moveframe
+                await moveframeHandlers.updateMoveframe(editingMoveframe.id, {
+                   sport: moveframeData.sport,
+                   type: moveframeData.type,
+                   description: moveframeData.description,
+                   notes: moveframeData.notes,
+                   macroFinal: moveframeData.macroFinal,
+                  alarm: moveframeData.alarm,
+                  sectionId: moveframeData.sectionId,
+                  manualMode: moveframeData.manualMode || false,
+                  // Annotation fields
+                  annotationText: moveframeData.annotationText,
+                  annotationBgColor: moveframeData.annotationBgColor,
+                  annotationTextColor: moveframeData.annotationTextColor,
+                  annotationBold: moveframeData.annotationBold
+                }, deps);
+                
+                 // ALWAYS regenerate movelaps for non-ANNOTATION types when editing
+                 // This ensures Rip\Sets column and all movelap data stays in sync
+                 if (moveframeData.type !== 'ANNOTATION') {
+                   const newRepsCount = parseInt(moveframeData.repetitions) || 1;
+                   console.log(`🔄 Editing moveframe - regenerating ${newRepsCount} movelaps to ensure data sync...`);
+                   
+                   const token = localStorage.getItem('token');
+                   
+                   // Delete ALL existing movelaps
+                   const deletePromises = (editingMoveframe.movelaps || []).map((movelap: any) =>
+                     fetch(`/api/workouts/movelaps/${movelap.id}`, {
+                       method: 'DELETE',
+                       headers: { 'Authorization': `Bearer ${token}` }
+                     })
+                   );
+                   await Promise.all(deletePromises);
+                   console.log(`✅ Deleted ${deletePromises.length} existing movelaps`);
+                   
+                   // Generate new movelaps with updated data
+                   const newMovelaps = generateMovelaps(moveframeData);
+                   
+                   // Create new movelaps
+                   for (const movelap of newMovelaps) {
+                     await fetch('/api/workouts/movelaps', {
+                       method: 'POST',
+                       headers: {
+                         'Content-Type': 'application/json',
+                         'Authorization': `Bearer ${token}`
+                       },
+                       body: JSON.stringify({
+                         ...movelap,
+                         moveframeId: editingMoveframe.id
+                       })
+                     });
+                   }
+                   
+                   console.log(`✅ Created ${newMovelaps.length} new movelaps with updated data`);
+                   console.log(`📊 Rip\\Sets column will now show: ${newMovelaps.length}`);
                  }
                  
-                 const result = await response.json();
-                 console.log('✅ Moveframe updated successfully:', result);
-                 showMessage('success', 'Moveframe updated successfully');
-                 
-                 // Reload data to show changes
+                 // Reload data to show changes (updates Rip\Sets column)
                  await loadWorkoutData(activeSection);
               } else {
                 // CREATE new moveframe
-                const movelaps: any[] = [];
-                
-                // Only create movelaps for non-ANNOTATION types
-                if (moveframeData.type !== 'ANNOTATION') {
-                  const repsCount = parseInt(moveframeData.repetitions) || 1;
-                  
-                  // Check if we're using individual planning mode
-                  const hasIndividualPlans = moveframeData.planningMode === 'individual' && 
-                                            moveframeData.individualPlans && 
-                                            moveframeData.individualPlans.length > 0;
-                  
-                  for (let i = 0; i < repsCount; i++) {
-                    // If using individual plans, get values from the specific plan
-                    const plan = hasIndividualPlans ? moveframeData.individualPlans[i] : null;
-                    
-                    movelaps.push({
-                      repetitionNumber: i + 1,
-                      distance: moveframeData.distance?.toString() || null,
-                      speed: plan?.speed || moveframeData.speed || null,
-                      style: moveframeData.style || null,
-                      pace: moveframeData.pace || null,
-                      time: plan?.time || moveframeData.time || null,
-                      reps: plan?.reps || moveframeData.reps || null,
-                      weight: plan?.weight || null, // For BODY_BUILDING
-                      tools: plan?.tools || null, // For tools-based sports
-                      r1: moveframeData.r1 || null,
-                      r2: moveframeData.r2 || null,
-                      muscularSector: moveframeData.muscularSector || null,
-                      exercise: moveframeData.exercise || null,
-                      restType: null,
-                      pause: plan?.pause || moveframeData.pause || null,
-                      macroFinal: plan?.macroFinal || moveframeData.macroFinal || null, // Per-movelap macro
-                      alarm: moveframeData.alarm || null,
-                      sound: moveframeData.sound || null,
-                      notes: moveframeData.notes || null,
-                      status: 'PENDING',
-                      isSkipped: false,
-                      isDisabled: false
-                    });
-                  }
-                }
+                const movelaps = generateMovelaps(moveframeData);
                 
                 console.log('📤 Generated movelaps:', movelaps);
                
-               const response = await fetch('/api/workouts/moveframes', {
-                method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                  },
-                body: JSON.stringify({
-                    workoutSessionId: activeWorkout.id,
+                const requestBody = {
+                   workoutSessionId: activeWorkout.id,
                   sport: moveframeData.sport,
                   type: moveframeData.type || 'STANDARD',
-                    description: moveframeData.description,
-                    notes: moveframeData.notes,
-                    macroFinal: moveframeData.macroFinal,
-                    alarm: moveframeData.alarm,
-                    movelaps,
-                    sectionId: 'default'
-                })
-              });
+                   description: moveframeData.description,
+                   notes: moveframeData.notes,
+                   macroFinal: moveframeData.macroFinal,
+                   alarm: moveframeData.alarm,
+                   movelaps,
+                  sectionId: moveframeData.sectionId || 'default',
+                  manualMode: moveframeData.manualMode || false,
+                  // Annotation fields
+                  annotationText: moveframeData.annotationText,
+                  annotationBgColor: moveframeData.annotationBgColor,
+                  annotationTextColor: moveframeData.annotationTextColor,
+                  annotationBold: moveframeData.annotationBold
+                };
                
-                 if (!response.ok) {
-                   const errorData = await response.json();
-                   console.error('❌ API Error:', errorData);
-                   throw new Error(errorData.error || 'Failed to create moveframe');
-                 }
+                console.log('📤 Creating moveframe with request body:', {
+                  ...requestBody,
+                  manualMode: moveframeData.manualMode,
+                  hasNotes: !!requestBody.notes,
+                  notesLength: requestBody.notes?.length || 0,
+                  movelapCount: movelaps.length
+                });
                  
-                const result = await response.json();
+                const result = await moveframeHandlers.createMoveframe(requestBody, deps);
                  console.log('✅ Moveframe created successfully:', result);
                  
                  // If we have an insert index, reorder the moveframes BEFORE reloading
                  if (moveframeInsertIndex !== null) {
                    console.log('📍 Inserting new moveframe at index:', moveframeInsertIndex);
                    
+                   const token = localStorage.getItem('token');
                    // Fetch fresh workout plan data directly from API
                    const planType = sectionHelpers.getPlanType(activeSection);
                    const planResponse = await fetch(`/api/workouts/plan?type=${planType}`, {
@@ -2045,8 +2265,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    // Reset insert index
                    setMoveframeInsertIndex(null);
                  }
-                 
-                 showMessage('success', 'Moveframe created successfully');
                  
                  // Reload data to show the final result
                  await loadWorkoutData(activeSection);
@@ -2122,60 +2340,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             modalActions.setShowAddDayModal(false);
           }}
         />
-      )}
-      
-      {/* Virtual Start Date Modal for Sections B & C */}
-      {modals.showStartDatePicker && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Set Virtual Start Date</h2>
-              <button onClick={() => modalActions.setShowStartDatePicker(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            
-            <p className="text-sm text-gray-600 mb-4">
-              {activeSection === 'B' ? 
-                'Set the starting date for your yearly plan (365 days from this date)' :
-                'Set the starting date to view your completed workouts (365 days from this date)'
-              }
-            </p>
-            
-            <input
-              type="date"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
-              onChange={(e) => {
-                if (e.target.value) {
-                  const selected = new Date(e.target.value);
-                  setVirtualStartDate(selected);
-                }
-              }}
-            />
-            
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => modalActions.setShowStartDatePicker(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={async () => {
-                  if (virtualStartDate) {
-                    modalActions.setShowStartDatePicker(false);
-                    // Reload data with new start date
-                    await loadWorkoutData();
-                  }
-                }}
-                disabled={!virtualStartDate}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
       )}
       
       {/* Athlete Selector Modal for Section C (Coaches/Teams/Clubs) */}
@@ -2386,7 +2550,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
         <EditDayModal
           day={editingDay}
           periods={periods}
-          activeSection={activeSection === 'D' ? 'A' : activeSection as 'A' | 'B' | 'C'}
+          activeSection={activeSection as 'A' | 'B' | 'C'}
           onClose={() => {
             modalActions.closeEditDayModal();
             setEditingDay(null);
@@ -2480,6 +2644,96 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             setEditingMovelap(null);
             setActiveMoveframe(null);
             setMovelapInsertIndex(null); // Clear insert index on close
+          }}
+          onCopyToAll={async (fieldName: string, fieldValue: any) => {
+            try {
+              const token = localStorage.getItem('token');
+              if (!token) {
+                showMessage('error', 'Authentication required');
+                return;
+              }
+
+              // Get all movelaps in the current moveframe
+              const movelapsToUpdate = activeMoveframe.movelaps?.filter(
+                (ml: any) => editingMovelap && ml.id !== editingMovelap.id
+              ) || [];
+
+              if (movelapsToUpdate.length === 0) {
+                showMessage('info', 'No other movelaps to copy to');
+                return;
+              }
+
+              // Update all movelaps with the new field value ONLY (preserve other fields)
+              const updatePromises = movelapsToUpdate.map((movelap: any) => {
+                // Get the current movelap data and only update the specific field
+                const existingData = {
+                  distance: movelap.distance,
+                  speed: movelap.speed,
+                  style: movelap.style,
+                  pause: movelap.pause,
+                  pace: movelap.pace,
+                  time: movelap.time,
+                  notes: movelap.notes,
+                  alarm: movelap.alarm,
+                  sound: movelap.sound,
+                  macroFinal: movelap.macroFinal,
+                  reps: movelap.reps,
+                  weight: movelap.weight,
+                  tools: movelap.tools,
+                  muscularSector: movelap.muscularSector,
+                  exercise: movelap.exercise,
+                  restType: movelap.restType,
+                  r1: movelap.r1,
+                  r2: movelap.r2,
+                };
+                
+                // Only update the specific field
+                const updateData = {
+                  ...existingData,
+                  [fieldName]: fieldValue
+                };
+                
+                return fetch(`/api/workouts/movelaps?id=${movelap.id}`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                  },
+                  body: JSON.stringify(updateData)
+                });
+              });
+
+              const responses = await Promise.all(updatePromises);
+              const allSuccessful = responses.every(r => r.ok);
+
+              if (allSuccessful) {
+                showMessage('success', `Copied ${fieldName} to ${movelapsToUpdate.length} movelap(s)`);
+                
+                // Refresh the moveframe data
+                const dayIdToExpand = activeDay?.id;
+                const workoutIdToExpand = activeWorkout?.id;
+                const moveframeIdToExpand = activeMoveframe?.id;
+                
+                await loadWorkoutData(activeSection);
+                
+                // Keep the moveframe expanded after reload
+                if (dayIdToExpand && workoutIdToExpand && moveframeIdToExpand) {
+                  setAutoExpandDayId(dayIdToExpand);
+                  setAutoExpandWorkoutId(workoutIdToExpand);
+                  setAutoExpandMoveframeId(moveframeIdToExpand);
+                  setTimeout(() => {
+                    setAutoExpandDayId(null);
+                    setAutoExpandWorkoutId(null);
+                    setAutoExpandMoveframeId(null);
+                  }, 500);
+                }
+              } else {
+                showMessage('error', 'Failed to copy to all movelaps');
+              }
+            } catch (error: any) {
+              console.error('Error copying to all movelaps:', error);
+              showMessage('error', 'Failed to copy to all movelaps');
+            }
           }}
           onSave={async (movelapData) => {
             try {
@@ -2983,6 +3237,52 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           }}
           week={currentWeek}
           autoPrint={autoPrintWeek}
+        />
+      )}
+
+      {/* Weekly Info Modal (Edit Week Description & Period) */}
+      {isWeeklyInfoModalOpen && currentWeek && (
+        <WeeklyInfoModal
+          isOpen={isWeeklyInfoModalOpen}
+          onClose={() => {
+            setIsWeeklyInfoModalOpen(false);
+            setCurrentWeek(null);
+          }}
+          weekNumber={currentWeek.weekNumber}
+          weekId={currentWeek.id}
+          initialPeriodId={currentWeek.periodId || ''}
+          initialNotes={currentWeek.notes || ''}
+          onSave={async (data) => {
+            try {
+              const token = localStorage.getItem('token');
+              const response = await fetch(`/api/workouts/weeks/${currentWeek.id}/notes`, {
+                method: 'PATCH',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  periodId: data.periodId,
+                  notes: data.notes
+                })
+              });
+
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update week');
+              }
+
+              showMessage('success', 'Week updated successfully!');
+              setIsWeeklyInfoModalOpen(false);
+              setCurrentWeek(null);
+              
+              // Reload workout data to reflect changes
+              await loadWorkoutData();
+            } catch (error: any) {
+              console.error('Error updating week:', error);
+              showMessage('error', error.message || 'Failed to update week');
+            }
+          }}
         />
       )}
 

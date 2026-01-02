@@ -71,6 +71,11 @@
   border-color: var(--moveframe-border-color, #e5e7eb);
 }
 
+/* Rip column - always white background, no matter the row color */
+.rip-column {
+  background-color: #ffffff !important;
+}
+
 /* Movelap Row Styles */
 .movelap-row-table tr {
   background-color: var(--movelap-header-bg);

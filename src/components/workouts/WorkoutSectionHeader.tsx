@@ -1,25 +1,27 @@
-import React from 'react';
-import { Calendar, Download, Table, Plus, X, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Calendar, Download, Table, Plus, X, List, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import type { SectionId, ViewMode } from '@/types/workout.types';
+import { calculateWeeklyPlanColor, getWorkoutCountLabel } from '@/utils/weeklyPlanColors';
 
 interface WorkoutSectionHeaderProps {
   // State
   activeSection: SectionId;
+  activeSubSection?: 'A' | 'B' | 'C'; // For Section A subsections (Weekly Plans)
   viewMode: ViewMode;
   selectedWeekForTable: number | null;
-  virtualStartDate: Date | null;
   userType?: string;
   selectedAthlete: any;
   canAddDay?: boolean; // Whether adding a day is allowed (checks 7-day limit for Section A)
   weeksPerPage?: number; // For Section B pagination
   currentPageStart?: number; // Starting week number for current page
   totalWeeks?: number; // Total weeks in the plan
+  workoutPlan?: any; // Workout plan data for color calculation
   
   // Actions
   onSectionChange: (section: SectionId) => void;
+  onSubSectionChange?: (subSection: 'A' | 'B' | 'C') => void; // For Section A subsections
   onViewModeChange: (mode: ViewMode) => void;
   onImportClick: () => void;
-  onStartDateClick: () => void;
   onAthleteSelect: () => void;
   onWeekFilterClear: () => void;
   onAddDay: () => void;
@@ -32,19 +34,20 @@ interface WorkoutSectionHeaderProps {
 
 export default function WorkoutSectionHeader({
   activeSection,
+  activeSubSection: externalActiveSubSection,
+  onSubSectionChange,
   viewMode,
   selectedWeekForTable,
-  virtualStartDate,
   userType,
   selectedAthlete,
   canAddDay = true,
   weeksPerPage = 3,
   currentPageStart = 1,
   totalWeeks = 0,
+  workoutPlan,
   onSectionChange,
   onViewModeChange,
   onImportClick,
-  onStartDateClick,
   onAthleteSelect,
   onWeekFilterClear,
   onAddDay,
@@ -55,13 +58,56 @@ export default function WorkoutSectionHeader({
   onNextPage
 }: WorkoutSectionHeaderProps) {
   
+  // Local state for plan descriptions
+  const [planDescriptions, setPlanDescriptions] = useState<Record<string, string>>({
+    A: '',
+    B: '',
+    C: ''
+  });
+
+  // Use external activeSubSection if provided, otherwise use local state
+  const activeSubSection = externalActiveSubSection || 'A';
+
+  // State for showing color rules tooltip
+  const [showColorRules, setShowColorRules] = useState(false);
+
+  // Load descriptions from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('weeklyPlanDescriptions');
+    if (saved) {
+      try {
+        setPlanDescriptions(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load plan descriptions:', e);
+      }
+    }
+  }, []);
+
+  // Save description
+  const handleDescriptionChange = (section: SectionId, value: string) => {
+    const updated = { ...planDescriptions, [section]: value };
+    setPlanDescriptions(updated);
+    localStorage.setItem('weeklyPlanDescriptions', JSON.stringify(updated));
+  };
+
+  // Calculate color for current section (recalculate when workoutPlan changes)
+  const planColor = calculateWeeklyPlanColor(workoutPlan);
+  const workoutCountLabel = getWorkoutCountLabel(workoutPlan);
+  
+  console.log('🎨 Color calculation for section', activeSection, ':', {
+    planId: workoutPlan?.id,
+    color: planColor,
+    label: workoutCountLabel,
+    weeksCount: workoutPlan?.weeks?.length
+  });
+  
   // Section labels
   const getSectionLabel = (section: SectionId): string => {
     switch (section) {
-      case 'A': return '3 Weeks Plan';
-      case 'B': return 'Year';
-      case 'C': return 'Done';
-      case 'D': return 'Archive';
+      case 'A': return 'A';
+      case 'B': return 'B';
+      case 'C': return 'C';
+      case 'D': return 'D';
       default: return '';
     }
   };
@@ -69,10 +115,10 @@ export default function WorkoutSectionHeader({
   // Section title
   const getSectionTitle = (section: SectionId): string => {
     switch (section) {
-      case 'A': return '3 Weeks Plan';
+      case 'A': return 'Create Template Plans';
       case 'B': return 'Yearly Plan';
-      case 'C': return 'Workouts Done';
-      case 'D': return 'Archive & Templates';
+      case 'C': return 'Done';
+      case 'D': return 'Archive';
       default: return '';
     }
   };
@@ -105,60 +151,125 @@ export default function WorkoutSectionHeader({
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              Sec {section}: {getSectionLabel(section)}
+              {getSectionTitle(section)}
             </button>
           ))}
           
-          {/* Import Button - Only for sections A & B */}
-          {(activeSection === 'A' || activeSection === 'B') && (
-            <button
-              onClick={onImportClick}
-              className="ml-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium flex items-center gap-2"
-            >
-              <Download className="w-4 h-4" />
-              Import from Coach/Team/Club
-            </button>
-          )}
+          {/* Import Button - All sections */}
+          <button
+            onClick={onImportClick}
+            className="ml-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Import from Coach/Team/Club
+          </button>
         </div>
       </div>
+
+      {/* Weekly Plan Subsections (A, B, C) - Only show when Section A is active */}
+      {activeSection === 'A' && (
+        <div className="bg-gray-100 border-b border-gray-300 px-4 py-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-gray-700 mr-2">Weekly Plans:</span>
+            {(['A', 'B', 'C'] as const).map((plan) => (
+              <button
+                key={plan}
+                onClick={() => onSubSectionChange?.(plan)}
+                className={`px-4 py-1.5 rounded font-semibold text-sm transition-colors ${
+                  activeSubSection === plan 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-300'
+                }`}
+              >
+                Plan {plan}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Sub-Header: Title + Actions */}
       <div className="bg-white px-4 py-3 border-b border-gray-200">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <h2 className="text-xl font-bold">
-              {getSectionTitle(activeSection)}
+              {activeSection === 'A' ? `Weekly Plan ${activeSubSection}` : getSectionTitle(activeSection)}
             </h2>
-            {/* Status Badge */}
-            {activeSection === 'B' && (
-              <span className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full border border-blue-300">
-                📋 PLANNED
-              </span>
-            )}
-            {activeSection === 'C' && (
-              <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full border border-green-300">
-                ✅ COMPLETED
-              </span>
-            )}
+            
+            {/* Colored Circle and Description for Weekly Plans (Section A subsections) */}
             {activeSection === 'A' && (
-              <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full border border-purple-300">
-                📝 DRAFT
-              </span>
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-6 h-6 rounded-full border-2 border-gray-400 flex-shrink-0" 
+                  style={{ backgroundColor: planColor }}
+                  title={workoutCountLabel}
+                />
+                <input
+                  type="text"
+                  value={planDescriptions[activeSection === 'A' ? activeSubSection : activeSection] || ''}
+                  onChange={(e) => handleDescriptionChange(activeSection === 'A' ? activeSubSection : activeSection, e.target.value)}
+                  placeholder="Type description"
+                  className="px-3 py-1 border border-gray-300 rounded text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  style={{ width: '200px' }}
+                />
+                
+                {/* Info Icon with Color Rules Tooltip */}
+                <div className="relative">
+                  <button
+                    onMouseEnter={() => setShowColorRules(true)}
+                    onMouseLeave={() => setShowColorRules(false)}
+                    className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+                    type="button"
+                  >
+                    <Info className="w-5 h-5 text-blue-600" />
+                  </button>
+                  
+                  {/* Color Rules Tooltip */}
+                  {showColorRules && (
+                    <div className="absolute left-0 top-8 z-50 bg-white border-2 border-gray-300 rounded-lg shadow-xl p-4 w-96">
+                      <h3 className="font-bold text-sm mb-3 text-gray-900">Color Rules - Weekly Plan Status</h3>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full border-2 border-gray-400" style={{ backgroundColor: '#EF4444' }} />
+                          <span className="text-gray-700"><strong>Red:</strong> 0 workouts with moveframes</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full border-2 border-gray-400" style={{ backgroundColor: '#D1D5DB' }} />
+                          <span className="text-gray-700"><strong>Light Grey:</strong> 1 workout with moveframes</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full border-2 border-gray-400" style={{ backgroundColor: '#FDE047' }} />
+                          <span className="text-gray-700"><strong>Light Yellow:</strong> 2 workouts with moveframes</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full border-2 border-gray-400" style={{ backgroundColor: '#FACC15' }} />
+                          <span className="text-gray-700"><strong>Yellow:</strong> 3 workouts with moveframes</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full border-2 border-gray-400" style={{ backgroundColor: '#86EFAC' }} />
+                          <span className="text-gray-700"><strong>Light Green:</strong> 4 workouts with moveframes</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full border-2 border-gray-400" style={{ backgroundColor: '#22C55E' }} />
+                          <span className="text-gray-700"><strong>Green:</strong> 5 workouts with moveframes</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full border-2 border-gray-400" style={{ backgroundColor: '#15803D' }} />
+                          <span className="text-gray-700"><strong>Dark Green:</strong> 6 workouts with moveframes</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-4 h-4 rounded-full border-2 border-gray-400" style={{ backgroundColor: '#3B82F6' }} />
+                          <span className="text-gray-700"><strong>Blue:</strong> 7+ workouts with moveframes</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
           
           <div className="flex gap-2 items-center">
-            {/* Virtual Start Date for Sections B & C */}
-            {(activeSection === 'B' || activeSection === 'C') && (
-              <button 
-                onClick={onStartDateClick}
-                className="px-3 py-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-              >
-                <Calendar className="w-4 h-4" />
-                {virtualStartDate ? `Start: ${virtualStartDate.toLocaleDateString()}` : 'Set Virtual Start Date'}
-              </button>
-            )}
-            
             {/* Athlete Selector for Section C (Coaches/Teams/Clubs only) */}
             {activeSection === 'C' && userType && ['COACH', 'TEAM', 'CLUB', 'TEAM_MANAGER', 'CLUB_TRAINER'].includes(userType) && (
               <button 
@@ -171,7 +282,7 @@ export default function WorkoutSectionHeader({
             )}
             
             {/* Add Day Button - Available for sections A & C */}
-            {(activeSection === 'A' || activeSection === 'C') && (
+            {activeSection === 'A' && (
               <button
                 onClick={onAddDay}
                 disabled={!canAddDay}
@@ -180,26 +291,40 @@ export default function WorkoutSectionHeader({
                     ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer' 
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
-                title={!canAddDay && activeSection === 'A' ? 'All weeks are full (7 days each)' : 'Add a new day'}
+                title={!canAddDay ? 'All weeks are full (7 days each)' : 'Add a new day'}
               >
                 <Plus className="w-4 h-4" />
                 Add Day
               </button>
             )}
             
-            {/* Create Plan Button - Only for Section B */}
-            {activeSection === 'B' && onCreatePlan && (
-              <button
-                onClick={onCreatePlan}
-                className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                title="Create yearly plan from start date"
-              >
-                <Plus className="w-4 h-4" />
-                Create Plan
-              </button>
+            {/* Buttons for Section B (Yearly Plan) */}
+            {activeSection === 'B' && (
+              <>
+                {onCreatePlan && (
+                  <button
+                    onClick={onCreatePlan}
+                    className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                    title="Set starting date and create yearly plan"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Set Start Date
+                  </button>
+                )}
+                {onImportClick && (
+                  <button
+                    onClick={onImportClick}
+                    className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                    title="Copy weeks from template plans"
+                  >
+                    <Download className="w-4 h-4" />
+                    Copy from Templates
+                  </button>
+                )}
+              </>
             )}
             
-            {/* Import Button - Only for Section C (Workouts Done) */}
+            {/* Import Button - Only for Section C (Done) */}
             {activeSection === 'C' && (
               <button
                 onClick={onImportClick}

@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Star } from 'lucide-react';
-import { SPORTS_LIST, MACRO_FINAL_OPTIONS, MUSCULAR_SECTORS, getPaceLabel, shouldShowPaceField, getSportConfig, getPauseOptions, REST_TYPES, REPS_TYPES, hasRepsTypeSelection, getSportDisplayName, DISTANCE_BASED_SPORTS } from '@/constants/moveframe.constants';
+import { SPORTS_LIST, MACRO_FINAL_OPTIONS, MUSCULAR_SECTORS, getPaceLabel, shouldShowPaceField, getSportConfig, getPauseOptions, REST_TYPES, REPS_TYPES, hasRepsTypeSelection, getSportDisplayName, DISTANCE_BASED_SPORTS, sportNeedsExerciseName } from '@/constants/moveframe.constants';
 import { useMoveframeForm } from '@/hooks/useMoveframeForm';
 import { getSportIcon } from '@/utils/sportIcons';
 import { useFavoriteSports } from '@/hooks/useFavoriteSports';
+import TimeInput from '@/components/common/TimeInput';
 import { useFreeMoveExercises } from '@/hooks/useFreeMoveExercises';
 import Image from 'next/image';
 
@@ -17,6 +18,7 @@ interface AddEditMoveframeModalProps {
   workout: any;
   day: any;
   existingMoveframe?: any;
+  onSetInsertIndex?: (index: number | null) => void;
 }
 
 export default function AddEditMoveframeModal({
@@ -26,13 +28,20 @@ export default function AddEditMoveframeModal({
   mode,
   workout,
   day,
-  existingMoveframe
+  existingMoveframe,
+  onSetInsertIndex
 }: AddEditMoveframeModalProps) {
   // Debug: Log mode on every render
   console.log(`🔒 AddEditMoveframeModal - mode="${mode}", isEditMode=${mode === 'edit'}`);
   
   // Get sport icon type from localStorage
   const [iconType, setIconType] = React.useState<'emoji' | 'icon'>('emoji');
+  
+  // State for annotation insert position - default to last moveframe index
+  const [annotationInsertAfter, setAnnotationInsertAfter] = React.useState<string>(() => {
+    const lastIndex = (workout?.moveframes?.length || 0) - 1;
+    return lastIndex >= 0 ? String(lastIndex) : 'last';
+  });
   
   React.useEffect(() => {
     // Load icon type from localStorage on mount
@@ -172,45 +181,96 @@ export default function AddEditMoveframeModal({
 
   // Format validation helpers (NOW sport is available)
   // Fast input parser for Pace - handles quick numeric input
-  const parsePaceInput = (value: string, isKmPace: boolean = false): string => {
-    // Remove all non-digit characters
-    const digits = value.replace(/\D/g, '');
-    if (!digits) return '';
+  const formatPace = (value: string, isKmPace: boolean = false): string => {
+    if (!value) return '';
     
-    // Quick format as user types (auto-format immediately)
-    const needsDecimal = sport !== 'BIKE';
-    let formatted = '';
-    
-    if (digits.length === 1) {
-      // Just minutes: "1" → "1'"
-      formatted = `${digits}'`;
-    } else if (digits.length === 2) {
-      // Minutes + first second digit: "13" → "1'3"
-      formatted = `${digits[0]}'${digits[1]}`;
-    } else if (digits.length === 3) {
-      // Full time without decimal: "130" → "1'30""
-      formatted = `${digits[0]}'${digits.slice(1, 3)}"`;
-      if (needsDecimal) formatted += '0';
-    } else {
-      // With decimal: "1305" → "1'30"5"
-      const min = digits[0];
-      const sec = digits.slice(1, 3);
-      const dec = needsDecimal ? digits.slice(3, 4) : '';
-      formatted = needsDecimal ? `${min}'${sec}"${dec}` : `${min}'${sec}"`;
+    // BIKE: Speed km/h format (00.0 to 99.9)
+    if (sport === 'BIKE') {
+      // Extract digits and decimal point
+      const numValue = value.replace(/[^\d.]/g, '');
+      if (!numValue) return '';
+      
+      // Parse as float
+      const speed = parseFloat(numValue);
+      if (isNaN(speed)) return value;
+      
+      // Validate range: 0.0 to 99.9 km/h
+      if (speed < 0) return '0.0';
+      if (speed > 99.9) return '99.9';
+      
+      // Format with 1 decimal place
+      return speed.toFixed(1);
     }
     
-    return formatted;
-  };
-
-  const formatPace = (value: string, isKmPace: boolean = false): string => {
-    // Remove all non-digit characters
+    // ROWING and SKI: Speed\500m or Pace\Refdist format (0'00" to 9'59")
+    if (sport === 'ROWING' || sport === 'SKI') {
+      // Check if user typed with separators (., :, ', ", etc.)
+      if (/[.:'"h]/.test(value)) {
+        const parts = value.match(/(\d+)[.:'"h]?(\d+)?/);
+        if (parts) {
+          const minutes = parts[1] || '0';
+          const seconds = (parts[2] || '0').padStart(2, '0').slice(0, 2);
+          
+          const min = parseInt(minutes);
+          const sec = parseInt(seconds);
+          
+          // Validate range: 0'00" to 9'59"
+          if (min > 9 || sec > 59) return value;
+          
+          return `${minutes}'${seconds}"`;
+        }
+      }
+      
+      // Fallback: pure digit input like "130" → "1'30"
     const digits = value.replace(/\D/g, '');
     if (!digits) return '';
     
-    // Determine if we need decimal (all sports except BIKE)
-    const needsDecimal = sport !== 'BIKE';
+      const padded = digits.padStart(3, '0');
+      const minutes = padded.slice(0, -2);
+      const seconds = padded.slice(-2);
+      
+      const min = parseInt(minutes);
+      const sec = parseInt(seconds);
+      
+      if (min > 9 || sec > 59) return value;
+      
+      return `${minutes}'${seconds}"`;
+    }
     
-    // Pad with zeros if needed
+    // Other sports: Standard pace format (e.g., SWIM, RUN)
+    const needsDecimal = sport !== 'BIKE' && sport !== 'ROWING' && sport !== 'SKI';
+    
+    // Check if user typed with separators (., :, ', ", etc.)
+    if (/[.:'"h]/.test(value)) {
+      const parts = value.match(/(\d+)[.:'"h]?(\d+)?[.:'"h]?(\d)?/);
+      if (parts) {
+        const minutes = parts[1] || '0';
+        const seconds = (parts[2] || '0').padStart(2, '0').slice(0, 2);
+        const decimals = needsDecimal ? (parts[3] || '0') : '';
+        
+        const min = parseInt(minutes);
+        const sec = parseInt(seconds);
+        
+        // Validate ranges based on sport
+        if (sport === 'RUN') {
+          if (isKmPace) {
+            if (min < 2) return "2'00\"0";
+            if (min > 9 || sec > 59) return value;
+    } else {
+            if (min > 1 || sec > 59) return value;
+          }
+        } else {
+          if (min > 9 || sec > 59) return value;
+        }
+        
+        return needsDecimal ? `${minutes}'${seconds}"${decimals}` : `${minutes}'${seconds}"`;
+    }
+    }
+    
+    // Fallback: pure digit input
+    const digits = value.replace(/\D/g, '');
+    if (!digits) return '';
+    
     const padded = needsDecimal ? digits.padStart(4, '0') : digits.padStart(3, '0');
     const minutes = padded.slice(0, 1);
     const seconds = padded.slice(1, 3);
@@ -219,31 +279,19 @@ export default function AddEditMoveframeModal({
     const min = parseInt(minutes);
     const sec = parseInt(seconds);
     
+    // Validate ranges
     if (sport === 'RUN') {
       if (isKmPace) {
-        // Pace/km range: 2'00"0 to 9'59"0
         if (min < 2) return "2'00\"0";
-        if (min > 9) return value;
-        if (sec > 59) return `${minutes}'59\"${decimals}`;
+        if (min > 9 || sec > 59) return value;
       } else {
-        // Pace/100m range: 0'00"0 to 1'59"0
-        if (min > 1) return "1'59\"0";
-        if (sec > 59) return `${minutes}'59\"${decimals}`;
-      }
-      return `${minutes}'${seconds}\"${decimals}`;
+        if (min > 1 || sec > 59) return value;
+    }
+    } else {
+      if (min > 9 || sec > 59) return value;
     }
     
-    // BIKE: 0'00" to 9'59" (no decimal)
-    if (sport === 'BIKE') {
-      if (min > 9) return value;
-      if (sec > 59) return `${minutes}'59\"`;
-      return `${minutes}'${seconds}\"`;
-    }
-    
-    // Other sports: 0'00"0 to 9'59"0
-    if (min > 9) return value;
-    if (sec > 59) return `${minutes}'59\"${decimals}`;
-    return `${minutes}'${seconds}\"${decimals}`;
+    return needsDecimal ? `${minutes}'${seconds}"${decimals}` : `${minutes}'${seconds}"`;
   };
   
   // Fast input parser for Pause - handles quick numeric input for pause times
@@ -362,55 +410,53 @@ export default function AddEditMoveframeModal({
     return `${minutes}'${seconds}"`;
   };
   
-  // Fast input parser for Time - handles quick numeric input
-  const parseTimeInput = (value: string): string => {
-    // Remove all non-digit characters
-    const digits = value.replace(/\D/g, '');
-    if (!digits) return '';
+  const formatTime = (value: string): string => {
+    if (!value) return '';
     
-    // Quick format as user types (auto-format immediately)
-    let formatted = '';
+    // Parse flexible input: "5.30", "5:30", "5'30", "530", "1:23:45", etc.
     
-    if (digits.length === 1) {
-      // Just minutes first digit: "5" → "0h5"
-      formatted = `0h${digits}`;
-    } else if (digits.length === 2) {
-      // Full minutes: "53" → "0h53'"
-      formatted = `0h${digits}'`;
-    } else if (digits.length === 3) {
-      // Minutes + first second digit: "530" → "0h05'3"
-      const m = digits.slice(0, 2);
-      const s1 = digits[2];
-      formatted = `0h${m}'${s1}`;
-    } else if (digits.length === 4) {
-      // Full time without decimal: "5300" → "0h53'00""
-      const m = digits.slice(0, 2);
-      const s = digits.slice(2, 4);
-      formatted = `0h${m}'${s}"`;
-    } else if (digits.length === 5) {
-      // With decimal: "53005" → "0h53'00"5"
-      const m = digits.slice(0, 2);
-      const s = digits.slice(2, 4);
-      const d = digits[4];
-      formatted = `0h${m}'${s}"${d}`;
+    // Check if user typed with separators
+    if (/[.:'"h]/.test(value)) {
+      // Extract hours, minutes, seconds, decimals from separated input
+      const parts = value.match(/(\d+)?[h:]?(\d+)?[.:']?(\d+)?[.:"]?(\d)?/);
+      if (parts) {
+        // If only 2 parts (e.g., "5:30"), assume minutes:seconds
+        const hasHours = value.includes('h') || value.split(/[.:]/).length > 2;
+        
+        let hours = '0';
+        let minutes = '0';
+        let seconds = '0';
+        let decimals = '0';
+        
+        if (hasHours) {
+          hours = (parts[1] || '0');
+          minutes = (parts[2] || '0').padStart(2, '0').slice(0, 2);
+          seconds = (parts[3] || '0').padStart(2, '0').slice(0, 2);
+          decimals = parts[4] || '0';
     } else {
-      // With hours: "153005" → "1h53'00"5"
-      const h = digits[0];
-      const m = digits.slice(1, 3);
-      const s = digits.slice(3, 5);
-      const d = digits.slice(5, 6);
-      formatted = `${h}h${m}'${s}"${d}`;
+          // Assume format is MM:SS or MM.SS
+          minutes = (parts[1] || '0').padStart(2, '0').slice(0, 2);
+          seconds = (parts[2] || '0').padStart(2, '0').slice(0, 2);
+          decimals = parts[3] || '0';
+        }
+        
+        const h = parseInt(hours);
+        const m = parseInt(minutes);
+        const s = parseInt(seconds);
+        
+        // Validate range
+        if (h > 9) return value;
+        if (h === 9) return "9h00'00\"0";
+        if (m > 59 || s > 59) return value;
+        
+        return `${hours}h${minutes}'${seconds}"${decimals}`;
+      }
     }
     
-    return formatted;
-  };
-
-  const formatTime = (value: string): string => {
-    // Remove all non-digit characters
+    // Fallback: pure digit input like "530" → "0h05'30"0"
     const digits = value.replace(/\D/g, '');
     if (!digits) return '';
     
-    // Pad with zeros if needed
     const padded = digits.padStart(6, '0');
     const hours = padded.slice(0, 1);
     const minutes = padded.slice(1, 3);
@@ -421,16 +467,12 @@ export default function AddEditMoveframeModal({
     const m = parseInt(minutes);
     const s = parseInt(seconds);
     
-    // Validate range: 0h00'00"0 to 9h00'00"0 (max 9 hours exactly)
+    // Validate range
     if (h > 9) return value;
-    if (h === 9) {
-      // When hours = 9, minutes and seconds must be 00
-      return "9h00'00\"0";
-    }
-    if (m > 59) return `${hours}h59'${seconds}\"${decimals}`;
-    if (s > 59) return `${hours}h${minutes}'59\"${decimals}`;
+    if (h === 9) return "9h00'00\"0";
+    if (m > 59 || s > 59) return value;
     
-    return `${hours}h${minutes}'${seconds}\"${decimals}`;
+    return `${hours}h${minutes}'${seconds}"${decimals}`;
   };
   
   // R1 and R2 options for BIKE
@@ -447,7 +489,7 @@ export default function AddEditMoveframeModal({
         const token = localStorage.getItem('token');
         if (!token) return;
         
-        // Fetch periods from database
+        // Fetch periods from database (user's custom training periods)
         const response = await fetch('/api/workouts/periods', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -459,11 +501,32 @@ export default function AddEditMoveframeModal({
           
           // Set periods directly from API (already in correct format from Prisma)
           const periods = data.periods || [];
-          setWorkoutSections(periods);
-          console.log('✅ Loaded periods from database:', periods);
+          console.log('✅ Loaded periods from Personal Settings:', periods);
           
-          if (periods.length === 0) {
-            console.warn('⚠️ No periods found. Default periods should be created automatically.');
+          // Sync periods to workout sections
+          if (periods.length > 0) {
+            // Sync periods and get synced sections directly
+            const syncResponse = await fetch('/api/workouts/sections/sync-from-periods', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ periods })
+            });
+          
+            if (syncResponse.ok) {
+              const syncData = await syncResponse.json();
+              const syncedSections = syncData.sections || [];
+              setWorkoutSections(syncedSections);
+              console.log('✅ Synced workout sections from periods:', syncedSections);
+            } else {
+              console.error('Failed to sync periods');
+              setWorkoutSections([]);
+            }
+          } else {
+            console.warn('⚠️ No periods found. Please add periods in Personal Settings → Tools → Periods.');
+            setWorkoutSections([]);
           }
         } else {
           console.error('Failed to load periods:', response.statusText);
@@ -601,10 +664,28 @@ export default function AddEditMoveframeModal({
     }
   }, [isOpen]);
 
-  // Auto-enable manual mode when switching to manual tab
+  // Set initial insert index for annotations when modal opens
   React.useEffect(() => {
-    if (type === 'STANDARD' && activeTab === 'manual' && !manualMode) {
-      setManualMode(true);
+    if (isOpen && type === 'ANNOTATION' && mode === 'add' && onSetInsertIndex) {
+      const lastIndex = (workout?.moveframes?.length || 0) - 1;
+      if (lastIndex >= 0) {
+        onSetInsertIndex(lastIndex + 1); // Insert after last moveframe
+      } else {
+        onSetInsertIndex(null); // No moveframes, append at end
+      }
+    }
+  }, [isOpen, type, mode, workout?.moveframes?.length, onSetInsertIndex]);
+
+  // Auto-enable/disable manual mode when switching tabs
+  React.useEffect(() => {
+    if (type === 'STANDARD') {
+      if (activeTab === 'manual' && !manualMode) {
+        // Enable manual mode when switching TO manual tab
+        setManualMode(true);
+      } else if (activeTab === 'edit' && manualMode) {
+        // Disable manual mode when switching back TO edit tab
+        setManualMode(false);
+      }
     }
   }, [activeTab, type, manualMode, setManualMode]);
 
@@ -664,7 +745,7 @@ export default function AddEditMoveframeModal({
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              Moveframe Info (manual input)
+              Manual input
             </button>
             <button
               onClick={() => handleTabChange('favorites')}
@@ -674,7 +755,7 @@ export default function AddEditMoveframeModal({
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
               }`}
             >
-              Load from Favourites moveframes
+              Favourites moveframes
             </button>
           </div>
         )}
@@ -688,29 +769,6 @@ export default function AddEditMoveframeModal({
           {errors.general && (
             <div className="mb-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
               {errors.general}
-            </div>
-          )}
-
-              {/* Icon Type Toggle */}
-              {(favoriteSports.length > 0 || loadingFavorites) && (
-                <div className="mb-3 flex items-center justify-end gap-2">
-                  <span className="text-xs text-gray-600">Icon Type:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newType = iconType === 'emoji' ? 'icon' : 'emoji';
-                      localStorage.setItem('sportIconType', newType);
-                      setIconType(newType);
-                    }}
-                    className={`px-3 py-1 text-xs rounded-md transition-colors ${
-                      iconType === 'emoji'
-                        ? 'bg-yellow-500 text-white'
-                        : 'bg-gray-700 text-white'
-                    }`}
-                    title="Toggle between color emoji icons and black/white image icons"
-                  >
-                    {iconType === 'emoji' ? '😊 Color' : '⚫ Black'}
-                  </button>
                 </div>
               )}
 
@@ -753,6 +811,24 @@ export default function AddEditMoveframeModal({
                       <Star className="w-4 h-4 text-yellow-600 fill-yellow-400" />
                       <span className="text-xs font-bold text-gray-700">Favorite Sports - Quick Select ({favoriteSports.length})</span>
                     </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-600">Icon Type:</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newType = iconType === 'emoji' ? 'icon' : 'emoji';
+                          localStorage.setItem('sportIconType', newType);
+                          setIconType(newType);
+                        }}
+                        className={`px-2 py-0.5 text-xs rounded-md transition-colors ${
+                          iconType === 'emoji'
+                            ? 'bg-yellow-500 text-white'
+                            : 'bg-gray-700 text-white'
+                        }`}
+                        title="Toggle between color emoji icons and black/white image icons"
+                      >
+                        {iconType === 'emoji' ? '😊 Color' : '⚫ Black'}
+                      </button>
                     <button
                       type="button"
                       onClick={() => reloadFavorites()}
@@ -762,7 +838,8 @@ export default function AddEditMoveframeModal({
                       🔄 Reload
                     </button>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
+                  </div>
+                  <div className="flex items-center justify-center gap-3 flex-wrap">
                     {favoriteSports.slice(0, 5).map((favSport) => {
                       const icon = getSportIcon(favSport, iconType);
                       const isImage = icon.startsWith('/');
@@ -798,7 +875,7 @@ export default function AddEditMoveframeModal({
                             setSport(favSport);
                           }}
                           disabled={mode === 'edit'}
-                          className={`flex flex-col items-center justify-center w-20 p-2 rounded-lg border-2 transition-all ${
+                          className={`flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all ${
                             mode === 'add' ? 'hover:scale-105' : 'cursor-not-allowed opacity-50'
                           } ${
                             isSelected 
@@ -810,22 +887,22 @@ export default function AddEditMoveframeModal({
                           title={mode === 'edit' ? 'Sport cannot be changed in edit mode' : `Select ${favSport.replace(/_/g, ' ')}`}
                         >
                           {isImage ? (
-                            <div className="w-12 h-12 flex items-center justify-center flex-shrink-0">
+                            <div className="w-18 h-18 flex items-center justify-center flex-shrink-0">
                               <Image 
                                 src={icon} 
                                 alt={favSport}
-                                width={48}
-                                height={48}
+                                width={72}
+                                height={72}
                                 className="object-contain"
-                                style={{ width: '48px', height: '48px' }}
+                                style={{ width: '72px', height: '72px' }}
                               />
                             </div>
                           ) : (
-                            <div className="w-12 h-12 flex items-center justify-center text-3xl flex-shrink-0">
+                            <div className="w-18 h-18 flex items-center justify-center text-5xl flex-shrink-0">
                               {icon}
                             </div>
                           )}
-                          <span className="text-[9px] font-medium text-gray-700 mt-1 text-center leading-tight">
+                          <span className="text-[10px] font-medium text-gray-700 mt-1 text-center leading-tight">
                             {favSport.replace(/_/g, ' ').substring(0, 12)}
                           </span>
                         </button>
@@ -854,7 +931,7 @@ export default function AddEditMoveframeModal({
             <label className="block text-xs font-bold text-gray-700 mb-1">
               Sport <span className="text-red-500">*</span>
             </label>
-            <div className="flex items-center gap-2">
+            <div className="flex items-start justify-center gap-3">
               <select
                 value={sport}
                 onChange={(e) => {
@@ -892,11 +969,10 @@ export default function AddEditMoveframeModal({
                 onMouseDown={(e) => mode === 'edit' && e.preventDefault()}
                 onKeyDown={(e) => mode === 'edit' && e.preventDefault()}
                 disabled={mode === 'edit'}
-                className={`flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm ${
+                className={`w-64 px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm ${
                   mode === 'edit' ? 'bg-gray-200 text-gray-500 cursor-not-allowed pointer-events-none' : ''
                 }`}
                 style={mode === 'edit' ? { pointerEvents: 'none' } : undefined}
-                size={1}
               >
                 {SPORTS_LIST.map((s) => (
                   <option key={s} value={s}>
@@ -909,17 +985,17 @@ export default function AddEditMoveframeModal({
                 const icon = getSportIcon(sport, iconType);
                 const isImage = icon.startsWith('/');
                 return isImage ? (
-                  <div className="w-12 h-12 flex items-center justify-center border border-gray-300 rounded bg-gray-50">
+                  <div className="w-18 h-18 flex items-center justify-center border-2 border-gray-300 rounded bg-gray-50 flex-shrink-0">
                     <Image 
                       src={icon} 
                       alt={sport}
-                      width={48}
-                      height={48}
+                      width={72}
+                      height={72}
                       className="object-contain"
                     />
                   </div>
                 ) : (
-                  <div className="w-12 h-12 flex items-center justify-center text-4xl border border-gray-300 rounded bg-gray-50">
+                  <div className="w-18 h-18 flex items-center justify-center text-5xl border-2 border-gray-300 rounded bg-gray-50 flex-shrink-0">
                     {icon}
                   </div>
                 );
@@ -982,7 +1058,7 @@ export default function AddEditMoveframeModal({
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 } ${mode === 'edit' ? 'cursor-not-allowed opacity-50 pointer-events-none' : ''}`}
               >
-                Battery
+                Mixd tests\Circuits
               </button>
               <button
                 type="button"
@@ -1017,22 +1093,22 @@ export default function AddEditMoveframeModal({
                 </div>
               )}
             <label className="block text-xs font-bold text-gray-700 mb-1">
-                Workout Section (Period) <span className="text-red-500">*</span>
+                Workout Section <span className="text-red-500">*</span>
             </label>
               <div className="flex items-center gap-2">
             <select
               value={sectionId}
                   onChange={(e) => {
-                    console.log('🔄 Period selected:', e.target.value);
-                    console.log('🔍 Available periods:', workoutSections);
+                    console.log('🔄 Workout section selected:', e.target.value);
+                    console.log('🔍 Available sections:', workoutSections);
                     setSectionId(e.target.value);
                   }}
                   className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm text-gray-900 bg-white"
                   style={{ color: '#000000' }}
                 >
-                  <option value="" style={{ color: '#666666' }}>Select period...</option>
+                  <option value="" style={{ color: '#666666' }}>Select section...</option>
                   {workoutSections.length === 0 && (
-                    <option disabled style={{ color: '#999999' }}>No periods available</option>
+                    <option disabled style={{ color: '#999999' }}>No sections available</option>
                   )}
                   {workoutSections.map((section, index) => (
                     <option 
@@ -1073,6 +1149,49 @@ export default function AddEditMoveframeModal({
             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
               <h3 className="font-bold text-sm text-blue-900 mb-3">📝 Annotation</h3>
             <div className="space-y-3">
+              {/* Insert Position Dropdown - Only show in add mode */}
+              {mode === 'add' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    📍 Insert After Moveframe
+                  </label>
+                  <select
+                    value={annotationInsertAfter}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setAnnotationInsertAfter(value);
+                      // Update parent component's insert index
+                      if (onSetInsertIndex) {
+                        if (value === 'last') {
+                          onSetInsertIndex(null); // null means append at end
+                        } else {
+                          const index = parseInt(value, 10);
+                          onSetInsertIndex(index + 1); // Insert AFTER the selected moveframe
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                  >
+                    {workout?.moveframes?.map((mf: any, index: number) => {
+                      const periodName = day?.period?.name || day?.periodName || 'Default';
+                      const sportIcon = getSportIcon(mf.sport || 'SWIM', iconType);
+                      const sportName = getSportDisplayName(mf.sport || 'SWIM');
+                      const isImage = sportIcon.startsWith('/');
+                      
+                      return (
+                        <option key={mf.id} value={index}>
+                          {index + 1}. {mf.letter || String.fromCharCode(65 + index)} • {periodName} • {isImage ? '⚫' : sportIcon} {sportName}
+                        </option>
+                      );
+                    })}
+                    <option value="last">🔽 After last moveframe (at the end)</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    ✨ Default: After last moveframe. Select a different position if needed.
+                  </p>
+                </div>
+              )}
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Annotation text
@@ -1391,24 +1510,21 @@ export default function AddEditMoveframeModal({
                                     ) : (
                                       <>
                                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                                          Time (per series): <span className="text-red-500">*</span> <span className="text-green-600 font-semibold text-[10px]">⚡ Type numbers only</span>
+                                          Time (per series): <span className="text-red-500">*</span>
                                         </label>
-                                        <input
-                                          type="text"
+                                        <TimeInput
                                           value={time}
-                                          onChange={(e) => {
-                                            const input = e.target.value;
-                                            // Auto-format as user types using fast input
-                                            const parsed = parseRepsTimeInput(input);
-                                            setTime(parsed);
-                                          }}
-                                          onBlur={(e) => setTime(formatRepsTime(e.target.value))}
-                                          className="w-full px-3 py-2 border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 font-mono bg-green-50"
-                                          placeholder="30 ⚡"
-                                          title="⚡ Fast input: Type 30 for 0'30&quot;"
+                                          onChange={setTime}
+                                          label=""
+                                          placeholder="0"
+                                          showLabel={false}
+                                          allowedUnits={['minutes', 'seconds']}
+                                          defaultUnit="seconds"
+                                          maxMinutes={9}
+                                          maxSeconds={59}
                                         />
-                                        <p className="mt-0.5 text-[10px] text-green-600 font-semibold">
-                                          ⚡ Fast input: Type <span className="font-mono bg-white px-1 rounded">30</span> → 0'30" | <span className="font-mono bg-white px-1 rounded">130</span> → 1'30" | Range: 00'01" to 09'59"
+                                        <p className="mt-0.5 text-[10px] text-blue-600">
+                                          💡 Just type the number and select the unit | Range: 0'01" - 9'59"
                                         </p>
                                       </>
                                     )}
@@ -1636,105 +1752,119 @@ export default function AddEditMoveframeModal({
                       </div>
                     )}
                     
-                    {/* Exercise Selection - Only for FREE_MOVES */}
-                    {sport === 'FREE_MOVES' && (
+                    {/* Exercise/Drill Name Selection - For sports that need exercise names */}
+                    {sportNeedsExerciseName(sport) && sport !== 'BODY_BUILDING' && (
                       <div className="space-y-3">
                         <div>
                           <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Exercise: <span className="text-red-500">*</span>
+                            {sport === 'FREE_MOVES' ? 'Exercise' : 'Exercise/Drill Name'}: <span className="text-red-500">*</span>
                           </label>
                           
-                          {/* Dropdown/Autocomplete with exercise history */}
-                          <div className="relative">
-                            <select
-                              value={exercise}
-                              onChange={(e) => {
-                                const selectedValue = e.target.value;
-                                if (selectedValue === '__NEW__') {
-                                  // User wants to add a new exercise
-                                  setExercise('');
-                                } else {
-                                  setExercise(selectedValue);
-                                }
-                              }}
-                              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
-                            >
-                              <option value="">Select or type new exercise...</option>
-                              <option value="__NEW__">➕ Add new exercise</option>
-                              {freeMoveExercises.map((ex) => (
-                                <option key={ex.id} value={ex.name}>
-                                  {ex.name}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                          
-                          {/* Manual input field (always visible for new entries) */}
-                          <div className="mt-2">
+                          {sport === 'FREE_MOVES' ? (
+                            /* Complex input with history for FREE_MOVES */
+                            <>
+                              {/* Dropdown/Autocomplete with exercise history */}
+                              <div className="relative">
+                                <select
+                                  value={exercise}
+                                  onChange={(e) => {
+                                    const selectedValue = e.target.value;
+                                    if (selectedValue === '__NEW__') {
+                                      // User wants to add a new exercise
+                                      setExercise('');
+                                    } else {
+                                      setExercise(selectedValue);
+                                    }
+                                  }}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
+                                >
+                                  <option value="">Select or type new exercise...</option>
+                                  <option value="__NEW__">➕ Add new exercise</option>
+                                  {freeMoveExercises.map((ex) => (
+                                    <option key={ex.id} value={ex.name}>
+                                      {ex.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              
+                              {/* Manual input field (always visible for new entries) */}
+                              <div className="mt-2">
+                                <input
+                                  type="text"
+                                  value={exercise}
+                                  onChange={(e) => setExercise(e.target.value)}
+                                  onBlur={async (e) => {
+                                    const newExercise = e.target.value.trim();
+                                    // If exercise is typed and not in history, save it
+                                    if (newExercise && !freeMoveExercises.some(ex => ex.name === newExercise)) {
+                                      console.log('💾 Saving new FREE_MOVES exercise:', newExercise);
+                                      const success = await addFreeMoveExercise(newExercise);
+                                      if (success) {
+                                        console.log('✅ Exercise saved to history');
+                                      }
+                                    }
+                                  }}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
+                                  placeholder="Type exercise name..."
+                                />
+                                <p className="mt-1 text-[10px] text-gray-500">
+                                  Type a new exercise or select from your history. New exercises are automatically saved.
+                                </p>
+                              </div>
+                              
+                              {/* Exercise history with delete option */}
+                              {freeMoveExercises.length > 0 && (
+                                <div className="mt-3 p-2 bg-white border border-gray-200 rounded max-h-40 overflow-y-auto">
+                                  <p className="text-[10px] font-semibold text-gray-600 mb-2">Your Exercise History:</p>
+                                  <div className="space-y-1">
+                                    {freeMoveExercises.map((ex) => (
+                                      <div key={ex.id} className="flex items-center justify-between group hover:bg-gray-50 px-2 py-1 rounded">
+                                        <button
+                                          type="button"
+                                          onClick={() => setExercise(ex.name)}
+                                          className="flex-1 text-left text-xs text-gray-700 hover:text-cyan-600"
+                                        >
+                                          {ex.name}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={async () => {
+                                            if (confirm(`Delete "${ex.name}" from your exercise history?`)) {
+                                              const success = await deleteFreeMoveExercise(ex.id);
+                                              if (success) {
+                                                console.log('✅ Exercise deleted from history');
+                                                // If the deleted exercise was selected, clear the field
+                                                if (exercise === ex.name) {
+                                                  setExercise('');
+                                                }
+                                              }
+                                            }
+                                          }}
+                                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs px-2 py-0.5 transition-opacity"
+                                          title="Delete from history"
+                                        >
+                                          🗑️
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              {loadingExercises && (
+                                <p className="mt-2 text-xs text-gray-500">Loading exercise history...</p>
+                              )}
+                            </>
+                          ) : (
+                            /* Simple input for other sports */
                             <input
                               type="text"
                               value={exercise}
                               onChange={(e) => setExercise(e.target.value)}
-                              onBlur={async (e) => {
-                                const newExercise = e.target.value.trim();
-                                // If exercise is typed and not in history, save it
-                                if (newExercise && !freeMoveExercises.some(ex => ex.name === newExercise)) {
-                                  console.log('💾 Saving new FREE_MOVES exercise:', newExercise);
-                                  const success = await addFreeMoveExercise(newExercise);
-                                  if (success) {
-                                    console.log('✅ Exercise saved to history');
-                                  }
-                                }
-                              }}
                               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
-                              placeholder="Type exercise name..."
+                              placeholder="Enter exercise or drill name..."
                             />
-                            <p className="mt-1 text-[10px] text-gray-500">
-                              Type a new exercise or select from your history. New exercises are automatically saved.
-                            </p>
-                          </div>
-                          
-                          {/* Exercise history with delete option */}
-                          {freeMoveExercises.length > 0 && (
-                            <div className="mt-3 p-2 bg-white border border-gray-200 rounded max-h-40 overflow-y-auto">
-                              <p className="text-[10px] font-semibold text-gray-600 mb-2">Your Exercise History:</p>
-                              <div className="space-y-1">
-                                {freeMoveExercises.map((ex) => (
-                                  <div key={ex.id} className="flex items-center justify-between group hover:bg-gray-50 px-2 py-1 rounded">
-                                    <button
-                                      type="button"
-                                      onClick={() => setExercise(ex.name)}
-                                      className="flex-1 text-left text-xs text-gray-700 hover:text-cyan-600"
-                                    >
-                                      {ex.name}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={async () => {
-                                        if (confirm(`Delete "${ex.name}" from your exercise history?`)) {
-                                          const success = await deleteFreeMoveExercise(ex.id);
-                                          if (success) {
-                                            console.log('✅ Exercise deleted from history');
-                                            // If the deleted exercise was selected, clear the field
-                                            if (exercise === ex.name) {
-                                              setExercise('');
-                                            }
-                                          }
-                                        }
-                                      }}
-                                      className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 text-xs px-2 py-0.5 transition-opacity"
-                                      title="Delete from history"
-                                    >
-                                      🗑️
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          
-                          {loadingExercises && (
-                            <p className="mt-2 text-xs text-gray-500">Loading exercise history...</p>
                           )}
                           
                           {errors.exercise && <p className="mt-1 text-xs text-red-500">{errors.exercise}</p>}
@@ -1759,26 +1889,41 @@ export default function AddEditMoveframeModal({
                       </span>
                     </h3>
                     
-                    {/* Pace/100m field for reference */}
+                    {/* Pace/Speed field for reference */}
                     <div className="mb-3 p-2 bg-white rounded border border-gray-300">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Pace/100m: <span className="text-[10px] text-green-600 font-semibold">⚡ Type numbers only (e.g., 130)</span>
+                        {(() => {
+                          if (sport === 'BIKE') return 'Speed/h:';
+                          if (sport === 'ROWING') return 'Speed/500m:';
+                          if (sport === 'SKI') return 'Pace/Refdist:';
+                          // For other sports, use the original getPaceLabel logic
+                          return 'Pace/100m:'; // Default for individual planning mode
+                        })()}{' '}
+                        <span className="text-[10px] text-green-600 font-semibold">✨ Flexible input</span>
                       </label>
                       <input
                         type="text"
                         value={pace}
-                        onChange={(e) => {
-                          const input = e.target.value;
-                          // Auto-format as user types
-                          const parsed = parsePaceInput(input);
-                          setPace(parsed);
-                        }}
+                        onChange={(e) => setPace(e.target.value)}
                         onBlur={(e) => setPace(formatPace(e.target.value))}
                         className="w-full px-3 py-2 text-lg border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono bg-green-50"
-                        placeholder="130"
+                        placeholder={
+                          sport === 'BIKE' ? '25.5 (km/h)' :
+                          sport === 'ROWING' ? "1'30\" or 130" :
+                          sport === 'SKI' ? "2'45\" or 245" :
+                          "1.30 or 130 or 1:30"
+                        }
                       />
                       <p className="mt-1 text-[10px] text-green-600">
-                        ⚡ Fast input: Just type <strong>130</strong> → auto-formats to <strong>1'30"0</strong>
+                        {sport === 'BIKE' ? (
+                          <>✨ Type: <strong>25.5</strong> → <strong>25.5 km/h</strong> (range: 0.0 to 99.9)</>
+                        ) : sport === 'ROWING' ? (
+                          <>✨ Type: <strong>1:30</strong> or <strong>130</strong> → <strong>1'30"</strong> (Speed per 500m)</>
+                        ) : sport === 'SKI' ? (
+                          <>✨ Type: <strong>2:45</strong> or <strong>245</strong> → <strong>2'45"</strong> (Pace per Refdist)</>
+                        ) : (
+                          <>✨ Type: <strong>1.30</strong>, <strong>1.30.5</strong>, or <strong>130</strong> → formats to <strong>1'30"0</strong> or <strong>1'30"5</strong></>
+                        )}
                       </p>
                     </div>
                     
@@ -1825,15 +1970,10 @@ export default function AddEditMoveframeModal({
                                     <input
                                       type="text"
                                       value={plan.time}
-                                      onChange={(e) => {
-                                        const input = e.target.value;
-                                        // Auto-format as user types
-                                        const parsed = parseTimeInput(input);
-                                        updateIndividualPlan(idx, 'time', parsed);
-                                      }}
+                                      onChange={(e) => updateIndividualPlan(idx, 'time', e.target.value)}
                                       onBlur={(e) => updateIndividualPlan(idx, 'time', formatTime(e.target.value))}
                                       className="w-full px-2 py-1.5 border-2 border-green-300 rounded text-xs focus:ring-1 focus:ring-green-500 font-mono bg-green-50"
-                                      placeholder="530 ⚡"
+                                      placeholder="5:30 or 530"
                                       title="⚡ Fast input: Type 530 for 0h05'30&quot;0"
                                     />
                                   </div>
@@ -2175,17 +2315,12 @@ export default function AddEditMoveframeModal({
                         return (
                           <>
                             <label className="block text-xs font-medium text-gray-700 mb-1">
-                              {paceLabel.replace('\\', '/')}: <span className="text-green-600 font-semibold text-[10px]">⚡ Type numbers only</span>
+                              {paceLabel.replace('\\', '/')}: <span className="text-green-600 font-semibold text-[10px]">✨ Flexible input</span>
                             </label>
                             <input
                               type="text"
                               value={pace}
-                              onChange={(e) => {
-                                const input = e.target.value;
-                                // Auto-format as user types
-                                const parsed = parsePaceInput(input, isKmPace);
-                                setPace(parsed);
-                              }}
+                              onChange={(e) => setPace(e.target.value)}
                               onBlur={(e) => {
                                 if (e.target.value) {
                                   const formatted = formatPace(e.target.value, isKmPace);
@@ -2193,8 +2328,17 @@ export default function AddEditMoveframeModal({
                                 }
                               }}
                               className="w-full px-3 py-2 text-lg border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono bg-green-50"
-                              placeholder="130"
-                              title="⚡ Fast input: Type 130 for 1'30&quot;0"
+                              placeholder={
+                                sport === 'BIKE' ? '25.5 (km/h)' :
+                                sport === 'ROWING' ? "1'30\" or 130" :
+                                sport === 'SKI' ? "2'45\" or 245" :
+                                "130 or 1:30 or 1.30"
+                              }
+                              title={
+                                sport === 'BIKE' ? 'Type freely: 25.5, 30, etc.' :
+                                sport === 'ROWING' || sport === 'SKI' ? "Type freely: 1:30, 130, 1'30" :
+                                "Type freely: 130, 1:30, 1.30"
+                              }
                             />
                             <p className="mt-0.5 text-[10px] text-green-600">⚡ Fast input: Type <strong>130</strong> → <strong>1'30"0</strong></p>
                           </>
@@ -2209,40 +2353,28 @@ export default function AddEditMoveframeModal({
                 {/* 3b. Time Field - for all distance-based sports */}
                 {shouldShowPaceField(sport) && planningMode === 'all' && (
                   <div className="bg-gray-50 p-2.5 rounded-lg">
-                    <h3 className="font-bold text-xs text-gray-700 mb-2">TIME</h3>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Time (Hh:MM'SS"D): <span className="text-gray-400">(optional)</span> <span className="text-green-600 font-semibold text-[10px]">⚡ Type numbers only</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={time}
-                        onChange={(e) => {
-                          const input = e.target.value;
-                          // Auto-format as user types using fast input
-                          const parsed = parseTimeInput(input);
-                          setTime(parsed);
-                        }}
-                        onBlur={(e) => {
-                          if (e.target.value) {
-                            const formatted = formatTime(e.target.value);
-                            setTime(formatted);
-                          }
-                        }}
-                        className="w-full px-3 py-2 text-lg border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono bg-green-50"
-                        placeholder="530"
-                        title="⚡ Fast input: Type 530 for 0h05'30&quot;0"
-                      />
-                      <p className="mt-0.5 text-[10px] text-green-600">⚡ Fast input: Type <strong>530</strong> → <strong>0h05'30"0</strong> or <strong>1130</strong> → <strong>0h11'30"0</strong></p>
-                    </div>
+                    <h3 className="font-bold text-xs text-gray-700 mb-2">TIME <span className="text-gray-400 font-normal">(optional)</span></h3>
+                    <TimeInput
+                      value={time}
+                      onChange={setTime}
+                      label="Enter time"
+                      placeholder="0"
+                      showLabel={false}
+                      allowedUnits={['hours', 'minutes', 'seconds']}
+                      defaultUnit="minutes"
+                      maxHours={99}
+                      maxMinutes={59}
+                      maxSeconds={59}
+                    />
+                    <p className="mt-1 text-[10px] text-blue-600">💡 Just type the number and select the unit (hours/minutes/seconds)</p>
                   </div>
                 )}
 
-                {/* 4. Reset/Pause & Macro */}
+                {/* 4. Reset/Pause & Macropause */}
                 {/* Only show pause section if NOT in individual planning mode */}
                 {planningMode === 'all' && (
                 <div className="bg-gray-50 p-2.5 rounded-lg">
-                  <h3 className="font-bold text-xs text-gray-700 mb-2">REST / PAUSE & MACRO</h3>
+                  <h3 className="font-bold text-xs text-gray-700 mb-2">REST\PAUSE & MACROPAUSE</h3>
                   <div className="space-y-3">
                     {/* Rest Type Selector */}
                     {sportConfig.restTypes && (
@@ -2278,31 +2410,63 @@ export default function AddEditMoveframeModal({
                     
                     {/* Pause Field - Conditional based on Rest Type */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Pause:</label>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      {restType === 'Set time' && 'Pause:'}
+                      {restType === 'Restart time' && 'Restart to..:'}
+                      {restType === 'Restart pulse' && 'Restart to pulse..:'}
+                      {!restType && 'Pause:'}
+                    </label>
                       {(() => {
                         const pauseOptions = getPauseOptions(sport, restType);
                         
                         // If it's 'input', show an input field instead of select
                         if (pauseOptions === 'input') {
                           if (restType === 'Restart time') {
+                            // Helper function to convert time string to seconds for comparison
+                            const timeToSeconds = (timeStr: string): number => {
+                              if (!timeStr) return 0;
+                              // Handle formats like 1'30" or 0'45" or 2'
+                              const match = timeStr.match(/(\d+)'(\d+)?"/);
+                              if (match) {
+                                const minutes = parseInt(match[1]) || 0;
+                                const seconds = parseInt(match[2]) || 0;
+                                return minutes * 60 + seconds;
+                              }
+                              return 0;
+                            };
+
+                            const validateRestartTime = () => {
+                              const timeSeconds = timeToSeconds(time);
+                              const pauseSeconds = timeToSeconds(pause);
+                              
+                              if (pauseSeconds > 0 && pauseSeconds <= timeSeconds) {
+                                alert('⚠️ Restart time must be greater than Time!\n\nPlease enter a restart time that is longer than the workout time.');
+                                setPause('');
+                                return false;
+                              }
+                              return true;
+                            };
+
                             return (
                               <>
-                                <input
-                                  type="text"
+                                <TimeInput
                                   value={pause}
-                                  onChange={(e) => {
-                                    const input = e.target.value;
-                                    // Auto-format as user types using fast input
-                                    const parsed = parsePauseInput(input);
-                                    setPause(parsed);
+                                  onChange={setPause}
+                                  onBlur={() => {
+                                    // Validate that restart time > time
+                                    setTimeout(() => validateRestartTime(), 100);
                                   }}
-                                  onBlur={(e) => setPause(formatPause(e.target.value))}
-                                  className="w-full px-3 py-2 border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 font-mono bg-green-50"
-                                  placeholder="130 ⚡"
-                                  title="⚡ Fast input: Type 130 for 1'30&quot;"
+                                  label=""
+                                  placeholder="0"
+                                  showLabel={false}
+                                  allowedUnits={['minutes', 'seconds']}
+                                  defaultUnit="minutes"
+                                  maxMinutes={99}
+                                  maxSeconds={59}
+                                  className="mb-1"
                                 />
-                                <p className="mt-0.5 text-[10px] text-green-600 font-semibold">
-                                  ⚡ Fast input: Type <span className="font-mono bg-white px-1 rounded">130</span> → 1'30" | Must be &gt; Time
+                                <p className="mt-0.5 text-[10px] text-red-600 font-semibold">
+                                  💡 Just type the number and select the unit | <span className="text-red-700 font-bold">MANDATORY: Must be &gt; Time ({time || '0\'00"'})</span>
                                 </p>
                               </>
                             );
@@ -2356,7 +2520,7 @@ export default function AddEditMoveframeModal({
                       })()}
                   </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Macro Final:</label>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Mode:</label>
                       <select
                         value={macroFinal}
                         onChange={(e) => setMacroFinal(e.target.value)}
@@ -2676,20 +2840,6 @@ export default function AddEditMoveframeModal({
                       />
                     </div>
                   </div>
-
-                  <div className="flex gap-2">
-                  <button
-                    onClick={() => setManualContent('')}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700"
-                    >
-                      Save
-                  </button>
-                </div>
               </>
             </div>
           )}

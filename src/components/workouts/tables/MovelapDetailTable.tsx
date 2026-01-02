@@ -265,14 +265,14 @@ function SortableMovelapRow({
       </td>
       
       {/* Options Column */}
-      <td className="border border-gray-300 px-1 py-1 text-center">
+      <td className="border border-gray-300 px-1 py-1 text-center" style={{ width: '180px', minWidth: '180px' }}>
         <div className="flex items-center justify-center gap-1 flex-wrap">
           <button
             onClick={(e) => {
               e.stopPropagation();
               if (onEditMovelap) onEditMovelap(movelap);
             }}
-            className="px-1 py-0.5 text-[9px] bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="px-2 py-1 text-[10px] bg-blue-500 text-white rounded hover:bg-blue-600"
             title="Edit movelap"
           >
             Edit
@@ -282,7 +282,7 @@ function SortableMovelapRow({
               e.stopPropagation();
               onCopyMovelap(movelap);
             }}
-            className="px-1 py-0.5 text-[9px] bg-green-500 text-white rounded hover:bg-green-600"
+            className="px-2 py-1 text-[10px] bg-green-500 text-white rounded hover:bg-green-600"
             title="Copy movelap"
           >
             Copy
@@ -292,7 +292,7 @@ function SortableMovelapRow({
               e.stopPropagation();
               onPasteMovelap(index);
             }}
-            className="px-1 py-0.5 text-[9px] bg-orange-500 text-white rounded hover:bg-orange-600"
+            className="px-2 py-1 text-[10px] bg-orange-500 text-white rounded hover:bg-orange-600"
             title="Paste copied movelap after this position"
           >
             Paste
@@ -306,7 +306,7 @@ function SortableMovelapRow({
                 }
               }
             }}
-            className="px-1 py-0.5 text-[9px] bg-red-500 text-white rounded hover:bg-red-600"
+            className="px-2 py-1 text-[10px] bg-red-500 text-white rounded hover:bg-red-600"
             title="Delete movelap"
           >
             Delete
@@ -318,7 +318,7 @@ function SortableMovelapRow({
                 onAddMovelapAfter(movelap, index);
               }
             }}
-            className="px-1 py-0.5 text-[9px] bg-purple-500 text-white rounded hover:bg-purple-600"
+            className="px-2 py-1 text-[10px] bg-purple-500 text-white rounded hover:bg-purple-600"
             title="Add movelap after this position"
           >
             Add movelap
@@ -342,13 +342,43 @@ export default function MovelapDetailTable({
   const sectionColor = moveframe.section?.color || '#5b8def';
   const sectionName = moveframe.section?.name || 'Default';
   const [copiedMovelap, setCopiedMovelap] = useState<any>(null);
+  const [noteValue, setNoteValue] = useState(moveframe.notes || '');
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  
+  // Check if this moveframe is manual mode
+  const isManualMode = moveframe.manualMode === true;
+  
+  // Debug logging
+  console.log('🔍 MovelapDetailTable - Moveframe data:', {
+    id: moveframe.id,
+    letter: moveframe.letter,
+    manualMode: moveframe.manualMode,
+    isManualMode,
+    hasNotes: !!moveframe.notes,
+    notesLength: moveframe.notes?.length || 0,
+    movelapCount: moveframe.movelaps?.length || 0
+  });
   
   // Store original sequence numbers for each movelap (persists through drag operations)
   const [movelapSequences, setMovelapSequences] = useState<Map<string, number>>(new Map());
 
   // Initialize or update sequence numbers when movelaps change
   React.useEffect(() => {
-    const newMovelaps = moveframe.movelaps || [];
+    // Sort movelaps by repetitionNumber to maintain order after reload
+    const unsortedMovelaps = moveframe.movelaps || [];
+    console.log('🔄 MovelapDetailTable: Loading movelaps', {
+      count: unsortedMovelaps.length,
+      unsorted: unsortedMovelaps.map((ml: any) => ({ id: ml.id.slice(-4), repNum: ml.repetitionNumber }))
+    });
+    
+    const newMovelaps = [...unsortedMovelaps].sort((a: any, b: any) => 
+      (a.repetitionNumber || 0) - (b.repetitionNumber || 0)
+    );
+    
+    console.log('✅ MovelapDetailTable: Sorted movelaps', {
+      sorted: newMovelaps.map((ml: any) => ({ id: ml.id.slice(-4), repNum: ml.repetitionNumber }))
+    });
+    
     setMovelaps(newMovelaps);
     
     // Regenerate all sequence numbers when movelaps change (e.g., when adding new movelaps)
@@ -411,7 +441,17 @@ export default function MovelapDetailTable({
     // Persist the new order to database
     try {
       const token = localStorage.getItem('token');
-      if (!token) return;
+      if (!token) {
+        console.error('❌ No auth token for reorder');
+        return;
+      }
+
+      const reorderPayload = newOrder.map((ml: any, idx: number) => ({
+        id: ml.id,
+        repetitionNumber: idx + 1 // repetitionNumber starts from 1
+      }));
+      
+      console.log('📤 Calling movelap reorder API with:', reorderPayload.map((ml: any) => ({ id: ml.id.slice(-4), repNum: ml.repetitionNumber })));
 
       const response = await fetch('/api/workouts/movelaps/reorder', {
         method: 'PATCH',
@@ -420,17 +460,26 @@ export default function MovelapDetailTable({
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          movelaps: newOrder.map((ml: any, idx: number) => ({
-            id: ml.id,
-            repetitionNumber: idx + 1 // repetitionNumber starts from 1
-          }))
+          movelaps: reorderPayload
         })
       });
 
       if (!response.ok) {
-        console.error('Failed to persist movelap order');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('❌ Failed to persist movelap order:', errorData);
         // Revert on error
         setMovelaps(moveframe.movelaps || []);
+      } else {
+        const result = await response.json();
+        console.log('✅ Movelap order persisted successfully:', result);
+        // Notify parent to refresh data (expansion state is preserved in MoveframesSection)
+        if (onRefresh) {
+          console.log('🔄 Calling onRefresh to update Rip count...');
+          await onRefresh();
+          console.log('✅ onRefresh completed - Rip count updated, expansion preserved');
+        } else {
+          console.warn('⚠️ No onRefresh callback provided');
+        }
       }
     } catch (error) {
       console.error('Error calling reorder API:', error);
@@ -489,7 +538,229 @@ export default function MovelapDetailTable({
       console.error('Error pasting movelap:', error);
     }
   };
+
+  // Handle save note
+  const handleSaveNote = async () => {
+    setIsSavingNote(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.error('Authentication required');
+        return;
+      }
+
+      const response = await fetch(`/api/workouts/moveframes/${moveframe.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ notes: noteValue })
+      });
+
+      if (response.ok) {
+        console.log('Note saved successfully');
+        if (onRefresh) {
+          onRefresh();
+        }
+      } else {
+        console.error('Failed to save note');
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+    } finally {
+      setIsSavingNote(false);
+    }
+  };
   
+  // Manual Mode Layout - Simplified
+  if (isManualMode) {
+    // Parse manual content from notes - it might be JSON or HTML
+    let manualContent = '';
+    try {
+      const parsed = JSON.parse(moveframe.notes || '{}');
+      manualContent = parsed.htmlContent || parsed.content || moveframe.notes || '';
+    } catch {
+      // Not JSON, use as-is
+      manualContent = moveframe.notes || 'No content';
+    }
+
+    return (
+      <div className="bg-gray-50 p-2 pr-0">
+        {/* Note Box, Save Button, and Add Movelap Button for Manual Mode - Above Table */}
+        <div className="mb-3 flex items-center gap-4">
+          {/* Add Movelap Button */}
+          {onAddMovelap && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onAddMovelap();
+              }}
+              className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 whitespace-nowrap"
+            >
+              + Add Movelap
+            </button>
+          )}
+          
+          {/* Note Box with Save Button */}
+          <div className="flex items-center gap-2" style={{ maxWidth: '600px' }}>
+            <label className="text-xs font-semibold text-black whitespace-nowrap">
+              Note
+            </label>
+            <input
+              type="text"
+              className="px-2 py-1 text-xs text-red-600 border-2 border-black rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+              style={{ width: '500px' }}
+              placeholder="Add a note for this moveframe..."
+              value={noteValue}
+              onChange={(e) => setNoteValue(e.target.value)}
+            />
+            <button
+              onClick={handleSaveNote}
+              disabled={isSavingNote}
+              className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400 whitespace-nowrap"
+            >
+              {isSavingNote ? 'Saving...' : 'Save'}
+            </button>
+          </div>
+        </div>
+
+        {/* Simplified Manual Mode Table - Single Row with 4 Columns */}
+        <table className="w-full border-collapse text-xs table-fixed">
+          <thead className="bg-gradient-to-r from-purple-200 to-pink-200">
+            <tr>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '100px' }}>Sport</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '250px' }}>Summary</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '270px', maxWidth: '270px' }}>Detail of workout</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '180px', minWidth: '180px' }}>Options</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="hover:bg-blue-50">
+              {/* Sport */}
+              <td className="border border-gray-300 px-1 py-1 text-center text-xs font-semibold">
+                <div className="flex items-center justify-center">
+                  <span className="px-3 py-2 bg-purple-100 border-2 border-purple-300 rounded-lg font-bold text-purple-800">
+                    {moveframe.sport?.replace(/_/g, ' ') || '—'}
+                  </span>
+                </div>
+              </td>
+              {/* Summary - shows moveframe description */}
+              <td className="border border-gray-300 px-1 py-1 text-xs">
+                <div 
+                  className="text-gray-800"
+                  style={{
+                    lineHeight: '1.6',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    fontSize: '12px'
+                  }}
+                  dangerouslySetInnerHTML={{ __html: moveframe.description || '' }}
+                />
+              </td>
+              {/* Detail of workout (Manual Content) */}
+              <td className="border border-gray-300 px-1 py-1 text-xs">
+                <div 
+                  className="p-2 bg-gradient-to-br from-white to-gray-50 rounded border border-gray-300 max-h-96 overflow-y-auto text-left"
+                  style={{
+                    lineHeight: '1.8',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    fontSize: '13px'
+                  }}
+                  dangerouslySetInnerHTML={{ __html: manualContent }}
+                />
+              </td>
+              {/* Options - Same as normal movelap options */}
+              <td className="border border-gray-300 px-1 py-1 text-center" style={{ width: '180px', minWidth: '180px' }}>
+                <div className="flex items-center justify-center gap-1 flex-wrap">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // In manual mode, we need to create a temporary movelap object for editing
+                      // Use the first movelap if it exists, otherwise create a default one
+                      const movelapToEdit = moveframe.movelaps && moveframe.movelaps.length > 0 
+                        ? moveframe.movelaps[0]
+                        : {
+                            id: 'temp-manual-movelap',
+                            moveframeId: moveframe.id,
+                            sequenceNumber: 1,
+                            repetitionNumber: 1,
+                            // Add other default movelap fields as needed
+                          };
+                      
+                      if (onEditMovelap) {
+                        onEditMovelap(movelapToEdit);
+                      }
+                    }}
+                    className="px-2 py-1 text-[10px] bg-blue-500 text-white rounded hover:bg-blue-600"
+                    title="Edit movelap"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Copy the moveframe data (for potential paste to other manual moveframes)
+                      setCopiedMovelap(moveframe);
+                      alert('Manual moveframe copied!');
+                    }}
+                    className="px-2 py-1 text-[10px] bg-green-500 text-white rounded hover:bg-green-600"
+                    title="Copy moveframe data"
+                  >
+                    Copy
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (!copiedMovelap) {
+                        alert('No moveframe copied. Click "Copy" first.');
+                        return;
+                      }
+                      // In manual mode, paste doesn't make much sense, but we keep it for consistency
+                      alert('Paste functionality is not applicable in manual mode');
+                    }}
+                    className="px-2 py-1 text-[10px] bg-orange-500 text-white rounded hover:bg-orange-600 opacity-50 cursor-not-allowed"
+                    title="Paste - Not applicable in manual mode"
+                  >
+                    Paste
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // In manual mode, deleting should be done at the moveframe level
+                      if (confirm(`Delete this manual moveframe ${moveframeLetter}? This cannot be undone.`)) {
+                        if (onDeleteMovelap) {
+                          // Use the parent callback but this should really delete the moveframe
+                          alert('To delete this manual moveframe, use the Delete button on the moveframe row');
+                        }
+                      }
+                    }}
+                    className="px-2 py-1 text-[10px] bg-red-500 text-white rounded hover:bg-red-600"
+                    title="Delete - Use moveframe delete button"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onAddMovelap) {
+                        onAddMovelap();
+                      }
+                    }}
+                    className="px-2 py-1 text-[10px] bg-purple-500 text-white rounded hover:bg-purple-600"
+                    title="Add movelap"
+                  >
+                    Add movelap
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // Standard Mode Layout - Full movelaps table
   return (
     <DndContext
       sensors={sensors}
@@ -499,6 +770,44 @@ export default function MovelapDetailTable({
     >
       <SortableContext items={movelaps.map((ml: any) => ml.id)} strategy={verticalListSortingStrategy}>
         <div className="bg-gray-50 p-2 pr-0">
+          {/* Top Controls - Note and Add Movelap Button */}
+          <div className="mb-3 flex items-center gap-4">
+            {/* Add Movelap Button */}
+            {onAddMovelap && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddMovelap();
+                }}
+                className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 whitespace-nowrap"
+              >
+                + Add Movelap
+              </button>
+            )}
+            
+            {/* Note Box with Save Button */}
+            <div className="flex items-center gap-2" style={{ maxWidth: '600px' }}>
+              <label className="text-xs font-semibold text-black whitespace-nowrap">
+                Note
+              </label>
+              <input
+                type="text"
+                className="px-2 py-1 text-xs text-red-600 border-2 border-black rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
+                style={{ width: '500px' }}
+                placeholder="Add a note for this moveframe..."
+                value={noteValue}
+                onChange={(e) => setNoteValue(e.target.value)}
+              />
+              <button
+                onClick={handleSaveNote}
+                disabled={isSavingNote}
+                className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400 whitespace-nowrap"
+              >
+                {isSavingNote ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+
           <table className="w-full border-collapse text-xs table-fixed">
             {/* Render sport-specific column headers */}
             {(() => {
@@ -584,7 +893,7 @@ export default function MovelapDetailTable({
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Macro</th>
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Alarm&Snd</th>
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Notes</th>
-                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Options</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" style={{ width: '180px', minWidth: '180px' }}>Options</th>
                     </tr>
                   </thead>
                 </>
@@ -611,39 +920,6 @@ export default function MovelapDetailTable({
               ))}
             </tbody>
           </table>
-          
-          {/* Note Box and Add Movelap Button - Same Line */}
-          <div className="mt-2 flex items-center gap-4">
-            {/* Add Movelap Button */}
-            {onAddMovelap && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddMovelap();
-                }}
-                className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 whitespace-nowrap"
-              >
-                + Add Movelap
-              </button>
-            )}
-            
-            {/* Note Box */}
-            <div className="flex items-center gap-2 flex-1">
-              <label className="text-xs font-semibold text-black whitespace-nowrap">
-                Note
-              </label>
-              <input
-                type="text"
-                className="flex-1 px-2 py-1 text-xs text-red-600 border-2 border-black rounded focus:outline-none focus:ring-2 focus:ring-gray-400"
-                placeholder="Add a note for this moveframe..."
-                defaultValue={moveframe.note || ''}
-                onBlur={(e) => {
-                  // TODO: Save note to backend
-                  console.log('Note updated:', e.target.value);
-                }}
-              />
-            </div>
-          </div>
         </div>
       </SortableContext>
     </DndContext>
