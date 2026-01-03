@@ -145,17 +145,8 @@ th.sticky-header-8 {
   z-index: 15 !important; /* Same as sticky columns for horizontal scrolling */
 }
 
-/* Data cells - Inherit row background color */
-td.sticky-col-1,
-td.sticky-col-2,
-td.sticky-col-3,
-td.sticky-col-4,
-td.sticky-col-5,
-td.sticky-col-6,
-td.sticky-col-7,
-td.sticky-col-8 {
-  background-color: inherit !important;
-}
+/* Data cells - Background color is set via inline styles in component */
+/* Removed inherit rule to allow inline styles to take precedence */
 
 /* Frozen RIGHT column (Options) */
 td.sticky-options-col,
@@ -166,9 +157,7 @@ th.sticky-options-header {
   z-index: 10 !important;
 }
 
-td.sticky-options-col {
-  background-color: inherit !important;
-}
+/* Options column background is set via inline styles in component */
 
 th.sticky-options-header {
   z-index: 15 !important; /* Same as other sticky columns */

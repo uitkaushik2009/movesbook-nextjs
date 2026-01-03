@@ -1015,7 +1015,7 @@ export default function DayTableView({
                <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                  Check
                </th>
-               <th className="border border-gray-400 px-2 py-2 text-xs font-bold" style={{ width: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} colSpan={2} rowSpan={2}>
+               <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-2" style={{ width: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} colSpan={2} rowSpan={2}>
                  Period
                </th>
                <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-4" style={{ width: COL_WIDTHS.weekNumber, minWidth: COL_WIDTHS.weekNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
