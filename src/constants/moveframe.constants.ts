@@ -419,14 +419,15 @@ export const SPORT_CONFIGS = {
   },
   
   WALKING: {
-    // Distance-based sport (already in DISTANCE_BASED_SPORTS array)
-    meters: ['100', '200', '500', '1000', '1500', '2000', '3000', '5000', '10000', 'input'],
+    // Distance-based sport - managed like RUN
+    meters: ['50', '60', '80', '100', '110', '150', '200', '300', '400', '500', '600', '800', '1000', '1200', '1500', '2000', '3000', '5000', '10000', 'input'],
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
-    styles: ['Road', 'Track', 'Trail', 'Beach'],
-    pace100Meters: [], // No pace/100 for walking
+    styles: ['Track', 'Road', 'Cross', 'Beach', 'Hill', 'Downhill'],
+    // Pace\100 for the same meter values as RUN
+    pace100Meters: ['50', '60', '80', '100', '110', '150', '200', '300', '400', '500'],
     restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
-      [REST_TYPES.SET_TIME]: ['30"', '45"', "1'", "1'30\"", "2'", "3'"],
+      [REST_TYPES.SET_TIME]: ['0', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
       [REST_TYPES.RESTART_TIME]: 'input',
       [REST_TYPES.RESTART_PULSE]: 'input'
     },
@@ -436,14 +437,15 @@ export const SPORT_CONFIGS = {
   },
   
   HIKING: {
-    // Distance-based sport (already in DISTANCE_BASED_SPORTS array)
-    meters: ['500', '1000', '2000', '3000', '5000', '10000', '15000', 'input'],
+    // Distance-based sport - managed like RUN
+    meters: ['50', '60', '80', '100', '110', '150', '200', '300', '400', '500', '600', '800', '1000', '1200', '1500', '2000', '3000', '5000', '10000', 'input'],
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
-    styles: ['Trail', 'Mountain', 'Cross-country'],
-    pace100Meters: [], // No pace/100 for hiking
+    styles: ['Track', 'Road', 'Cross', 'Beach', 'Hill', 'Downhill'],
+    // Pace\100 for the same meter values as RUN
+    pace100Meters: ['50', '60', '80', '100', '110', '150', '200', '300', '400', '500'],
     restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
-      [REST_TYPES.SET_TIME]: ["1'", "2'", "3'", "5'", "10'"],
+      [REST_TYPES.SET_TIME]: ['0', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
       [REST_TYPES.RESTART_TIME]: 'input',
       [REST_TYPES.RESTART_PULSE]: 'input'
     },

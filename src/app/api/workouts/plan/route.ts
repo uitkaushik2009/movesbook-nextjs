@@ -244,7 +244,7 @@ export async function GET(request: NextRequest) {
       (type !== 'TEMPLATE_WEEKS' && (isPlanEmpty || needsRecreation))
     );
     
-    if (shouldRecreate) {
+    if (shouldRecreate && plan) {
       const reason = forceRecreate ? 'force recreate requested' : 
                      isPlanEmpty ? 'empty plan' : 
                      'plan does not start on Monday';
@@ -793,12 +793,13 @@ export async function POST(request: NextRequest) {
           const dayDate = new Date(weekStartDate);
           dayDate.setDate(weekStartDate.getDate() + (dayOfWeek - 1));
           
-          // Use upsert to avoid duplicate key violations on userId + date
+          // Use upsert to avoid duplicate key violations on userId + date + storageZone
           await prisma.workoutDay.upsert({
             where: {
-              userId_date: {
+              userId_date_storageZone: {
                 userId: decoded.userId,
-                date: dayDate
+                date: dayDate,
+                storageZone
               }
             },
             update: {

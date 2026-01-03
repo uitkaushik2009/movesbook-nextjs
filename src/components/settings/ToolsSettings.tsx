@@ -344,7 +344,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         const data = await response.json();
         
         if (response.ok) {
-          const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name;
+          const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || selectedLanguage;
           alert(`✅ Success! ALL settings saved as ${languageName.toUpperCase()} defaults!\n\n📋 Saved to ${languageName.toUpperCase()}:\n✓ Periods, Sections, Sports\n✓ Equipment, Exercises, Library, Devices\n\n👥 These settings are now available for ${languageName}-speaking users when they click "Load Admin Defaults" button.`);
           setShowPasswordDialog(false);
           setSuperAdminPassword('');

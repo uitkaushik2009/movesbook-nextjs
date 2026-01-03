@@ -126,8 +126,8 @@ export default function MoveframesSection({
   };
 
   // Default column order - matching original layout from screenshot
-  // ☑, ⋮⋮, #, MF, Color section, Name section, Moveframe description, Rip, Macro, Alarm & Sound, Options
-  const defaultColumnOrder = ['checkbox', 'drag', 'expand', 'index', 'mf', 'color', 'section', 'description', 'rip', 'macro', 'alarm', 'options', 'code_section', 'action', 'dist', 'style', 'speed', 'time', 'pace', 'rec', 'rest_to', 'aim_snd', 'sport', 'annotation', 'annotations'];
+  // ☑, ⋮⋮, #, MF, Color section, Name section, Moveframe description, Duration, Rip, Macro, Alarm & Sound, Options
+  const defaultColumnOrder = ['checkbox', 'drag', 'expand', 'index', 'mf', 'color', 'section', 'description', 'duration', 'rip', 'macro', 'alarm', 'options', 'code_section', 'action', 'dist', 'style', 'speed', 'time', 'pace', 'rec', 'rest_to', 'aim_snd', 'sport', 'annotation', 'annotations'];
 
   // Column visibility helper
   const isColumnVisible = (columnId: string) => {
@@ -177,6 +177,7 @@ export default function MoveframesSection({
       section: <th key="section" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Period</th>,
       sport: <th key="sport" className="border border-gray-200 px-1 py-1 text-left text-[10px]">Sport of the moveframe</th>,
       description: <th key="description" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Moveframe description</th>,
+      duration: <th key="duration" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Duration</th>,
       rip: <th key="rip" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rip\Sets</th>,
       macro: <th key="macro" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Macro</th>,
       alarm: <th key="alarm" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Alarm & Sound</th>,

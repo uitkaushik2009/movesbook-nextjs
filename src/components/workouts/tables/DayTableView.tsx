@@ -10,12 +10,14 @@ import WeeklyInfoModal from '../WeeklyInfoModal';
 import WeekTotalsModal from '../modals/WeekTotalsModal';
 import CopyWeekModal from '../modals/CopyWeekModal';
 import MoveWeekModal from '../modals/MoveWeekModal';
+import DayInfoModal from '../DayInfoModal';
 import '../../../styles/sticky-table.css';
 
 interface DayTableViewProps {
   workoutPlan: any;
   activeSection?: 'A' | 'B' | 'C' | 'D'; // Active section for conditional display
   currentPageStart?: number; // Current page start for Section B navigation
+  setCurrentPageStart?: (page: number) => void; // Setter for current page start
   weeksPerPage?: number; // Weeks per page for Section B navigation
   expandedDays?: Set<string>;
   expandedWorkouts?: Set<string>;
@@ -77,6 +79,7 @@ export default function DayTableView({
   workoutPlan,
   activeSection = 'A',
   currentPageStart = 1,
+  setCurrentPageStart,
   weeksPerPage = 3,
   expandedDays,
   expandedWorkouts,
@@ -121,7 +124,8 @@ export default function DayTableView({
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [isWeeklyInfoModalOpen, setIsWeeklyInfoModalOpen] = useState(false);
   const [weeklyNotes, setWeeklyNotes] = useState<Record<string, { periodId: string; notes: string }>>({});
-  const [dayInfoOpenForDay, setDayInfoOpenForDay] = useState<string | null>(null);
+  const [dayInfoModalOpen, setDayInfoModalOpen] = useState(false);
+  const [selectedDayForInfo, setSelectedDayForInfo] = useState<any | null>(null);
   const [periods, setPeriods] = useState<any[]>([]);
   const [showPeriodSelector, setShowPeriodSelector] = useState(false);
   const [areWeekWorkoutsExpanded, setAreWeekWorkoutsExpanded] = useState(false);
@@ -467,7 +471,8 @@ export default function DayTableView({
   };
 
   const handleShowDayInfo = (day: any) => {
-    setDayInfoOpenForDay(prev => prev === day.id ? null : day.id);
+    setSelectedDayForInfo(day);
+    setDayInfoModalOpen(true);
   };
 
   const handleCopyWeek = async (targetWeekId: string) => {
@@ -719,7 +724,7 @@ export default function DayTableView({
                 <>
                   <button
                     onClick={() => {
-                      if (currentPageStart > 1) {
+                      if (currentPageStart > 1 && setCurrentPageStart) {
                         const newStart = Math.max(1, currentPageStart - weeksPerPage);
                         setCurrentPageStart(newStart);
                       }
@@ -734,7 +739,7 @@ export default function DayTableView({
                   <button
                     onClick={() => {
                       const totalWeeks = workoutPlan.weeks.length;
-                      if (currentPageStart + weeksPerPage <= totalWeeks) {
+                      if (currentPageStart + weeksPerPage <= totalWeeks && setCurrentPageStart) {
                         setCurrentPageStart(currentPageStart + weeksPerPage);
                       }
                     }}
@@ -1025,19 +1030,19 @@ export default function DayTableView({
                    Dayname
                  </th>
                )}
-               {/* Match done column - Greyed out for 3 weeks plans */}
-               <th 
-                 className={`border border-gray-400 px-1 py-2 text-xs font-bold ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-header-6' : 'sticky-header-7'}`}
-                 style={{ 
-                   width: COL_WIDTHS.matchDone, 
-                   minWidth: COL_WIDTHS.matchDone,
-                   backgroundColor: (activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? '#E5E7EB' : colors.weekHeader,
-                   color: (activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? '#9CA3AF' : colors.weekHeaderText
-                 }} 
-                 rowSpan={2}
-               >
-                 Match<br/>done
-               </th>
+              {/* Match done column */}
+              <th 
+                className={`border border-gray-400 px-1 py-2 text-xs font-bold ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-header-6' : 'sticky-header-7'}`}
+                style={{ 
+                  width: COL_WIDTHS.matchDone, 
+                  minWidth: COL_WIDTHS.matchDone,
+                  backgroundColor: colors.weekHeader,
+                  color: colors.weekHeaderText
+                }} 
+                rowSpan={2}
+              >
+                Match<br/>done
+              </th>
                <th 
                  className={`border border-gray-400 px-2 py-2 text-xs font-bold ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-header-7' : 'sticky-header-8'}`}
                  style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
@@ -1148,69 +1153,21 @@ export default function DayTableView({
                       onPrintDay={onPrintDay}
                       onDeleteDay={onDeleteDay}
                     />
-                  
                   {/* Expanded Workouts Section */}
                     {expandedDaysSet.has(day.id) && (
                       <tr className="workout-expanded-row">
                        <td colSpan={32} className="p-0 bg-gray-50" style={{ position: 'relative' }}>
                         <div className="p-4 workout-details-container">
-                          <div className="mb-2 text-sm font-semibold text-gray-700">
-                            Workouts for {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
-                          </div>
-                          
-                          {/* Day Info Panel - Shows immediately after day header when toggled */}
-                          {dayInfoOpenForDay === day.id && (
-                            <div className="mb-4 border-l-4 border-cyan-500">
-                              <div className="bg-cyan-50 rounded-lg shadow-sm p-4">
-                                 <h3 className="text-base font-bold text-cyan-700 mb-3 flex items-center gap-2">
-                                   <span>ℹ️</span>
-                                   <span>Day Information</span>
-                                 </h3>
-                                 
-                                 {/* All data in single column, left-aligned */}
-                                 <div className="space-y-3">
-                                   <div>
-                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Week Number</label>
-                                     <div className="text-sm text-gray-800">{week?.weekNumber || '—'}</div>
-                                   </div>
-                                   
-                                   <div>
-                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Day of Week</label>
-                                     <div className="text-sm text-gray-800">
-                                       {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
-                                     </div>
-                                   </div>
-                                   
-                                   <div>
-                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Number of Workouts</label>
-                                     <div className="text-sm text-gray-800">{day.workouts?.length || 0}</div>
-                                   </div>
-                                   
-                                   <div>
-                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Period</label>
-                                     <div className="text-sm text-gray-800">
-                                       {day.period ? (
-                                         <div className="flex items-center gap-2">
-                                           <div 
-                                             className="w-4 h-4 rounded" 
-                                             style={{ backgroundColor: day.period.color }}
-                                           />
-                                           <span>{day.period.name}</span>
-                                         </div>
-                                       ) : '—'}
-                                     </div>
-                                   </div>
-                                   
-                                   <div>
-                                     <label className="block text-xs font-semibold text-gray-600 mb-1">Notes</label>
-                                     <div className="text-sm text-gray-800 whitespace-pre-wrap">
-                                       {day.notes || 'No notes'}
-                                     </div>
-                                   </div>
-                                 </div>
-                              </div>
+                          <div className="mb-2 flex items-center gap-3">
+                            <div className="text-sm font-semibold text-gray-700">
+                              Workouts for {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
                             </div>
-                          )}
+                            {day.notes && day.notes.trim().length > 0 && (
+                              <div className="text-xs text-gray-600 italic">
+                                {day.notes.substring(0, 60)}{day.notes.length > 60 ? '...' : ''}
+                              </div>
+                            )}
+                          </div>
                           
                           {day.workouts && day.workouts.length > 0 ? (
                             <WorkoutHierarchyView
@@ -1436,6 +1393,17 @@ export default function DayTableView({
           </div>
         </div>
       )}
+
+      {/* Day Info Modal */}
+      <DayInfoModal
+        isOpen={dayInfoModalOpen}
+        day={selectedDayForInfo}
+        isTemplate={activeSection === 'A'} // Template plans don't have specific dates
+        onClose={() => {
+          setDayInfoModalOpen(false);
+          setSelectedDayForInfo(null);
+        }}
+      />
     </>
   );
 }

@@ -139,8 +139,25 @@ export default function WorkoutTable({
 
   // Calculate sport totals from moveframes and workout sessions
   const calculateSportTotals = () => {
-    // Get the 4 sports defined on the workout (in order)
-    const workoutSportNames = (workout.sports || []).map((ws: any) => ws.sport);
+    console.log(`🔍 [WorkoutTable] calculateSportTotals - workout.sports:`, workout.sports);
+    console.log(`🔍 [WorkoutTable] workout.moveframes:`, workout.moveframes?.length || 0);
+    
+    // IMPORTANT: workout.sports is often empty, so we calculate sports from moveframes
+    // Get unique sports from moveframes in the order they appear
+    const sportsFromMoveframes: string[] = [];
+    (workout.moveframes || []).forEach((mf: any) => {
+      if (mf.sport && !sportsFromMoveframes.includes(mf.sport)) {
+        sportsFromMoveframes.push(mf.sport);
+      }
+    });
+    
+    // Use sports from moveframes if workout.sports is empty
+    const workoutSportNames = sportsFromMoveframes.length > 0 
+      ? sportsFromMoveframes 
+      : (workout.sports || []).map((ws: any) => ws.sport);
+    
+    console.log(`🔍 [WorkoutTable] Sports found in moveframes:`, sportsFromMoveframes);
+    console.log(`🔍 [WorkoutTable] Using sports:`, workoutSportNames);
     
     // Build a map of totals from moveframes
     const sportMap = new Map<string, { distance: number; durationMinutes: number; series: number; repetitions: number; k: string }>();
@@ -202,9 +219,12 @@ export default function WorkoutTable({
       return `0:${mins.toString().padStart(2, '0')}`;
     };
     
-    // Build array of exactly 4 sports, using workout.sports order
+    // Build array of sports (up to 4), using the sports found
     const sportsArray = [];
-    for (let i = 0; i < 4; i++) {
+    const maxSports = 4; // Maximum sports to display
+    const sportsToShow = Math.min(workoutSportNames.length, maxSports);
+    
+    for (let i = 0; i < maxSports; i++) {
       const sportName = workoutSportNames[i];
       if (sportName) {
         // Sport is defined in workout - show it with totals (or empty if no moveframes yet)
@@ -226,15 +246,17 @@ export default function WorkoutTable({
         let secondaryWork = allMoveframesOfSport.find((mf: any) => mf.workType === 'SECONDARY');
         
         // Debug logging
-        console.log(`🔍 Sport ${sportName} - ${allMoveframesOfSport.length} moveframes:`, 
+        console.log(`🔍 [WorkoutTable] Sport ${sportName} - ${allMoveframesOfSport.length} moveframes:`, 
           allMoveframesOfSport.map(mf => ({
+            id: mf.id,
             letter: mf.letter,
             workType: mf.workType,
+            hasWorkType: mf.hasOwnProperty('workType'),
             description: mf.description?.substring(0, 30)
           }))
         );
-        console.log(`   Main work found:`, mainWork ? `${mainWork.letter} (${mainWork.workType})` : 'None');
-        console.log(`   Secondary work found:`, secondaryWork ? `${secondaryWork.letter} (${secondaryWork.workType})` : 'None');
+        console.log(`   [WorkoutTable] Main work found:`, mainWork ? `${mainWork.letter} (${mainWork.workType})` : 'None');
+        console.log(`   [WorkoutTable] Secondary work found:`, secondaryWork ? `${secondaryWork.letter} (${secondaryWork.workType})` : 'None');
         
         // Apply automatic fallback logic if no explicit main work is set
         if (!mainWork && allMoveframesOfSport.length > 0) {
@@ -268,7 +290,8 @@ export default function WorkoutTable({
           secondaryWorkMoveframe: secondaryWork || null
         });
       } else {
-        // Empty slot
+        // Empty slot - no sport defined for this position
+        console.log(`⚠️ [WorkoutTable] Empty sport slot at position ${i}`);
         sportsArray.push({ name: '', icon: '', isSeriesBased: false, distance: 0, duration: '', k: '', mainWork: '', secondaryWork: '', mainWorkMoveframe: null, secondaryWorkMoveframe: null });
       }
     }
@@ -284,8 +307,17 @@ export default function WorkoutTable({
     ? `${Math.round(workout.completionRate)}% + ${Math.round(workout.bonusRate || 0)}%`
     : '85% + 20%';
 
-  // Debug: Log workout rendering (disabled for performance)
-  // console.log(`🏋️ WorkoutTable rendering for workout ${workout.id}, isExpanded: ${isExpanded}`);
+  // Debug: Log workout rendering and sport totals
+  console.log(`\n🏋️ ========== WORKOUT TABLE RENDERING ==========`);
+  console.log(`🏋️ Workout ID: ${workout.id}, isExpanded: ${isExpanded}`);
+  console.log(`🏋️ Workout has ${workout.moveframes?.length || 0} moveframes`);
+  console.log(`🏋️ Sport totals:`);
+  sports.forEach((s: any, idx: number) => {
+    console.log(`   Sport ${idx + 1}: ${s.name}`);
+    console.log(`      Main Work: ${s.mainWork || 'EMPTY'}`);
+    console.log(`      Secondary Work: ${s.secondaryWork || 'EMPTY'}`);
+  });
+  console.log(`🏋️ ========== END WORKOUT TABLE ==========\n`);
 
   return (
       <div 
@@ -571,41 +603,45 @@ export default function WorkoutTable({
                 </div>
               </td>
               <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[0].k}</td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
-                onMouseEnter={(e) => {
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-pointer" style={{ width: '300px', height: '60px' }}
+                onClick={(e) => {
                   if (sports[0].mainWorkMoveframe) {
+                    e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     setHoveredMoveframe(sports[0].mainWorkMoveframe);
                     setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
                   }
                 }}
-                onMouseLeave={() => {
-                  setHoveredMoveframe(null);
-                  setPopupPosition(null);
-                }}
               >
-                <div className="line-clamp-2 leading-tight">
-                  {sports[0].mainWork && sports[0].mainWork.includes('<') ? (
-                    <div dangerouslySetInnerHTML={{ __html: sports[0].mainWork }} />
-                  ) : (
-                    sports[0].mainWork
-                  )}
+                <div className="line-clamp-1 leading-tight">
+                  {(() => {
+                    if (!sports[0].mainWork) return '';
+                    // Strip HTML tags and get plain text
+                    const plainText = sports[0].mainWork.replace(/<[^>]*>/g, '').trim();
+                    // Get first line only
+                    const firstLine = plainText.split('\n')[0];
+                    return firstLine;
+                  })()}
                 </div>
               </td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
-                onMouseEnter={(e) => {
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-pointer" style={{ width: '300px', height: '60px' }}
+                onClick={(e) => {
                   if (sports[0].secondaryWorkMoveframe) {
+                    e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     setHoveredMoveframe(sports[0].secondaryWorkMoveframe);
                     setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
                   }
                 }}
-                onMouseLeave={() => {
-                  setHoveredMoveframe(null);
-                  setPopupPosition(null);
-                }}
               >
-                <div className="line-clamp-2 leading-tight">{sports[0].secondaryWork}</div>
+                <div className="line-clamp-1 leading-tight">
+                  {(() => {
+                    if (!sports[0].secondaryWork) return '';
+                    const plainText = sports[0].secondaryWork.replace(/<[^>]*>/g, '').trim();
+                    const firstLine = plainText.split('\n')[0];
+                    return firstLine;
+                  })()}
+                </div>
               </td>
               
               {/* Sport 2 */}
@@ -625,41 +661,43 @@ export default function WorkoutTable({
                 </div>
               </td>
               <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[1].k}</td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
-                onMouseEnter={(e) => {
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-pointer" style={{ width: '300px', height: '60px' }}
+                onClick={(e) => {
                   if (sports[1].mainWorkMoveframe) {
+                    e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     setHoveredMoveframe(sports[1].mainWorkMoveframe);
                     setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
                   }
                 }}
-                onMouseLeave={() => {
-                  setHoveredMoveframe(null);
-                  setPopupPosition(null);
-                }}
               >
-                <div className="line-clamp-2 leading-tight">
-                  {sports[1].mainWork && sports[1].mainWork.includes('<') ? (
-                    <div dangerouslySetInnerHTML={{ __html: sports[1].mainWork }} />
-                  ) : (
-                    sports[1].mainWork
-                  )}
+                <div className="line-clamp-1 leading-tight">
+                  {(() => {
+                    if (!sports[1].mainWork) return '';
+                    const plainText = sports[1].mainWork.replace(/<[^>]*>/g, '').trim();
+                    const firstLine = plainText.split('\n')[0];
+                    return firstLine;
+                  })()}
                 </div>
               </td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
-                onMouseEnter={(e) => {
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-pointer" style={{ width: '300px', height: '60px' }}
+                onClick={(e) => {
                   if (sports[1].secondaryWorkMoveframe) {
+                    e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     setHoveredMoveframe(sports[1].secondaryWorkMoveframe);
                     setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
                   }
                 }}
-                onMouseLeave={() => {
-                  setHoveredMoveframe(null);
-                  setPopupPosition(null);
-                }}
               >
-                <div className="line-clamp-2 leading-tight">{sports[1].secondaryWork}</div>
+                <div className="line-clamp-1 leading-tight">
+                  {(() => {
+                    if (!sports[1].secondaryWork) return '';
+                    const plainText = sports[1].secondaryWork.replace(/<[^>]*>/g, '').trim();
+                    const firstLine = plainText.split('\n')[0];
+                    return firstLine;
+                  })()}
+                </div>
               </td>
               
               {/* Sport 3 */}
@@ -679,41 +717,43 @@ export default function WorkoutTable({
                 </div>
               </td>
               <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[2].k}</td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
-                onMouseEnter={(e) => {
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-pointer" style={{ width: '300px', height: '60px' }}
+                onClick={(e) => {
                   if (sports[2].mainWorkMoveframe) {
+                    e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     setHoveredMoveframe(sports[2].mainWorkMoveframe);
                     setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
                   }
                 }}
-                onMouseLeave={() => {
-                  setHoveredMoveframe(null);
-                  setPopupPosition(null);
-                }}
               >
-                <div className="line-clamp-2 leading-tight">
-                  {sports[2].mainWork && sports[2].mainWork.includes('<') ? (
-                    <div dangerouslySetInnerHTML={{ __html: sports[2].mainWork }} />
-                  ) : (
-                    sports[2].mainWork
-                  )}
+                <div className="line-clamp-1 leading-tight">
+                  {(() => {
+                    if (!sports[2].mainWork) return '';
+                    const plainText = sports[2].mainWork.replace(/<[^>]*>/g, '').trim();
+                    const firstLine = plainText.split('\n')[0];
+                    return firstLine;
+                  })()}
                 </div>
               </td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
-                onMouseEnter={(e) => {
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-pointer" style={{ width: '300px', height: '60px' }}
+                onClick={(e) => {
                   if (sports[2].secondaryWorkMoveframe) {
+                    e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     setHoveredMoveframe(sports[2].secondaryWorkMoveframe);
                     setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
                   }
                 }}
-                onMouseLeave={() => {
-                  setHoveredMoveframe(null);
-                  setPopupPosition(null);
-                }}
               >
-                <div className="line-clamp-2 leading-tight">{sports[2].secondaryWork}</div>
+                <div className="line-clamp-1 leading-tight">
+                  {(() => {
+                    if (!sports[2].secondaryWork) return '';
+                    const plainText = sports[2].secondaryWork.replace(/<[^>]*>/g, '').trim();
+                    const firstLine = plainText.split('\n')[0];
+                    return firstLine;
+                  })()}
+                </div>
               </td>
               
               {/* Sport 4 */}
@@ -733,41 +773,43 @@ export default function WorkoutTable({
                 </div>
               </td>
               <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[3].k}</td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
-                onMouseEnter={(e) => {
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-pointer" style={{ width: '300px', height: '60px' }}
+                onClick={(e) => {
                   if (sports[3].mainWorkMoveframe) {
+                    e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     setHoveredMoveframe(sports[3].mainWorkMoveframe);
                     setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
                   }
                 }}
-                onMouseLeave={() => {
-                  setHoveredMoveframe(null);
-                  setPopupPosition(null);
-                }}
               >
-                <div className="line-clamp-2 leading-tight">
-                  {sports[3].mainWork && sports[3].mainWork.includes('<') ? (
-                    <div dangerouslySetInnerHTML={{ __html: sports[3].mainWork }} />
-                  ) : (
-                    sports[3].mainWork
-                  )}
+                <div className="line-clamp-1 leading-tight">
+                  {(() => {
+                    if (!sports[3].mainWork) return '';
+                    const plainText = sports[3].mainWork.replace(/<[^>]*>/g, '').trim();
+                    const firstLine = plainText.split('\n')[0];
+                    return firstLine;
+                  })()}
                 </div>
               </td>
-              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-help" style={{ width: '300px', height: '60px' }}
-                onMouseEnter={(e) => {
+              <td className="border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle relative cursor-pointer" style={{ width: '300px', height: '60px' }}
+                onClick={(e) => {
                   if (sports[3].secondaryWorkMoveframe) {
+                    e.stopPropagation();
                     const rect = e.currentTarget.getBoundingClientRect();
                     setHoveredMoveframe(sports[3].secondaryWorkMoveframe);
                     setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
                   }
                 }}
-                onMouseLeave={() => {
-                  setHoveredMoveframe(null);
-                  setPopupPosition(null);
-                }}
               >
-                <div className="line-clamp-2 leading-tight">{sports[3].secondaryWork}</div>
+                <div className="line-clamp-1 leading-tight">
+                  {(() => {
+                    if (!sports[3].secondaryWork) return '';
+                    const plainText = sports[3].secondaryWork.replace(/<[^>]*>/g, '').trim();
+                    const firstLine = plainText.split('\n')[0];
+                    return firstLine;
+                  })()}
+                </div>
               </td>
             </tr>
           </tbody>

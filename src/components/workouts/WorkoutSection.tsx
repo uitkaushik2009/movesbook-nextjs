@@ -1156,7 +1156,13 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             currentPageStart={currentPageStart}
             totalWeeks={workoutPlan?.weeks?.length || 0}
             workoutPlan={workoutPlan}
-            onSectionChange={setActiveSection}
+            onSectionChange={(section) => {
+              setActiveSection(section);
+              // Template plans (Section A) don't have calendar view since they don't have specific dates
+              if (section === 'A' && viewMode === 'calendar') {
+                setViewMode('table');
+              }
+            }}
         onViewModeChange={(mode) => {
           setViewMode(mode);
           if (mode === 'calendar') {

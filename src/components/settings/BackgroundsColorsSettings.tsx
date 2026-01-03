@@ -66,8 +66,7 @@ export default function BackgroundsColorsSettings() {
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (error) {
       console.error('Failed to save color settings:', error);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+      setSaveStatus('idle');
     }
   };
 

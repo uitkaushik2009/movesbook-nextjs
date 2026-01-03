@@ -93,9 +93,10 @@ export async function POST(request: NextRequest) {
       // Find or create the day in Done plan
       let targetDay = await prisma.workoutDay.findUnique({
         where: {
-          userId_date: {
+          userId_date_storageZone: {
             userId: decoded.userId,
-            date: workoutDate
+            date: workoutDate,
+            storageZone: 'C'
           }
         }
       });

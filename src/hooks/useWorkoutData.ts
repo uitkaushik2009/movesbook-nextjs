@@ -33,7 +33,7 @@ interface UseWorkoutDataReturn {
   isLoadingProfile: boolean;
   
   // Actions
-  loadWorkoutData: (section?: SectionId) => Promise<void>;
+  loadWorkoutData: (section?: SectionId, subSection?: 'A' | 'B' | 'C') => Promise<void>;
   loadPeriods: () => Promise<void>;
   loadUserProfile: () => Promise<void>;
   loadAthleteList: () => Promise<void>;

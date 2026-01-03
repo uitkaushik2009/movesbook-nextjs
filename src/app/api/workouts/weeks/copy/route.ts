@@ -50,20 +50,20 @@ export async function POST(req: NextRequest) {
     // Get source plan type and storage zone
     const getSourcePlanConfig = (section: string) => {
       if (section === 'A' || section === 'B' || section === 'C') {
-        return { type: 'TEMPLATE_WEEKS', storageZone: section };
+        return { type: 'TEMPLATE_WEEKS' as const, storageZone: section };
       } else if (section === 'B') {
-        return { type: 'YEARLY_PLAN', storageZone: null };
+        return { type: 'YEARLY_PLAN' as const, storageZone: null };
       }
-      return { type: 'WORKOUTS_DONE', storageZone: null };
+      return { type: 'WORKOUTS_DONE' as const, storageZone: null };
     };
 
     const getTargetPlanConfig = (section: string) => {
       if (section === 'B') {
-        return { type: 'YEARLY_PLAN', storageZone: null };
+        return { type: 'YEARLY_PLAN' as const, storageZone: null };
       } else if (section === 'C') {
-        return { type: 'WORKOUTS_DONE', storageZone: null };
+        return { type: 'WORKOUTS_DONE' as const, storageZone: null };
       }
-      return { type: 'TEMPLATE_WEEKS', storageZone: section };
+      return { type: 'TEMPLATE_WEEKS' as const, storageZone: section };
     };
 
     const sourceConfig = getSourcePlanConfig(sourceSection);
@@ -243,12 +243,24 @@ export async function POST(req: NextRequest) {
                   distance: sourceMovelap.distance,
                   time: sourceMovelap.time,
                   speed: sourceMovelap.speed,
+                  style: sourceMovelap.style,
+                  pace: sourceMovelap.pace,
                   pause: sourceMovelap.pause,
-                  macropause: sourceMovelap.macropause,
-                  heartRate: sourceMovelap.heartRate,
-                  slope: sourceMovelap.slope,
-                  cadence: sourceMovelap.cadence,
+                  restType: sourceMovelap.restType,
+                  alarm: sourceMovelap.alarm,
+                  sound: sourceMovelap.sound,
+                  macroFinal: sourceMovelap.macroFinal,
+                  reps: sourceMovelap.reps,
+                  rowPerMin: sourceMovelap.rowPerMin,
+                  r1: sourceMovelap.r1,
+                  r2: sourceMovelap.r2,
+                  exercise: sourceMovelap.exercise,
+                  muscularSector: sourceMovelap.muscularSector,
+                  weight: sourceMovelap.weight,
+                  tools: sourceMovelap.tools,
                   status: sourceMovelap.status,
+                  isSkipped: sourceMovelap.isSkipped,
+                  isDisabled: sourceMovelap.isDisabled,
                   notes: sourceMovelap.notes
                 }
               });
@@ -261,10 +273,8 @@ export async function POST(req: NextRequest) {
       await tx.workoutWeek.update({
         where: { id: targetWeek.id },
         data: {
-          colorCycle: sourceWeek.colorCycle,
-          nameCycle: sourceWeek.nameCycle,
-          periodName: sourceWeek.periodName,
-          periodColor: sourceWeek.periodColor
+          periodId: sourceWeek.periodId,
+          notes: sourceWeek.notes
         }
       });
     });

@@ -56,6 +56,7 @@ export const MOVEFRAME_COLUMNS: ColumnDefinition[] = [
   { id: 'icon', label: 'Ico', defaultVisible: true, description: 'Sport icon' },
   { id: 'sport', label: 'Sport of the moveframe', defaultVisible: true, required: true, description: 'Sport type' },
   { id: 'description', label: 'Moveframe description', defaultVisible: true, required: true, description: 'Moveframe description' },
+  { id: 'duration', label: 'Duration', defaultVisible: true, description: 'Distance/Time/Series duration' },
   { id: 'rip', label: 'Rip\\Sets', defaultVisible: true, description: 'Repetitions/Sets' },
   { id: 'macro', label: 'Macro', defaultVisible: true, description: 'Macro cycle' },
   { id: 'alarm', label: 'Alarm & Sound', defaultVisible: true, description: 'Alarm settings' },

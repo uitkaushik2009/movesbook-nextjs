@@ -144,7 +144,7 @@ export default function SortableMoveframeRow({
   };
 
   // Default column order if not provided
-  const visibleColumns = orderedVisibleColumns || ['checkbox', 'drag', 'expand', 'index', 'mf', 'section', 'icon', 'sport', 'description', 'rip', 'macro', 'alarm', 'annotation', 'options'];
+  const visibleColumns = orderedVisibleColumns || ['checkbox', 'drag', 'expand', 'index', 'mf', 'section', 'icon', 'sport', 'description', 'duration', 'rip', 'macro', 'alarm', 'annotation', 'options'];
 
   // Render individual cells based on column ID
   const renderCell = (columnId: string) => {
@@ -415,6 +415,55 @@ export default function SortableMoveframeRow({
             ) : (
               moveframe.description || moveframe.annotationText || 'No description'
             )}
+          </td>
+        );
+      
+      case 'duration':
+        // Calculate duration based on sport type
+        const isSeriesBased = ['BODY_BUILDING', 'GYMNASTIC', 'CALISTHENICS', 'CROSSFIT', 'FUNCTIONAL'].includes(moveframe.sport || '');
+        const isTimeBased = ['TREADMILL', 'ROLLER', 'CYCLETTE', 'ELLIPTICAL'].includes(moveframe.sport || '');
+        
+        let durationDisplay = '—';
+        
+        if (moveframe.type === 'ANNOTATION') {
+          durationDisplay = '—';
+        } else if (isSeriesBased) {
+          // Show total series
+          const totalSeries = moveframe.movelaps?.length || 0;
+          durationDisplay = totalSeries > 0 ? `${totalSeries} ${totalSeries === 1 ? 'series' : 'series'}` : '—';
+        } else if (isTimeBased) {
+          // Show total time
+          const totalTime = (moveframe.movelaps || []).reduce((sum: number, lap: any) => {
+            if (lap.time) {
+              // Parse time string like "7:00" to minutes
+              const parts = lap.time.split(':');
+              const minutes = parseInt(parts[0] || '0');
+              const seconds = parseInt(parts[1] || '0');
+              return sum + minutes + (seconds / 60);
+            }
+            return sum;
+          }, 0);
+          
+          if (totalTime > 0) {
+            const mins = Math.floor(totalTime);
+            const secs = Math.round((totalTime - mins) * 60);
+            durationDisplay = `${mins}'${secs.toString().padStart(2, '0')}"`;
+          }
+        } else {
+          // Show total distance in meters
+          durationDisplay = totalDistance > 0 ? `${totalDistance}m` : '—';
+        }
+        
+        return (
+          <td 
+            key="duration" 
+            className="border border-gray-200 px-1 py-1 text-center font-semibold text-xs"
+            style={{
+              backgroundColor: '#f9fafb',
+              color: '#1f2937'
+            }}
+          >
+            {durationDisplay}
           </td>
         );
       

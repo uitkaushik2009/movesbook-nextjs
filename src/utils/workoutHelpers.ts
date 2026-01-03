@@ -78,20 +78,20 @@ export function calculateSportSummaries(
         }
         
         // Debug: Log moveframe workType
-        console.log(`   📋 Moveframe ${moveframe.letter || '?'} - Sport: ${moveframe.sport}, workType: ${moveframe.workType || 'undefined'}`);
+        console.log(`   📋 [workoutHelpers] Moveframe ${moveframe.letter || '?'} - ID: ${moveframe.id}, Sport: ${moveframe.sport}, workType: "${moveframe.workType}" (type: ${typeof moveframe.workType}), hasWorkType: ${moveframe.hasOwnProperty('workType')}`);
         
         // Set main work description and moveframe object if this moveframe is marked as MAIN
         if (moveframe.workType === 'MAIN' && moveframe.description) {
           summary.mainWork = moveframe.description;
           summary.mainWorkMoveframe = moveframe;
-          console.log(`   ✅ Set as MAIN work for ${moveframe.sport}`);
+          console.log(`   ✅ [workoutHelpers] Set as MAIN work for ${moveframe.sport}: "${moveframe.description.substring(0, 40)}"`);
         }
         
         // Set secondary work description and moveframe object if this moveframe is marked as SECONDARY
         if (moveframe.workType === 'SECONDARY' && moveframe.description) {
           summary.secondaryWork = moveframe.description;
           summary.secondaryWorkMoveframe = moveframe;
-          console.log(`   ✅ Set as SECONDARY work for ${moveframe.sport}`);
+          console.log(`   ✅ [workoutHelpers] Set as SECONDARY work for ${moveframe.sport}: "${moveframe.description.substring(0, 40)}"`);
         }
         
         // For ALL sports: sum the repetitions/series from each moveframe

@@ -203,23 +203,19 @@ export default function DayRowTable({
         </td>
       )}
 
-      {/* Match Done (Workout Completion Status) - Greyed out for 3 weeks plans */}
+      {/* Match Done (Workout Completion Status) */}
       <td 
-        className={`border border-gray-200 px-1 py-2 text-center ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-col-6 bg-gray-100' : 'sticky-col-7'} w-[60px] min-w-[60px]`}
+        className={`border border-gray-200 px-1 py-2 text-center ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-col-6' : 'sticky-col-7'} w-[60px] min-w-[60px]`}
         style={{ 
-          backgroundColor: (activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? undefined : bgStyle,
-          color: (activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? '#9CA3AF' : rowTextColor
+          backgroundColor: bgStyle,
+          color: rowTextColor
         }}
       >
         <input
           type="checkbox"
           checked={hasWorkouts}
           readOnly
-          disabled={activeSection === 'A' || activeSection === 'B' || activeSection === 'C'}
           className="w-4 h-4"
-          style={{ 
-            opacity: (activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? 0.4 : 1 
-          }}
           title={hasWorkouts ? 'Workouts planned' : 'No workouts'}
         />
       </td>
@@ -289,26 +285,22 @@ export default function DayRowTable({
           </div>
         ) : '—'}
       </td>
-      <td className="border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-blue-100 relative cursor-help"
-        onMouseEnter={(e) => {
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-blue-100 relative cursor-pointer"
+        onClick={(e) => {
           if (sportSummaries[0]?.mainWorkMoveframe) {
+            e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
             setHoveredMoveframe(sportSummaries[0].mainWorkMoveframe);
             setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
           }
         }}
-        onMouseLeave={() => {
-          setHoveredMoveframe(null);
-          setPopupPosition(null);
-        }}
       >
-        {sportSummaries[0]?.mainWork ? (
-          sportSummaries[0].mainWork.includes('<') ? (
-            <div dangerouslySetInnerHTML={{ __html: sportSummaries[0].mainWork }} />
-          ) : (
-            sportSummaries[0].mainWork
-          )
-        ) : '—'}
+        {(() => {
+          if (!sportSummaries[0]?.mainWork) return '—';
+          const plainText = sportSummaries[0].mainWork.replace(/<[^>]*>/g, '').trim();
+          const firstLine = plainText.split('\n')[0];
+          return firstLine || '—';
+        })()}
       </td>
 
       {/* S2 - Sport 2 - Green */}
@@ -332,26 +324,22 @@ export default function DayRowTable({
           </div>
         ) : '—'}
       </td>
-      <td className="border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-green-100 relative cursor-help"
-        onMouseEnter={(e) => {
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-green-100 relative cursor-pointer"
+        onClick={(e) => {
           if (sportSummaries[1]?.mainWorkMoveframe) {
+            e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
             setHoveredMoveframe(sportSummaries[1].mainWorkMoveframe);
             setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
           }
         }}
-        onMouseLeave={() => {
-          setHoveredMoveframe(null);
-          setPopupPosition(null);
-        }}
       >
-        {sportSummaries[1]?.mainWork ? (
-          sportSummaries[1].mainWork.includes('<') ? (
-            <div dangerouslySetInnerHTML={{ __html: sportSummaries[1].mainWork }} />
-          ) : (
-            sportSummaries[1].mainWork
-          )
-        ) : '—'}
+        {(() => {
+          if (!sportSummaries[1]?.mainWork) return '—';
+          const plainText = sportSummaries[1].mainWork.replace(/<[^>]*>/g, '').trim();
+          const firstLine = plainText.split('\n')[0];
+          return firstLine || '—';
+        })()}
       </td>
 
       {/* S3 - Sport 3 - Orange */}
@@ -375,26 +363,22 @@ export default function DayRowTable({
           </div>
         ) : '—'}
       </td>
-      <td className="border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-orange-100 relative cursor-help"
-        onMouseEnter={(e) => {
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-orange-100 relative cursor-pointer"
+        onClick={(e) => {
           if (sportSummaries[2]?.mainWorkMoveframe) {
+            e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
             setHoveredMoveframe(sportSummaries[2].mainWorkMoveframe);
             setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
           }
         }}
-        onMouseLeave={() => {
-          setHoveredMoveframe(null);
-          setPopupPosition(null);
-        }}
       >
-        {sportSummaries[2]?.mainWork ? (
-          sportSummaries[2].mainWork.includes('<') ? (
-            <div dangerouslySetInnerHTML={{ __html: sportSummaries[2].mainWork }} />
-          ) : (
-            sportSummaries[2].mainWork
-          )
-        ) : '—'}
+        {(() => {
+          if (!sportSummaries[2]?.mainWork) return '—';
+          const plainText = sportSummaries[2].mainWork.replace(/<[^>]*>/g, '').trim();
+          const firstLine = plainText.split('\n')[0];
+          return firstLine || '—';
+        })()}
       </td>
 
       {/* S4 - Sport 4 - Pink */}
@@ -418,26 +402,22 @@ export default function DayRowTable({
           </div>
         ) : '—'}
       </td>
-      <td className="border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-pink-100 relative cursor-help"
-        onMouseEnter={(e) => {
+      <td className="border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-pink-100 relative cursor-pointer"
+        onClick={(e) => {
           if (sportSummaries[3]?.mainWorkMoveframe) {
+            e.stopPropagation();
             const rect = e.currentTarget.getBoundingClientRect();
             setHoveredMoveframe(sportSummaries[3].mainWorkMoveframe);
             setPopupPosition({ x: rect.left + rect.width / 2, y: rect.top });
           }
         }}
-        onMouseLeave={() => {
-          setHoveredMoveframe(null);
-          setPopupPosition(null);
-        }}
       >
-        {sportSummaries[3]?.mainWork ? (
-          sportSummaries[3].mainWork.includes('<') ? (
-            <div dangerouslySetInnerHTML={{ __html: sportSummaries[3].mainWork }} />
-          ) : (
-            sportSummaries[3].mainWork
-          )
-        ) : '—'}
+        {(() => {
+          if (!sportSummaries[3]?.mainWork) return '—';
+          const plainText = sportSummaries[3].mainWork.replace(/<[^>]*>/g, '').trim();
+          const firstLine = plainText.split('\n')[0];
+          return firstLine || '—';
+        })()}
       </td>
 
       {/* Options */}

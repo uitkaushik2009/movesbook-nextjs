@@ -357,7 +357,8 @@ export default function WorkoutSectionHeader({
               Table
             </button>
             
-            {/* Calendar view only for Section B */}
+            {/* Calendar view only for Section B (Planned - with dates) */}
+            {/* Section A (Template Plans) doesn't have calendar view since templates don't have specific dates */}
             {activeSection === 'B' && (
               <button
                 onClick={() => onViewModeChange('calendar')}

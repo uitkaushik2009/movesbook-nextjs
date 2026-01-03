@@ -56,14 +56,14 @@ export default function EditDayModal({
   const getPeriodInfo = () => {
     console.log('🔍 Getting period info...');
     console.log('  - day.periodId:', day.periodId);
-    console.log('  - day.period:', day.period);
     
-    // First try to get from day.period (nested object from Prisma)
-    if (day.period && day.period.name && day.period.color) {
+    // First try to get from day.period (nested object from Prisma) if it exists
+    const dayWithPeriod = day as any;
+    if (dayWithPeriod.period && dayWithPeriod.period.name && dayWithPeriod.period.color) {
       console.log('✅ Using nested period object');
       return {
-        name: day.period.name,
-        color: day.period.color
+        name: dayWithPeriod.period.name,
+        color: dayWithPeriod.period.color
       };
     }
     
