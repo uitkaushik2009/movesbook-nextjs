@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reset Section A - 3 Weeks Plan</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+    }
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      font-weight: bold;
+      transition: transform 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    #output {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .warning {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+    .success {
+      color: #28a745;
+    }
+    .error {
+      color: #dc3545;
+    }
+    .info {
+      color: #17a2b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔄 Reset Section A</h1>
+    <p class="subtitle">Create a new 3-week workout plan for Section A</p>
+    
+    <div class="warning">
+      ⚠️ <strong>Warning:</strong> This will delete your current Section A plan and create a new one with 3 weeks starting from Monday.
+    </div>
+    
+    <button id="resetBtn" onclick="resetSectionA()">
+      Reset Section A to 3 Weeks
+    </button>
+    
+    <div id="output"></div>
+  </div>
+
+  <script>
+    function log(message, type = 'info') {
+      const output = document.getElementById('output');
+      const span = document.createElement('div');
+      span.className = type;
+      span.textContent = message;
+      output.appendChild(span);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    async function resetSectionA() {
+      const btn = document.getElementById('resetBtn');
+      const output = document.getElementById('output');
+      
+      // Clear previous output
+      output.innerHTML = '';
+      
+      // Disable button
+      btn.disabled = true;
+      btn.textContent = 'Processing...';
+      
+      try {
+        // Get token from localStorage
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          log('❌ No authentication token found. Please login first.', 'error');
+          log('Redirecting to login page...', 'info');
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+          return;
+        }
+        
+        log('🔐 Authentication token found', 'success');
+        log('', 'info');
+        
+        // Step 1: Delete existing plan
+        log('🗑️  Step 1: Deleting existing Section A plan...', 'info');
+        
+        const deleteResponse = await fetch('/api/workouts/plan/reset?type=CURRENT_WEEKS', {
+          method: 'DELETE',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (deleteResponse.ok) {
+          const deleteResult = await deleteResponse.json();
+          log(`✓ Deleted ${deleteResult.plansDeleted || 0} existing plan(s)`, 'success');
+        } else {
+          log('⚠️  No existing plan found (this is okay)', 'info');
+        }
+        
+        log('', 'info');
+        log('⏳ Waiting for database cleanup...', 'info');
+        
+        // Wait for cleanup
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        log('', 'info');
+        log('🔄 Step 2: Creating new 3-week plan...', 'info');
+        
+        // Step 2: Create new plan
+        const createResponse = await fetch('/api/workouts/plan?type=CURRENT_WEEKS&forceRecreate=true', {
+          method: 'GET',
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!createResponse.ok) {
+          const error = await createResponse.json();
+          throw new Error(error.error || 'Failed to create new plan');
+        }
+        
+        const result = await createResponse.json();
+        const plan = result.plan;
+        
+        if (plan && plan.weeks) {
+          log('', 'info');
+          log('✅ SUCCESS! New Section A created:', 'success');
+          log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+          log(`  Plan ID: ${plan.id}`, 'info');
+          log(`  Type: ${plan.type}`, 'info');
+          log(`  Number of Weeks: ${plan.weeks.length}`, 'success');
+          log(`  Start Date: ${new Date(plan.startDate).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          })}`, 'info');
+          
+          const totalDays = plan.weeks.reduce((sum, w) => sum + w.days.length, 0);
+          log(`  Total Days: ${totalDays}`, 'success');
+          
+          log('', 'info');
+          log('Week Details:', 'info');
+          plan.weeks.forEach(week => {
+            log(`  • Week ${week.weekNumber}: ${week.days.length} days`, 'info');
+          });
+          
+          log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+          log('', 'info');
+          log('🔄 Redirecting to workout section...', 'success');
+          
+          // Redirect after 3 seconds
+          setTimeout(() => {
+            window.location.href = '/workouts';
+          }, 3000);
+        } else {
+          throw new Error('Plan created but structure is invalid');
+        }
+        
+      } catch (error) {
+        log('', 'info');
+        log(`❌ Error: ${error.message}`, 'error');
+        log('', 'info');
+        log('Please try again or contact support if the problem persists.', 'info');
+        
+        // Re-enable button
+        btn.disabled = false;
+        btn.textContent = 'Retry Reset';
+      }
+    }
+  </script>
+</body>
+</html>
+

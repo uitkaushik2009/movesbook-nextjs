@@ -1,0 +1,227 @@
+import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import { UserType, SportType } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+
+
+export async function POST(request: NextRequest) {
+  try {
+    const { 
+      name, 
+      firstName, 
+      surname, 
+      username, 
+      email, 
+      password, 
+      userType, 
+      gender, 
+      birthdate, 
+      country 
+    } = await request.json();
+
+    console.log('Registration attempt:', { name, firstName, surname, username, email, userType, country });
+
+    // Validate required fields
+    if (!name || !username || !email || !password || !userType || !country) {
+      return NextResponse.json(
+        { error: 'All required fields must be filled' },
+        { status: 400 }
+      );
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email },
+          { username }
+        ]
+      }
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { error: 'User with this email or username already exists' },
+        { status: 409 }
+      );
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    // Map frontend userType to database UserType enum
+    const dbUserType = mapUserType(userType);
+
+    console.log('Creating user with type:', dbUserType);
+
+    // Create user with new profile fields
+    const user = await prisma.user.create({
+      data: {
+        name,
+        firstName: firstName || undefined,
+        surname: surname || undefined,
+        username,
+        email,
+        password: hashedPassword,
+        userType: dbUserType,
+        gender: gender || undefined,
+        birthdate: birthdate ? new Date(birthdate) : undefined,
+        country: country || undefined,
+      },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        email: true,
+        userType: true,
+        createdAt: true,
+      }
+    });
+
+    console.log('User created:', user.id);
+
+    // Load admin defaults for user's language (fallback to 'en')
+    const userLanguage = 'en'; // Default language
+    console.log(`Loading admin defaults for language: ${userLanguage}`);
+
+    const [colorDefaults, toolsDefaults, favouritesDefaults] = await Promise.all([
+      prisma.colorDefaults.findUnique({ where: { language: userLanguage } }),
+      prisma.toolsDefaults.findUnique({ where: { language: userLanguage } }),
+      prisma.favouritesDefaults.findUnique({ where: { language: userLanguage } })
+    ]);
+
+    // Fallback defaults if admin hasn't set them yet
+    const defaultColorSettings = {
+      pageBackground: '#ffffff',
+      dayHeader: '#f3f4f6',
+      moveframeHeader: '#e5e7eb',
+      movelapHeader: '#d1d5db',
+      microlapBackground: '#f9fafb',
+      selectedRow: '#3b82f6',
+      buttonAdd: '#10b981',
+      buttonEdit: '#f59e0b',
+      buttonDelete: '#ef4444',
+      buttonPrint: '#6b7280',
+      alternateRow: '#f9fafc'
+    };
+
+    // Create default settings for user with admin defaults
+    await prisma.userSettings.create({
+      data: {
+        userId: user.id,
+        colorSettings: colorDefaults?.data ? JSON.stringify(colorDefaults.data) : JSON.stringify(defaultColorSettings),
+        toolsSettings: toolsDefaults?.data ? JSON.stringify(toolsDefaults.data) : '{}',
+        favouritesSettings: favouritesDefaults?.data ? JSON.stringify(favouritesDefaults.data) : '{}',
+        myBestSettings: '{}',
+        adminSettings: '{}',
+        workoutPreferences: '{}',
+        socialSettings: '{}',
+        notificationSettings: '{}',
+        language: userLanguage
+      }
+    });
+
+    console.log('User settings created with admin defaults');
+
+    // Create default main sports
+    const defaultSports = [
+      { sport: SportType.SWIM, order: 0 },
+      { sport: SportType.BIKE, order: 1 },
+      { sport: SportType.RUN, order: 2 },
+      { sport: SportType.BODY_BUILDING, order: 3 }
+    ];
+
+    for (const sportData of defaultSports) {
+      await prisma.userMainSport.create({
+        data: {
+          userId: user.id,
+          sport: sportData.sport,
+          order: sportData.order
+        }
+      });
+    }
+
+    console.log('Default sports created');
+
+    // Create default periods
+    const defaultPeriods = [
+      { name: 'Preparation', description: 'Initial training phase', color: '#3b82f6' },
+      { name: 'Competition', description: 'Main competition phase', color: '#ef4444' },
+      { name: 'Recovery', description: 'Active recovery phase', color: '#10b981' }
+    ];
+
+    for (const period of defaultPeriods) {
+      await prisma.period.create({
+        data: {
+          userId: user.id,
+          name: period.name,
+          description: period.description,
+          color: period.color
+        }
+      });
+    }
+
+    console.log('Default periods created');
+
+    // Create default workout sections
+    const defaultSections = [
+      { name: 'Warm-up', description: 'Pre-workout activation', color: '#f59e0b' },
+      { name: 'Main Set', description: 'Primary workout component', color: '#ef4444' },
+      { name: 'Cool-down', description: 'Post-workout recovery', color: '#10b981' }
+    ];
+
+    for (const section of defaultSections) {
+      await prisma.workoutSection.create({
+        data: {
+          userId: user.id,
+          name: section.name,
+          description: section.description,
+          color: section.color
+        }
+      });
+    }
+
+    console.log('Default sections created');
+
+    // Generate JWT token with RSA signing
+    const token = require('@/lib/auth').generateToken(
+      user.id,
+      user.email,
+      user.username,
+      user.userType
+    );
+
+    return NextResponse.json({
+      success: true,
+      token,
+      user
+    });
+
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    
+    // More detailed error logging
+    if (error.code) {
+      console.error('Error code:', error.code);
+      console.error('Error meta:', error.meta);
+    }
+    
+    return NextResponse.json(
+      { error: 'Internal server error: ' + error.message },
+      { status: 500 }
+    );
+  }
+}
+
+function mapUserType(frontendType: string): UserType {
+  const typeMap: { [key: string]: UserType } = {
+    'athlete': UserType.ATHLETE,
+    'coach': UserType.COACH,
+    'team': UserType.TEAM,
+    'club': UserType.CLUB,
+    'group': UserType.GROUP,
+    'groupAdmin': UserType.GROUP_ADMIN
+  };
+  
+  return typeMap[frontendType] || UserType.ATHLETE;
+}

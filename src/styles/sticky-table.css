@@ -1,0 +1,204 @@
+/* Sticky Table Columns - Global Styles */
+
+/* Use separate borders with zero spacing - works better with sticky */
+table {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  position: relative !important;
+}
+
+/* Ensure all table cells have light grey borders */
+td, th {
+  border: 1px solid #d1d5db !important;
+}
+
+/* Force regular (non-sticky) cells to have lower z-index than headers */
+tbody td:not(.sticky-col-1):not(.sticky-col-2):not(.sticky-col-3):not(.sticky-col-4):not(.sticky-col-5):not(.sticky-col-6):not(.sticky-col-7):not(.sticky-col-8):not(.sticky-options-col) {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+tbody th:not(.sticky-col-1):not(.sticky-col-2):not(.sticky-col-3):not(.sticky-col-4):not(.sticky-col-5):not(.sticky-col-6):not(.sticky-col-7):not(.sticky-col-8):not(.sticky-options-col) {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+/* Thead cells (non-sticky) should have medium z-index */
+thead th:not(.sticky-header-1):not(.sticky-header-2):not(.sticky-header-3):not(.sticky-header-4):not(.sticky-header-5):not(.sticky-header-6):not(.sticky-header-7):not(.sticky-header-8):not(.sticky-options-header) {
+  position: relative !important;
+  z-index: 500 !important;
+}
+
+/* Prevent blue background from bleeding into borders */
+th {
+  background-clip: padding-box !important;
+}
+
+/* Sticky columns need solid backgrounds */
+td.sticky-col-1,
+td.sticky-col-2,
+td.sticky-col-3,
+td.sticky-col-4,
+td.sticky-col-5,
+td.sticky-col-6,
+td.sticky-col-7,
+td.sticky-col-8,
+td.sticky-options-col {
+  background-clip: padding-box !important;
+  opacity: 1 !important; /* Ensure full opacity */
+}
+
+/* Hide default scrollbar on table container */
+.table-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.table-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Sticky bottom scrollbar styling */
+.custom-scrollbar::-webkit-scrollbar {
+  height: 16px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #e5e7eb;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+  border-radius: 6px;
+  border: 3px solid #e5e7eb;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
+}
+
+/* Table header rows - NOT sticky to avoid conflicts with sticky columns */
+/* Sticky behavior is handled by the wrapper elements above the table */
+
+/* Frozen LEFT columns - Sticky positioning */
+td.sticky-col-1,
+td.sticky-col-2,
+td.sticky-col-3,
+td.sticky-col-4,
+td.sticky-col-5,
+td.sticky-col-6,
+td.sticky-col-7,
+td.sticky-col-8 {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  z-index: 999 !important; /* Very high z-index to ensure it's always on top */
+  box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.15) !important; /* Slightly stronger shadow for better visual separation */
+}
+
+th.sticky-header-1,
+th.sticky-header-2,
+th.sticky-header-3,
+th.sticky-header-4,
+th.sticky-header-5,
+th.sticky-header-6,
+th.sticky-header-7,
+th.sticky-header-8 {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+}
+
+/* Column 1 - Check (0px, width: 50px) */
+td.sticky-col-1,
+th.sticky-header-1 { 
+  left: 0px !important;
+}
+
+/* Column 2 - Color (50px, width: 50px) */
+td.sticky-col-2,
+th.sticky-header-2 { 
+  left: 50px !important;
+}
+
+/* Column 3 - Period Name (100px = 50 + 50, width: 90px) */
+td.sticky-col-3,
+th.sticky-header-3 { 
+  left: 100px !important;
+}
+
+/* Column 4 - Week (190px = 50 + 50 + 90, width: 60px) */
+td.sticky-col-4,
+th.sticky-header-4 { 
+  left: 190px !important;
+}
+
+/* Column 5 - Day (250px = 50 + 50 + 90 + 60, width: 50px) */
+td.sticky-col-5,
+th.sticky-header-5 { 
+  left: 250px !important;
+}
+
+/* Column 6 - Dayname OR Match done (300px = 50 + 50 + 90 + 60 + 50, width: 80px for Dayname, 60px for Match done) */
+/* For 3 weeks plans (A,B,C): Column 6 = Match done at 300px */
+/* For other sections: Column 6 = Dayname at 300px */
+td.sticky-col-6,
+th.sticky-header-6 { 
+  left: 300px !important;
+}
+
+/* Column 7 - Match done OR Workouts */
+/* For 3 weeks plans (A,B,C): Column 7 = Workouts at 360px (300 + 60) */
+/* For other sections: Column 7 = Match done at 380px (300 + 80) */
+td.sticky-col-7,
+th.sticky-header-7 { 
+  left: 360px !important; /* For 3 weeks plans */
+}
+
+/* Column 8 - Workouts (440px = 50 + 50 + 90 + 60 + 50 + 80 + 60, width: 80px) */
+/* Only used for non-3-weeks sections */
+td.sticky-col-8,
+th.sticky-header-8 { 
+  left: 440px !important;
+}
+
+/* Headers - Higher z-index to stay on top */
+th.sticky-header-1,
+th.sticky-header-2,
+th.sticky-header-3,
+th.sticky-header-4,
+th.sticky-header-5,
+th.sticky-header-6,
+th.sticky-header-7,
+th.sticky-header-8 {
+  z-index: 1000 !important; /* Higher than sticky data cells */
+  box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.15) !important; /* Slightly stronger shadow */
+  opacity: 1 !important; /* Ensure full opacity */
+}
+
+/* Data cells - Background color is set via inline styles in component */
+/* Removed inherit rule to allow inline styles to take precedence */
+
+/* Frozen RIGHT column (Options) */
+td.sticky-options-col {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  right: 0 !important;
+  z-index: 999 !important; /* Match left sticky columns z-index */
+  box-shadow: -2px 0 5px -2px rgba(0, 0, 0, 0.15) !important; /* Shadow on left edge */
+}
+
+th.sticky-options-header {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  right: 0 !important;
+  z-index: 1000 !important; /* Match left sticky headers z-index */
+  box-shadow: -2px 0 5px -2px rgba(0, 0, 0, 0.15) !important; /* Shadow on left edge */
+  opacity: 1 !important;
+}
+
+/* Options column background is set via inline styles in component */
+
+/* Thick black line between weeks */
+tr.week-separator-thick {
+  border-bottom: 4px solid black !important;
+}
+
+tr.week-separator-thick td {
+  border-bottom: 4px solid black !important;
+}

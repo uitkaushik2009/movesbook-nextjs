@@ -1,0 +1,462 @@
+import { useState, useEffect } from 'react';
+import {
+  Period,
+  WorkoutSection,
+  Sport,
+  Equipment,
+  Exercise,
+  Device,
+  IconType,
+  DEFAULT_PERIODS,
+  DEFAULT_SECTIONS,
+  DEFAULT_SPORTS,
+  DEFAULT_EQUIPMENT,
+  DEFAULT_EXERCISES,
+  DEFAULT_DEVICES,
+  STORAGE_KEYS
+} from '@/constants/tools.constants';
+import { getAuthToken, getAuthHeaders } from '@/utils/auth.utils';
+
+interface UseToolsDataReturn {
+  // State
+  periods: Period[];
+  sections: WorkoutSection[];
+  sports: Sport[];
+  equipment: Equipment[];
+  exercises: Exercise[];
+  devices: Device[];
+  iconType: IconType;
+  isLoadingIconPreference: boolean;
+  isSavingToDatabase: boolean;
+  lastSavedTime: Date | null;
+  
+  // Actions
+  setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
+  setSections: React.Dispatch<React.SetStateAction<WorkoutSection[]>>;
+  setSports: React.Dispatch<React.SetStateAction<Sport[]>>;
+  setEquipment: React.Dispatch<React.SetStateAction<Equipment[]>>;
+  setExercises: React.Dispatch<React.SetStateAction<Exercise[]>>;
+  setDevices: React.Dispatch<React.SetStateAction<Device[]>>;
+  setIconType: React.Dispatch<React.SetStateAction<IconType>>;
+  setIsSavingToDatabase: React.Dispatch<React.SetStateAction<boolean>>;
+  setLastSavedTime: React.Dispatch<React.SetStateAction<Date | null>>;
+  
+  // Loading functions
+  loadToolsSettingsFromDatabase: () => Promise<void>;
+  saveToLocalStorage: (
+    periods?: Period[],
+    sections?: WorkoutSection[],
+    sports?: Sport[],
+    equipment?: Equipment[],
+    exercises?: Exercise[],
+    devices?: Device[]
+  ) => void;
+  saveToDatabase: () => Promise<void>;
+}
+
+/**
+ * Custom hook for managing tools settings data
+ * Extracted from ToolsSettings.tsx
+ * 
+ * Handles:
+ * - Loading from database with localStorage fallback
+ * - Icon type preferences
+ * - Saving to database and localStorage
+ * - Default data initialization
+ */
+export function useToolsData(): UseToolsDataReturn {
+  const [periods, setPeriods] = useState<Period[]>([]);
+  const [sections, setSections] = useState<WorkoutSection[]>([]);
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [iconType, setIconType] = useState<IconType>('emoji');
+  const [isLoadingIconPreference, setIsLoadingIconPreference] = useState(true);
+  const [isSavingToDatabase, setIsSavingToDatabase] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
+  
+  /**
+   * Load icon type preference from user settings
+   */
+  useEffect(() => {
+    const loadIconTypePreference = async () => {
+      try {
+        const token = getAuthToken();
+        if (!token) {
+          setIsLoadingIconPreference(false);
+          return;
+        }
+        
+        const response = await fetch('/api/user/settings', {
+          headers: getAuthHeaders()
+        });
+        
+        if (response.ok) {
+          const settings = await response.json();
+          setIconType(settings.sportIconType || 'emoji');
+        }
+      } catch (error) {
+        console.error('Error loading icon type preference:', error);
+      } finally {
+        setIsLoadingIconPreference(false);
+      }
+    };
+    
+    loadIconTypePreference();
+  }, []);
+  
+  /**
+   * Load all tools settings from database first, then fallback to localStorage
+   */
+  useEffect(() => {
+    loadToolsSettingsFromDatabase();
+  }, []);
+  
+  /**
+   * Load settings from database with localStorage fallback
+   */
+  const loadToolsSettingsFromDatabase = async () => {
+    try {
+      const token = getAuthToken();
+      
+      if (!token) {
+        console.warn('⚠️ No authentication token found. Loading from localStorage fallback.');
+        loadAllFromLocalStorage();
+        return;
+      }
+      
+      // Load periods from Prisma Period table (not from JSON settings)
+      const periodsResponse = await fetch('/api/workouts/periods', {
+        headers: getAuthHeaders()
+      });
+      
+      if (periodsResponse.ok) {
+        const periodsData = await periodsResponse.json();
+        if (periodsData.periods && periodsData.periods.length > 0) {
+          // Convert Prisma Period format to local Period format
+          const formattedPeriods = periodsData.periods.map((p: any) => ({
+            id: p.id,
+            title: p.name,
+            description: p.description || '',
+            color: p.color,
+            order: 0 // Order is not stored in Prisma Period
+          }));
+          setPeriods(formattedPeriods);
+        } else {
+          loadPeriodsFromLocalStorage();
+        }
+      } else {
+        loadPeriodsFromLocalStorage();
+      }
+      
+      // Load other settings from UserSettings JSON
+      const response = await fetch('/api/user/settings', {
+        headers: getAuthHeaders()
+      });
+
+      if (response.ok) {
+        const settings = await response.json();
+        const toolsSettings = settings.toolsSettings || {};
+
+        // Sections, sports, equipment, exercises, devices are still in JSON
+        if (toolsSettings.sections && toolsSettings.sections.length > 0) {
+          setSections(toolsSettings.sections);
+        } else {
+          loadSectionsFromLocalStorage();
+        }
+
+        if (toolsSettings.sports && toolsSettings.sports.length > 0) {
+          setSports(toolsSettings.sports);
+        } else {
+          loadSportsFromLocalStorage();
+        }
+
+        if (toolsSettings.equipment && toolsSettings.equipment.length > 0) {
+          setEquipment(toolsSettings.equipment);
+        } else {
+          loadEquipmentFromLocalStorage();
+        }
+
+        if (toolsSettings.exercises && toolsSettings.exercises.length > 0) {
+          setExercises(toolsSettings.exercises);
+        } else {
+          loadExercisesFromLocalStorage();
+        }
+
+        if (toolsSettings.devices && toolsSettings.devices.length > 0) {
+          setDevices(toolsSettings.devices);
+        } else {
+          loadDevicesFromLocalStorage();
+        }
+      } else {
+        // Fallback to localStorage if API fails
+        loadAllFromLocalStorage();
+      }
+    } catch (error) {
+      console.error('Error loading tools settings from database:', error);
+      // Fallback to localStorage on error
+      loadAllFromLocalStorage();
+    }
+  };
+  
+  /**
+   * Load all data from localStorage
+   */
+  const loadAllFromLocalStorage = () => {
+    loadPeriodsFromLocalStorage();
+    loadSectionsFromLocalStorage();
+    loadSportsFromLocalStorage();
+    loadEquipmentFromLocalStorage();
+    loadExercisesFromLocalStorage();
+    loadDevicesFromLocalStorage();
+  };
+  
+  /**
+   * Load periods from localStorage
+   */
+  const loadPeriodsFromLocalStorage = () => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PERIODS);
+    if (saved) {
+      try {
+        setPeriods(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load periods');
+        setPeriods(DEFAULT_PERIODS);
+      }
+    } else {
+      setPeriods(DEFAULT_PERIODS);
+    }
+  };
+  
+  /**
+   * Load sections from localStorage
+   */
+  const loadSectionsFromLocalStorage = () => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SECTIONS);
+    if (saved) {
+      try {
+        setSections(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load sections');
+        setSections(DEFAULT_SECTIONS);
+      }
+    } else {
+      setSections(DEFAULT_SECTIONS);
+    }
+  };
+  
+  /**
+   * Load sports from localStorage
+   */
+  const loadSportsFromLocalStorage = () => {
+    const saved = localStorage.getItem(STORAGE_KEYS.SPORTS);
+    if (saved) {
+      try {
+        setSports(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load sports');
+        setSports(DEFAULT_SPORTS);
+      }
+    } else {
+      setSports(DEFAULT_SPORTS);
+    }
+  };
+  
+  /**
+   * Load equipment from localStorage
+   */
+  const loadEquipmentFromLocalStorage = () => {
+    const saved = localStorage.getItem(STORAGE_KEYS.EQUIPMENT);
+    if (saved) {
+      try {
+        setEquipment(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load equipment');
+        setEquipment(DEFAULT_EQUIPMENT);
+      }
+    } else {
+      setEquipment(DEFAULT_EQUIPMENT);
+    }
+  };
+  
+  /**
+   * Load exercises from localStorage
+   */
+  const loadExercisesFromLocalStorage = () => {
+    const saved = localStorage.getItem(STORAGE_KEYS.EXERCISES);
+    if (saved) {
+      try {
+        setExercises(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load exercises');
+        setExercises(DEFAULT_EXERCISES);
+      }
+    } else {
+      setExercises(DEFAULT_EXERCISES);
+    }
+  };
+  
+  /**
+   * Load devices from localStorage
+   */
+  const loadDevicesFromLocalStorage = () => {
+    const saved = localStorage.getItem(STORAGE_KEYS.DEVICES);
+    if (saved) {
+      try {
+        setDevices(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load devices');
+        setDevices(DEFAULT_DEVICES);
+      }
+    } else {
+      setDevices(DEFAULT_DEVICES);
+    }
+  };
+  
+  /**
+   * Save to localStorage
+   */
+  const saveToLocalStorage = (
+    periodsData?: Period[],
+    sectionsData?: WorkoutSection[],
+    sportsData?: Sport[],
+    equipmentData?: Equipment[],
+    exercisesData?: Exercise[],
+    devicesData?: Device[]
+  ) => {
+    if (periodsData) {
+      localStorage.setItem(STORAGE_KEYS.PERIODS, JSON.stringify(periodsData));
+    }
+    if (sectionsData) {
+      localStorage.setItem(STORAGE_KEYS.SECTIONS, JSON.stringify(sectionsData));
+    }
+    if (sportsData) {
+      localStorage.setItem(STORAGE_KEYS.SPORTS, JSON.stringify(sportsData));
+    }
+    if (equipmentData) {
+      localStorage.setItem(STORAGE_KEYS.EQUIPMENT, JSON.stringify(equipmentData));
+    }
+    if (exercisesData) {
+      localStorage.setItem(STORAGE_KEYS.EXERCISES, JSON.stringify(exercisesData));
+    }
+    if (devicesData) {
+      localStorage.setItem(STORAGE_KEYS.DEVICES, JSON.stringify(devicesData));
+    }
+  };
+  
+  /**
+   * Save all settings to database
+   */
+  const saveToDatabase = async () => {
+    setIsSavingToDatabase(true);
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        console.warn('Cannot save: not logged in');
+        setIsSavingToDatabase(false);
+        return;
+      }
+
+      console.log('💾 Saving periods to database...', periods);
+
+      // Save periods to Prisma Period table (bulk sync)
+      const periodsResponse = await fetch('/api/workouts/periods/sync', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ periods })
+      });
+
+      if (periodsResponse.ok) {
+        const periodsData = await periodsResponse.json();
+        console.log('✅ Periods synced successfully:', periodsData);
+        
+        // Reload periods from database to get updated IDs
+        if (periodsData.periods && periodsData.periods.length > 0) {
+          const formattedPeriods = periodsData.periods.map((p: any) => ({
+            id: p.id,
+            title: p.name,
+            description: p.description || '',
+            color: p.color,
+            order: 0
+          }));
+          setPeriods(formattedPeriods);
+          console.log('🔄 Periods reloaded:', formattedPeriods);
+        }
+      } else {
+        console.error('❌ Failed to sync periods');
+      }
+
+      // Save other tools settings to UserSettings JSON
+      const response = await fetch('/api/user/settings', {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          toolsSettings: {
+            // Periods are now in Prisma table, not JSON
+            sections,
+            sports,
+            equipment,
+            exercises,
+            devices
+          }
+        })
+      });
+
+      if (response.status === 401) {
+        console.warn('Session expired. Please log in again.');
+        setIsSavingToDatabase(false);
+        return;
+      }
+
+      if (response.ok) {
+        setLastSavedTime(new Date());
+        console.log('✅ Tools settings saved to database successfully');
+      } else {
+        throw new Error('Failed to save to database');
+      }
+    } catch (error) {
+      console.error('Error saving to database:', error);
+      alert('Failed to save to database. Please try again.');
+    } finally {
+      setIsSavingToDatabase(false);
+    }
+  };
+  
+  return {
+    // State
+    periods,
+    sections,
+    sports,
+    equipment,
+    exercises,
+    devices,
+    iconType,
+    isLoadingIconPreference,
+    isSavingToDatabase,
+    lastSavedTime,
+    
+    // Actions
+    setPeriods,
+    setSections,
+    setSports,
+    setEquipment,
+    setExercises,
+    setDevices,
+    setIconType,
+    setIsSavingToDatabase,
+    setLastSavedTime,
+    
+    // Loading functions
+    loadToolsSettingsFromDatabase,
+    saveToLocalStorage,
+    saveToDatabase
+  };
+}
+
