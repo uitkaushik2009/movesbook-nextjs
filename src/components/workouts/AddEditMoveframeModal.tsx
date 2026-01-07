@@ -791,6 +791,8 @@ export default function AddEditMoveframeModal({
       if (activeTab === 'manual' && !manualMode) {
         // Enable manual mode when switching TO manual tab
         setManualMode(true);
+        // Also set manualPriority to true by default
+        setManualPriority(true);
       } else if (activeTab === 'edit' && manualMode) {
         // Disable manual mode when switching back TO edit tab
         setManualMode(false);

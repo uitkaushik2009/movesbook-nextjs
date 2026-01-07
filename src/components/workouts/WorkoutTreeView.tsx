@@ -323,13 +323,14 @@ export default function WorkoutTreeView({
                                   {/* Workout Row - Third Level (Indented from Day) */}
                                   <button
                                     onClick={(e) => toggleWorkout(workout.id, e)}
-                                    className="w-full flex items-center justify-between px-4 py-2.5 border-t hover:bg-opacity-90 transition-all"
+                                    className="w-full flex items-center justify-between px-4 py-2.5 border-t hover:bg-opacity-90 transition-all cursor-pointer"
                                     style={{
                                       paddingLeft: '3rem', // Indent from day
                                       backgroundColor: workoutIndex % 3 === 0 ? colors.workoutHeader : (workoutIndex % 3 === 1 ? colors.workout2Header : colors.workout3Header),
                                       color: workoutIndex % 3 === 0 ? colors.workoutHeaderText : (workoutIndex % 3 === 1 ? colors.workout2HeaderText : colors.workout3HeaderText),
                                       borderTop: getBorderStyle('workout') || '1.5px solid rgba(0,0,0,0.1)',
-                                      fontWeight: '600'
+                                      fontWeight: '600',
+                                      cursor: 'pointer'
                                     }}
                                   >
                                     <div className="flex items-center gap-3">
@@ -380,7 +381,7 @@ export default function WorkoutTreeView({
                                   </button>
 
                                   {/* Expanded Moveframes */}
-                                  {isWorkoutExpanded && expandState === 2 && workout.moveframes && workout.moveframes.length > 0 && (
+                                  {isWorkoutExpanded && workout.moveframes && workout.moveframes.length > 0 && (
                                     <div>
                                       {workout.moveframes.map((moveframe: any, moveframeIndex: number) => {
                                         const isMoveframeExpanded = expandedMoveframes.has(moveframe.id);
