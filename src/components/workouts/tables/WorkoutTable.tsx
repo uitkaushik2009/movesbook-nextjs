@@ -21,6 +21,7 @@ interface WorkoutTableProps {
   isExpanded?: boolean;
   expandedMoveframeId?: string | null;
   showMoveframes?: boolean; // Control whether to show moveframes (for 3-state expand)
+  expandMovelaps?: boolean; // Control whether to expand all movelaps (for 3-state expand)
   onToggleExpand?: () => void;
   onExpandOnlyThis?: (workout: any, day: any) => void;
   onEdit: () => void;
@@ -59,6 +60,7 @@ export default function WorkoutTable({
   isExpanded = false,
   expandedMoveframeId,
   showMoveframes = true,
+  expandMovelaps = false,
   onToggleExpand,
   onExpandOnlyThis,
   onEdit,
@@ -357,7 +359,7 @@ export default function WorkoutTable({
         };
         
         sportsArray.push({
-          name: sportName,
+          name: sportName.replace(/_/g, ' '), // Remove underscores and replace with spaces
           icon: getSportIcon(sportName, iconType),
           isSeriesBased: isSeries,
           distance: totals ? (isSeries ? totals.series : totals.distance) : 0,
@@ -513,16 +515,6 @@ export default function WorkoutTable({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (onPasteWorkout) onPasteWorkout(day);
-              }}
-              className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors whitespace-nowrap flex-shrink-0"
-              title="Paste Workout"
-            >
-              Paste
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
                 if (onMoveWorkout) onMoveWorkout(workout, day);
               }}
               className="px-2 py-1 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors whitespace-nowrap flex-shrink-0"
@@ -658,11 +650,11 @@ export default function WorkoutTable({
               {/* Dynamic headers for each sport */}
               {sports.map((sport, index) => (
                   <React.Fragment key={index}>
-                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '120px' }}>Sport</th>
-                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '150px' }}>Dist & Time</th>
+                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '107px' }}>Sport</th>
+                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '80px' }}>Dist & Time</th>
                     <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '50px' }}>K</th>
-                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '300px' }}>Main work</th>
-                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '300px' }}>Secondary work</th>
+                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-left" style={{ width: '300px' }}>Main work</th>
+                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-left" style={{ width: '300px' }}>Secondary work</th>
                   </React.Fragment>
               ))}
             </tr>
@@ -693,23 +685,46 @@ export default function WorkoutTable({
               </td>
               
               {/* Sport 1 */}
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '120px', height: '60px' }}>
-                <div className="flex items-center justify-center gap-2">
-                  {sports[0].icon && (useImageIcons ? 
-                    <img src={sports[0].icon} alt={sports[0].name} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
+              <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '107px', height: '60px' }}>
+                {(() => {
+                  const sportName = sports[0].name;
+                  const words = sportName.split(' ');
+                  const isOneWord = words.length === 1;
+                  const icon = sports[0].icon && (useImageIcons ? 
+                    <img src={sports[0].icon} alt={sportName} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
                     <span className="text-base flex-shrink-0">{sports[0].icon}</span>
-                  )}
-                  <span className="font-medium whitespace-nowrap">{sports[0].name}</span>
-                </div>
+                  );
+                  
+                  if (isOneWord) {
+                    // One word: icon and name on same line
+                    return (
+                      <div className="flex items-center justify-center gap-2">
+                        {icon}
+                        <span className="font-medium whitespace-nowrap">{sportName}</span>
+                      </div>
+                    );
+                  } else {
+                    // Two words: icon + first word on first line, second word on second line
+                    return (
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="flex items-center gap-2">
+                          {icon}
+                          <span className="font-medium">{words[0]}</span>
+                        </div>
+                        <span className="font-medium">{words.slice(1).join(' ')}</span>
+                      </div>
+                    );
+                  }
+                })()}
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '150px', height: '60px' }}>
+              <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-red-600 font-bold text-base">{sports[0].distance > 0 ? sports[0].distance : ''}</div>
+                  <div className="text-black font-bold text-base">{sports[0].distance > 0 ? sports[0].distance : ''}</div>
                   <div className="mt-1 font-bold text-sm">{sports[0].duration}</div>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[0].k}</td>
-              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px' }}
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle text-red-600 font-bold" style={{ width: '50px', height: '60px' }}>{sports[0].k}</td>
+              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-left text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px' }}
                 onClick={(e) => {
                   if (sports[0].mainWorkMoveframe) {
                     e.stopPropagation();
@@ -743,7 +758,7 @@ export default function WorkoutTable({
                   })()}
                 </div>
               </td>
-              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
+              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-left text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
                 onClick={(e) => {
                   if (sports[0].secondaryWorkMoveframe) {
                     e.stopPropagation();
@@ -777,23 +792,46 @@ export default function WorkoutTable({
               </td>
               
               {/* Sport 2 */}
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '120px', height: '60px' }}>
-                <div className="flex items-center justify-center gap-2">
-                  {sports[1].icon && (useImageIcons ? 
-                    <img src={sports[1].icon} alt={sports[1].name} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
+              <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '107px', height: '60px' }}>
+                {(() => {
+                  const sportName = sports[1].name;
+                  const words = sportName.split(' ');
+                  const isOneWord = words.length === 1;
+                  const icon = sports[1].icon && (useImageIcons ? 
+                    <img src={sports[1].icon} alt={sportName} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
                     <span className="text-base flex-shrink-0">{sports[1].icon}</span>
-                  )}
-                  <span className="font-medium whitespace-nowrap">{sports[1].name}</span>
-                </div>
+                  );
+                  
+                  if (isOneWord) {
+                    // One word: icon and name on same line
+                    return (
+                      <div className="flex items-center justify-center gap-2">
+                        {icon}
+                        <span className="font-medium whitespace-nowrap">{sportName}</span>
+                      </div>
+                    );
+                  } else {
+                    // Two words: icon + first word on first line, second word on second line
+                    return (
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="flex items-center gap-2">
+                          {icon}
+                          <span className="font-medium">{words[0]}</span>
+                        </div>
+                        <span className="font-medium">{words.slice(1).join(' ')}</span>
+                      </div>
+                    );
+                  }
+                })()}
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '150px', height: '60px' }}>
+              <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-red-600 font-bold text-base">{sports[1].distance > 0 ? sports[1].distance : ''}</div>
+                  <div className="text-black font-bold text-base">{sports[1].distance > 0 ? sports[1].distance : ''}</div>
                   <div className="mt-1 font-bold text-sm">{sports[1].duration}</div>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[1].k}</td>
-              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle text-red-600 font-bold" style={{ width: '50px', height: '60px' }}>{sports[1].k}</td>
+              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-left text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
                 onClick={(e) => {
                   if (sports[1].mainWorkMoveframe) {
                     e.stopPropagation();
@@ -824,7 +862,7 @@ export default function WorkoutTable({
                   })()}
                 </div>
               </td>
-              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
+              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-left text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
                 onClick={(e) => {
                   if (sports[1].secondaryWorkMoveframe) {
                     e.stopPropagation();
@@ -857,23 +895,46 @@ export default function WorkoutTable({
               </td>
               
               {/* Sport 3 */}
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '120px', height: '60px' }}>
-                <div className="flex items-center justify-center gap-2">
-                  {sports[2].icon && (useImageIcons ? 
-                    <img src={sports[2].icon} alt={sports[2].name} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
+              <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '107px', height: '60px' }}>
+                {(() => {
+                  const sportName = sports[2].name;
+                  const words = sportName.split(' ');
+                  const isOneWord = words.length === 1;
+                  const icon = sports[2].icon && (useImageIcons ? 
+                    <img src={sports[2].icon} alt={sportName} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
                     <span className="text-base flex-shrink-0">{sports[2].icon}</span>
-                  )}
-                  <span className="font-medium whitespace-nowrap">{sports[2].name}</span>
-                </div>
+                  );
+                  
+                  if (isOneWord) {
+                    // One word: icon and name on same line
+                    return (
+                      <div className="flex items-center justify-center gap-2">
+                        {icon}
+                        <span className="font-medium whitespace-nowrap">{sportName}</span>
+                      </div>
+                    );
+                  } else {
+                    // Two words: icon + first word on first line, second word on second line
+                    return (
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="flex items-center gap-2">
+                          {icon}
+                          <span className="font-medium">{words[0]}</span>
+                        </div>
+                        <span className="font-medium">{words.slice(1).join(' ')}</span>
+                      </div>
+                    );
+                  }
+                })()}
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '150px', height: '60px' }}>
+              <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-red-600 font-bold text-base">{sports[2].distance > 0 ? sports[2].distance : ''}</div>
+                  <div className="text-black font-bold text-base">{sports[2].distance > 0 ? sports[2].distance : ''}</div>
                   <div className="mt-1 font-bold text-sm">{sports[2].duration}</div>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[2].k}</td>
-              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle text-red-600 font-bold" style={{ width: '50px', height: '60px' }}>{sports[2].k}</td>
+              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-left text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
                 onClick={(e) => {
                   if (sports[2].mainWorkMoveframe) {
                     e.stopPropagation();
@@ -904,7 +965,7 @@ export default function WorkoutTable({
                   })()}
                 </div>
               </td>
-              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
+              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-left text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
                 onClick={(e) => {
                   if (sports[2].secondaryWorkMoveframe) {
                     e.stopPropagation();
@@ -937,23 +998,46 @@ export default function WorkoutTable({
               </td>
               
               {/* Sport 4 */}
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '120px', height: '60px' }}>
-                <div className="flex items-center justify-center gap-2">
-                  {sports[3].icon && (useImageIcons ? 
-                    <img src={sports[3].icon} alt={sports[3].name} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
+              <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '107px', height: '60px' }}>
+                {(() => {
+                  const sportName = sports[3].name;
+                  const words = sportName.split(' ');
+                  const isOneWord = words.length === 1;
+                  const icon = sports[3].icon && (useImageIcons ? 
+                    <img src={sports[3].icon} alt={sportName} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
                     <span className="text-base flex-shrink-0">{sports[3].icon}</span>
-                  )}
-                  <span className="font-medium whitespace-nowrap">{sports[3].name}</span>
-                </div>
+                  );
+                  
+                  if (isOneWord) {
+                    // One word: icon and name on same line
+                    return (
+                      <div className="flex items-center justify-center gap-2">
+                        {icon}
+                        <span className="font-medium whitespace-nowrap">{sportName}</span>
+                      </div>
+                    );
+                  } else {
+                    // Two words: icon + first word on first line, second word on second line
+                    return (
+                      <div className="flex flex-col items-center justify-center gap-1">
+                        <div className="flex items-center gap-2">
+                          {icon}
+                          <span className="font-medium">{words[0]}</span>
+                        </div>
+                        <span className="font-medium">{words.slice(1).join(' ')}</span>
+                      </div>
+                    );
+                  }
+                })()}
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '150px', height: '60px' }}>
+              <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-red-600 font-bold text-base">{sports[3].distance > 0 ? sports[3].distance : ''}</div>
+                  <div className="text-black font-bold text-base">{sports[3].distance > 0 ? sports[3].distance : ''}</div>
                   <div className="mt-1 font-bold text-sm">{sports[3].duration}</div>
                 </div>
               </td>
-              <td className="border border-gray-200 px-2 text-xs text-center align-middle" style={{ width: '50px', height: '60px' }}>{sports[3].k}</td>
-              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
+              <td className="border border-gray-200 px-2 text-xs text-center align-middle text-red-600 font-bold" style={{ width: '50px', height: '60px' }}>{sports[3].k}</td>
+              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-left text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
                 onClick={(e) => {
                   if (sports[3].mainWorkMoveframe) {
                     e.stopPropagation();
@@ -984,7 +1068,7 @@ export default function WorkoutTable({
                   })()}
                 </div>
               </td>
-              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-center text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
+              <td className="main-secondary-work-cell border border-gray-200 px-3 text-xs text-left text-gray-900 font-semibold align-middle cursor-pointer" style={{ width: '300px', height: '60px', position: 'relative' }}
                 onClick={(e) => {
                   if (sports[3].secondaryWorkMoveframe) {
                     e.stopPropagation();
@@ -1029,7 +1113,7 @@ export default function WorkoutTable({
             workoutIndex={workoutIndex}
             day={day}
             expandedMoveframeId={expandedMoveframeId}
-            autoExpandAll={false}
+            autoExpandAll={expandMovelaps}
             onAddMoveframe={onAddMoveframe}
             onAddMoveframeAfter={onAddMoveframeAfter}
             onEditMoveframe={onEditMoveframe}

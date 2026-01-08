@@ -244,40 +244,26 @@ export default function AddEditMovelapModal({
   };
 
   const handlePaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value;
-    
-    // Allow clearing the field
-    if (input === '') {
-      setPace('');
-      return;
-    }
-    
-    // If user is typing numbers, auto-format
-    if (/^\d+$/.test(input)) {
-      const formatted = parsePaceInput(input);
+    // Just update the value, don't format while typing
+    setPace(e.target.value);
+  };
+
+  const handlePaceBlur = () => {
+    if (pace && /^\d+$/.test(pace)) {
+      const formatted = parsePaceInput(pace);
       setPace(formatted);
-    } else {
-      // Allow manual editing with quotes and apostrophes
-      setPace(input);
     }
   };
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const input = e.target.value;
-    
-    // Allow clearing the field
-    if (input === '') {
-      setTime('');
-      return;
-    }
-    
-    // If user is typing numbers, auto-format
-    if (/^\d+$/.test(input)) {
-      const formatted = parseTimeInput(input);
+    // Just update the value, don't format while typing
+    setTime(e.target.value);
+  };
+
+  const handleTimeBlur = () => {
+    if (time && /^\d+$/.test(time)) {
+      const formatted = parseTimeInput(time);
       setTime(formatted);
-    } else {
-      // Allow manual editing
-      setTime(input);
     }
   };
 
@@ -730,40 +716,44 @@ export default function AddEditMovelapModal({
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <h3 className="font-bold text-sm text-gray-700 mb-3">⏱️ TIMING</h3>
                   <div className="mb-3">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Time:
-                      <span className="ml-2 text-xs text-gray-500 font-normal">
-                        (Type: 113255 → 1h13'25"5)
-                      </span>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      TIME <span className="text-gray-400 font-normal text-[10px]">(optional)</span>
                     </label>
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-2">
                       <input
                         type="text"
                         value={time}
                         onChange={handleTimeChange}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        placeholder="Type: 113255 for 1h13'25&quot;5"
+                        onBlur={handleTimeBlur}
+                        autoComplete="off"
+                        className="flex-1 px-3 py-2 text-base border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                        placeholder="0h00'00&quot;0"
                       />
                       <CopyButton fieldName="time" fieldValue={time} />
                     </div>
+                    <p className="mt-1 text-[10px] text-blue-600">
+                      💡 Type: <strong>1'30, 1.30.5, or 1'30</strong> — formats to <strong>0h01'30&quot;0</strong> or <strong>0h01'30&quot;5</strong>
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Pace/100m:
-                      <span className="ml-2 text-xs text-gray-500 font-normal">
-                        (Type: 1325 → 1'32"5)
-                      </span>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">
+                      Pace/100: <span className="text-[10px] text-green-600 font-semibold">✨ Flexible input</span>
                     </label>
-                    <div className="flex items-center">
+                    <div className="flex items-center gap-2">
                       <input
                         type="text"
                         value={pace}
                         onChange={handlePaceChange}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        placeholder="Type: 1325 for 1'32&quot;5"
+                        onBlur={handlePaceBlur}
+                        autoComplete="off"
+                        className="flex-1 px-3 py-2 text-lg border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono bg-green-50"
+                        placeholder="130 or 1:30 or 1.30"
                       />
                       <CopyButton fieldName="pace" fieldValue={pace} />
                     </div>
+                    <p className="mt-1 text-[10px] text-green-600">
+                      ⚡ Fast input: Type <strong>130</strong> → <strong>1'30&quot;0</strong>
+                    </p>
                   </div>
                 </div>
               )}

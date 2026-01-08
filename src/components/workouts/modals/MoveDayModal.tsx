@@ -9,6 +9,7 @@ interface MoveDayModalProps {
   sourceDay: any;
   workoutPlan: any;
   onConfirm: (targetDate: Date, targetWeekId: string) => void;
+  activeSection?: 'A' | 'B' | 'C' | 'D';
 }
 
 export default function MoveDayModal({
@@ -16,7 +17,8 @@ export default function MoveDayModal({
   onClose,
   sourceDay,
   workoutPlan,
-  onConfirm
+  onConfirm,
+  activeSection = 'A'
 }: MoveDayModalProps) {
   const [selectedWeek, setSelectedWeek] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -66,19 +68,27 @@ export default function MoveDayModal({
           <div className="bg-orange-50 p-3 rounded border border-orange-200">
             <p className="text-sm text-gray-700">
               <strong>Moving from:</strong>{' '}
-              {sourceDay?.date ? new Date(sourceDay.date).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              }) : 'N/A'}
+              {activeSection === 'A' ? (
+                `Template Day (${sourceDay?.workouts?.length || 0} workout(s))`
+              ) : (
+                sourceDay?.date ? new Date(sourceDay.date).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                }) : 'N/A'
+              )}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {sourceDay?.workouts?.length || 0} workout(s) will be moved
-            </p>
-            <p className="text-xs text-orange-600 mt-2">
-              ⚠️ This will remove the workouts from the current date
-            </p>
+            {activeSection !== 'A' && (
+              <>
+                <p className="text-xs text-gray-500 mt-1">
+                  {sourceDay?.workouts?.length || 0} workout(s) will be moved
+                </p>
+                <p className="text-xs text-orange-600 mt-2">
+                  ⚠️ This will remove the workouts from the current date
+                </p>
+              </>
+            )}
           </div>
 
           {/* Select Week */}

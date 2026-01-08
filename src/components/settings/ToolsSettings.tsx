@@ -150,6 +150,12 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
       return;
     }
     
+    // Don't trigger auto-save if a save is already in progress
+    if (isSavingToDatabase) {
+      console.log('⏭️ Skipping auto-save: save already in progress');
+      return;
+    }
+    
     // Save to localStorage immediately (backup)
     saveToLocalStorage(periods, sections, sports, equipment, exercises, devices);
     

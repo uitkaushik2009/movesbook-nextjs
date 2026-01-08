@@ -10,6 +10,7 @@ interface WorkoutHierarchyViewProps {
   activeSection?: 'A' | 'B' | 'C' | 'D';
   expandedWorkouts?: Set<string>;
   fullyExpandedWorkouts?: Set<string>; // Workouts with moveframes visible
+  workoutsWithExpandedMovelaps?: Set<string>; // Workouts with movelaps expanded
   expandedMoveframeId?: string | null;
   expandState?: number; // 0 = collapsed, 1 = workouts only, 2 = workouts + moveframes
   onToggleWorkout?: (workoutId: string) => void;
@@ -44,6 +45,7 @@ export default function WorkoutHierarchyView({
   activeSection,
   expandedWorkouts,
   fullyExpandedWorkouts,
+  workoutsWithExpandedMovelaps,
   expandedMoveframeId,
   expandState = 2, // Default to fully expanded (workouts + moveframes)
   onToggleWorkout,
@@ -120,6 +122,7 @@ export default function WorkoutHierarchyView({
               isExpanded={isWorkoutExpanded}
               expandedMoveframeId={expandedMoveframeId}
               showMoveframes={expandState === 2 || (fullyExpandedWorkouts && fullyExpandedWorkouts.has(workout.id))} // Show moveframes when Expand All is in state 2 OR when individually fully expanded
+              expandMovelaps={workoutsWithExpandedMovelaps?.has(workout.id) || false} // Expand movelaps when workout is in the set
               onToggleExpand={() => onToggleWorkout?.(workout.id)}
               onExpandOnlyThis={(workout, day) => onExpandOnlyThisWorkout?.(workout, day)}
               onEdit={() => onEditWorkout?.(workout, day)}

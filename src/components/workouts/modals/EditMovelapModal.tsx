@@ -5,11 +5,73 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { REST_TYPES } from '@/config/workout.constants';
 import { movelapApi } from '@/utils/api.utils';
 import type { Movelap, Moveframe, Workout, WorkoutDay } from '@/types/workout.types';
+
+// Helper function to parse flexible time input
+const parseFlexibleTime = (input: string): string => {
+  if (!input || input.trim() === '') return '';
+  
+  const cleaned = input.trim();
+  
+  // Already in correct format (e.g., "1'30"0" or "0h01'30"0" or "1h13'25"5")
+  if (cleaned.match(/^\d+h\d{2}'\d{2}"\d$/)) {
+    return cleaned;
+  }
+  
+  // Format: "130" or "1:30" or "1.30" -> "1'30"0"
+  // Format: "113255" -> "1h13'25"5"
+  // Format: "1325" -> "1'32"5"
+  const formats = [
+    // 113255 (6 digits) -> 1h13'25"5
+    { pattern: /^(\d{1,2})(\d{2})(\d{2})(\d)$/, handler: (m: RegExpMatchArray) => `${m[1]}h${m[2]}'${m[3]}"${m[4]}` },
+    // 11325 (5 digits) -> 1h13'25"0
+    { pattern: /^(\d{1,2})(\d{2})(\d{2})$/, handler: (m: RegExpMatchArray) => {
+      const first = m[1];
+      if (first.length === 1 && parseInt(first) <= 9) {
+        // Treat as h:mm:ss format
+        return `${first}h${m[2]}'${m[3]}"0`;
+      } else {
+        // Treat as mm:ss format
+        return `${m[1]}'${m[2]}"${m[3].charAt(0)}`;
+      }
+    }},
+    // 1325 (4 digits) -> 1'32"5 or 13'25"0
+    { pattern: /^(\d{1,2})(\d{2})(\d?)$/, handler: (m: RegExpMatchArray) => {
+      if (m[3]) {
+        return `${m[1]}'${m[2]}"${m[3]}`;
+      } else {
+        return `${m[1]}'${m[2]}"0`;
+      }
+    }},
+    // 130 -> 1'30"0
+    { pattern: /^(\d{1,2})(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}'${m[2]}"0` },
+    // 1:30 -> 1'30"0
+    { pattern: /^(\d{1,2}):(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}'${m[2]}"0` },
+    // 1.30 -> 1'30"0
+    { pattern: /^(\d{1,2})\.(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}'${m[2]}"0` },
+    // 1'30 -> 1'30"0
+    { pattern: /^(\d{1,2})'(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}'${m[2]}"0` },
+    // 1:30:5 -> 1h30'05"5
+    { pattern: /^(\d{1,2}):(\d{2}):(\d{1,2})$/, handler: (m: RegExpMatchArray) => `${m[1]}h${m[2]}'${m[3].padStart(2, '0')}"0` },
+    // 1.30.5 -> 1h30'05"5
+    { pattern: /^(\d{1,2})\.(\d{2})\.(\d{1,2})$/, handler: (m: RegExpMatchArray) => `${m[1]}h${m[2]}'${m[3].padStart(2, '0')}"0` },
+    // 1h30'5 -> 1h30'05"0
+    { pattern: /^(\d{1,2})h(\d{2})'(\d{1,2})$/, handler: (m: RegExpMatchArray) => `${m[1]}h${m[2]}'${m[3].padStart(2, '0')}"0` },
+  ];
+  
+  for (const { pattern, handler } of formats) {
+    const match = cleaned.match(pattern);
+    if (match) {
+      return handler(match);
+    }
+  }
+  
+  return cleaned; // Return as-is if no pattern matches
+};
 
 interface EditMovelapModalProps {
   movelap: any; // TODO: Use proper Movelap type
@@ -33,6 +95,22 @@ export default function EditMovelapModal({
   onSuccess
 }: EditMovelapModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paceInput, setPaceInput] = useState(movelap.pace || '');
+  const [paceFormatted, setPaceFormatted] = useState(movelap.pace || '');
+  const [timeInput, setTimeInput] = useState(movelap.time || '');
+  const [timeFormatted, setTimeFormatted] = useState(movelap.time || '');
+  
+  // Initialize formatted values on mount
+  useEffect(() => {
+    if (movelap.pace) {
+      setPaceInput(movelap.pace);
+      setPaceFormatted(movelap.pace);
+    }
+    if (movelap.time) {
+      setTimeInput(movelap.time);
+      setTimeFormatted(movelap.time);
+    }
+  }, [movelap.pace, movelap.time]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -45,8 +123,8 @@ export default function EditMovelapModal({
         distance: parseInt(formData.get('distance') as string) || 0,
         speedCode: formData.get('speedCode') as string || '',
         style: formData.get('style') as string || '',
-        pace: formData.get('pace') as string || '',
-        time: formData.get('time') as string || '',
+        pace: paceFormatted || '',
+        time: timeFormatted || '',
         pause: formData.get('pause') as string || '',
         restType: formData.get('restType') as string || 'SET_TIME',
         alarm: parseInt(formData.get('alarm') as string) || 0,
@@ -140,34 +218,56 @@ export default function EditMovelapModal({
               />
             </div>
 
-            {/* Pace */}
+            {/* Pace/100m */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pace
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                Pace/100: <span className="text-[10px] text-green-600 font-semibold">✨ Flexible input</span>
               </label>
               <input
                 type="text"
-                name="pace"
-                defaultValue={movelap.pace || ''}
-                placeholder="0:45:0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={paceInput}
+                onChange={(e) => setPaceInput(e.target.value)}
+                onBlur={(e) => {
+                  const formatted = parseFlexibleTime(e.target.value);
+                  if (formatted) {
+                    setPaceFormatted(formatted);
+                    setPaceInput(formatted);
+                  }
+                }}
+                placeholder="130 or 1:30 or 1.30"
+                autoComplete="off"
+                className="w-full px-3 py-2 text-lg border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono bg-green-50"
                 disabled={isSubmitting}
               />
+              <p className="mt-1 text-[10px] text-green-600">
+                ⚡ Fast input: Type <strong>130</strong> → <strong>1&apos;30&quot;0</strong>
+              </p>
             </div>
 
             {/* Time */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Time
+              <label className="block text-xs font-semibold text-gray-700 mb-1">
+                TIME <span className="text-gray-400 font-normal text-[10px]">(optional)</span>
               </label>
               <input
                 type="text"
-                name="time"
-                defaultValue={movelap.time || ''}
-                placeholder="HH:MM:SS"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={timeInput}
+                onChange={(e) => setTimeInput(e.target.value)}
+                onBlur={(e) => {
+                  const formatted = parseFlexibleTime(e.target.value);
+                  if (formatted) {
+                    setTimeFormatted(formatted);
+                    setTimeInput(formatted);
+                  }
+                }}
+                placeholder="0h00'00&quot;0"
+                autoComplete="off"
+                className="w-full px-3 py-2 text-base border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
                 disabled={isSubmitting}
               />
+              <p className="mt-1 text-[10px] text-blue-600">
+                💡 Type: <strong>1&apos;30, 1.30.5, or 1&apos;30</strong> — formats to <strong>0h01&apos;30&quot;0</strong> or <strong>0h01&apos;30&quot;5</strong>
+              </p>
             </div>
 
             {/* Pause */}

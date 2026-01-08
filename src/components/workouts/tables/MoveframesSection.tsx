@@ -157,32 +157,32 @@ export default function MoveframesSection({
   // Map column IDs to their header components
   const renderColumnHeader = (columnId: string) => {
     const columnHeaders: { [key: string]: JSX.Element } = {
-      checkbox: <th key="checkbox" className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Select moveframe">☑</th>,
-      drag: <th key="drag" className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Drag to reorder">⋮⋮</th>,
-      expand: <th key="expand" className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Expand/Collapse">::</th>,
-      index: <th key="index" className="border border-gray-200 px-1 py-1 text-center text-[10px]" title="Index">#</th>,
-      color: <th key="color" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Color section</th>,
-      code_section: <th key="code_section" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Code section</th>,
-      action: <th key="action" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Action</th>,
-      dist: <th key="dist" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Dist</th>,
-      style: <th key="style" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Style</th>,
-      speed: <th key="speed" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Speed</th>,
-      time: <th key="time" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Time</th>,
-      pace: <th key="pace" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Pace</th>,
-      rec: <th key="rec" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rec</th>,
-      rest_to: <th key="rest_to" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rest to</th>,
-      aim_snd: <th key="aim_snd" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Aim & Snd</th>,
-      annotations: <th key="annotations" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Annotations</th>,
-      mf: <th key="mf" className="border border-gray-200 px-1 py-1 text-center text-[10px]">MF</th>,
-      section: <th key="section" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Period</th>,
-      sport: <th key="sport" className="border border-gray-200 px-1 py-1 text-left text-[10px]">Sport of the moveframe</th>,
-      description: <th key="description" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Moveframe description</th>,
-      duration: <th key="duration" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Duration</th>,
-      rip: <th key="rip" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Rip\Sets</th>,
-      macro: <th key="macro" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Macro</th>,
-      alarm: <th key="alarm" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Alarm & Sound</th>,
-      annotation: <th key="annotation" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Annotation</th>,
-      options: <th key="options" className="border border-gray-200 px-1 py-1 text-center text-[10px]">Options</th>,
+      checkbox: <th key="checkbox" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '18px' }} title="Select moveframe">☑</th>,
+      drag: <th key="drag" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '28px' }} title="Drag to reorder">⋮⋮</th>,
+      expand: <th key="expand" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '18px' }} title="Expand/Collapse">::</th>,
+      index: <th key="index" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '25px' }} title="Index">#</th>,
+      color: <th key="color" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '40px' }}>Color</th>,
+      code_section: <th key="code_section" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '50px' }}>Code</th>,
+      action: <th key="action" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '38px' }}>Act</th>,
+      dist: <th key="dist" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '38px' }}>Dist</th>,
+      style: <th key="style" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '38px' }}>Style</th>,
+      speed: <th key="speed" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '38px' }}>Spd</th>,
+      time: <th key="time" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '38px' }}>Time</th>,
+      pace: <th key="pace" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '38px' }}>Pace</th>,
+      rec: <th key="rec" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '38px' }}>Rec</th>,
+      rest_to: <th key="rest_to" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '38px' }}>Rest</th>,
+      aim_snd: <th key="aim_snd" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '40px' }}>Aim</th>,
+      annotations: <th key="annotations" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '50px' }}>Notes</th>,
+      mf: <th key="mf" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '25px' }}>MF</th>,
+      section: <th key="section" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '96px' }}>Period</th>,
+      sport: <th key="sport" className="border border-gray-200 px-1 py-1 text-left text-sm font-bold" style={{ width: '48px' }}>Sport</th>,
+      description: <th key="description" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '623px' }}>Description</th>,
+      duration: <th key="duration" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '42px' }}>Dur</th>,
+      rip: <th key="rip" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '28px' }}>Rip</th>,
+      macro: <th key="macro" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '32px' }}>Macro</th>,
+      alarm: <th key="alarm" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '42px' }}>Alarm</th>,
+      annotation: <th key="annotation" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '50px' }}>Note</th>,
+      options: <th key="options" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '250px' }}>Options</th>,
     };
     return columnHeaders[columnId];
   };
@@ -380,7 +380,7 @@ export default function MoveframesSection({
             strategy={verticalListSortingStrategy}
           >
             <div className="p-4">
-              <table className="w-full border-collapse text-xs bg-white">
+              <table className="border-collapse text-xs bg-white" style={{ tableLayout: 'fixed', width: 'auto' }}>
                 <thead className="bg-purple-300 text-purple-900">
                   <tr>
                     {orderedVisibleColumns.map(columnId => renderColumnHeader(columnId))}

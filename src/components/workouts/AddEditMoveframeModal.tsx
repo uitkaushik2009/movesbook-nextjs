@@ -533,18 +533,18 @@ export default function AddEditMoveframeModal({
   const R1_OPTIONS = ['', '34', '36', '38', '39', '40', '48', '50', '52', '53', '54', '55'];
   const R2_OPTIONS = ['', ...Array.from({ length: 43 }, (_, i) => (i + 10).toString())]; // 10-52
 
-  // Workout Sections state (loaded from Personal Settings - Periods)
+  // Workout Sections state (loaded from Personal Settings - Workout Sections)
   const [workoutSections, setWorkoutSections] = useState<any[]>([]);
 
-  // Load workout sections (periods) from Prisma database
+  // Load workout sections from Prisma database
   useEffect(() => {
     const loadWorkoutSections = async () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
         
-        // Fetch periods from database (user's custom training periods)
-        const response = await fetch('/api/workouts/periods', {
+        // Fetch workout sections from database (user's custom workout sections)
+        const response = await fetch('/api/workouts/sections', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -552,42 +552,15 @@ export default function AddEditMoveframeModal({
         
         if (response.ok) {
           const data = await response.json();
-          
-          // Set periods directly from API (already in correct format from Prisma)
-          const periods = data.periods || [];
-          console.log('✅ Loaded periods from Personal Settings:', periods);
-          
-          // Sync periods to workout sections
-          if (periods.length > 0) {
-            // Sync periods and get synced sections directly
-            const syncResponse = await fetch('/api/workouts/sections/sync-from-periods', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ periods })
-            });
-          
-            if (syncResponse.ok) {
-              const syncData = await syncResponse.json();
-              const syncedSections = syncData.sections || [];
-              setWorkoutSections(syncedSections);
-              console.log('✅ Synced workout sections from periods:', syncedSections);
-            } else {
-              console.error('Failed to sync periods');
-              setWorkoutSections([]);
-            }
-          } else {
-            console.warn('⚠️ No periods found. Please add periods in Personal Settings → Tools → Periods.');
-            setWorkoutSections([]);
-          }
+          const sections = data.sections || [];
+          console.log('✅ Loaded workout sections from Personal Settings:', sections);
+          setWorkoutSections(sections);
         } else {
-          console.error('Failed to load periods:', response.statusText);
+          console.error('Failed to load workout sections:', response.statusText);
           setWorkoutSections([]);
         }
       } catch (error) {
-        console.error('❌ Error loading periods from database:', error);
+        console.error('❌ Error loading workout sections from database:', error);
         setWorkoutSections([]);
       }
     };
@@ -1503,28 +1476,75 @@ export default function AddEditMoveframeModal({
                           onChange={(e) => setRepsType(e.target.value as any)}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
                         >
-                          <option value="Reps">Reps or Minutes</option>
                           <option value="Reps">Reps</option>
-                          <option value="Time">Minutes</option>
+                          <option value="Time">Time</option>
                         </select>
                       </div>
                       
                       <div>
                         {repsType === 'Time' ? (
                           <>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Minutes (per series):</label>
-                            <TimeInput
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Time (per series): <span className="text-red-500">*</span></label>
+                            <input
+                              type="text"
                               value={time}
-                              onChange={setTime}
-                              label=""
-                              placeholder="0h01'30&quot;0"
-                              showLabel={false}
-                              allowedUnits={['hours', 'minutes', 'seconds']}
+                              onChange={(e) => {
+                                const input = e.target.value;
+                                // Allow clearing the field
+                                if (input === '') {
+                                  setTime('');
+                                  return;
+                                }
+                                // If user is typing numbers only, auto-format
+                                if (/^\d+$/.test(input)) {
+                                  const digits = input.replace(/\D/g, '');
+                                  const len = digits.length;
+                                  let decisec = '0';
+                                  let sec = '00';
+                                  let min = '00';
+                                  let hour = '0';
+                                  
+                                  if (len === 1) {
+                                    decisec = digits[0];
+                                  } else if (len === 2) {
+                                    sec = digits[0].padStart(2, '0');
+                                    decisec = digits[1];
+                                  } else if (len === 3) {
+                                    sec = digits.slice(0, 2);
+                                    decisec = digits[2];
+                                  } else if (len === 4) {
+                                    min = digits[0].padStart(2, '0');
+                                    sec = digits.slice(1, 3);
+                                    decisec = digits[3];
+                                  } else if (len === 5) {
+                                    min = digits.slice(0, 2);
+                                    sec = digits.slice(2, 4);
+                                    decisec = digits[4];
+                                  } else if (len === 6) {
+                                    hour = digits[0];
+                                    min = digits.slice(1, 3);
+                                    sec = digits.slice(3, 5);
+                                    decisec = digits[5];
+                                  } else {
+                                    hour = digits.slice(0, -5);
+                                    min = digits.slice(-5, -3);
+                                    sec = digits.slice(-3, -1);
+                                    decisec = digits.slice(-1);
+                                  }
+                                  
+                                  setTime(`${hour}h${min}'${sec}"${decisec}`);
+                                } else {
+                                  // Allow manual editing with quotes and apostrophes
+                                  setTime(input);
+                                }
+                              }}
                               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                              placeholder="1h23'45&quot;6"
                             />
                             <p className="mt-0.5 text-[10px] text-blue-600">
-                              💡 Type 130 → 0h01'30"0 | Fast input
+                              💡 Just type the number and select the unit | Range: 0'01" - 9'59" · Format 123456 will be = 1h23'45"6
                             </p>
+                            {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
                           </>
                         ) : (
                           <>
@@ -1555,7 +1575,9 @@ export default function AddEditMoveframeModal({
                                 onChange={() => setPlanningMode('all')}
                                 className="w-4 h-4 text-cyan-600"
                               />
-                              <span className="text-sm text-gray-700">Plan for all the repetitions</span>
+                              <span className="text-sm text-gray-700">
+                                Plan for all the {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'repetitions' : 'series'}
+                              </span>
                             </label>
                             {canShowIndividualPlanning && (
                               <label className="flex items-center gap-2 cursor-pointer">
@@ -1568,7 +1590,7 @@ export default function AddEditMoveframeModal({
                                   className="w-4 h-4 text-cyan-600"
                                 />
                                 <span className="text-sm text-gray-700">
-                                  Plan one by one (until to 12 repetitions)
+                                  Plan one by one (until to 12 {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'repetitions' : 'series'})
                                 </span>
                               </label>
                             )}
@@ -1589,7 +1611,7 @@ export default function AddEditMoveframeModal({
                             <>
                               <div className="mb-3">
                                 <label className="block text-xs font-medium text-gray-700 mb-1">
-                                  Repetitions: <span className="text-red-500">*</span>
+                                  {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'Repetitions:' : 'Series:'} <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                   type="number"
@@ -1656,20 +1678,64 @@ export default function AddEditMoveframeModal({
                                   ) : (
                                     <>
                                       <label className="block text-xs font-medium text-gray-700 mb-1">
-                                        Minutes (per series): <span className="text-red-500">*</span>
+                                        Time (per series): <span className="text-red-500">*</span>
                                       </label>
-                                      <TimeInput
+                                      <input
+                                        type="text"
                                         value={time}
-                                        onChange={setTime}
-                                        label=""
-                                        placeholder="0h01'30&quot;0"
-                                        showLabel={false}
-                                        allowedUnits={['hours', 'minutes', 'seconds']}
-                                        defaultUnit="seconds"
-                                        />
-                                        <p className="mt-0.5 text-[10px] text-blue-600">
-                                          💡 Type 130 → 0h01'30"0 | Fast input
-                                        </p>
+                                        onChange={(e) => {
+                                          const input = e.target.value;
+                                          if (input === '') {
+                                            setTime('');
+                                            return;
+                                          }
+                                          if (/^\d+$/.test(input)) {
+                                            const digits = input.replace(/\D/g, '');
+                                            const len = digits.length;
+                                            let decisec = '0';
+                                            let sec = '00';
+                                            let min = '00';
+                                            let hour = '0';
+                                            
+                                            if (len === 1) {
+                                              decisec = digits[0];
+                                            } else if (len === 2) {
+                                              sec = digits[0].padStart(2, '0');
+                                              decisec = digits[1];
+                                            } else if (len === 3) {
+                                              sec = digits.slice(0, 2);
+                                              decisec = digits[2];
+                                            } else if (len === 4) {
+                                              min = digits[0].padStart(2, '0');
+                                              sec = digits.slice(1, 3);
+                                              decisec = digits[3];
+                                            } else if (len === 5) {
+                                              min = digits.slice(0, 2);
+                                              sec = digits.slice(2, 4);
+                                              decisec = digits[4];
+                                            } else if (len === 6) {
+                                              hour = digits[0];
+                                              min = digits.slice(1, 3);
+                                              sec = digits.slice(3, 5);
+                                              decisec = digits[5];
+                                            } else {
+                                              hour = digits.slice(0, -5);
+                                              min = digits.slice(-5, -3);
+                                              sec = digits.slice(-3, -1);
+                                              decisec = digits.slice(-1);
+                                            }
+                                            
+                                            setTime(`${hour}h${min}'${sec}"${decisec}`);
+                                          } else {
+                                            setTime(input);
+                                          }
+                                        }}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                        placeholder="1h23'45&quot;6"
+                                      />
+                                      <p className="mt-0.5 text-[10px] text-blue-600">
+                                        💡 Just type the number and select the unit | Range: 0'01" - 9'59" · Format 123456 will be = 1h23'45"6
+                                      </p>
                                       </>
                                     )}
                                 </div>
@@ -1689,7 +1755,9 @@ export default function AddEditMoveframeModal({
                                         onChange={() => setPlanningMode('all')}
                                         className="w-4 h-4 text-cyan-600"
                                       />
-                                      <span className="text-sm text-gray-700">Plan for all the repetitions</span>
+                                      <span className="text-sm text-gray-700">
+                                        Plan for all the {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'repetitions' : 'series'}
+                                      </span>
                                     </label>
                                     {canShowIndividualPlanning && (
                                       <label className="flex items-center gap-2 cursor-pointer">
@@ -1702,7 +1770,7 @@ export default function AddEditMoveframeModal({
                                           className="w-4 h-4 text-cyan-600"
                                         />
                                         <span className="text-sm text-gray-700">
-                                          Plan one by one (until to 12 repetitions)
+                                          Plan one by one (until to 12 {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'repetitions' : 'series'})
                                         </span>
                                       </label>
                                     )}
@@ -1736,9 +1804,8 @@ export default function AddEditMoveframeModal({
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
                         >
-                          <option value="Reps">Distance or Minutes</option>
                           <option value="Reps">Distance</option>
-                          <option value="Time">Minutes</option>
+                          <option value="Time">Time</option>
                         </select>
                       </div>
                       
@@ -1746,19 +1813,63 @@ export default function AddEditMoveframeModal({
                       {repsType === 'Time' ? (
                         <div className="mb-3">
                           <label className="block text-xs font-medium text-gray-700 mb-1">
-                            Minutes: <span className="text-red-500">*</span>
+                            Time: <span className="text-red-500">*</span>
                           </label>
-                          <TimeInput
+                          <input
+                            type="text"
                             value={time}
-                            onChange={setTime}
-                            label=""
-                            placeholder="0h01'30&quot;0"
-                            showLabel={false}
-                            allowedUnits={['hours', 'minutes', 'seconds']}
+                            onChange={(e) => {
+                              const input = e.target.value;
+                              if (input === '') {
+                                setTime('');
+                                return;
+                              }
+                              if (/^\d+$/.test(input)) {
+                                const digits = input.replace(/\D/g, '');
+                                const len = digits.length;
+                                let decisec = '0';
+                                let sec = '00';
+                                let min = '00';
+                                let hour = '0';
+                                
+                                if (len === 1) {
+                                  decisec = digits[0];
+                                } else if (len === 2) {
+                                  sec = digits[0].padStart(2, '0');
+                                  decisec = digits[1];
+                                } else if (len === 3) {
+                                  sec = digits.slice(0, 2);
+                                  decisec = digits[2];
+                                } else if (len === 4) {
+                                  min = digits[0].padStart(2, '0');
+                                  sec = digits.slice(1, 3);
+                                  decisec = digits[3];
+                                } else if (len === 5) {
+                                  min = digits.slice(0, 2);
+                                  sec = digits.slice(2, 4);
+                                  decisec = digits[4];
+                                } else if (len === 6) {
+                                  hour = digits[0];
+                                  min = digits.slice(1, 3);
+                                  sec = digits.slice(3, 5);
+                                  decisec = digits[5];
+                                } else {
+                                  hour = digits.slice(0, -5);
+                                  min = digits.slice(-5, -3);
+                                  sec = digits.slice(-3, -1);
+                                  decisec = digits.slice(-1);
+                                }
+                                
+                                setTime(`${hour}h${min}'${sec}"${decisec}`);
+                              } else {
+                                setTime(input);
+                              }
+                            }}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                            placeholder="1h23'45&quot;6"
                           />
                           <p className="mt-0.5 text-[10px] text-blue-600">
-                            💡 Type 130 → 0h01'30"0 | Fast input
+                            💡 Just type the number and select the unit | Range: 0'01" - 9'59" · Format 123456 will be = 1h23'45"6
                           </p>
                         </div>
                       ) : (
@@ -1799,7 +1910,7 @@ export default function AddEditMoveframeModal({
 
                       <div>
                         <label className="block text-xs font-medium text-gray-700 mb-1">
-                          {sport === 'ROWING' ? 'Series:' : 'Repetitions:'}
+                          {(['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport)) ? 'Repetitions:' : 'Series:'}
                         </label>
                         <div className="flex items-center gap-2">
                           <input
@@ -1835,7 +1946,7 @@ export default function AddEditMoveframeModal({
                                 className="w-4 h-4 text-cyan-600"
                               />
                               <span className="text-sm text-gray-700">
-                                Plan for all the {sport === 'ROWING' ? 'series' : 'repetitions'}
+                                Plan for all the {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'repetitions' : 'series'}
                               </span>
                             </label>
                             {canShowIndividualPlanning && (
@@ -1849,7 +1960,7 @@ export default function AddEditMoveframeModal({
                                   className="w-4 h-4 text-cyan-600"
                                 />
                                 <span className="text-sm text-gray-700">
-                                  Plan one by one (until to 12 {sport === 'ROWING' ? 'series' : 'repetitions'})
+                                  Plan one by one (until to 12 {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'repetitions' : 'series'})
                                 </span>
                               </label>
                             )}
@@ -1932,7 +2043,8 @@ export default function AddEditMoveframeModal({
                 {sport !== 'BODY_BUILDING' && (
                 <div className="bg-gray-50 p-2.5 rounded-lg">
                     <h3 className="font-bold text-xs text-gray-700 mb-2">
-                      {sport === 'BIKE' ? 'BIKE SETTINGS' : 'STYLE & TECHNIQUE'}
+                      {sport === 'BIKE' ? 'BIKE SETTINGS' : 
+                       (['SWIM', 'SPINNING', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'STYLE & TECHNIQUE' : 'EXERCISE & STYLE/TECHNIQUE')}
                     </h3>
                     
                     {/* Style - For sports with styles defined */}
@@ -2254,7 +2366,7 @@ export default function AddEditMoveframeModal({
                     
                     <p className="mt-2 text-[10px] text-blue-600 flex items-center gap-1">
                       <span>ℹ️</span>
-                      <span>Scroll to view all {individualPlans.length} {sport === 'ROWING' ? 'series' : 'repetitions'}. Each can have unique speed, time, and pause values.</span>
+                      <span>Scroll to view all {individualPlans.length} {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'repetitions' : 'series'}. Each can have unique speed, time, and pause values.</span>
                     </p>
                   </div>
                   );
@@ -2264,7 +2376,7 @@ export default function AddEditMoveframeModal({
                 {sport === 'BODY_BUILDING' && planningMode === 'individual' && canShowIndividualPlanning && (
                   <div className="bg-blue-50 p-2.5 rounded-lg border border-blue-200">
                     <h3 className="font-bold text-xs text-gray-700 mb-3 flex items-center gap-2">
-                      <span>💪 {repsType === 'Time' ? 'MINUTES' : 'REPS'} & WEIGHTS PLANNING</span>
+                      <span>💪 {repsType === 'Time' ? 'TIME' : 'REPS'} & WEIGHTS PLANNING</span>
                       <span className="text-[10px] bg-blue-200 text-blue-700 px-2 py-0.5 rounded font-normal">
                         {individualPlans.length} series
                       </span>
@@ -2278,14 +2390,14 @@ export default function AddEditMoveframeModal({
                             <tr>
                               <th className="border border-gray-300 px-2 py-2 text-center w-12">#</th>
                               <th className="border border-gray-300 px-2 py-2 text-center" colSpan={2}>
-                                {repsType === 'Time' ? 'MINUTES & WEIGHTS' : 'REPS & WEIGHTS'}
+                                {repsType === 'Time' ? 'TIME & WEIGHTS' : 'REPS & WEIGHTS'}
                               </th>
                               <th className="border border-gray-300 px-2 py-2 text-center">REST & ALERTS</th>
                             </tr>
                             <tr>
                               <th className="border-b border-gray-300"></th>
                               <th className="border border-gray-300 px-2 py-1.5 text-center bg-gray-100">
-                                <span className="font-semibold">{repsType === 'Time' ? 'Minutes' : 'Reps'}</span>
+                                <span className="font-semibold">{repsType === 'Time' ? 'Time' : 'Reps'}</span>
                               </th>
                               <th className="border border-gray-300 px-2 py-1.5 text-center bg-gray-100">
                                 <span className="font-semibold">Weights</span>
@@ -2398,7 +2510,7 @@ export default function AddEditMoveframeModal({
                   return (
                     <div className="bg-blue-50 p-2.5 rounded-lg border border-blue-200">
                       <h3 className="font-bold text-xs text-gray-700 mb-3 flex items-center gap-2">
-                        <span>🏋️ {repsType === 'Time' ? 'MINUTES' : 'REPS'} & TOOLS PLANNING</span>
+                        <span>🏋️ {repsType === 'Time' ? 'TIME' : 'REPS'} & TOOLS PLANNING</span>
                         <span className="text-[10px] bg-blue-200 text-blue-700 px-2 py-0.5 rounded font-normal">
                           {individualPlans.length} {repsType === 'Time' ? 'series' : 'reps'}
                         </span>
@@ -2412,14 +2524,14 @@ export default function AddEditMoveframeModal({
                               <tr>
                                 <th className="border border-gray-300 px-2 py-2 text-center w-12">#</th>
                                 <th className="border border-gray-300 px-2 py-2 text-center" colSpan={2}>
-                                  {repsType === 'Time' ? 'MINUTES & TOOLS' : 'REPS & TOOLS'}
+                                  {repsType === 'Time' ? 'TIME & TOOLS' : 'REPS & TOOLS'}
                                 </th>
                                 <th className="border border-gray-300 px-2 py-2 text-center">REST & ALERTS</th>
                               </tr>
                               <tr>
                                 <th className="border-b border-gray-300"></th>
                                 <th className="border border-gray-300 px-2 py-1.5 text-center bg-gray-100">
-                                  <span className="font-semibold">{repsType === 'Time' ? 'Minutes' : 'Reps'}</span>
+                                  <span className="font-semibold">{repsType === 'Time' ? 'Time' : 'Reps'}</span>
                                 </th>
                                 <th className="border border-gray-300 px-2 py-1.5 text-center bg-gray-100">
                                   <span className="font-semibold">Tools</span>
@@ -2479,7 +2591,7 @@ export default function AddEditMoveframeModal({
                       
                       <p className="mt-2 text-[10px] text-blue-600 flex items-center gap-1">
                         <span>ℹ️</span>
-                        <span>Scroll to view all {individualPlans.length} repetitions. Each can have unique {repsType === 'Time' ? 'minutes' : 'reps'}, tools, and pause values.</span>
+                        <span>Scroll to view all {individualPlans.length} {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'repetitions' : 'series'}. Each can have unique {repsType === 'Time' ? 'time' : 'reps'}, tools, and pause values.</span>
                       </p>
                     </div>
                   );
@@ -2728,22 +2840,66 @@ export default function AddEditMoveframeModal({
 
                             return (
                               <>
-                                <TimeInput
+                                <input
+                                  type="text"
                                   value={pause}
-                                  onChange={setPause}
+                                  onChange={(e) => {
+                                    const input = e.target.value;
+                                    if (input === '') {
+                                      setPause('');
+                                      return;
+                                    }
+                                    // If user is typing numbers only, auto-format
+                                    if (/^\d+$/.test(input)) {
+                                      const digits = input.replace(/\D/g, '');
+                                      const len = digits.length;
+                                      let decisec = '0';
+                                      let sec = '00';
+                                      let min = '00';
+                                      let hour = '0';
+                                      
+                                      if (len === 1) {
+                                        decisec = digits[0];
+                                      } else if (len === 2) {
+                                        sec = digits[0].padStart(2, '0');
+                                        decisec = digits[1];
+                                      } else if (len === 3) {
+                                        sec = digits.slice(0, 2);
+                                        decisec = digits[2];
+                                      } else if (len === 4) {
+                                        min = digits[0].padStart(2, '0');
+                                        sec = digits.slice(1, 3);
+                                        decisec = digits[3];
+                                      } else if (len === 5) {
+                                        min = digits.slice(0, 2);
+                                        sec = digits.slice(2, 4);
+                                        decisec = digits[4];
+                                      } else if (len === 6) {
+                                        hour = digits[0];
+                                        min = digits.slice(1, 3);
+                                        sec = digits.slice(3, 5);
+                                        decisec = digits[5];
+                                      } else {
+                                        hour = digits.slice(0, -5);
+                                        min = digits.slice(-5, -3);
+                                        sec = digits.slice(-3, -1);
+                                        decisec = digits.slice(-1);
+                                      }
+                                      
+                                      setPause(`${hour}h${min}'${sec}"${decisec}`);
+                                    } else {
+                                      setPause(input);
+                                    }
+                                  }}
                                   onBlur={() => {
                                     // Validate that restart time > time
                                     setTimeout(() => validateRestartTime(), 100);
                                   }}
-                                  label=""
-                                  placeholder="0h01'30&quot;0"
-                                  showLabel={false}
-                                  allowedUnits={['hours', 'minutes', 'seconds']}
-                                  defaultUnit="minutes"
-                                  className="mb-1"
+                                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 mb-1"
+                                  placeholder="0h00'00&quot;0"
                                 />
                                 <p className="mt-0.5 text-[10px] text-red-600 font-semibold">
-                                  💡 Type 130 → 0h01'30"0 | <span className="text-red-700 font-bold">MANDATORY: Must be &gt; Time ({time || '0h00\'00"0'})</span>
+                                  💡 Type: 1:30, 1:30,5, or 130 → formats to 0h01'30"0 or 0h01'30"5 | <span className="text-red-700 font-bold">MANDATORY: Must be &gt; Time ({time || '0h00\'00"0'})</span>
                                 </p>
                               </>
                             );
@@ -2905,7 +3061,7 @@ export default function AddEditMoveframeModal({
               {(parseInt(repetitions) > 1 || (macroFinal && macroFinal !== "0'")) && (
                 <div className="mt-2 text-xs text-blue-600 space-y-0.5">
                   {parseInt(repetitions) > 1 && (
-                    <div>• Repetitions: {repetitions} reps</div>
+                    <div>• {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'Repetitions' : 'Series'}: {repetitions} {['SWIM', 'BIKE', 'SPINNING', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'reps' : 'series'}</div>
                   )}
                   {macroFinal && macroFinal !== "0'" && (
                     <div>• Macro Final: {macroFinal}</div>

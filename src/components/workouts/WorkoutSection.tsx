@@ -74,6 +74,8 @@ import CreateYearlyPlanModal from '@/components/workouts/modals/CreateYearlyPlan
 import ImportFromPlanModal from '@/components/workouts/modals/ImportFromPlanModal';
 import CopyFromTemplateModal from '@/components/workouts/modals/CopyFromTemplateModal';
 import DayPrintModal from '@/components/workouts/modals/DayPrintModal';
+import WorkoutPrintModal from '@/components/workouts/modals/WorkoutPrintModal';
+import ShareWorkoutModal from '@/components/workouts/modals/ShareWorkoutModal';
 import WeekTotalsModal from '@/components/workouts/modals/WeekTotalsModal';
 import WeeklyInfoModal from '@/components/workouts/WeeklyInfoModal';
 import CopyWeekModal from '@/components/workouts/modals/CopyWeekModal';
@@ -186,15 +188,18 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     expandedDays,
     expandedWorkouts,
     fullyExpandedWorkouts,
+    workoutsWithExpandedMovelaps,
     toggleDayExpansion,
     toggleWorkoutExpansion,
     toggleWeekExpansion,
     expandAll,
     collapseAll,
     expandDayWithAllWorkouts,
+    cycleWorkoutExpansion,
     setExpandedDays,
     setExpandedWorkouts,
-    setFullyExpandedWorkouts
+    setFullyExpandedWorkouts,
+    setWorkoutsWithExpandedMovelaps
   } = useWorkoutExpansion({
     workoutPlan,
     activeSection,
@@ -308,6 +313,15 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     console.log('✅ Done. Should have ONLY workout', workout.id, 'open');
   };
 
+  /**
+   * Handler for workout number clicks in day table
+   * 3-state cycle: closed → show moveframes → show movelaps → closed
+   */
+  const handleWorkoutNumberClick = (workout: any, day: any) => {
+    console.log('🔢 Workout number clicked:', workout.id, 'on day:', day.id);
+    cycleWorkoutExpansion(workout.id, day.id);
+  };
+
   // ==================== MODAL MODE STATE ====================
   const [workoutModalMode, setWorkoutModalMode] = useState<'add' | 'edit'>('add');
   const [showWorkoutInfoModal, setShowWorkoutInfoModal] = useState(false);
@@ -316,6 +330,13 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [showDayPrintModal, setShowDayPrintModal] = useState(false);
   const [dayToPrint, setDayToPrint] = useState<any>(null);
   const [autoPrintDay, setAutoPrintDay] = useState(false);
+  const [showWorkoutPrintModal, setShowWorkoutPrintModal] = useState(false);
+  const [workoutToPrint, setWorkoutToPrint] = useState<any>(null);
+  const [dayForWorkoutPrint, setDayForWorkoutPrint] = useState<any>(null);
+  const [autoPrintWorkout, setAutoPrintWorkout] = useState(false);
+  const [showShareWorkoutModal, setShowShareWorkoutModal] = useState(false);
+  const [workoutToShare, setWorkoutToShare] = useState<any>(null);
+  const [dayForWorkoutShare, setDayForWorkoutShare] = useState<any>(null);
   const [showCopyWeekModal, setShowCopyWeekModal] = useState(false);
   const [showMoveWeekModal, setShowMoveWeekModal] = useState(false);
   const [showWeekTotalsModal, setShowWeekTotalsModal] = useState(false);
@@ -1769,11 +1790,13 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  expandedDays={expandedDays}
                  expandedWorkouts={expandedWorkouts}
                  fullyExpandedWorkouts={fullyExpandedWorkouts}
+                 workoutsWithExpandedMovelaps={workoutsWithExpandedMovelaps}
                  expandedMoveframeId={autoExpandMoveframeId}
-                 onToggleDay={toggleDayExpansion}
-                 onToggleWorkout={toggleWorkoutExpansion}
-                 onExpandOnlyThisWorkout={handleExpandOnlyThisWorkout}
-                 onExpandDayWithAllWorkouts={expandDayWithAllWorkouts}
+                onToggleDay={toggleDayExpansion}
+                onToggleWorkout={toggleWorkoutExpansion}
+                onExpandOnlyThisWorkout={handleExpandOnlyThisWorkout}
+                onExpandDayWithAllWorkouts={expandDayWithAllWorkouts}
+                onCycleWorkoutExpansion={handleWorkoutNumberClick}
                  onEditDay={(day) => {
                    setEditingDay(day);
                    modalActions.setShowEditDayModal(true);
@@ -2048,6 +2071,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                     if (response.ok) {
                       const data = await response.json();
                       showMessage('success', `"${workout.name}" saved to favorites!`);
+                      // Note: Saving to favorites doesn't modify the workout plan, so no need to reload
                     } else {
                       const error = await response.json();
                       showMessage('error', error.error || 'Failed to save to favorites');
@@ -2058,19 +2082,21 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   }
                 }}
                 onShareWorkout={(workout, day) => {
-                  // TODO: Implement share functionality
-                  showMessage('info', 'Share workout functionality coming soon!');
-                  console.log('Share workout:', workout, day);
+                  setWorkoutToShare(workout);
+                  setDayForWorkoutShare(day);
+                  setShowShareWorkoutModal(true);
                 }}
                 onExportPdfWorkout={(workout, day) => {
-                  // TODO: Implement PDF export functionality
-                  showMessage('info', 'Export workout to PDF functionality coming soon!');
-                  console.log('Export workout PDF:', workout, day);
+                  setWorkoutToPrint(workout);
+                  setDayForWorkoutPrint(day);
+                  setAutoPrintWorkout(true);
+                  setShowWorkoutPrintModal(true);
                 }}
                 onPrintWorkout={(workout, day) => {
-                  // TODO: Implement print functionality
-                  showMessage('info', 'Print workout functionality coming soon!');
-                  console.log('Print workout:', workout, day);
+                  setWorkoutToPrint(workout);
+                  setDayForWorkoutPrint(day);
+                  setAutoPrintWorkout(false);
+                  setShowWorkoutPrintModal(true);
                 }}
                  onCopyMoveframe={(moveframe, workout, day) => {
                    setCopiedMoveframe(moveframe);
@@ -3046,6 +3072,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           }}
           sourceDay={copiedDay}
           workoutPlan={workoutPlan}
+          activeSection={activeSection}
           onConfirm={async (targetDate, targetWeekId) => {
             try {
               const token = localStorage.getItem('token');
@@ -3087,6 +3114,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           }}
           sourceDay={copiedDay}
           workoutPlan={workoutPlan}
+          activeSection={activeSection}
           onConfirm={async (targetDate, targetWeekId) => {
             try {
               const token = localStorage.getItem('token');
@@ -3128,6 +3156,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           }}
           sourceWorkout={copiedWorkout}
           workoutPlan={workoutPlan}
+          activeSection={activeSection}
           onConfirm={async (targetDayId, sessionNumber) => {
             try {
               const token = localStorage.getItem('token');
@@ -3152,6 +3181,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               showMessage('success', 'Workout copied successfully');
               modalActions.closeCopyWorkoutModal();
               setCopiedWorkout(null);
+              
+              // Refresh workout data to show the copied workout
+              await loadWorkoutData(activeSection);
             } catch (error: any) {
               showMessage('error', error.message || 'Failed to copy workout');
             }
@@ -3169,6 +3201,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           }}
           sourceWorkout={copiedWorkout}
           workoutPlan={workoutPlan}
+          activeSection={activeSection}
           onConfirm={async (targetDayId, sessionNumber) => {
             try {
               const token = localStorage.getItem('token');
@@ -3193,6 +3226,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
               showMessage('success', 'Workout moved successfully');
               modalActions.closeMoveWorkoutModal();
               setCopiedWorkout(null);
+              
+              // Refresh workout data to show the moved workout
+              await loadWorkoutData(activeSection);
             } catch (error: any) {
               showMessage('error', error.message || 'Failed to move workout');
             }
@@ -3210,6 +3246,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           }}
           sourceMoveframe={copiedMoveframe}
           workoutPlan={workoutPlan}
+          activeSection={activeSection}
           onConfirm={async (targetWorkoutId, position, targetMoveframeId) => {
             try {
               const token = localStorage.getItem('token');
@@ -3254,6 +3291,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           sourceMoveframe={copiedMoveframe}
           sourceWorkout={activeWorkout}
           workoutPlan={workoutPlan}
+          activeSection={activeSection}
           onConfirm={async (targetWorkoutId, position, targetMoveframeId) => {
             try {
               const token = localStorage.getItem('token');
@@ -3390,6 +3428,37 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           }}
           day={dayToPrint}
           autoPrint={autoPrintDay}
+        />
+      )}
+
+      {/* Workout Print/PDF Export Modal */}
+      {showWorkoutPrintModal && workoutToPrint && (
+        <WorkoutPrintModal
+          isOpen={showWorkoutPrintModal}
+          onClose={() => {
+            setShowWorkoutPrintModal(false);
+            setWorkoutToPrint(null);
+            setDayForWorkoutPrint(null);
+            setAutoPrintWorkout(false);
+          }}
+          workout={workoutToPrint}
+          day={dayForWorkoutPrint}
+          autoPrint={autoPrintWorkout}
+          activeSection={activeSection}
+        />
+      )}
+
+      {/* Share Workout Modal */}
+      {showShareWorkoutModal && workoutToShare && (
+        <ShareWorkoutModal
+          isOpen={showShareWorkoutModal}
+          onClose={() => {
+            setShowShareWorkoutModal(false);
+            setWorkoutToShare(null);
+            setDayForWorkoutShare(null);
+          }}
+          workout={workoutToShare}
+          day={dayForWorkoutShare}
         />
       )}
 

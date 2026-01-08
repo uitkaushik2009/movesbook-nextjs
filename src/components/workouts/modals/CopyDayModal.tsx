@@ -9,6 +9,7 @@ interface CopyDayModalProps {
   sourceDay: any;
   workoutPlan: any;
   onConfirm: (targetDate: Date, targetWeekId: string) => void;
+  activeSection?: 'A' | 'B' | 'C' | 'D';
 }
 
 export default function CopyDayModal({
@@ -16,7 +17,8 @@ export default function CopyDayModal({
   onClose,
   sourceDay,
   workoutPlan,
-  onConfirm
+  onConfirm,
+  activeSection = 'A'
 }: CopyDayModalProps) {
   const [selectedWeek, setSelectedWeek] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -69,16 +71,22 @@ export default function CopyDayModal({
           <div className="bg-blue-50 p-3 rounded">
             <p className="text-sm text-gray-700">
               <strong>Copying from:</strong>{' '}
-              {new Date(sourceDay.date).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}
+              {activeSection === 'A' ? (
+                `Template Day (${sourceDay.workouts?.length || 0} workout(s))`
+              ) : (
+                new Date(sourceDay.date).toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })
+              )}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              {sourceDay.workouts?.length || 0} workout(s) will be copied
-            </p>
+            {activeSection !== 'A' && (
+              <p className="text-xs text-gray-500 mt-1">
+                {sourceDay.workouts?.length || 0} workout(s) will be copied
+              </p>
+            )}
           </div>
 
           {/* Select Week */}

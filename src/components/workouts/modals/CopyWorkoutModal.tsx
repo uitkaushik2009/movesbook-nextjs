@@ -9,6 +9,7 @@ interface CopyWorkoutModalProps {
   sourceWorkout: any;
   workoutPlan: any;
   onConfirm: (targetDayId: string, sessionNumber: number) => void;
+  activeSection?: 'A' | 'B' | 'C' | 'D';
 }
 
 export default function CopyWorkoutModal({
@@ -16,7 +17,8 @@ export default function CopyWorkoutModal({
   onClose,
   sourceWorkout,
   workoutPlan,
-  onConfirm
+  onConfirm,
+  activeSection = 'A'
 }: CopyWorkoutModalProps) {
   const [selectedWeek, setSelectedWeek] = useState<string>('');
   const [selectedDay, setSelectedDay] = useState<string>('');
@@ -84,13 +86,13 @@ export default function CopyWorkoutModal({
               {workoutPlan?.weeks?.map((week: any) => {
                 // Get first day's date from the week if available
                 const firstDay = week.days?.[0];
-                const dateDisplay = firstDay 
-                  ? new Date(firstDay.date).toLocaleDateString()
-                  : 'No dates';
+                const dateDisplay = activeSection === 'A' 
+                  ? '' 
+                  : (firstDay ? new Date(firstDay.date).toLocaleDateString() : 'No dates');
                 
                 return (
                   <option key={week.id} value={week.id}>
-                    Week {week.weekNumber} ({dateDisplay})
+                    Week {week.weekNumber}{dateDisplay ? ` (${dateDisplay})` : ''}
                   </option>
                 );
               })}
@@ -111,11 +113,15 @@ export default function CopyWorkoutModal({
                 <option value="">Choose a day...</option>
                 {availableDays.map((day: any) => (
                   <option key={day.id} value={day.id}>
-                    {new Date(day.date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'short',
-                      day: 'numeric'
-                    })} ({day.workouts?.length || 0} workout(s))
+                    {activeSection === 'A' ? (
+                      `Day ${availableDays.indexOf(day) + 1} (${day.workouts?.length || 0} workout(s))`
+                    ) : (
+                      `${new Date(day.date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        month: 'short',
+                        day: 'numeric'
+                      })} (${day.workouts?.length || 0} workout(s))`
+                    )}
                   </option>
                 ))}
               </select>

@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
 import { DISTANCE_BASED_SPORTS } from '@/constants/moveframe.constants';
+import PrintOptionsModal, { PrintOptions } from './PrintOptionsModal';
 
 interface WeekTotalsModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
   const [shouldAutoPrint, setShouldAutoPrint] = React.useState(false);
   const [currentWeekIndex, setCurrentWeekIndex] = React.useState(0);
   const [showMovelaps, setShowMovelaps] = React.useState(showMovelapsDetails);
+  const [showPrintOptionsModal, setShowPrintOptionsModal] = React.useState(false);
   
   // Section A is template mode (no dates), Section B is yearly plan (with dates)
   const isTemplateMode = activeSection === 'A';
@@ -390,6 +392,252 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
       printWindow.close();
     }, 250);
   }, [week?.weekNumber]); // Safe optional chaining for dependency
+
+  // Handler for printing a single day
+  const handlePrintDay = React.useCallback((options: PrintOptions) => {
+    console.log('🖨️ Printing day with options:', options);
+    setShowPrintOptionsModal(false);
+    
+    if (!displayWeek?.days?.[options.selectedDayIndex]) {
+      console.error('❌ Selected day not found');
+      return;
+    }
+
+    const selectedDay = displayWeek.days[options.selectedDayIndex];
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const dayName = dayNames[options.selectedDayIndex] || `Day ${options.selectedDayIndex + 1}`;
+    
+    // Create print window
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (!printWindow) return;
+
+    // Build HTML content based on selected options
+    let htmlContent = '';
+
+    // Header
+    htmlContent += `
+      <div style="text-align: center; margin-bottom: 20pt;">
+        <h1 style="font-size: 20pt; margin: 0 0 8pt 0;">${dayName}</h1>
+        ${isTemplateMode ? `<h2 style="font-size: 14pt; margin: 0;">Week ${displayWeek.weekNumber || 1}</h2>` : 
+          `<h2 style="font-size: 14pt; margin: 0;">Week ${displayWeek.weekNumber || 1} - ${selectedDay.date ? new Date(selectedDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''}</h2>`}
+      </div>
+    `;
+
+    // Week Note (if selected)
+    if (options.printWeekNote && displayWeek.note) {
+      htmlContent += `
+        <div style="border: 2px solid #e5e7eb; padding: 12pt; margin-bottom: 16pt; background: #f9fafb;">
+          <h3 style="font-size: 12pt; margin: 0 0 8pt 0; font-weight: bold;">📝 Note of the Week</h3>
+          <p style="margin: 0; font-size: 10pt; white-space: pre-wrap;">${displayWeek.note || ''}</p>
+        </div>
+      `;
+    }
+
+    // Day Note (if selected)
+    if (options.printDayNote && selectedDay.note) {
+      htmlContent += `
+        <div style="border: 2px solid #e5e7eb; padding: 12pt; margin-bottom: 16pt; background: #fffbeb;">
+          <h3 style="font-size: 12pt; margin: 0 0 8pt 0; font-weight: bold;">📌 Note of the Day</h3>
+          <p style="margin: 0; font-size: 10pt; white-space: pre-wrap;">${selectedDay.note || ''}</p>
+        </div>
+      `;
+    }
+
+    // Summary (Daily Summary Table - if selected)
+    if (options.printSummary && selectedDay.workouts?.length > 0) {
+      htmlContent += '<h3 style="font-size: 13pt; margin: 16pt 0 10pt 0; font-weight: bold;">📊 Daily Summary</h3>';
+      
+      // Calculate sport totals for this day
+      const sportDataMap = new Map<string, { distance: number; series: number }>();
+      
+      selectedDay.workouts?.forEach((workout: any) => {
+        workout.moveframes?.forEach((mf: any) => {
+          const sport = mf.sport || 'UNKNOWN';
+          
+          if (!sportDataMap.has(sport)) {
+            sportDataMap.set(sport, { distance: 0, series: 0 });
+          }
+          
+          const sportData = sportDataMap.get(sport)!;
+          const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
+          
+          if (isDistanceBased) {
+            mf.movelaps?.forEach((lap: any) => {
+              sportData.distance += parseInt(lap.distance) || 0;
+            });
+          } else {
+            // For series-based sports, count total reps/series
+            sportData.series += mf.movelaps?.length || 0;
+          }
+        });
+      });
+
+      // Build summary table
+      htmlContent += `
+        <table style="width: 100%; border-collapse: collapse; font-size: 10pt; margin-bottom: 16pt;">
+          <thead>
+            <tr style="background: #3b82f6; color: white;">
+              <th style="border: 1px solid #999; padding: 6pt; text-align: center;">Day</th>
+              <th style="border: 1px solid #999; padding: 6pt; text-align: center;">Workouts</th>
+              <th style="border: 1px solid #999; padding: 6pt; text-align: left;">Sport</th>
+              <th style="border: 1px solid #999; padding: 6pt; text-align: center;">Total Distance (m)</th>
+              <th style="border: 1px solid #999; padding: 6pt; text-align: center;">Total Series</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      const sportsArray = Array.from(sportDataMap.entries());
+      sportsArray.forEach(([sport, data], index) => {
+        const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
+        const sportIcon = getSportIcon(sport, iconType);
+        
+        htmlContent += `
+          <tr>
+            ${index === 0 ? `<td rowspan="${sportsArray.length}" style="border: 1px solid #999; padding: 6pt; text-align: center; font-weight: bold;">${dayName}</td>` : ''}
+            ${index === 0 ? `<td rowspan="${sportsArray.length}" style="border: 1px solid #999; padding: 6pt; text-align: center;">${selectedDay.workouts.length}</td>` : ''}
+            <td style="border: 1px solid #999; padding: 6pt;">${useImageIcons ? `<img src="${sportIcon}" alt="${sport}" style="width: 14pt; height: 14pt; vertical-align: middle; margin-right: 4pt;" />` : sportIcon} ${sport.replace(/_/g, ' ')}</td>
+            <td style="border: 1px solid #999; padding: 6pt; text-align: center;">${isDistanceBased ? data.distance : '—'}</td>
+            <td style="border: 1px solid #999; padding: 6pt; text-align: center;">${!isDistanceBased ? data.series : '—'}</td>
+          </tr>
+        `;
+      });
+
+      htmlContent += '</tbody></table>';
+    }
+
+    // Workout Info & Movelaps (if selected)
+    if ((options.printWorkoutInfo || options.printMovelaps) && selectedDay.workouts?.length > 0) {
+      htmlContent += '<h3 style="font-size: 13pt; margin: 16pt 0 10pt 0; font-weight: bold;">📋 Workout Details</h3>';
+      
+      selectedDay.workouts.forEach((workout: any, workoutIndex: number) => {
+        const sportName = workout.sport?.replace(/_/g, ' ') || 'Unknown Sport';
+        const sportIcon = getSportIcon(workout.sport, iconType);
+        
+        htmlContent += `
+          <div style="margin-bottom: 16pt; border: 1px solid #d1d5db; padding: 10pt; background: #fafafa;">
+            <h4 style="font-size: 11pt; margin: 0 0 8pt 0; font-weight: bold;">${useImageIcons ? `<img src="${sportIcon}" alt="${sportName}" style="width: 16pt; height: 16pt; vertical-align: middle; margin-right: 4pt;" />` : sportIcon} Workout ${workoutIndex + 1}: ${sportName}</h4>
+        `;
+
+        // Workout Info (if selected)
+        if (options.printWorkoutInfo) {
+          htmlContent += '<div style="border: 1px solid #d1d5db; padding: 8pt; margin-bottom: 10pt; background: #ffffff;">';
+          
+          if (workout.context) {
+            htmlContent += `<p style="margin: 0 0 4pt 0; font-size: 9pt;"><strong>Context:</strong> ${workout.context}</p>`;
+          }
+          if (workout.annotations) {
+            htmlContent += `<p style="margin: 0; font-size: 9pt;"><strong>Annotations:</strong> ${workout.annotations}</p>`;
+          }
+          if (!workout.context && !workout.annotations) {
+            htmlContent += `<p style="margin: 0; font-size: 9pt; color: #999;">No additional info</p>`;
+          }
+          
+          htmlContent += '</div>';
+        }
+
+        // Movelaps (if selected)
+        if (options.printMovelaps && workout.moveframes?.length > 0) {
+          workout.moveframes.forEach((moveframe: any, mfIndex: number) => {
+            if (moveframe.movelaps?.length > 0) {
+              const mfSport = moveframe.sport?.replace(/_/g, ' ') || workout.sport?.replace(/_/g, ' ') || '';
+              
+              htmlContent += `
+                <div style="margin-bottom: 10pt;">
+                  <p style="margin: 0 0 4pt 0; font-size: 9pt; font-weight: bold;">Moveframe ${mfIndex + 1}: ${mfSport}</p>
+                  <table style="width: 100%; border-collapse: collapse; font-size: 8pt;">
+                    <thead>
+                      <tr style="background: #e5e7eb;">
+                        <th style="border: 1px solid #ccc; padding: 3pt; text-align: center;">Seq</th>
+                        <th style="border: 1px solid #ccc; padding: 3pt; text-align: center;">Distance</th>
+                        <th style="border: 1px solid #ccc; padding: 3pt; text-align: center;">Style</th>
+                        <th style="border: 1px solid #ccc; padding: 3pt; text-align: center;">Speed</th>
+                        <th style="border: 1px solid #ccc; padding: 3pt; text-align: center;">Pace</th>
+                        <th style="border: 1px solid #ccc; padding: 3pt; text-align: center;">Time</th>
+                        <th style="border: 1px solid #ccc; padding: 3pt; text-align: center;">Rest</th>
+                        <th style="border: 1px solid #ccc; padding: 3pt; text-align: left;">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+              `;
+
+              moveframe.movelaps.forEach((movelap: any) => {
+                // Strip HTML from notes
+                let notes = '—';
+                if (movelap.notes) {
+                  const tempDiv = document.createElement('div');
+                  tempDiv.innerHTML = movelap.notes;
+                  const strippedNotes = tempDiv.textContent || tempDiv.innerText || '';
+                  notes = strippedNotes.length > 30 ? strippedNotes.substring(0, 30) + '...' : strippedNotes;
+                }
+                
+                htmlContent += `
+                  <tr>
+                    <td style="border: 1px solid #ccc; padding: 3pt; text-align: center;">${movelap.repetitionNumber || '—'}</td>
+                    <td style="border: 1px solid #ccc; padding: 3pt; text-align: center;">${movelap.distance || '—'}</td>
+                    <td style="border: 1px solid #ccc; padding: 3pt; text-align: center;">${movelap.style || '—'}</td>
+                    <td style="border: 1px solid #ccc; padding: 3pt; text-align: center;">${movelap.speed || '—'}</td>
+                    <td style="border: 1px solid #ccc; padding: 3pt; text-align: center;">${movelap.pace || '—'}</td>
+                    <td style="border: 1px solid #ccc; padding: 3pt; text-align: center;">${movelap.time || '—'}</td>
+                    <td style="border: 1px solid #ccc; padding: 3pt; text-align: center;">${movelap.pause || '—'}</td>
+                    <td style="border: 1px solid #ccc; padding: 3pt; font-size: 7pt;">${notes}</td>
+                  </tr>
+                `;
+              });
+
+              htmlContent += `
+                    </tbody>
+                  </table>
+                </div>
+              `;
+            }
+          });
+        }
+
+        htmlContent += '</div>';
+      });
+    }
+
+    // Write to print window
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${dayName} - Week ${displayWeek.weekNumber}</title>
+        <style>
+          @page {
+            size: A4 portrait;
+            margin: 1.5cm;
+          }
+          * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: white;
+            font-size: 10pt;
+          }
+        </style>
+      </head>
+      <body>
+        ${htmlContent}
+      </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Wait for content to load, then print
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+  }, [displayWeek, iconType, useImageIcons, isTemplateMode]);
 
   // Trigger auto-print after modal content is rendered (only once)
   React.useEffect(() => {
@@ -893,6 +1141,12 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
             Close
           </button>
           <button
+            onClick={() => setShowPrintOptionsModal(true)}
+            className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+          >
+            Print a Day
+          </button>
+          <button
             onClick={handlePrint}
             className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
           >
@@ -900,6 +1154,15 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
           </button>
         </div>
       </div>
+
+      {/* Print Options Modal */}
+      <PrintOptionsModal
+        isOpen={showPrintOptionsModal}
+        onClose={() => setShowPrintOptionsModal(false)}
+        onPrint={handlePrintDay}
+        week={displayWeek}
+        activeSection={activeSection}
+      />
 
       {/* Print Styles - Show ONLY modal content */}
       <style jsx global>{`

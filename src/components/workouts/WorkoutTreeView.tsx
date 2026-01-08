@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ChevronRight, ChevronDown, Dumbbell } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronRight, ChevronDown, Dumbbell, Flag } from 'lucide-react';
 import { useColorSettings } from '@/hooks/useColorSettings';
 import { useSportIconType } from '@/hooks/useSportIconType';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
@@ -44,8 +44,23 @@ export default function WorkoutTreeView({
   const expandedDays = externalExpandedDays || localExpandedDays;
   const expandedWorkouts = externalExpandedWorkouts || localExpandedWorkouts;
   const { colors, getBorderStyle } = useColorSettings();
-  const iconType = useSportIconType();
+  const defaultIconType = useSportIconType();
+  const [iconType, setIconType] = useState<'emoji' | 'icon'>(defaultIconType);
   const useImageIcons = isImageIcon(iconType);
+  
+  // Load icon type from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('sportIconType');
+    if (saved === 'icon' || saved === 'emoji') {
+      setIconType(saved);
+    }
+  }, []);
+  
+  const toggleIconType = () => {
+    const newType = iconType === 'emoji' ? 'icon' : 'emoji';
+    localStorage.setItem('sportIconType', newType);
+    setIconType(newType);
+  };
 
   const toggleWeek = (weekNumber: number) => {
     // If parent provided a toggle callback, use it
@@ -162,17 +177,16 @@ export default function WorkoutTreeView({
               }}
             >
               {/* Week Header - Level 1 (Thickest) */}
-              <button
-                onClick={() => toggleWeek(week.weekNumber)}
-                className="w-full flex items-center justify-between px-4 py-4 hover:bg-opacity-95 transition-all"
-                style={{
-                  backgroundColor: colors.weekHeader,
-                  color: colors.weekHeaderText,
-                  borderBottom: '3px solid rgba(0,0,0,0.15)',
-                  fontWeight: '700'
-                }}
-              >
-                <div className="flex items-center gap-3">
+              <div className="w-full flex items-center justify-between px-4 py-4" style={{
+                backgroundColor: colors.weekHeader,
+                color: colors.weekHeaderText,
+                borderBottom: '3px solid rgba(0,0,0,0.15)',
+                fontWeight: '700'
+              }}>
+                <button
+                  onClick={() => toggleWeek(week.weekNumber)}
+                  className="flex items-center gap-3 hover:opacity-80 transition-all"
+                >
                   {isExpanded ? (
                     <ChevronDown className="w-6 h-6 flex-shrink-0" />
                   ) : (
@@ -184,11 +198,23 @@ export default function WorkoutTreeView({
                       {week.days?.length || 0} days • {totalWorkouts} workout{totalWorkouts !== 1 ? 's' : ''} planned
                     </div>
                   </div>
+                </button>
+                <div className="flex items-center gap-3">
+                  <div className="text-sm font-semibold opacity-90">
+                    {dateRange}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleIconType();
+                    }}
+                    className="px-3 py-1.5 text-xs rounded-md transition-colors bg-white bg-opacity-20 hover:bg-opacity-30 border border-white border-opacity-30"
+                    title={`Switch to ${iconType === 'emoji' ? 'image' : 'emoji'} icons`}
+                  >
+                    {iconType === 'emoji' ? '🎨 Images' : '😀 Emojis'}
+                  </button>
                 </div>
-                <div className="text-sm font-semibold opacity-90">
-                  {dateRange}
-                </div>
-              </button>
+              </div>
 
               {/* Expanded Days */}
               {isExpanded && week.days && (
@@ -316,69 +342,128 @@ export default function WorkoutTreeView({
                                 totalMoveframes = workout.moveframes.length;
                               }
                               
+                              // Find main and secondary work descriptions per sport
+                              const workDescriptions = new Map<string, { main: string | null; secondary: string | null }>();
+                              if (workout.moveframes) {
+                                workout.moveframes.forEach((mf: any) => {
+                                  if (mf.sport && mf.workType) {
+                                    if (!workDescriptions.has(mf.sport)) {
+                                      workDescriptions.set(mf.sport, { main: null, secondary: null });
+                                    }
+                                    const desc = workDescriptions.get(mf.sport)!;
+                                    
+                                    // Get description (prefer manual content over regular description)
+                                    const mfDescription = mf.manualMode && mf.notes ? mf.notes : mf.description;
+                                    
+                                    if (mf.workType === 'MAIN' && !desc.main) {
+                                      desc.main = mfDescription || 'Main work';
+                                    } else if (mf.workType === 'SECONDARY' && !desc.secondary) {
+                                      desc.secondary = mfDescription || 'Secondary work';
+                                    }
+                                  }
+                                });
+                              }
+                              
                               const isWorkoutExpanded = expandedWorkouts.has(workout.id);
 
                               return (
                                 <div key={workout.id}>
                                   {/* Workout Row - Third Level (Indented from Day) */}
-                                  <button
-                                    onClick={(e) => toggleWorkout(workout.id, e)}
-                                    className="w-full flex items-center justify-between px-4 py-2.5 border-t hover:bg-opacity-90 transition-all cursor-pointer"
-                                    style={{
-                                      paddingLeft: '3rem', // Indent from day
-                                      backgroundColor: workoutIndex % 3 === 0 ? colors.workoutHeader : (workoutIndex % 3 === 1 ? colors.workout2Header : colors.workout3Header),
-                                      color: workoutIndex % 3 === 0 ? colors.workoutHeaderText : (workoutIndex % 3 === 1 ? colors.workout2HeaderText : colors.workout3HeaderText),
-                                      borderTop: getBorderStyle('workout') || '1.5px solid rgba(0,0,0,0.1)',
-                                      fontWeight: '600',
-                                      cursor: 'pointer'
-                                    }}
-                                  >
-                                    <div className="flex items-center gap-3">
-                                      {isWorkoutExpanded ? (
-                                        <ChevronDown className="w-4 h-4 flex-shrink-0" />
-                                      ) : (
-                                        <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                                  <div>
+                                    <button
+                                      onClick={(e) => toggleWorkout(workout.id, e)}
+                                      className="w-full flex flex-col px-4 py-2.5 border-t hover:bg-opacity-90 transition-all cursor-pointer"
+                                      style={{
+                                        paddingLeft: '3rem', // Indent from day
+                                        backgroundColor: workoutIndex % 3 === 0 ? colors.workoutHeader : (workoutIndex % 3 === 1 ? colors.workout2Header : colors.workout3Header),
+                                        color: workoutIndex % 3 === 0 ? colors.workoutHeaderText : (workoutIndex % 3 === 1 ? colors.workout2HeaderText : colors.workout3HeaderText),
+                                        borderTop: getBorderStyle('workout') || '1.5px solid rgba(0,0,0,0.1)',
+                                        fontWeight: '600',
+                                        cursor: 'pointer'
+                                      }}
+                                    >
+                                      {/* First Row - Workout Title and Sports */}
+                                      <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center gap-3">
+                                          {isWorkoutExpanded ? (
+                                            <ChevronDown className="w-4 h-4 flex-shrink-0" />
+                                          ) : (
+                                            <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                                          )}
+                                          <Dumbbell className="w-4 h-4" />
+                                          <span className="font-semibold text-sm">Workout #{workoutIndex + 1}</span>
+                                          <span className="text-xs opacity-70">
+                                            ({totalMoveframes} moveframe{totalMoveframes !== 1 ? 's' : ''})
+                                          </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          {Array.from(sportData.entries()).slice(0, 3).map(([sport, data]) => {
+                                            const sportIcon = getSportIcon(sport, iconType);
+                                            const displayValue = data.value > 0 
+                                              ? (data.isSeriesBased ? `${data.value} series` : `${data.value}m`)
+                                              : '—';
+                                            return (
+                                              <div
+                                                key={sport}
+                                                className="flex items-center gap-2 px-3 py-1 rounded text-sm font-semibold"
+                                                style={{ 
+                                                  backgroundColor: 'rgba(255,255,255,0.25)',
+                                                  border: '1px solid rgba(0,0,0,0.1)'
+                                                }}
+                                              >
+                                                {useImageIcons ? (
+                                                  <img src={sportIcon} alt={sport} className="w-4 h-4 object-cover rounded" />
+                                                ) : (
+                                                  <span className="text-base">{sportIcon}</span>
+                                                )}
+                                                <span className="text-xs">{sport}</span>
+                                                {data.value > 0 && (
+                                                  <span className="text-sm font-bold ml-1 text-blue-900">
+                                                    {displayValue}
+                                                  </span>
+                                                )}
+                                              </div>
+                                            );
+                                          })}
+                                          {sportData.size > 3 && (
+                                            <span className="text-xs opacity-60 font-medium">+{sportData.size - 3}</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Second Row - Main and Secondary Work Descriptions */}
+                                      {workDescriptions.size > 0 && (
+                                        <div className="mt-2 ml-8 flex flex-wrap gap-3 text-xs">
+                                          {Array.from(workDescriptions.entries()).map(([sport, work]) => (
+                                            <div key={sport} className="flex flex-col gap-1">
+                                              {work.main && (
+                                                <div className="flex items-start gap-2 bg-white bg-opacity-20 px-2 py-1 rounded">
+                                                  <Flag className="w-3 h-3 mt-0.5 flex-shrink-0 text-red-600" fill="currentColor" />
+                                                  <div className="flex flex-col">
+                                                    <span className="font-semibold text-[10px] opacity-80">{sport} - MAIN</span>
+                                                    <span className="text-[10px] opacity-90 max-w-md line-clamp-2">
+                                                      {work.main.replace(/<[^>]*>/g, '').substring(0, 100)}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              )}
+                                              {work.secondary && (
+                                                <div className="flex items-start gap-2 bg-white bg-opacity-20 px-2 py-1 rounded">
+                                                  <Flag className="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-600" fill="currentColor" />
+                                                  <div className="flex flex-col">
+                                                    <span className="font-semibold text-[10px] opacity-80">{sport} - SECONDARY</span>
+                                                    <span className="text-[10px] opacity-90 max-w-md line-clamp-2">
+                                                      {work.secondary.replace(/<[^>]*>/g, '').substring(0, 100)}
+                                                    </span>
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
                                       )}
-                                      <Dumbbell className="w-4 h-4" />
-                                      <span className="font-semibold text-sm">Workout #{workoutIndex + 1}</span>
-                                      <span className="text-xs opacity-70">
-                                        ({totalMoveframes} moveframe{totalMoveframes !== 1 ? 's' : ''})
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      {Array.from(sportData.entries()).slice(0, 3).map(([sport, data]) => {
-                                        const sportIcon = getSportIcon(sport, iconType);
-                                        const displayValue = data.value > 0 
-                                          ? (data.isSeriesBased ? `${data.value} series` : `${data.value}m`)
-                                          : '—';
-                                        return (
-                                          <div
-                                            key={sport}
-                                            className="flex items-center gap-2 px-3 py-1 rounded text-sm font-semibold"
-                                            style={{ 
-                                              backgroundColor: 'rgba(255,255,255,0.25)',
-                                              border: '1px solid rgba(0,0,0,0.1)'
-                                            }}
-                                          >
-                                            {useImageIcons ? (
-                                              <img src={sportIcon} alt={sport} className="w-4 h-4 object-cover rounded" />
-                                            ) : (
-                                              <span className="text-base">{sportIcon}</span>
-                                            )}
-                                            <span className="text-xs">{sport}</span>
-                                            {data.value > 0 && (
-                                              <span className="text-sm font-bold ml-1 text-blue-900">
-                                                {displayValue}
-                                              </span>
-                                            )}
-                                          </div>
-                                        );
-                                      })}
-                                      {sportData.size > 3 && (
-                                        <span className="text-xs opacity-60 font-medium">+{sportData.size - 3}</span>
-                                      )}
-                                    </div>
-                                  </button>
+                                    </button>
+                                  </div>
 
                                   {/* Expanded Moveframes */}
                                   {isWorkoutExpanded && workout.moveframes && workout.moveframes.length > 0 && (
@@ -416,7 +501,19 @@ export default function WorkoutTreeView({
                                                 )}
                                                 <span className="text-xs font-medium">{moveframe.letter}</span>
                                                 <span className="text-xs opacity-70">{moveframe.sport}</span>
-                                                <span className="text-xs opacity-60">
+                                                {moveframe.workType === 'MAIN' && (
+                                                  <div className="flex items-center gap-1 ml-1">
+                                                    <Flag className="w-3 h-3 text-red-600 flex-shrink-0" fill="currentColor" />
+                                                    <span className="text-xs font-medium text-red-600">Main work</span>
+                                                  </div>
+                                                )}
+                                                {moveframe.workType === 'SECONDARY' && (
+                                                  <div className="flex items-center gap-1 ml-1">
+                                                    <Flag className="w-3 h-3 text-blue-600 flex-shrink-0" fill="currentColor" />
+                                                    <span className="text-xs font-medium text-blue-600">Secondary work</span>
+                                                  </div>
+                                                )}
+                                                <span className="text-xs opacity-60 ml-1">
                                                   ({movelapsCount} lap{movelapsCount !== 1 ? 's' : ''})
                                                 </span>
                                               </div>

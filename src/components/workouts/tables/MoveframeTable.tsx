@@ -132,7 +132,7 @@ export default function MoveframeTable({
           className="border-collapse shadow-sm text-sm" 
           style={{ 
             tableLayout: 'fixed', 
-            width: '1100px',
+            width: '800px',
             backgroundColor: colors.moveframeHeader,
             border: getBorderStyle('moveframe') || '1px solid #e5e7eb'
           }}
@@ -140,7 +140,7 @@ export default function MoveframeTable({
           {/* Title Row */}
           <thead style={{ backgroundColor: colors.moveframeHeader }}>
             <tr>
-              <th colSpan={visibleColumnCount + 1} className="border border-gray-200 px-2 py-1 text-left text-sm" style={{ color: colors.moveframeHeaderText }}>
+              <th colSpan={visibleColumnCount + 1} className="border border-gray-200 px-2 py-1 text-left text-base" style={{ color: colors.moveframeHeaderText }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <button
@@ -150,15 +150,15 @@ export default function MoveframeTable({
                     >
                       {isExpanded ? '▼' : '►'}
                     </button>
-                  <span className="font-bold text-sm">
+                  <span className="font-bold text-base">
                     Moveframes of workout #{workoutIndex + 1}
                   </span>
-                  <span className="ml-2 text-sm" style={{ color: colors.moveframeHeaderText }}>
+                  <span className="ml-2 text-base" style={{ color: colors.moveframeHeaderText }}>
                     {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
                   </span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="font-bold text-xs" style={{ color: colors.moveframeHeaderText }}>Options:</span>
+                  <span className="font-bold text-sm" style={{ color: colors.moveframeHeaderText }}>Options:</span>
                   <div className="flex gap-1">
                       <button 
                         onClick={(e) => {
@@ -233,7 +233,7 @@ export default function MoveframeTable({
             <tr style={{ backgroundColor: colors.moveframeHeader, filter: 'brightness(0.95)' }}>
               {/* Drag Handle Header */}
               <th 
-                className="border border-gray-200 px-1 py-1 text-center text-xs font-bold w-6"
+                className="border border-gray-200 px-1 py-1 text-center text-sm font-bold w-6"
                 title="Drag handle"
               >
                 ⋮⋮
@@ -242,9 +242,17 @@ export default function MoveframeTable({
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
-                  className="border border-gray-200 px-1 py-1 text-xs font-bold text-center"
+                  className="border border-gray-200 px-1 py-1 text-sm font-bold text-center"
                   style={{ 
-                    width: column.id === 'description' ? '450px' : column.id === 'mf' ? '40px' : '70px'
+                    width: column.id === 'description' ? '300px' : // Decreased by 1/3 from 450px
+                           column.id === 'sport' ? '28px' :         // Decreased by additional 2/5 from 47px
+                           column.id === 'mf' ? '40px' : 
+                           column.id === 'type' ? '60px' :          // Compact Type/Section
+                           column.id === 'repetitions' ? '45px' :   // Compact Rip\Sets
+                           column.id === 'total_distance' ? '50px' : // Compact Duration/Distance
+                           column.id === 'macro' ? '50px' :         // Compact Macro
+                           column.id === 'alarm' ? '50px' :         // Compact Alarm
+                           '70px'
                   }}
                 >
                   {column.label}
@@ -294,7 +302,7 @@ export default function MoveframeTable({
                       column.id === 'mf' ? 'font-bold' : ''
                     }`}
                     style={{ 
-                      width: column.id === 'description' ? '450px' : column.id === 'mf' ? '40px' : '70px'
+                      width: column.id === 'description' ? '500px' : column.id === 'mf' ? '40px' : '70px'
                     }}
                   >
                     {isHtml ? (

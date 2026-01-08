@@ -104,137 +104,15 @@ export default function FavouritesSettings() {
     { code: 'ar', name: 'العربية' },
   ];
 
-  // Load data from localStorage
+  // Load data from database APIs
   useEffect(() => {
-    // Load Weekly Plans
-    const savedPlans = localStorage.getItem('favouriteWeeklyPlans');
-    if (savedPlans) {
-      try {
-        setWeeklyPlans(JSON.parse(savedPlans));
-      } catch (e) {
-        console.error('Failed to load weekly plans');
-      }
-    } else {
-      // Default plans
-      setWeeklyPlans([
-        {
-          id: '1',
-          name: 'Beginner Strength Program',
-          description: 'Full body workout routine for beginners',
-          weekStart: 'Monday',
-          daysCount: 3,
-          workoutsCount: 9,
-          lastUsed: '2025-11-20',
-          tags: ['Strength', 'Beginner']
-        },
-        {
-          id: '2',
-          name: 'Cardio & Core',
-          description: 'High intensity cardio with core strengthening',
-          weekStart: 'Monday',
-          daysCount: 4,
-          workoutsCount: 12,
-          lastUsed: '2025-11-22',
-          tags: ['Cardio', 'Core']
-        }
-      ]);
-    }
-
-    // Load Workouts
-    const savedWorkouts = localStorage.getItem('favouriteWorkouts');
-    if (savedWorkouts) {
-      try {
-        setWorkouts(JSON.parse(savedWorkouts));
-      } catch (e) {
-        console.error('Failed to load workouts');
-      }
-    } else {
-      // Default workouts
-      setWorkouts([
-        {
-          id: '1',
-          name: 'Upper Body Push',
-          description: 'Chest, shoulders, and triceps workout',
-          duration: 45,
-          intensity: 'High',
-          moveframesCount: 6,
-          sport: 'Weightlifting',
-          lastUsed: '2025-11-23',
-          tags: ['Upper Body', 'Push']
-        },
-        {
-          id: '2',
-          name: '5K Run Training',
-          description: 'Interval training for 5K preparation',
-          duration: 30,
-          intensity: 'Medium',
-          moveframesCount: 4,
-          sport: 'Running',
-          lastUsed: '2025-11-21',
-          tags: ['Cardio', 'Running']
-        }
-      ]);
-    }
-
-    // Load Moveframes
-    const savedMoveframes = localStorage.getItem('favouriteMoveframes');
-    if (savedMoveframes) {
-      try {
-        setMoveframes(JSON.parse(savedMoveframes));
-      } catch (e) {
-        console.error('Failed to load moveframes');
-      }
-    } else {
-      // Default moveframes
-      setMoveframes([
-        {
-          id: '1',
-          name: 'Barbell Bench Press',
-          description: 'Compound chest exercise',
-          sets: 4,
-          reps: '8-10',
-          restTime: 120,
-          equipment: ['Barbell', 'Bench'],
-          muscleGroups: ['Chest', 'Triceps', 'Shoulders'],
-          difficulty: 'Intermediate',
-          lastUsed: '2025-11-23',
-          usageCount: 45
-        },
-        {
-          id: '2',
-          name: 'Bodyweight Squats',
-          description: 'Basic lower body movement',
-          sets: 3,
-          reps: '15-20',
-          restTime: 60,
-          equipment: [],
-          muscleGroups: ['Quadriceps', 'Glutes', 'Hamstrings'],
-          difficulty: 'Beginner',
-          lastUsed: '2025-11-22',
-          usageCount: 78
-        }
-      ]);
-    }
+    loadFavoriteWeeklyPlans();
+    loadFavoriteWorkouts();
+    loadFavoriteMoveframes();
   }, []);
 
-  // Save to localStorage
-  useEffect(() => {
-    if (weeklyPlans.length > 0) {
-      localStorage.setItem('favouriteWeeklyPlans', JSON.stringify(weeklyPlans));
-    }
-  }, [weeklyPlans]);
-
-  useEffect(() => {
-    if (workouts.length > 0) {
-      localStorage.setItem('favouriteWorkouts', JSON.stringify(workouts));
-    }
-  }, [workouts]);
-
-  useEffect(() => {
-    if (moveframes.length > 0) {
-      localStorage.setItem('favouriteMoveframes', JSON.stringify(moveframes));
-    }
-  }, [moveframes]);
+  // Data is now saved to database via API endpoints
+  // No need for localStorage sync
 
   // Load favorite sports from API
   useEffect(() => {
@@ -267,6 +145,131 @@ export default function FavouritesSettings() {
     } catch (error) {
       console.error('❌ Error loading favorite sports:', error);
       setSelectedSports([]);
+    }
+  };
+
+  const loadFavoriteWeeklyPlans = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('🔒 No token for loading favorite weekly plans');
+        return;
+      }
+
+      console.log('📥 Loading favorite weekly plans...');
+      const response = await fetch('/api/workouts/plans/favorites', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Loaded favorite plans:', data.plans);
+        // Transform to match the WeeklyPlan interface
+        const transformed = Array.isArray(data.plans) ? data.plans.map((plan: any) => ({
+          id: plan.id,
+          name: plan.name,
+          description: plan.description,
+          weekStart: 'Monday',
+          daysCount: plan.daysCount || 0,
+          workoutsCount: plan.workoutsCount || 0,
+          lastUsed: new Date(plan.lastUsed).toLocaleDateString(),
+          tags: []
+        })) : [];
+        setWeeklyPlans(transformed);
+      } else {
+        console.log('⚠️ No favorite plans found');
+        setWeeklyPlans([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading favorite weekly plans:', error);
+      setWeeklyPlans([]);
+    }
+  };
+
+  const loadFavoriteWorkouts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('🔒 No token for loading favorite workouts');
+        return;
+      }
+
+      console.log('📥 Loading favorite workouts...');
+      const response = await fetch('/api/workouts/favorites', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const favorites = await response.json(); // API returns array directly
+        console.log('✅ Loaded favorite workouts:', favorites);
+        // Transform to match the Workout interface
+        const transformed = Array.isArray(favorites) ? favorites.map((fav: any) => ({
+          id: fav.id,
+          name: fav.name,
+          description: fav.description || '',
+          duration: Math.round((fav.totalDuration || 0) / 60), // Convert seconds to minutes
+          intensity: 'Medium' as const,
+          moveframesCount: 0, // Not stored in FavoriteWorkout
+          sport: fav.sports?.split(',')[0] || 'Unknown',
+          sportIcon: undefined,
+          lastUsed: new Date(fav.createdAt).toLocaleDateString(),
+          tags: fav.sports?.split(',') || []
+        })) : [];
+        setWorkouts(transformed);
+      } else {
+        console.log('⚠️ No favorite workouts found');
+        setWorkouts([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading favorite workouts:', error);
+      setWorkouts([]);
+    }
+  };
+
+  const loadFavoriteMoveframes = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('🔒 No token for loading favorite moveframes');
+        return;
+      }
+
+      console.log('📥 Loading favorite moveframes...');
+      const response = await fetch('/api/workouts/moveframes/favorites', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Loaded favorite moveframes:', data.moveframes);
+        // Transform to match the Moveframe interface
+        const transformed = Array.isArray(data.moveframes) ? data.moveframes.map((mf: any) => ({
+          id: mf.id,
+          name: mf.name,
+          description: mf.description || '',
+          sets: mf.lapsCount || 0,
+          reps: `${mf.totalDistance}m` || '-',
+          restTime: 0,
+          equipment: [],
+          muscleGroups: [mf.sport],
+          difficulty: 'Intermediate' as const,
+          lastUsed: new Date(mf.lastUsed).toLocaleDateString(),
+          usageCount: 0
+        })) : [];
+        setMoveframes(transformed);
+      } else {
+        console.log('⚠️ No favorite moveframes found');
+        setMoveframes([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading favorite moveframes:', error);
+      setMoveframes([]);
     }
   };
 
@@ -576,55 +579,45 @@ export default function FavouritesSettings() {
       {/* Action Bar */}
       <div className="flex justify-between items-center">
         <div className="flex gap-3">
-          <button
-            onClick={() => {
-              if (activeTab === 'plans') {
-                setEditingPlan({
-                  id: '',
-                  name: '',
-                  description: '',
-                  weekStart: 'Monday',
-                  daysCount: 3,
-                  workoutsCount: 0,
-                  lastUsed: new Date().toISOString().split('T')[0],
-                  tags: []
-                });
-                setShowPlanDialog(true);
-              } else if (activeTab === 'workouts') {
-                setEditingWorkout({
-                  id: '',
-                  name: '',
-                  description: '',
-                  duration: 30,
-                  intensity: 'Medium',
-                  moveframesCount: 0,
-                  sport: '',
-                  lastUsed: new Date().toISOString().split('T')[0],
-                  tags: []
-                });
-                setShowWorkoutDialog(true);
-              } else {
-                setEditingMoveframe({
-                  id: '',
-                  name: '',
-                  description: '',
-                  sets: 3,
-                  reps: '10',
-                  restTime: 60,
-                  equipment: [],
-                  muscleGroups: [],
-                  difficulty: 'Beginner',
-                  lastUsed: new Date().toISOString().split('T')[0],
-                  usageCount: 0
-                });
-                setShowMoveframeDialog(true);
-              }
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-          >
-            <Plus className="w-4 h-4" />
-            Add {activeTab === 'plans' ? 'Plan' : activeTab === 'workouts' ? 'Workout' : 'Moveframe'}
-          </button>
+          {/* Only show Add button for plans and moveframes, not for workouts */}
+          {activeTab !== 'workouts' && (
+            <button
+              onClick={() => {
+                if (activeTab === 'plans') {
+                  setEditingPlan({
+                    id: '',
+                    name: '',
+                    description: '',
+                    weekStart: 'Monday',
+                    daysCount: 3,
+                    workoutsCount: 0,
+                    lastUsed: new Date().toISOString().split('T')[0],
+                    tags: []
+                  });
+                  setShowPlanDialog(true);
+                } else {
+                  setEditingMoveframe({
+                    id: '',
+                    name: '',
+                    description: '',
+                    sets: 3,
+                    reps: '10',
+                    restTime: 60,
+                    equipment: [],
+                    muscleGroups: [],
+                    difficulty: 'Beginner',
+                    lastUsed: new Date().toISOString().split('T')[0],
+                    usageCount: 0
+                  });
+                  setShowMoveframeDialog(true);
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            >
+              <Plus className="w-4 h-4" />
+              Add {activeTab === 'plans' ? 'Plan' : 'Moveframe'}
+            </button>
+          )}
         </div>
         <div className="flex gap-3 items-center">
           <div className="relative">

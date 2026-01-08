@@ -16,7 +16,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const { periods } = await request.json();
+    // Safely parse JSON with error handling
+    let periods;
+    try {
+      const body = await request.json();
+      periods = body.periods;
+    } catch (parseError) {
+      console.error('❌ Error parsing request body:', parseError);
+      return NextResponse.json({ 
+        error: 'Invalid request body', 
+        details: parseError instanceof Error ? parseError.message : 'Unable to parse JSON'
+      }, { status: 400 });
+    }
     
     // Handle fallback admin - accept but don't save
     if (decoded.userId === 'admin') {

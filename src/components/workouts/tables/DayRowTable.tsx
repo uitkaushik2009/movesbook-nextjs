@@ -23,6 +23,7 @@ interface DayRowTableProps {
   onToggleWorkout?: (workoutId: string) => void;  // Added for clickable workout numbers
   onExpandOnlyThisWorkout?: (workout: any, day: any) => void; // For expanding only one workout
   onExpandDayWithAllWorkouts?: (dayId: string, workouts: any[]) => void; // For row click
+  onCycleWorkoutExpansion?: (workout: any, day: any) => void; // 3-state cycle for workout numbers
   onEditDay?: (day: any) => void;
   onAddWorkout?: (day: any) => void;
   onShowDayInfo?: (day: any) => void;
@@ -47,6 +48,7 @@ export default function DayRowTable({
   onToggleWorkout,
   onExpandOnlyThisWorkout,
   onExpandDayWithAllWorkouts,
+  onCycleWorkoutExpansion,
   onEditDay,
   onAddWorkout,
   onShowDayInfo,
@@ -262,26 +264,28 @@ export default function DayRowTable({
         </td>
       )}
 
-      {/* Match Done (Workout Completion Status) */}
-      <td 
-        className={`border border-gray-200 px-1 py-2 text-center ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-col-6' : 'sticky-col-7'} w-[60px] min-w-[60px]`}
-        style={{ 
-          backgroundColor: bgStyle,
-          color: rowTextColor
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={hasWorkouts}
-          readOnly
-          className="w-4 h-4"
-          title={hasWorkouts ? 'Workouts planned' : 'No workouts'}
-        />
-      </td>
+      {/* Match Done (Workout Completion Status) - Only for Section D */}
+      {activeSection === 'D' && (
+        <td 
+          className="border border-gray-200 px-1 py-2 text-center sticky-col-7 w-[60px] min-w-[60px]"
+          style={{ 
+            backgroundColor: bgStyle,
+            color: rowTextColor
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={hasWorkouts}
+            readOnly
+            className="w-4 h-4"
+            title={hasWorkouts ? 'Workouts planned' : 'No workouts'}
+          />
+        </td>
+      )}
 
       {/* Workout Sessions - Show numbers with symbols for each workout + Day Description */}
       <td 
-        className={`border border-gray-200 px-1 py-2 text-center ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-col-7' : 'sticky-col-8'}`}
+        className={`border border-gray-200 px-1 py-2 text-center ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-col-6' : 'sticky-col-8'}`}
         style={{ backgroundColor: bgStyle }}
         onClick={(e) => e.stopPropagation()} // Prevent row click when clicking on workout numbers
       >
@@ -298,13 +302,13 @@ export default function DayRowTable({
                 <span 
                   key={num} 
                   className={`text-xl font-bold ${colorClass} flex items-center gap-1 ${workout ? 'cursor-pointer hover:bg-blue-200 px-2 rounded transition-colors' : ''}`}
-                  title={workout ? `Click to expand ONLY Workout ${num}` : `Workout ${num} (not created)`}
+                  title={workout ? `Click to cycle: closed → moveframes → movelaps → closed` : `Workout ${num} (not created)`}
                   onClick={(e) => {
-                    if (workout && onExpandOnlyThisWorkout) {
+                    if (workout && onCycleWorkoutExpansion) {
                       e.stopPropagation();
                       console.log('🔢 User clicked workout number in day table:', num, workout.id);
-                      // Expand ONLY this workout and collapse all others
-                      onExpandOnlyThisWorkout(workout, day);
+                      // 3-state cycle: closed → show moveframes → show movelaps → closed
+                      onCycleWorkoutExpansion(workout, day);
                     }
                   }}
                 >

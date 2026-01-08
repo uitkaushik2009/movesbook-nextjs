@@ -233,10 +233,14 @@ export default function SortableMoveframeRow({
       
       case 'drag':
         return (
-          <td 
-            key="drag" 
-            className="border border-gray-200 px-1 py-1 text-center" 
-            style={isAnnotation ? { backgroundColor: annotationBgColor || '#5168c2', color: annotationTextColor || '#ffffff' } : {}}
+           <td 
+             key="drag" 
+             className="border border-gray-200 text-center" 
+             style={{
+               width: '28px',
+               padding: '0',
+               ...(isAnnotation ? { backgroundColor: annotationBgColor || '#5168c2', color: annotationTextColor || '#ffffff' } : {})
+             }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -376,10 +380,10 @@ export default function SortableMoveframeRow({
         const mfHasHtmlContent = moveframe.description && moveframe.description.includes('<');
         
         return (
-          <td 
-            key="mf" 
-            className="border border-gray-200 px-1 py-1 text-center cursor-pointer hover:bg-blue-100 transition-colors"
-            style={isAnnotation ? { backgroundColor: annotationBgColor || '#5168c2', color: annotationTextColor || '#ffffff' } : {}}
+           <td 
+             key="mf" 
+             className="border border-gray-200 px-1 py-1 text-center cursor-pointer hover:bg-blue-100 transition-colors"
+             style={{ width: '25px', ...isAnnotation ? { backgroundColor: annotationBgColor || '#5168c2', color: annotationTextColor || '#ffffff' } : {} }}
             onDoubleClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -420,7 +424,7 @@ export default function SortableMoveframeRow({
       case 'section':
         // Show workout section information (section name and color)
         return (
-          <td key="section" className="border border-gray-200 px-1 py-1 text-center text-xs" style={isAnnotation ? { backgroundColor: annotationBgColor || '#5168c2', color: annotationTextColor || '#ffffff' } : {}}>
+           <td key="section" className="border border-gray-200 px-1 py-1 text-center text-xs" style={{ width: '96px', ...isAnnotation ? { backgroundColor: annotationBgColor || '#5168c2', color: annotationTextColor || '#ffffff' } : {} }}>
             <div className="flex items-center justify-center gap-1">
               <div
                 className="w-3 h-3 rounded-full border border-gray-400 flex-shrink-0"
@@ -434,7 +438,7 @@ export default function SortableMoveframeRow({
       
       case 'sport':
         return (
-          <td key="sport" className="border border-gray-200 px-1 py-1 text-left" style={isAnnotation ? { backgroundColor: annotationBgColor || '#5168c2', color: annotationTextColor || '#ffffff' } : {}}>
+           <td key="sport" className="border border-gray-200 px-1 py-1 text-left" style={{ width: '48px', ...isAnnotation ? { backgroundColor: annotationBgColor || '#5168c2', color: annotationTextColor || '#ffffff' } : {} }}>
             <div className="flex items-center gap-1">
               {useImageIcons ? (
                 <img 
@@ -453,19 +457,26 @@ export default function SortableMoveframeRow({
       case 'description':
         // Check if this is a manual mode moveframe
         const isManualMode = moveframe.manualMode === true;
+        // Check if Priority checkbox is selected
+        const hasManualPriority = moveframe.manualPriority === true;
+        // For manual mode WITHOUT priority, don't show description
         // For manual mode, ALWAYS use notes field first (it contains the full rich text content)
         // Description field might be truncated for database constraints
-        const manualContent = isManualMode ? (moveframe.notes || moveframe.description || '') : moveframe.description;
+        const manualContent = (isManualMode && hasManualPriority) ? (moveframe.notes || moveframe.description || '') : 
+                             (isManualMode && !hasManualPriority) ? '' :
+                             moveframe.description;
         
         // Debug logging for manual mode
         if (isManualMode) {
           console.log(`🔍 [SortableMoveframeRow] Manual mode moveframe ${moveframe.letter}:`, {
             manualMode: moveframe.manualMode,
+            manualPriority: moveframe.manualPriority,
             hasDescription: !!moveframe.description,
             hasNotes: !!moveframe.notes,
             descriptionLength: moveframe.description?.length || 0,
             notesLength: moveframe.notes?.length || 0,
-            manualContentLength: manualContent?.length || 0
+            manualContentLength: manualContent?.length || 0,
+            willShowContent: hasManualPriority
           });
         }
         
@@ -487,19 +498,19 @@ export default function SortableMoveframeRow({
             key="description" 
             className={`border border-gray-200 px-2 py-1 text-center text-sm ${
               moveframe.type === 'ANNOTATION' && moveframe.annotationBold ? 'font-bold' : ''
-            } ${isManualMode && manualContent && !isAnnotation ? 'cursor-pointer hover:bg-blue-50' : ''}`}
-            style={{
-              width: '600px',
-              minWidth: '600px',
-              maxWidth: '600px',
-              overflow: 'hidden',
+            } ${isManualMode && hasManualPriority && manualContent && !isAnnotation ? 'cursor-pointer hover:bg-blue-50' : ''}`}
+             style={{
+               width: '623px',
+               minWidth: '623px',
+               maxWidth: '623px',
+               overflow: 'hidden',
               ...(isAnnotation ? {
                 backgroundColor: annotationBgColor || '#5168c2',
                 color: annotationTextColor || '#ffffff'
               } : {})
             }}
             onClick={(e) => {
-              if (isManualMode && manualContent) {
+              if (isManualMode && hasManualPriority && manualContent) {
                 e.stopPropagation();
                 console.log('🔍 [SortableMoveframeRow] Opening popup with content:', {
                   contentLength: manualContent.length,
@@ -514,9 +525,9 @@ export default function SortableMoveframeRow({
                 setShowManualPopup(true);
               }
             }}
-            title={isManualMode && manualContent ? "Click to view full content" : ""}
+            title={isManualMode && hasManualPriority && manualContent ? "Click to view full content" : ""}
           >
-            {isManualMode && manualContent ? (
+            {isManualMode && hasManualPriority && manualContent ? (
               <div 
                 className="text-left text-sm overflow-hidden manual-content-preview break-words"
                 dangerouslySetInnerHTML={{ __html: manualContent }}
@@ -527,6 +538,10 @@ export default function SortableMoveframeRow({
                   overflow: 'hidden'
                 }}
               />
+            ) : isManualMode && !hasManualPriority ? (
+              <div className="overflow-hidden break-words text-gray-400 italic">
+                —
+              </div>
             ) : hasHtmlContent ? (
               <div className="text-sm overflow-hidden break-words" dangerouslySetInnerHTML={{ __html: moveframe.description }} />
             ) : (
@@ -559,8 +574,8 @@ export default function SortableMoveframeRow({
             durationDisplay = '—';
           }
         } else if (isManualModeDuration && !isAerobicSportDuration) {
-          // For manual mode with non-aerobic sports, display total series (movelaps count)
-          const totalSeries = moveframe.movelaps?.length || 0;
+          // For manual mode with non-aerobic sports, display total series from repetitions field
+          const totalSeries = parseInt(moveframe.repetitions) || 0;
           durationDisplay = totalSeries > 0 ? `${totalSeries} series` : '—';
         } else if (isSeriesBased) {
           // Show total series
@@ -594,15 +609,17 @@ export default function SortableMoveframeRow({
             key="duration" 
             className="border border-gray-200 px-1 py-1 text-center font-semibold text-sm"
             style={
-              isAnnotation 
-                ? {
-                    backgroundColor: annotationBgColor || '#5168c2',
-                    color: annotationTextColor || '#ffffff'
-                  }
-                : {
-                    backgroundColor: '#f9fafb',
-                    color: '#1f2937'
-                  }
+               isAnnotation 
+                 ? {
+                     width: '42px',
+                     backgroundColor: annotationBgColor || '#5168c2',
+                     color: annotationTextColor || '#ffffff'
+                   }
+                 : {
+                     width: '42px',
+                     backgroundColor: '#f9fafb',
+                     color: '#1f2937'
+                   }
             }
           >
             {durationDisplay}
@@ -625,15 +642,17 @@ export default function SortableMoveframeRow({
           ripDisplay = '—';
         }
         
-        const ripCellStyle: React.CSSProperties = isAnnotation
-          ? {
-              backgroundColor: annotationBgColor || '#5168c2',
-              color: annotationTextColor || '#ffffff'
-            }
-          : {
-              backgroundColor: '#ffffff',
-              color: '#dc2626' // red-600
-            };
+         const ripCellStyle: React.CSSProperties = isAnnotation
+           ? {
+               width: '28px',
+               backgroundColor: annotationBgColor || '#5168c2',
+               color: annotationTextColor || '#ffffff'
+             }
+           : {
+               width: '28px',
+               backgroundColor: '#ffffff',
+               color: '#dc2626' // red-600
+             };
         
         return (
           <td 
@@ -652,17 +671,19 @@ export default function SortableMoveframeRow({
             key="macro" 
             className="border border-gray-200 px-1 py-1 text-center font-semibold text-sm"
             style={
-              isAnnotation
-                ? {
-                    backgroundColor: annotationBgColor || '#5168c2',
-                    color: annotationTextColor || '#ffffff'
-                  }
-                : isManualModeMacro
-                ? {
-                    backgroundColor: '#e5e7eb',
-                    color: '#9ca3af'
-                  }
-                : {}
+               isAnnotation
+                 ? {
+                     width: '32px',
+                     backgroundColor: annotationBgColor || '#5168c2',
+                     color: annotationTextColor || '#ffffff'
+                   }
+                 : isManualModeMacro
+                 ? {
+                     width: '32px',
+                     backgroundColor: '#e5e7eb',
+                     color: '#9ca3af'
+                   }
+                 : { width: '32px' }
             }
           >
             {moveframe.type === 'ANNOTATION' ? '—' : (isManualModeMacro ? '—' : (moveframe.macroFinal || formatMacroTime(macroTime)))}
@@ -676,17 +697,19 @@ export default function SortableMoveframeRow({
             key="alarm" 
             className="border border-gray-200 px-1 py-1 text-center text-[10px]"
             style={
-              isAnnotation
-                ? {
-                    backgroundColor: annotationBgColor || '#5168c2',
-                    color: annotationTextColor || '#ffffff'
-                  }
-                : isManualModeAlarm
-                ? {
-                    backgroundColor: '#e5e7eb',
-                    color: '#9ca3af'
-                  }
-                : {}
+               isAnnotation
+                 ? {
+                     width: '42px',
+                     backgroundColor: annotationBgColor || '#5168c2',
+                     color: annotationTextColor || '#ffffff'
+                   }
+                 : isManualModeAlarm
+                 ? {
+                     width: '42px',
+                     backgroundColor: '#e5e7eb',
+                     color: '#9ca3af'
+                   }
+                 : { width: '42px' }
             }
           >
             {moveframe.type === 'ANNOTATION' ? '—' : (isManualModeAlarm ? '—' : (moveframe.alarm ? (
@@ -718,18 +741,19 @@ export default function SortableMoveframeRow({
       
       case 'options':
         return (
-          <td 
-            key="options" 
-            className="border border-gray-200 px-1 py-1 text-center" 
-            style={{
-              position: 'relative',
-              overflow: 'visible',
-              ...(isAnnotation ? {
-                backgroundColor: annotationBgColor || '#5168c2',
-                color: annotationTextColor || '#ffffff'
-              } : {})
-            }}
-          >
+           <td 
+             key="options" 
+             className="border border-gray-200 px-1 py-1 text-center" 
+             style={{
+               width: '250px',
+               position: 'relative',
+               overflow: 'visible',
+               ...(isAnnotation ? {
+                 backgroundColor: annotationBgColor || '#5168c2',
+                 color: annotationTextColor || '#ffffff'
+               } : {})
+             }}
+           >
             <div className="flex items-center justify-center gap-1 flex-wrap" style={{ position: 'relative', zIndex: 1 }}>
               {/* For annotations, show only Edit and Delete */}
               {isAnnotation ? (
@@ -739,7 +763,7 @@ export default function SortableMoveframeRow({
                       e.stopPropagation();
                       if (onEditMoveframe) onEditMoveframe(moveframe);
                     }}
-                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="px-1.5 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                     title="Edit this annotation"
                   >
                     Edit
@@ -749,7 +773,7 @@ export default function SortableMoveframeRow({
                       e.stopPropagation();
                       if (onDeleteMoveframe) onDeleteMoveframe(moveframe);
                     }}
-                    className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                    className="px-1.5 py-0.5 text-xs bg-red-500 text-white rounded hover:bg-red-600"
                     title="Delete this annotation"
                   >
                     Delete
@@ -767,7 +791,7 @@ export default function SortableMoveframeRow({
                         onAddMoveframeAfter(moveframe, mfIndex, workout, day);
                       }
                     }}
-                    className="px-2 py-1 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600"
+                    className="px-1.5 py-0.5 text-xs bg-emerald-500 text-white rounded hover:bg-emerald-600"
                     title="Add a new moveframe after this one"
                   >
                     Add MF
@@ -777,7 +801,7 @@ export default function SortableMoveframeRow({
                       e.stopPropagation();
                       if (onEditMoveframe) onEditMoveframe(moveframe);
                     }}
-                    className="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                    className="px-1.5 py-0.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
                     title="Edit this moveframe"
                   >
                     Edit
@@ -788,7 +812,7 @@ export default function SortableMoveframeRow({
                       setSelectedMoveframe(moveframe);
                       setShowInfoPanel(true);
                     }}
-                    className="px-2 py-1 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600"
+                    className="px-1.5 py-0.5 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600"
                     title="View moveframe info"
                   >
                     MF Info
@@ -804,7 +828,7 @@ export default function SortableMoveframeRow({
                         handleOpenDropdown();
                       }
                     }}
-                    className="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center gap-1"
+                    className="px-1.5 py-0.5 text-xs bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center gap-1"
                     title="More options"
                   >
                     Options

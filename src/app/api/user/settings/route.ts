@@ -2,7 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
-// GET - Fetch user settings
+// Helper function to safely parse JSON with fallback
+function safeJsonParse(jsonString: string | null, defaultValue: any = {}) {
+  if (!jsonString) return defaultValue;
+  
+  try {
+    return JSON.parse(jsonString);
+  } catch (error) {
+    console.error('❌ Failed to parse JSON, using default:', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      jsonString: jsonString?.substring(0, 100) + '...'
+    });
+    return defaultValue;
+  }
+}
+
+// GET - Fetch user settings (with safe JSON parsing and auto-recovery)
+
 export async function GET(request: NextRequest) {
   try {
     // Get token from Authorization header (consistent with other APIs)
@@ -82,9 +98,24 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    let settings = await prisma.userSettings.findUnique({
-      where: { userId }
-    });
+    let settings;
+    try {
+      settings = await prisma.userSettings.findUnique({
+        where: { userId }
+      });
+    } catch (dbError) {
+      console.error('❌ Database error reading settings (likely corrupted JSON), will recreate:', dbError);
+      // Delete corrupted settings
+      try {
+        await prisma.userSettings.deleteMany({
+          where: { userId }
+        });
+        console.log('🔧 Deleted corrupted settings');
+      } catch (deleteError) {
+        console.error('Error deleting corrupted settings:', deleteError);
+      }
+      settings = null; // Will trigger recreation below
+    }
 
     // If no settings exist, create default settings with admin defaults
     if (!settings) {
@@ -145,18 +176,31 @@ export async function GET(request: NextRequest) {
       console.log('Created user settings with admin defaults');
     }
 
-    // Parse all JSON fields
+    // Safely parse all JSON fields with error handling
+    const safeJsonParse = (jsonString: string, defaultValue: any, fieldName: string) => {
+      try {
+        if (!jsonString || jsonString.trim() === '') {
+          return defaultValue;
+        }
+        return JSON.parse(jsonString);
+      } catch (error) {
+        console.error(`Error parsing ${fieldName}:`, error);
+        console.error(`Corrupted JSON for ${fieldName}:`, jsonString?.substring(0, 200));
+        return defaultValue;
+      }
+    };
+
     const response = {
       ...settings,
-      colorSettings: JSON.parse(settings.colorSettings || '{}'),
-      widgetArrangement: JSON.parse(settings.widgetArrangement || '[]'),
-      toolsSettings: JSON.parse(settings.toolsSettings || '{}'),
-      favouritesSettings: JSON.parse(settings.favouritesSettings || '{}'),
-      myBestSettings: JSON.parse(settings.myBestSettings || '{}'),
-      adminSettings: JSON.parse(settings.adminSettings || '{}'),
-      workoutPreferences: JSON.parse(settings.workoutPreferences || '{}'),
-      socialSettings: JSON.parse(settings.socialSettings || '{}'),
-      notificationSettings: JSON.parse(settings.notificationSettings || '{}')
+      colorSettings: safeJsonParse(settings.colorSettings, {}, 'colorSettings'),
+      widgetArrangement: safeJsonParse(settings.widgetArrangement, [], 'widgetArrangement'),
+      toolsSettings: safeJsonParse(settings.toolsSettings, {}, 'toolsSettings'),
+      favouritesSettings: safeJsonParse(settings.favouritesSettings, {}, 'favouritesSettings'),
+      myBestSettings: safeJsonParse(settings.myBestSettings, {}, 'myBestSettings'),
+      adminSettings: safeJsonParse(settings.adminSettings, {}, 'adminSettings'),
+      workoutPreferences: safeJsonParse(settings.workoutPreferences, {}, 'workoutPreferences'),
+      socialSettings: safeJsonParse(settings.socialSettings, {}, 'socialSettings'),
+      notificationSettings: safeJsonParse(settings.notificationSettings, {}, 'notificationSettings')
     };
 
     return NextResponse.json(response);
@@ -248,18 +292,31 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Parse all JSON fields for response
+    // Safely parse all JSON fields for response
+    const safeJsonParse = (jsonString: string, defaultValue: any, fieldName: string) => {
+      try {
+        if (!jsonString || jsonString.trim() === '') {
+          return defaultValue;
+        }
+        return JSON.parse(jsonString);
+      } catch (error) {
+        console.error(`Error parsing ${fieldName}:`, error);
+        console.error(`Corrupted JSON for ${fieldName}:`, jsonString?.substring(0, 200));
+        return defaultValue;
+      }
+    };
+
     const response = {
       ...settings,
-      colorSettings: JSON.parse(settings.colorSettings || '{}'),
-      widgetArrangement: JSON.parse(settings.widgetArrangement || '[]'),
-      toolsSettings: JSON.parse(settings.toolsSettings || '{}'),
-      favouritesSettings: JSON.parse(settings.favouritesSettings || '{}'),
-      myBestSettings: JSON.parse(settings.myBestSettings || '{}'),
-      adminSettings: JSON.parse(settings.adminSettings || '{}'),
-      workoutPreferences: JSON.parse(settings.workoutPreferences || '{}'),
-      socialSettings: JSON.parse(settings.socialSettings || '{}'),
-      notificationSettings: JSON.parse(settings.notificationSettings || '{}')
+      colorSettings: safeJsonParse(settings.colorSettings, {}, 'colorSettings'),
+      widgetArrangement: safeJsonParse(settings.widgetArrangement, [], 'widgetArrangement'),
+      toolsSettings: safeJsonParse(settings.toolsSettings, {}, 'toolsSettings'),
+      favouritesSettings: safeJsonParse(settings.favouritesSettings, {}, 'favouritesSettings'),
+      myBestSettings: safeJsonParse(settings.myBestSettings, {}, 'myBestSettings'),
+      adminSettings: safeJsonParse(settings.adminSettings, {}, 'adminSettings'),
+      workoutPreferences: safeJsonParse(settings.workoutPreferences, {}, 'workoutPreferences'),
+      socialSettings: safeJsonParse(settings.socialSettings, {}, 'socialSettings'),
+      notificationSettings: safeJsonParse(settings.notificationSettings, {}, 'notificationSettings')
     };
 
     return NextResponse.json(response);
@@ -329,36 +386,71 @@ export async function PATCH(request: NextRequest) {
       }
     });
 
-    const settings = await prisma.userSettings.upsert({
-      where: { userId },
-      update: updateData,
-      create: {
-        userId,
-        colorSettings: '{}',
-        widgetArrangement: '[]',
-        toolsSettings: '{}',
-        favouritesSettings: '{}',
-        myBestSettings: '{}',
-        adminSettings: '{}',
-        workoutPreferences: '{}',
-        socialSettings: '{}',
-        notificationSettings: '{}',
-        ...updateData
+    let settings;
+    try {
+      settings = await prisma.userSettings.upsert({
+        where: { userId },
+        update: updateData,
+        create: {
+          userId,
+          colorSettings: '{}',
+          widgetArrangement: '[]',
+          toolsSettings: '{}',
+          favouritesSettings: '{}',
+          myBestSettings: '{}',
+          adminSettings: '{}',
+          workoutPreferences: '{}',
+          socialSettings: '{}',
+          notificationSettings: '{}',
+          ...updateData
+        }
+      });
+    } catch (dbError) {
+      console.error('❌ Database error during upsert, attempting to fix corrupted data:', dbError);
+      
+      // If upsert fails (likely due to corrupted JSON), delete and recreate
+      try {
+        await prisma.userSettings.deleteMany({
+          where: { userId }
+        });
+        
+        console.log('🔧 Deleted corrupted settings, creating fresh ones...');
+        
+        settings = await prisma.userSettings.create({
+          data: {
+            userId,
+            colorSettings: '{}',
+            widgetArrangement: '[]',
+            toolsSettings: '{}',
+            favouritesSettings: '{}',
+            myBestSettings: '{}',
+            adminSettings: '{}',
+            workoutPreferences: '{}',
+            socialSettings: '{}',
+            notificationSettings: '{}',
+            ...updateData
+          }
+        });
+        
+        console.log('✅ Successfully recreated settings with clean data');
+      } catch (recreateError) {
+        console.error('❌ Failed to recreate settings:', recreateError);
+        throw new Error('Failed to fix corrupted settings data');
       }
-    });
+    }
 
-    // Parse all JSON fields for response
+    // Parse all JSON fields for response (using safeJsonParse to handle corrupted data)
     const response = {
       ...settings,
-      colorSettings: JSON.parse(settings.colorSettings || '{}'),
-      widgetArrangement: JSON.parse(settings.widgetArrangement || '[]'),
-      toolsSettings: JSON.parse(settings.toolsSettings || '{}'),
-      favouritesSettings: JSON.parse(settings.favouritesSettings || '{}'),
-      myBestSettings: JSON.parse(settings.myBestSettings || '{}'),
-      adminSettings: JSON.parse(settings.adminSettings || '{}'),
-      workoutPreferences: JSON.parse(settings.workoutPreferences || '{}'),
-      socialSettings: JSON.parse(settings.socialSettings || '{}'),
-      notificationSettings: JSON.parse(settings.notificationSettings || '{}')
+      colorSettings: safeJsonParse(settings.colorSettings, {}),
+      widgetArrangement: safeJsonParse(settings.widgetArrangement, []),
+      toolsSettings: safeJsonParse(settings.toolsSettings, {}),
+      favouritesSettings: safeJsonParse(settings.favouritesSettings, {}),
+      myBestSettings: safeJsonParse(settings.myBestSettings, {}),
+      adminSettings: safeJsonParse(settings.adminSettings, {}),
+      workoutPreferences: safeJsonParse(settings.workoutPreferences, {}),
+      socialSettings: safeJsonParse(settings.socialSettings, {}),
+      notificationSettings: safeJsonParse(settings.notificationSettings, {})
     };
 
     return NextResponse.json(response);

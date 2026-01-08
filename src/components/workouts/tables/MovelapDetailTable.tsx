@@ -5,6 +5,15 @@ import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useS
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+// Helper function to strip HTML tags from text (defined at module level for accessibility)
+const stripHtmlTags = (html: string): string => {
+  if (!html) return '';
+  if (typeof window === 'undefined') return html; // SSR safety
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = html;
+  return tempDiv.textContent || tempDiv.innerText || '';
+};
+
 interface MovelapDetailTableProps {
   moveframe: any;
   onEditMovelap?: (movelap: any) => void;
@@ -203,133 +212,133 @@ function SortableMovelapRow({
       
       {/* SPORT-SPECIFIC COLUMNS */}
       
-      {/* BODY BUILDING - Different fields */}
-      {isBodyBuilding && (
-        <>
-          {/* Muscular Sector */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-            {movelap.muscularSector || '—'}
-          </td>
-          {/* Exercise */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-            {movelap.exercise || '—'}
-          </td>
-          {/* Reps */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-            {movelap.reps || '—'}
-          </td>
-          {/* Weight */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs font-semibold text-blue-700">
-            {movelap.weight || '—'}
-          </td>
-          {/* Tempo/Speed */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-            {movelap.speed || '—'}
-          </td>
-          {/* Rest Type */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-            {movelap.restType?.replace(/_/g, ' ') || '—'}
-          </td>
-        </>
-      )}
+       {/* BODY BUILDING - Different fields */}
+       {isBodyBuilding && (
+         <>
+           {/* Muscular Sector */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.muscularSector || '—'}
+           </td>
+           {/* Exercise */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.exercise || '—'}
+           </td>
+           {/* Reps */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.reps || '—'}
+           </td>
+           {/* Weight */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs font-semibold ${movelap.isNewlyAdded ? 'text-red-600' : 'text-blue-700'}`}>
+             {movelap.weight || '—'}
+           </td>
+           {/* Tempo/Speed */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.speed || '—'}
+           </td>
+           {/* Rest Type */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.restType?.replace(/_/g, ' ') || '—'}
+           </td>
+         </>
+       )}
       
-      {/* OTHER SPORTS WITH TOOLS (Gymnastic, Stretching, Pilates, Yoga, etc.) */}
-      {hasTools && (
-        <>
-          {/* Reps */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-            {movelap.reps || '—'}
-          </td>
-          {/* Tools */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs font-semibold text-green-700">
-            {movelap.tools || '—'}
-          </td>
-        </>
-      )}
+       {/* OTHER SPORTS WITH TOOLS (Gymnastic, Stretching, Pilates, Yoga, etc.) */}
+       {hasTools && (
+         <>
+           {/* Reps */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.reps || '—'}
+           </td>
+           {/* Tools */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs font-semibold ${movelap.isNewlyAdded ? 'text-red-600' : 'text-green-700'}`}>
+             {movelap.tools || '—'}
+           </td>
+         </>
+       )}
       
-      {/* SWIM, BIKE, RUN, ROWING, SKATE, SKI, SNOWBOARD - Distance-based sports */}
-      {isDistanceBased && (
-        <>
-          {/* Distance (m) */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-            {movelap.distance || '—'}
-          </td>
-          
-          {/* Style - Only for SWIM and RUN */}
-          {(isSwim || isRun) && (
-            <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-              {movelap.style || '—'}
-            </td>
-          )}
-          
-          {/* R1, R2 - Only for BIKE */}
-          {isBike && (
-            <>
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.r1 || '—'}
-              </td>
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-                {movelap.r2 || '—'}
-              </td>
-            </>
-          )}
-          
-          {/* Speed - For SWIM, BIKE, RUN */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-            {movelap.speed || '—'}
-          </td>
-          
-          {/* Row/min - Only for ROWING */}
-          {sport === 'ROWING' && (
-            <td className="border border-gray-300 px-1 py-1 text-center text-xs font-semibold text-purple-700">
-              {movelap.rowPerMin || '—'}
-            </td>
-          )}
-          
-          {/* Time */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-            {movelap.time || '—'}
-          </td>
-          
-          {/* Pace */}
-          <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-            {movelap.pace || '—'}
-          </td>
-        </>
-      )}
+       {/* SWIM, BIKE, RUN, ROWING, SKATE, SKI, SNOWBOARD - Distance-based sports */}
+       {isDistanceBased && (
+         <>
+           {/* Distance (m) */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.distance || '—'}
+           </td>
+           
+           {/* Style - Only for SWIM and RUN */}
+           {(isSwim || isRun) && (
+             <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+               {movelap.style || '—'}
+             </td>
+           )}
+           
+           {/* R1, R2 - Only for BIKE */}
+           {isBike && (
+             <>
+               <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+                 {movelap.r1 || '—'}
+               </td>
+               <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+                 {movelap.r2 || '—'}
+               </td>
+             </>
+           )}
+           
+           {/* Speed - For SWIM, BIKE, RUN */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.speed || '—'}
+           </td>
+           
+           {/* Row/min - Only for ROWING */}
+           {sport === 'ROWING' && (
+             <td className={`border border-gray-300 px-1 py-1 text-center text-xs font-semibold ${movelap.isNewlyAdded ? 'text-red-600' : 'text-purple-700'}`}>
+               {movelap.rowPerMin || '—'}
+             </td>
+           )}
+           
+           {/* Time */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.time || '—'}
+           </td>
+           
+           {/* Pace */}
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.pace || '—'}
+           </td>
+         </>
+       )}
       
-      {/* COMMON COLUMNS for all sports */}
-      
-      {/* Pause/Recovery */}
-      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-        {movelap.pause || '—'}
-      </td>
-      
-      {/* Macro Final */}
-      <td className="border border-gray-300 px-1 py-1 text-center text-xs">
-        {movelap.macroFinal || '—'}
-      </td>
-      
-      {/* Alarm & Sound */}
-      <td className="border border-gray-300 px-1 py-1 text-center">
-        <div className="flex items-center justify-center gap-1">
-          {getSoundIcon(movelap)}
-          {movelap.alarm && movelap.alarm !== -1 && <span className="text-[8px]">{Math.abs(movelap.alarm)}</span>}
-        </div>
-      </td>
+       {/* COMMON COLUMNS for all sports */}
+       
+       {/* Pause/Recovery */}
+       <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+         {movelap.pause || '—'}
+       </td>
+       
+       {/* Macro Final */}
+       <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+         {movelap.macroFinal || '—'}
+       </td>
+       
+       {/* Alarm & Sound */}
+       <td className={`border border-gray-300 px-1 py-1 text-center ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+         <div className="flex items-center justify-center gap-1">
+           {getSoundIcon(movelap)}
+           {movelap.alarm && movelap.alarm !== -1 && <span className="text-[8px]">{Math.abs(movelap.alarm)}</span>}
+         </div>
+       </td>
       
       {/* Notes - Display only first 20 characters, full text shown in Edit modal */}
       <td className="border border-gray-300 px-2 py-1 text-left text-xs" style={{ width: '200px', maxWidth: '200px', minWidth: '200px' }}>
         <div 
           className="overflow-hidden text-ellipsis whitespace-nowrap" 
-          title={movelap.notes || '—'}
+          title={stripHtmlTags(movelap.notes || '—')}
           style={{ maxWidth: '200px' }}
         >
           {movelap.notes 
-            ? (movelap.notes.length > 20 
-                ? movelap.notes.substring(0, 20) + '...' 
-                : movelap.notes
-              ) 
+            ? (() => {
+                const stripped = stripHtmlTags(movelap.notes);
+                return stripped.length > 20 ? stripped.substring(0, 20) + '...' : stripped;
+              })()
             : '—'
           }
         </div>
@@ -466,11 +475,16 @@ export default function MovelapDetailTable({
   const sectionColor = moveframe.section?.color || '#5b8def';
   const sectionName = moveframe.section?.name || 'Default';
   const [copiedMovelap, setCopiedMovelap] = useState<any>(null);
-  const [noteValue, setNoteValue] = useState(moveframe.notes || '');
+  const [noteValue, setNoteValue] = useState(stripHtmlTags(moveframe.notes || ''));
   const [isSavingNote, setIsSavingNote] = useState(false);
   
   // Check if this moveframe is manual mode
   const isManualMode = moveframe.manualMode === true;
+  
+  // Update noteValue when moveframe.notes changes (strip HTML)
+  React.useEffect(() => {
+    setNoteValue(stripHtmlTags(moveframe.notes || ''));
+  }, [moveframe.notes]);
   
   // Debug logging
   console.log('🔍 MovelapDetailTable - Moveframe data:', {

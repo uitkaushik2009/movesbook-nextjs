@@ -761,7 +761,8 @@ export const SPORTS_WITH_EXERCISE_NAME = [
   'CALISTENIC',
   'CROSSFIT',
   'SPARTAN',
-  'TRIATHLON'
+  'TRIATHLON',
+  'TRACK_FIELD'
 ] as const;
 
 // Helper function to check if sport requires exercise/drill name

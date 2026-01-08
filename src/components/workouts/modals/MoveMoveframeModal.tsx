@@ -10,6 +10,7 @@ interface MoveMoveframeModalProps {
   sourceWorkout: any;
   workoutPlan: any;
   onConfirm: (targetWorkoutId: string, position: 'before' | 'after' | 'replace', targetMoveframeId?: string) => void;
+  activeSection?: 'A' | 'B' | 'C' | 'D';
 }
 
 export default function MoveMoveframeModal({
@@ -18,7 +19,8 @@ export default function MoveMoveframeModal({
   sourceMoveframe,
   sourceWorkout,
   workoutPlan,
-  onConfirm
+  onConfirm,
+  activeSection = 'A'
 }: MoveMoveframeModalProps) {
   const [selectedDay, setSelectedDay] = useState<string>('');
   const [selectedWorkout, setSelectedWorkout] = useState<string>('');

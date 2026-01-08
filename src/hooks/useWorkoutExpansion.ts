@@ -20,6 +20,7 @@ export function useWorkoutExpansion({
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const [expandedWorkouts, setExpandedWorkouts] = useState<Set<string>>(new Set());
   const [fullyExpandedWorkouts, setFullyExpandedWorkouts] = useState<Set<string>>(new Set()); // Workouts with moveframes visible
+  const [workoutsWithExpandedMovelaps, setWorkoutsWithExpandedMovelaps] = useState<Set<string>>(new Set()); // Workouts with movelaps expanded
   
   // Track last auto-expand key to prevent repeated expansion
   const [lastAutoExpandKey, setLastAutoExpandKey] = useState<string>('');
@@ -142,6 +143,7 @@ export function useWorkoutExpansion({
     setExpandedDays(new Set());
     setExpandedWorkouts(new Set());
     setFullyExpandedWorkouts(new Set());
+    setWorkoutsWithExpandedMovelaps(new Set());
   };
 
   /**
@@ -219,6 +221,49 @@ export function useWorkoutExpansion({
     });
   };
 
+  /**
+   * 3-state cycle for workout numbers in day table:
+   * State 0 (closed) → State 1 (show moveframes) → State 2 (show movelaps) → back to State 0
+   */
+  const cycleWorkoutExpansion = (workoutId: string, dayId: string) => {
+    const isExpanded = expandedWorkouts.has(workoutId);
+    const hasMovelaps = workoutsWithExpandedMovelaps.has(workoutId);
+    
+    // Ensure day is expanded first
+    setExpandedDays(prev => new Set(prev).add(dayId));
+    
+    // Determine current state and cycle to next
+    if (!isExpanded) {
+      // State 0 (closed) → State 1 (show moveframes only)
+      console.log(`🔢 Cycle: State 0 → 1 (Show moveframes for workout ${workoutId})`);
+      setExpandedWorkouts(prev => new Set(prev).add(workoutId));
+      setFullyExpandedWorkouts(prev => new Set(prev).add(workoutId));
+      // Do NOT add to workoutsWithExpandedMovelaps yet (movelaps stay collapsed)
+    } else if (isExpanded && !hasMovelaps) {
+      // State 1 (moveframes shown) → State 2 (show movelaps)
+      console.log(`🔢 Cycle: State 1 → 2 (Show movelaps for workout ${workoutId})`);
+      setWorkoutsWithExpandedMovelaps(prev => new Set(prev).add(workoutId));
+    } else {
+      // State 2 (movelaps shown) → State 0 (close all)
+      console.log(`🔢 Cycle: State 2 → 0 (Close workout ${workoutId})`);
+      setExpandedWorkouts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(workoutId);
+        return newSet;
+      });
+      setFullyExpandedWorkouts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(workoutId);
+        return newSet;
+      });
+      setWorkoutsWithExpandedMovelaps(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(workoutId);
+        return newSet;
+      });
+    }
+  };
+
   // ==================== AUTO-EXPANSION EFFECT ====================
   
   /**
@@ -237,6 +282,7 @@ export function useWorkoutExpansion({
       setExpandedWorkouts(new Set());
       setExpandedWeeks(new Set());
       setFullyExpandedWorkouts(new Set());
+      setWorkoutsWithExpandedMovelaps(new Set());
       setLastAutoExpandKey(currentKey);
     }
     
@@ -259,6 +305,7 @@ export function useWorkoutExpansion({
     expandedDays,
     expandedWorkouts,
     fullyExpandedWorkouts,
+    workoutsWithExpandedMovelaps,
     
     // Actions
     toggleDayExpansion,
@@ -272,12 +319,14 @@ export function useWorkoutExpansion({
     collapseDay,
     collapseWorkout,
     expandDayWithAllWorkouts,
+    cycleWorkoutExpansion,
     
     // Setters (for direct control if needed)
     setExpandedWeeks,
     setExpandedDays,
     setExpandedWorkouts,
     setFullyExpandedWorkouts,
+    setWorkoutsWithExpandedMovelaps,
   };
 }
 

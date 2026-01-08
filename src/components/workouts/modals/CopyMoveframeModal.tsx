@@ -9,6 +9,7 @@ interface CopyMoveframeModalProps {
   sourceMoveframe: any | any[]; // Can be single or array
   workoutPlan: any;
   onConfirm: (targetWorkoutId: string, position: 'before' | 'after' | 'replace', targetMoveframeId?: string) => void;
+  activeSection?: 'A' | 'B' | 'C' | 'D';
 }
 
 export default function CopyMoveframeModal({
@@ -16,7 +17,8 @@ export default function CopyMoveframeModal({
   onClose,
   sourceMoveframe,
   workoutPlan,
-  onConfirm
+  onConfirm,
+  activeSection = 'A'
 }: CopyMoveframeModalProps) {
   const [selectedDay, setSelectedDay] = useState<string>('');
   const [selectedWorkout, setSelectedWorkout] = useState<string>('');

@@ -9,6 +9,7 @@ interface MoveWorkoutModalProps {
   sourceWorkout: any;
   workoutPlan: any;
   onConfirm: (targetDayId: string, sessionNumber: number) => void;
+  activeSection?: 'A' | 'B' | 'C' | 'D';
 }
 
 export default function MoveWorkoutModal({
@@ -16,7 +17,8 @@ export default function MoveWorkoutModal({
   onClose,
   sourceWorkout,
   workoutPlan,
-  onConfirm
+  onConfirm,
+  activeSection = 'A'
 }: MoveWorkoutModalProps) {
   const [selectedWeek, setSelectedWeek] = useState<string>('');
   const [selectedDay, setSelectedDay] = useState<string>('');
@@ -83,11 +85,17 @@ export default function MoveWorkoutModal({
               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-purple-500"
             >
               <option value="">Choose a week...</option>
-              {workoutPlan?.weeks?.map((week: any) => (
-                <option key={week.id} value={week.id}>
-                  Week {week.weekNumber} ({new Date(week.startDate).toLocaleDateString()})
-                </option>
-              ))}
+              {workoutPlan?.weeks?.map((week: any) => {
+                const dateDisplay = activeSection === 'A' 
+                  ? '' 
+                  : (week.startDate ? ` (${new Date(week.startDate).toLocaleDateString()})` : '');
+                
+                return (
+                  <option key={week.id} value={week.id}>
+                    Week {week.weekNumber}{dateDisplay}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
@@ -105,11 +113,15 @@ export default function MoveWorkoutModal({
                 <option value="">Choose a day...</option>
                 {availableDays.map((day: any) => (
                   <option key={day.id} value={day.id}>
-                    {new Date(day.date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      month: 'short',
-                      day: 'numeric'
-                    })} ({day.workouts?.length || 0} workout(s))
+                    {activeSection === 'A' ? (
+                      `Day ${availableDays.indexOf(day) + 1} (${day.workouts?.length || 0} workout(s))`
+                    ) : (
+                      `${new Date(day.date).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        month: 'short',
+                        day: 'numeric'
+                      })} (${day.workouts?.length || 0} workout(s))`
+                    )}
                   </option>
                 ))}
               </select>

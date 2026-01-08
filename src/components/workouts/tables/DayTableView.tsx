@@ -25,11 +25,13 @@ interface DayTableViewProps {
   expandedDays?: Set<string>;
   expandedWorkouts?: Set<string>;
   fullyExpandedWorkouts?: Set<string>; // Workouts with moveframes visible
+  workoutsWithExpandedMovelaps?: Set<string>; // Workouts with movelaps expanded
   expandedMoveframeId?: string | null;
   onToggleDay?: (dayId: string) => void;
   onToggleWorkout?: (workoutId: string) => void;
   onExpandOnlyThisWorkout?: (workout: any, day: any) => void;
   onExpandDayWithAllWorkouts?: (dayId: string, workouts: any[]) => void;
+  onCycleWorkoutExpansion?: (workout: any, day: any) => void; // 3-state cycle for workout numbers
   onEditDay?: (day: any) => void;
   onAddWorkout?: (day: any) => void;
   onCopyDay?: (day: any) => void;
@@ -91,11 +93,13 @@ export default function DayTableView({
   expandedDays,
   expandedWorkouts,
   fullyExpandedWorkouts,
+  workoutsWithExpandedMovelaps,
   expandedMoveframeId,
   onToggleDay,
   onToggleWorkout,
   onExpandOnlyThisWorkout,
   onExpandDayWithAllWorkouts,
+  onCycleWorkoutExpansion,
   onEditDay,
   onAddWorkout,
   onCopyDay,
@@ -278,7 +282,7 @@ export default function DayTableView({
     (COL_WIDTHS.icoSport + COL_WIDTHS.distTime + COL_WIDTHS.mainWork) * 4 + // 4 sport sections (3 cols each)
     COL_WIDTHS.options;
   
-  // Synchronize scrollbars and position
+   // Synchronize scrollbars and position + Fix workout details scroll
   useEffect(() => {
     const tableContainer = tableContainerRef.current;
     const scrollbar = scrollbarRef.current;
@@ -290,6 +294,12 @@ export default function DayTableView({
       if (scrollbar) {
         scrollbar.scrollLeft = tableContainer.scrollLeft;
       }
+       
+       // Counter-scroll the workout details containers
+       const workoutContainers = document.querySelectorAll('.workout-details-wrapper');
+       workoutContainers.forEach((container) => {
+         (container as HTMLElement).style.transform = `translateX(${tableContainer.scrollLeft}px)`;
+       });
     };
     
     const handleScrollbarScroll = () => {
@@ -418,21 +428,21 @@ export default function DayTableView({
       });
     });
     
-    // Cycle through 3 states: 0 (Collapsed) -> 1 (Workouts only) -> 2 (Workouts + Moveframes) -> 0
+    // Cycle through 3 states: 0 (Collapsed) -> 1 (Show workout headers only) -> 2 (Show moveframes) -> 0
     const nextState = (expandState + 1) % 3;
     
     if (nextState === 0) {
       // State 0: Collapse all - Close all workouts and days
-      console.log('📕 State 0: Collapsing all');
+      console.log('📕 State 0: Collapsing all days and workouts');
       
-      // Close all workouts first
+      // Close all workouts first (remove from expandedWorkouts to hide moveframes)
       allWorkoutIds.forEach(workoutId => {
         if (expandedWorkoutsSet.has(workoutId) && onToggleWorkout) {
           onToggleWorkout(workoutId);
         }
       });
       
-      // Then close all days
+      // Then close all days (hide workout headers)
       allDayIds.forEach((dayId: string) => {
         if (expandedDaysSet.has(dayId) && onToggleDay) {
           onToggleDay(dayId);
@@ -441,32 +451,35 @@ export default function DayTableView({
       
       setExpandState(0);
     } else if (nextState === 1) {
-      // State 1: Show workouts only (no moveframes)
-      console.log('📖 State 1: Expanding workouts only (no moveframes)');
+      // State 1: Show workout headers only (expand days, but NOT workouts)
+      console.log('📖 State 1: Expanding days to show workout headers (no moveframes)');
       
-      // Open all days
+      // First, ensure all workouts are CLOSED (so moveframes are hidden)
+      allWorkoutIds.forEach(workoutId => {
+        if (expandedWorkoutsSet.has(workoutId) && onToggleWorkout) {
+          onToggleWorkout(workoutId);
+        }
+      });
+      
+      // Then open all days (this shows workout headers)
       allDayIds.forEach((dayId: string) => {
         if (!expandedDaysSet.has(dayId) && onToggleDay) {
           onToggleDay(dayId);
         }
       });
       
-      // Open all workouts
+      setExpandState(1);
+    } else if (nextState === 2) {
+      // State 2: Show moveframes (days are already open, now expand workouts)
+      console.log('📖📖 State 2: Expanding workouts to show moveframes (no movelaps)');
+      
+      // Days should already be open from state 1
+      // Now open all workouts to show moveframes
       allWorkoutIds.forEach(workoutId => {
         if (!expandedWorkoutsSet.has(workoutId) && onToggleWorkout) {
           onToggleWorkout(workoutId);
         }
       });
-      
-      // Note: Moveframes will not be expanded in this state
-      setExpandState(1);
-    } else if (nextState === 2) {
-      // State 2: Show workouts + moveframes (all expanded)
-      console.log('📖📖 State 2: Expanding workouts + moveframes');
-      
-      // Days and workouts should already be open from state 1
-      // This state just shows moveframes, which are handled by WorkoutHierarchyView
-      // No additional action needed here - the state change will trigger the UI update
       
       setExpandState(2);
     }
@@ -682,15 +695,30 @@ export default function DayTableView({
         }
         
         /* Fixed workout details - don't scroll with day row */
-        .workout-expanded-row td {
-          position: sticky !important;
-          left: 0 !important;
+        .workout-expanded-row > td {
+          position: relative;
+          padding: 0 !important;
+          overflow: visible;
+          height: 0;
         }
+        
+        .workout-details-wrapper {
+          position: relative;
+          left: 0;
+          width: 100vw;
+          transform: translateX(0);
+          transition: transform 0s;
+          z-index: 25;
+          margin-left: calc(-1 * var(--scroll-offset, 0px));
+        }
+        
         .workout-details-container {
           position: relative;
           width: 100%;
-          max-width: 100vw;
-          overflow-x: visible;
+          background: #f9fafb;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          margin: 0;
+          padding: 1rem;
         }
       `}</style>
       
@@ -718,7 +746,7 @@ export default function DayTableView({
                     ))}
                   </div>
                 )}
-              </div>
+            </div>
               )}
 
             {/* CENTER-LEFT: Period Badge for Section A/C */}
@@ -921,49 +949,49 @@ export default function DayTableView({
               
               {/* Overview Button - For Section A/C */}
               {activeSection !== 'B' && (
-                <button
-                  onClick={() => {
+              <button
+                onClick={() => {
                     console.log('📊 Overview button clicked - single week');
-                    setAutoPrintWeek(false);
+                  setAutoPrintWeek(false);
                     setShowAllWeeksInModal(false);
-                    setShowWeekTotalsModal(true);
-                  }}
+                  setShowWeekTotalsModal(true);
+                }}
                   className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all shadow-md hover:shadow-lg"
                   title="View week overview"
-                >
+              >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                  Overview
-                </button>
+                Overview
+              </button>
               )}
-
+              
               {/* Print Button - Only for Section A/C */}
               {activeSection !== 'B' && (
-                <button
-                  onClick={() => {
-                    console.log('🖨️ Print button clicked');
-                    console.log('📅 Current week:', currentWeek);
-                    setAutoPrintWeek(true);
-                    setShowWeekTotalsModal(true);
-                    console.log('✅ Modal should open AND print dialog should appear');
-                  }}
+              <button
+                onClick={() => {
+                  console.log('🖨️ Print button clicked');
+                  console.log('📅 Current week:', currentWeek);
+                  setAutoPrintWeek(true);
+                  setShowWeekTotalsModal(true);
+                  console.log('✅ Modal should open AND print dialog should appear');
+                }}
                   className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
-                  title="Print week overview"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                  Print
-                </button>
+                title="Print week overview"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Print
+              </button>
               )}
 
               {/* Expand All Button - For Section A/C */}
-              {activeSection !== 'B' && (
-                <button
+            {activeSection !== 'B' && (
+              <button
                   onClick={toggleWeekWorkouts}
                   className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-md hover:shadow-lg"
-                  title={expandState === 0 ? "Show workouts only" : expandState === 1 ? "Show workouts + moveframes" : "Collapse all"}
+                  title={expandState === 0 ? "Show workout headers" : expandState === 1 ? "Show moveframes" : "Collapse all"}
                 >
-                  {expandState === 0 ? 'Expand All' : expandState === 1 ? 'Expand All (with moveframes)' : 'Collapse All'}
-                </button>
-              )}
+                  {expandState === 0 ? 'Expand All' : expandState === 1 ? 'Expand (with moveframes)' : 'Collapse All'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -974,8 +1002,8 @@ export default function DayTableView({
              <div className="sticky top-[76px] z-40 bg-gray-100 py-3 flex items-center justify-between gap-3 border-b border-gray-300 shadow-md">
                {/* Left side - Set periods for Section B */}
                <div className="flex items-center gap-3">
-                 <button
-                   onClick={() => {
+          <button
+            onClick={() => {
                      // Initialize week range to all displayed weeks
                      const allWeekNumbers = sortedWeeks.map((w: any) => w.weekNumber);
                      const minWeek = Math.min(...allWeekNumbers);
@@ -999,14 +1027,14 @@ export default function DayTableView({
               
                {/* Right side - Action Buttons for Section B */}
                <div className="flex items-center gap-3">
-                 {/* Expand/Collapse All Button */}
-                 <button
-                   onClick={toggleWeekWorkouts}
-                   className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-md"
-                   title={expandState === 0 ? "Show workouts only" : expandState === 1 ? "Show workouts + moveframes" : "Collapse all weeks"}
-                 >
-                   {expandState === 0 ? 'Expand all the Weeks displayed' : expandState === 1 ? 'Expand all (with moveframes)' : 'Collapse all the weeks displayed'}
-                 </button>
+                {/* Expand/Collapse All Button */}
+                <button
+                  onClick={toggleWeekWorkouts}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-md"
+                  title={expandState === 0 ? "Show workout headers" : expandState === 1 ? "Show moveframes" : "Collapse all weeks"}
+                >
+                  {expandState === 0 ? 'Expand all the Weeks displayed' : expandState === 1 ? 'Expand all (with moveframes)' : 'Collapse all the weeks displayed'}
+                </button>
 
                  {/* Overview of the weeks displayed Button */}
                  <button
@@ -1050,21 +1078,21 @@ export default function DayTableView({
                        console.error('Error saving grid settings:', error);
                        alert('❌ Failed to save grid settings');
                      }
-                   }}
-                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                 >
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                     <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                     <polyline points="7 3 7 8 15 8"></polyline>
-                   </svg>
-                   Save Grid Settings
-                 </button>
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+              <polyline points="17 21 17 13 7 13 7 21"></polyline>
+              <polyline points="7 3 7 8 15 8"></polyline>
+            </svg>
+            Save Grid Settings
+          </button>
 
                  {/* Reset to Default */}
-                 <button
-                   onClick={() => {
-                     if (confirm('Are you sure you want to reset grid settings to default?')) {
+          <button
+            onClick={() => {
+              if (confirm('Are you sure you want to reset grid settings to default?')) {
                        try {
                          localStorage.removeItem('workoutGridSettings');
                          alert('✅ Grid settings reset to default!');
@@ -1073,18 +1101,18 @@ export default function DayTableView({
                          console.error('Error resetting grid settings:', error);
                          alert('❌ Failed to reset grid settings');
                        }
-                     }
-                   }}
-                   className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-                 >
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                     <polyline points="1 4 1 10 7 10"></polyline>
-                     <polyline points="23 20 23 14 17 14"></polyline>
-                     <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-                   </svg>
-                   Reset to Default
-                 </button>
-               </div>
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="1 4 1 10 7 10"></polyline>
+              <polyline points="23 20 23 14 17 14"></polyline>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+            </svg>
+            Reset to Default
+          </button>
+        </div>
              </div>
            )}
 
@@ -1254,7 +1282,7 @@ export default function DayTableView({
                     <button
                       onClick={toggleWeekWorkouts}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-md"
-                      title={expandState === 0 ? "Show workouts only" : expandState === 1 ? "Show workouts + moveframes" : "Collapse all"}
+                      title={expandState === 0 ? "Show workout headers" : expandState === 1 ? "Show moveframes" : "Collapse all"}
                     >
                       <span>{expandState === 0 ? 'Expand All' : expandState === 1 ? 'Expand (+ moveframes)' : 'Collapse All'}</span>
                     </button>
@@ -1393,20 +1421,23 @@ export default function DayTableView({
                           <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                             Day
                           </th>
+                          {/* Match done column - Only for Section D */}
+                          {activeSection === 'D' && (
+                            <th 
+                              className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6"
+                              style={{ 
+                                width: COL_WIDTHS.matchDone, 
+                                minWidth: COL_WIDTHS.matchDone,
+                                backgroundColor: colors.weekHeader,
+                                color: colors.weekHeaderText
+                              }} 
+                              rowSpan={2}
+                            >
+                              Match<br/>done
+                            </th>
+                          )}
                           <th 
-                            className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6"
-                            style={{ 
-                              width: COL_WIDTHS.matchDone, 
-                              minWidth: COL_WIDTHS.matchDone,
-                              backgroundColor: colors.weekHeader,
-                              color: colors.weekHeaderText
-                            }} 
-                            rowSpan={2}
-                          >
-                            Match<br/>done
-                          </th>
-                          <th 
-                            className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-7"
+                            className={`border border-gray-400 px-2 py-2 text-xs font-bold ${activeSection === 'D' ? 'sticky-header-7' : 'sticky-header-6'}`}
                             style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
                             rowSpan={2}
                           >
@@ -1463,9 +1494,9 @@ export default function DayTableView({
                           <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
                           
                           {/* S4 sub-headers - Pink */}
-                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
-                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
-                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
+                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '107px', minWidth: '107px' }}>Sport</th>
+                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '80px', minWidth: '80px' }}>Dist & Time</th>
+                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black text-left" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1509,12 +1540,18 @@ export default function DayTableView({
                                 />
                                 {expandedDaysSet.has(day.id) && (
                                   <tr className="workout-expanded-row">
-                                    <td colSpan={32} className="p-0 bg-gray-50" style={{ position: 'relative' }}>
-                                      <WorkoutHierarchyView
+                                    <td colSpan={32} className="p-0 bg-transparent">
+                                      <div className="workout-details-wrapper">
+                                        <div className="workout-details-container">
+                                          <div className="mb-2 text-sm font-semibold text-gray-700">
+                                            Workouts for {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                                          </div>
+                                          <WorkoutHierarchyView
                                         day={{ ...day, weekNumber: week?.weekNumber }}
                                         activeSection={activeSection}
                                         expandedWorkouts={expandedWorkoutsSet}
                                         fullyExpandedWorkouts={fullyExpandedWorkouts}
+                                        workoutsWithExpandedMovelaps={workoutsWithExpandedMovelaps}
                                         expandedMoveframeId={expandedMoveframeId}
                                         expandState={expandState}
                                         onToggleWorkout={onToggleWorkout!}
@@ -1543,6 +1580,8 @@ export default function DayTableView({
                                         reloadWorkouts={reloadWorkouts}
                                         columnSettings={columnSettings}
                                       />
+                                        </div>
+                                      </div>
                                     </td>
                                   </tr>
                                 )}
@@ -1689,48 +1728,50 @@ export default function DayTableView({
           </div>
 
           {/* Table Wrapper */}
-          <div ref={tableWrapperRef} className="bg-white rounded-lg shadow-md relative mb-6">
-            <div className="relative">
-              <div 
-                ref={tableContainerRef}
-                className="overflow-x-auto overflow-y-visible table-scrollbar" 
-              >
-                <table className="text-sm" style={{ minWidth: `${TABLE_MIN_WIDTH}px`, width: '100%' }}>
+      <div ref={tableWrapperRef} className="bg-white rounded-lg shadow-md relative mb-6">
+        <div className="relative">
+          <div 
+            ref={tableContainerRef}
+            className="overflow-x-auto overflow-y-visible table-scrollbar" 
+          >
+            <table className="text-sm" style={{ minWidth: `${TABLE_MIN_WIDTH}px`, width: '100%' }}>
                   <thead className="sticky-table-header">
                     <tr style={{ backgroundColor: colors.weekHeader, color: colors.weekHeaderText }}>
                       <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
-                        Check
-                      </th>
+                 Check
+               </th>
                       <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-2" style={{ width: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} colSpan={2} rowSpan={2}>
                         Period
-                      </th>
+               </th>
                       <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-4" style={{ width: COL_WIDTHS.weekNumber, minWidth: COL_WIDTHS.weekNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                         Week
-                      </th>
+               </th>
                       <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                         Day
-                      </th>
+               </th>
               {/* Dayname column - Only for non-3-weeks sections */}
               {activeSection === 'D' && (
                 <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
-                Dayname
-              </th>
+                 Dayname
+               </th>
               )}
-             {/* Match done column */}
-             <th 
-               className={`border border-gray-400 px-1 py-2 text-xs font-bold ${activeSection !== 'D' ? 'sticky-header-6' : 'sticky-header-7'}`}
-                style={{ 
-                  width: COL_WIDTHS.matchDone, 
-                  minWidth: COL_WIDTHS.matchDone,
-                  backgroundColor: colors.weekHeader,
-                  color: colors.weekHeaderText
-                }} 
-                rowSpan={2}
-              >
-               Match<br/>done
-              </th>
+             {/* Match done column - Only for Section D */}
+             {activeSection === 'D' && (
+               <th 
+                 className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-7"
+                 style={{ 
+                   width: COL_WIDTHS.matchDone, 
+                   minWidth: COL_WIDTHS.matchDone,
+                   backgroundColor: colors.weekHeader,
+                   color: colors.weekHeaderText
+                 }} 
+                 rowSpan={2}
+               >
+                 Match<br/>done
+               </th>
+             )}
               <th 
-                className={`border border-gray-400 px-2 py-2 text-xs font-bold ${activeSection !== 'D' ? 'sticky-header-7' : 'sticky-header-8'}`}
+                className={`border border-gray-400 px-2 py-2 text-xs font-bold ${activeSection === 'D' ? 'sticky-header-8' : 'sticky-header-6'}`}
                  style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
                  rowSpan={2}
                >
@@ -1828,6 +1869,7 @@ export default function DayTableView({
                       onToggleWorkout={onToggleWorkout}
                       onExpandOnlyThisWorkout={onExpandOnlyThisWorkout}
                       onExpandDayWithAllWorkouts={onExpandDayWithAllWorkouts}
+                      onCycleWorkoutExpansion={onCycleWorkoutExpansion}
                       onEditDay={onEditDay}
                       onAddWorkout={onAddWorkout}
                       onShowDayInfo={handleShowDayInfo}
@@ -1842,8 +1884,9 @@ export default function DayTableView({
                   {/* Expanded Workouts Section */}
                     {expandedDaysSet.has(day.id) && (
                       <tr className="workout-expanded-row">
-                       <td colSpan={32} className="p-0 bg-gray-50" style={{ position: 'relative' }}>
-                        <div className="p-4 workout-details-container">
+                       <td colSpan={32} className="p-0 bg-transparent">
+                        <div className="workout-details-wrapper">
+                         <div className="workout-details-container">
                           <div className="mb-2 flex items-center gap-3">
                             <div className="text-sm font-semibold text-gray-700">
                               Workouts for {new Date(day.date).toLocaleDateString('en-US', { weekday: 'long' })}
@@ -1861,6 +1904,7 @@ export default function DayTableView({
                               activeSection={activeSection}
                               expandedWorkouts={expandedWorkoutsSet}
                               fullyExpandedWorkouts={fullyExpandedWorkouts}
+                              workoutsWithExpandedMovelaps={workoutsWithExpandedMovelaps}
                               expandedMoveframeId={expandedMoveframeId}
                               expandState={expandState}
                               onToggleWorkout={onToggleWorkout!}
@@ -1895,9 +1939,9 @@ export default function DayTableView({
                             </div>
                           )}
                           
-                          {/* Add Workout Button - Only show if less than 3 workouts */}
-                          {(!day.workouts || day.workouts.length < 3) && (
-                            <div className="mt-4 py-4" style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', paddingLeft: '60px' }}>
+                           {/* Add Workout Button - Only show if less than 3 workouts */}
+                           {(!day.workouts || day.workouts.length < 3) && (
+                             <div className="mt-4 py-4" style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', paddingLeft: '60px' }}>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1907,8 +1951,9 @@ export default function DayTableView({
                             >
                               Add a workout
                             </button>
+                           </div>
+                           )}
                           </div>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -1923,7 +1968,7 @@ export default function DayTableView({
         </table>
           </div>
         </div>
-          </div>
+      </div>
         </>
       )}
 

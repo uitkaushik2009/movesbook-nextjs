@@ -476,9 +476,28 @@ export function useMoveframeForm({
   const buildMoveframeData = () => {
     // Determine notes value based on mode
     let notesValue = note;
+    let descriptionValue = generateDescription();
+    
     if (manualMode && manualContent) {
-      // For manual mode, use manual content as notes
-      notesValue = manualContent;
+      // For manual mode, clean the content
+      // Strip source code tags (pre, code, script, style)
+      let cleanedContent = manualContent
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<pre[^>]*>[\s\S]*?<\/pre>/gi, '')
+        .replace(/<code[^>]*>[\s\S]*?<\/code>/gi, '');
+      
+      // Use cleaned content as notes (full content)
+      notesValue = cleanedContent;
+      
+      // For description, extract text content and limit to 90 characters
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = cleanedContent;
+      const textContent = tempDiv.textContent || tempDiv.innerText || '';
+      descriptionValue = textContent.trim().substring(0, 90);
+      if (textContent.length > 90) {
+        descriptionValue += '...';
+      }
     }
 
     // For manual mode, provide defaults for required fields
@@ -492,7 +511,7 @@ export function useMoveframeForm({
     return {
       sport: effectiveSport,
       type,
-      description: generateDescription(),
+      description: descriptionValue,
       
       // Annotation fields (ONLY for ANNOTATION type)
       annotationText: type === 'ANNOTATION' ? (annotationText || null) : null,
