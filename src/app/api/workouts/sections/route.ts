@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, color } = body;
+    const { name, code, description, color } = body;
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
       data: {
         userId: decoded.userId,
         name,
+        code: code || null, // Short code for compact display
         description: description || '',
         color: color || '#E5E7EB' // Gray default
       }

@@ -56,8 +56,9 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
   
   const [activeTab, setActiveTab] = useState<ToolsTab>('periods');
   const [editingItem, setEditingItem] = useState<Period | WorkoutSection | null>(null);
+  const [editItemTranslations, setEditItemTranslations] = useState<Record<string, { title: string; description: string }>>({});
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newItem, setNewItem] = useState({ title: '', description: '', color: '#3b82f6' });
+  const [newItem, setNewItem] = useState({ title: '', code: '', description: '', color: '#3b82f6' });
   const [newItemTranslations, setNewItemTranslations] = useState<Record<string, { title: string; description: string }>>({});
   const [activeInputLanguage, setActiveInputLanguage] = useState('en');
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
@@ -212,6 +213,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
       description: currentLangData.description || '',
       color: newItem.color,
       order: items.length,
+      ...(activeTab === 'sections' && { code: newItem.code || '' }) // Add code field for sections
     };
 
     // Save translations to localStorage for each language
@@ -247,27 +249,92 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
 
   const handleEdit = (item: Period | WorkoutSection) => {
     setEditingItem({ ...item });
+    
+    // Load translations from all languages
+    const itemType = activeTab === 'periods' ? 'periods' : 'sections';
+    const translations: Record<string, { title: string; description: string }> = {};
+    
+    SUPPORTED_LANGUAGES.forEach(lang => {
+      const storageKey = `tools_${itemType}_${lang.code}`;
+      const existingDataStr = localStorage.getItem(storageKey);
+      if (existingDataStr) {
+        try {
+          const existingData = JSON.parse(existingDataStr);
+          const existingItem = existingData.find((i: any) => i.id === item.id);
+          if (existingItem) {
+            translations[lang.code] = {
+              title: existingItem.title || '',
+              description: existingItem.description || ''
+            };
+          }
+        } catch (e) {
+          console.error(`Error loading ${lang.code} translation:`, e);
+        }
+      }
+    });
+    
+    setEditItemTranslations(translations);
   };
 
   const handleSaveEdit = () => {
     if (!editingItem) return;
 
-    if (editingItem.title.length > 30) {
-      alert('Title must be 30 characters or less');
-      return;
+    // Validate all language translations
+    for (const [lang, trans] of Object.entries(editItemTranslations)) {
+      if (trans.title && trans.title.length > 30) {
+        alert(`Title in ${lang.toUpperCase()} must be 30 characters or less`);
+        return;
+      }
+      if (trans.description && trans.description.length > 255) {
+        alert(`Description in ${lang.toUpperCase()} must be 255 characters or less`);
+        return;
+      }
     }
 
-    if (editingItem.description.length > 255) {
-      alert('Description must be 255 characters or less');
-      return;
-    }
-
+    // Update in current state
     const items = getActiveItems();
     const updated = items.map(item => 
       item.id === editingItem.id ? editingItem : item
     );
     setActiveItems(updated);
+    
+    // Save to all language libraries
+    const itemType = activeTab === 'periods' ? 'periods' : 'sections';
+    SUPPORTED_LANGUAGES.forEach(lang => {
+      const langData = editItemTranslations[lang.code];
+      if (langData && (langData.title || langData.description)) {
+        const storageKey = `tools_${itemType}_${lang.code}`;
+        const existingDataStr = localStorage.getItem(storageKey);
+        const existingData = existingDataStr ? JSON.parse(existingDataStr) : [];
+        
+        // Find and update the item
+        const itemIndex = existingData.findIndex((i: any) => i.id === editingItem.id);
+        if (itemIndex >= 0) {
+          existingData[itemIndex] = {
+            ...existingData[itemIndex],
+            title: langData.title || '',
+            description: langData.description || '',
+            color: editingItem.color,
+            ...(activeTab === 'sections' && { code: (editingItem as any).code || '' })
+          };
+        } else {
+          // Add if doesn't exist
+          existingData.push({
+            id: editingItem.id,
+            title: langData.title || '',
+            description: langData.description || '',
+            color: editingItem.color,
+            order: existingData.length,
+            ...(activeTab === 'sections' && { code: (editingItem as any).code || '' })
+          });
+        }
+        
+        localStorage.setItem(storageKey, JSON.stringify(existingData));
+      }
+    });
+    
     setEditingItem(null);
+    setEditItemTranslations({});
   };
 
   const handleDelete = (id: string) => {
@@ -1798,90 +1865,48 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
       {/* Add Dialog */}
       {showAddDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-lg w-full">
+          <div className="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold mb-6">
               Add New {activeTab === 'periods' ? 'Period' : 'Section'}
             </h3>
             
-            {/* Language Toolbar */}
-            <div className="mb-6 p-3 bg-green-50 border-2 border-green-300 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Globe className="w-5 h-5 text-green-700" />
-                <span className="text-sm font-semibold text-gray-700">Language Input</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {SUPPORTED_LANGUAGES.map((lang) => (
-                  <button
-                    key={lang.code}
-                    onClick={() => setActiveInputLanguage(lang.code)}
-                    className={`px-3 py-1.5 text-sm font-medium rounded transition ${
-                      activeInputLanguage === lang.code
-                        ? 'bg-yellow-400 text-gray-900 border-2 border-yellow-600'
-                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    {lang.code.toUpperCase()}
-                  </button>
-                ))}
+            {/* Info Banner */}
+            <div className="mb-6 p-3 bg-blue-50 border-2 border-blue-300 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-blue-700" />
+                <span className="text-sm font-semibold text-blue-900">
+                  Edit in all languages simultaneously - changes save to all language libraries at once!
+                </span>
               </div>
             </div>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Title <span className="text-gray-500">(max 30 characters)</span>
-                </label>
-                <input
-                  type="text"
-                  value={newItemTranslations[activeInputLanguage]?.title || ''}
-                  onChange={(e) => {
-                    const value = e.target.value.slice(0, 30);
-                    setNewItemTranslations({
-                      ...newItemTranslations,
-                      [activeInputLanguage]: {
-                        title: value,
-                        description: newItemTranslations[activeInputLanguage]?.description || ''
-                      }
-                    });
-                  }}
-                  placeholder="Enter title..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  maxLength={30}
-                />
-                <div className="text-xs text-gray-500 mt-1">
-                  {(newItemTranslations[activeInputLanguage]?.title || '').length}/30
+            {/* Global Fields (Code & Color) */}
+            <div className="space-y-4 mb-6">
+              {activeTab === 'sections' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Code <span className="text-gray-500">(max 5 characters, same for all languages)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newItem.code || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.slice(0, 5).toUpperCase();
+                      setNewItem({ ...newItem, code: value });
+                    }}
+                    placeholder="Enter code..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold"
+                    maxLength={5}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {(newItem.code || '').length}/5 - Short code for compact display
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Description <span className="text-gray-500">(max 255 characters)</span>
-                </label>
-                <textarea
-                  value={newItemTranslations[activeInputLanguage]?.description || ''}
-                  onChange={(e) => {
-                    const value = e.target.value.slice(0, 255);
-                    setNewItemTranslations({
-                      ...newItemTranslations,
-                      [activeInputLanguage]: {
-                        title: newItemTranslations[activeInputLanguage]?.title || '',
-                        description: value
-                      }
-                    });
-                  }}
-                  placeholder="Enter description..."
-                  rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  maxLength={255}
-                />
-                <div className="text-xs text-gray-500 mt-1">
-                  {(newItemTranslations[activeInputLanguage]?.description || '').length}/255
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Color
+                  Color <span className="text-gray-500">(same for all languages)</span>
                 </label>
                 <div className="flex items-center gap-4">
                   <div
@@ -1905,17 +1930,87 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
               </div>
             </div>
 
+            {/* Per-Language Fields */}
+            <div className="space-y-6">
+              <h4 className="text-lg font-semibold text-gray-800 border-b pb-2">Translations</h4>
+              
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <div key={lang.code} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-md font-bold text-sm">
+                      {lang.code.toUpperCase()}
+                    </span>
+                    <span className="text-sm font-medium text-gray-700">{lang.name}</span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">
+                        Title <span className="text-gray-400">(max 30 chars)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newItemTranslations[lang.code]?.title || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.slice(0, 30);
+                          setNewItemTranslations({
+                            ...newItemTranslations,
+                            [lang.code]: {
+                              title: value,
+                              description: newItemTranslations[lang.code]?.description || ''
+                            }
+                          });
+                        }}
+                        placeholder={`Enter ${lang.name} title...`}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        maxLength={30}
+                      />
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {(newItemTranslations[lang.code]?.title || '').length}/30
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">
+                        Description <span className="text-gray-400">(max 255 chars)</span>
+                      </label>
+                      <textarea
+                        value={newItemTranslations[lang.code]?.description || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.slice(0, 255);
+                          setNewItemTranslations({
+                            ...newItemTranslations,
+                            [lang.code]: {
+                              title: newItemTranslations[lang.code]?.title || '',
+                              description: value
+                            }
+                          });
+                        }}
+                        placeholder={`Enter ${lang.name} description...`}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        maxLength={255}
+                      />
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {(newItemTranslations[lang.code]?.description || '').length}/255
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="flex gap-3 mt-8">
               <button
                 onClick={handleAdd}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
+                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
               >
-                Add
+                💾 Save to All Languages
               </button>
               <button
                 onClick={() => {
                   setShowAddDialog(false);
-                  setNewItem({ title: '', description: '', color: '#3b82f6' });
+                  setNewItem({ title: '', code: '', description: '', color: '#3b82f6' });
                   setNewItemTranslations({});
                   setActiveInputLanguage('en');
                 }}
@@ -1931,43 +2026,48 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
       {/* Edit Dialog */}
       {editingItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-8 max-w-lg w-full">
+          <div className="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold mb-6">
               Edit {activeTab === 'periods' ? 'Period' : 'Section'}
             </h3>
             
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Title <span className="text-gray-500">(max 30 characters)</span>
-                </label>
-                <input
-                  type="text"
-                  value={editingItem.title}
-                  onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value.slice(0, 30) })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  maxLength={30}
-                />
-                <div className="text-xs text-gray-500 mt-1">{editingItem.title.length}/30</div>
+            {/* Info Banner */}
+            <div className="mb-6 p-3 bg-blue-50 border-2 border-blue-300 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Globe className="w-5 h-5 text-blue-700" />
+                <span className="text-sm font-semibold text-blue-900">
+                  Edit in all languages simultaneously - changes save to all language libraries at once!
+                </span>
               </div>
+            </div>
+
+            {/* Global Fields (Code & Color) */}
+            <div className="space-y-4 mb-6">
+              {activeTab === 'sections' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Code <span className="text-gray-500">(max 5 characters, same for all languages)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={(editingItem as any).code || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.slice(0, 5).toUpperCase();
+                      setEditingItem({ ...editingItem, code: value } as any);
+                    }}
+                    placeholder="Enter code..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono font-bold"
+                    maxLength={5}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {((editingItem as any).code || '').length}/5 - Short code for compact display
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Description <span className="text-gray-500">(max 255 characters)</span>
-                </label>
-                <textarea
-                  value={editingItem.description}
-                  onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value.slice(0, 255) })}
-                  rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  maxLength={255}
-                />
-                <div className="text-xs text-gray-500 mt-1">{editingItem.description.length}/255</div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Color
+                  Color <span className="text-gray-500">(same for all languages)</span>
                 </label>
                 <div className="flex items-center gap-4">
                   <div
@@ -1991,13 +2091,83 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
               </div>
             </div>
 
+            {/* Per-Language Fields */}
+            <div className="space-y-6">
+              <h4 className="text-lg font-semibold text-gray-800 border-b pb-2">Translations</h4>
+              
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <div key={lang.code} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-md font-bold text-sm">
+                      {lang.code.toUpperCase()}
+                    </span>
+                    <span className="text-sm font-medium text-gray-700">{lang.name}</span>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">
+                        Title <span className="text-gray-400">(max 30 chars)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editItemTranslations[lang.code]?.title || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.slice(0, 30);
+                          setEditItemTranslations({
+                            ...editItemTranslations,
+                            [lang.code]: {
+                              title: value,
+                              description: editItemTranslations[lang.code]?.description || ''
+                            }
+                          });
+                        }}
+                        placeholder={`Enter ${lang.name} title...`}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        maxLength={30}
+                      />
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {(editItemTranslations[lang.code]?.title || '').length}/30
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">
+                        Description <span className="text-gray-400">(max 255 chars)</span>
+                      </label>
+                      <textarea
+                        value={editItemTranslations[lang.code]?.description || ''}
+                        onChange={(e) => {
+                          const value = e.target.value.slice(0, 255);
+                          setEditItemTranslations({
+                            ...editItemTranslations,
+                            [lang.code]: {
+                              title: editItemTranslations[lang.code]?.title || '',
+                              description: value
+                            }
+                          });
+                        }}
+                        placeholder={`Enter ${lang.name} description...`}
+                        rows={2}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        maxLength={255}
+                      />
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {(editItemTranslations[lang.code]?.description || '').length}/255
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="flex gap-3 mt-8">
               <button
                 onClick={handleSaveEdit}
-                className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold flex items-center justify-center gap-2"
               >
                 <Save className="w-4 h-4" />
-                Save
+                💾 Save to All Languages
               </button>
               <button
                 onClick={() => setEditingItem(null)}

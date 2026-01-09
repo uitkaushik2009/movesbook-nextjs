@@ -336,6 +336,52 @@ export default function FavouritesSettings() {
     });
   };
 
+  const handleLoadSportDefaults = () => {
+    if (!confirm('⚠️ Load sports from Main Sports Mode?\n\nThis will replace your current selection with the sports configured in admin settings (in your current language).\n\nContinue?')) {
+      return;
+    }
+
+    try {
+      // Load main sports from localStorage (admin settings)
+      // Format: tools_sports_[language]
+      const storageKey = `tools_sports_${currentLanguage}`;
+      const sportsDataStr = localStorage.getItem(storageKey);
+      
+      if (!sportsDataStr) {
+        alert(`ℹ️ No default sports configured for "${currentLanguage}" language yet.\n\nPlease ask your admin to:\n1. Go to Settings > Tools > Main Sports tab\n2. Configure sports for ${currentLanguage}\n3. Save to ${currentLanguage.toUpperCase()}`);
+        return;
+      }
+
+      try {
+        const sportsData = JSON.parse(sportsDataStr);
+        
+        if (!Array.isArray(sportsData) || sportsData.length === 0) {
+          alert('ℹ️ No sports found in Main Sports Mode for your language.\n\nPlease ask your admin to configure sports in Tools Settings.');
+          return;
+        }
+
+        // Sort by order and take top 5
+        const sortedSports = sportsData
+          .sort((a: any, b: any) => a.order - b.order)
+          .map((sport: any) => sport.name)
+          .slice(0, 5);
+        
+        if (sortedSports.length > 0) {
+          setSelectedSports(sortedSports);
+          alert(`✅ Loaded ${sortedSports.length} sports from Main Sports Mode!\n\n${sortedSports.map((s: string) => `• ${s.replace(/_/g, ' ')}`).join('\n')}\n\n💡 Remember to click "Save" to apply changes.`);
+        } else {
+          alert('ℹ️ No sports configured in Main Sports Mode.');
+        }
+      } catch (parseError) {
+        console.error('Error parsing sports data:', parseError);
+        alert('❌ Error reading sports data. The data may be corrupted.');
+      }
+    } catch (error) {
+      console.error('Error loading sport defaults:', error);
+      alert('❌ Error loading sport defaults. Please try again.');
+    }
+  };
+
   const moveSportUp = (index: number) => {
     if (index === 0) return;
     setSelectedSports(prev => {
@@ -1143,6 +1189,14 @@ export default function FavouritesSettings() {
               className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-semibold"
             >
               Clear All
+            </button>
+            <button
+              onClick={handleLoadSportDefaults}
+              className="px-6 py-3 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition font-semibold flex items-center gap-2"
+              title="Load sports from Main Sports Mode in your current language"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+              Load Sport Default
             </button>
             <button
               onClick={saveFavoriteSports}

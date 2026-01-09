@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Star } from 'lucide-react';
+import { X, Star, ChevronsDown } from 'lucide-react';
 import { SPORTS_LIST, MACRO_FINAL_OPTIONS, MUSCULAR_SECTORS, getPaceLabel, shouldShowPaceField, getSportConfig, getPauseOptions, REST_TYPES, REPS_TYPES, hasRepsTypeSelection, getSportDisplayName, DISTANCE_BASED_SPORTS, sportNeedsExerciseName } from '@/constants/moveframe.constants';
 import { useMoveframeForm } from '@/hooks/useMoveframeForm';
 import { getSportIcon } from '@/utils/sportIcons';
@@ -113,6 +113,24 @@ export default function AddEditMoveframeModal({
     workout,
     day
   });
+
+  // Copy down function: copies current row data to all rows below
+  const copyDownRow = (fromIdx: number) => {
+    if (fromIdx >= individualPlans.length - 1) return; // Don't copy from last row
+    
+    const sourceRow = individualPlans[fromIdx];
+    
+    // Copy to all rows below the current one
+    for (let i = fromIdx + 1; i < individualPlans.length; i++) {
+      // Copy all relevant fields based on what exists in the source row
+      if (sourceRow.speed !== undefined) updateIndividualPlan(i, 'speed', sourceRow.speed);
+      if (sourceRow.time !== undefined) updateIndividualPlan(i, 'time', sourceRow.time);
+      if (sourceRow.pause !== undefined) updateIndividualPlan(i, 'pause', sourceRow.pause);
+      if (sourceRow.reps !== undefined) updateIndividualPlan(i, 'reps', sourceRow.reps);
+      if (sourceRow.weight !== undefined) updateIndividualPlan(i, 'weight', sourceRow.weight);
+      if (sourceRow.tools !== undefined) updateIndividualPlan(i, 'tools', sourceRow.tools);
+    }
+  };
 
   // Destructure for easier access
   const {
@@ -603,13 +621,13 @@ export default function AddEditMoveframeModal({
     }
   }, [isOpen, type, manualMode, sport, sectionId, workoutSections]);
 
-  // Debug: Log whenever periods are loaded
+  // Debug: Log whenever workout sections are loaded
   useEffect(() => {
     if (workoutSections.length > 0) {
-      console.log('📋 Periods loaded:', workoutSections);
-      console.log('📋 Period count:', workoutSections.length);
-      workoutSections.forEach((period, idx) => {
-        console.log(`  ${idx + 1}. ${period.name} (ID: ${period.id}, Color: ${period.color})`);
+      console.log('📋 Workout Sections loaded:', workoutSections);
+      console.log('📋 Workout Section count:', workoutSections.length);
+      workoutSections.forEach((section, idx) => {
+        console.log(`  ${idx + 1}. ${section.name} (ID: ${section.id}, Code: ${section.code || 'N/A'}, Color: ${section.color})`);
       });
     }
   }, [workoutSections]);
@@ -1199,13 +1217,13 @@ export default function AddEditMoveframeModal({
                   className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm text-gray-900 bg-white"
                   style={{ color: '#000000' }}
                 >
-                  <option value="" style={{ color: '#666666' }}>Select section...</option>
+                  <option value="" style={{ color: '#666666' }}>Select workout section...</option>
                   {workoutSections.length === 0 && (
-                    <option disabled style={{ color: '#999999' }}>No sections available</option>
+                    <option disabled style={{ color: '#999999' }}>No workout sections available</option>
                   )}
                   {workoutSections.map((section, index) => (
                     <option 
-                      key={section.id || `period-${index}`} 
+                      key={section.id || `section-${index}`} 
                       value={section.id}
                       style={{ 
                         color: '#000000',
@@ -1216,14 +1234,14 @@ export default function AddEditMoveframeModal({
                 </option>
               ))}
             </select>
-                {/* Show selected period color */}
+                {/* Show selected workout section color */}
                 {sectionId && (() => {
                   const selectedSection = workoutSections.find(s => s.id === sectionId);
                   return selectedSection?.color ? (
                     <div 
                       className="w-8 h-8 rounded border-2 border-gray-300 flex-shrink-0"
                       style={{ backgroundColor: selectedSection.color }}
-                      title={selectedSection.name}
+                      title={`${selectedSection.name}${selectedSection.code ? ` (${selectedSection.code})` : ''}`}
                     />
                   ) : null;
                 })()}
@@ -1231,7 +1249,7 @@ export default function AddEditMoveframeModal({
             {errors.sectionId && <p className="mt-0.5 text-xs text-red-500">{errors.sectionId}</p>}
               {workoutSections.length === 0 && (
                 <p className="mt-1 text-xs text-orange-600">
-                  ⚠️ No periods found. Please add periods in Personal Settings → Tools.
+                  ⚠️ No workout sections found. Please add workout sections in Personal Settings → Tools → Sections.
                 </p>
               )}
           </div>
@@ -1266,14 +1284,14 @@ export default function AddEditMoveframeModal({
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 text-sm bg-white"
                   >
                     {workout?.moveframes?.map((mf: any, index: number) => {
-                      const periodName = day?.period?.name || day?.periodName || 'Default';
+                      const sectionName = mf.section?.name || 'Default Section';
                       const sportIcon = getSportIcon(mf.sport || 'SWIM', iconType);
                       const sportName = getSportDisplayName(mf.sport || 'SWIM');
                       const isImage = sportIcon.startsWith('/');
                       
                       return (
                         <option key={mf.id} value={index}>
-                          {index + 1}. {mf.letter || String.fromCharCode(65 + index)} • {periodName} • {isImage ? '⚫' : sportIcon} {sportName}
+                          {index + 1}. {mf.letter || String.fromCharCode(65 + index)} • {sectionName} • {isImage ? '⚫' : sportIcon} {sportName}
                         </option>
                       );
                     })}
@@ -2304,6 +2322,7 @@ export default function AddEditMoveframeModal({
                               <th className="border border-gray-300 px-2 py-2 text-center w-12">#</th>
                               <th className="border border-gray-300 px-2 py-2 text-center">SPEED & PACING</th>
                               <th className="border border-gray-300 px-2 py-2 text-center">REST & ALERTS</th>
+                              <th className="border border-gray-300 px-2 py-2 text-center w-20"></th>
                             </tr>
                             <tr>
                               <th className="border-b border-gray-300"></th>
@@ -2316,6 +2335,7 @@ export default function AddEditMoveframeModal({
                               <th className="border border-gray-300 px-2 py-1.5 text-left bg-gray-100">
                                 <span className="font-semibold">Pause</span>
                               </th>
+                              <th className="border-b border-gray-300"></th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2357,6 +2377,19 @@ export default function AddEditMoveframeModal({
                                     ))}
                                   </select>
                                 </td>
+                                <td className="border border-gray-300 px-1 py-1.5 text-center">
+                                  {idx > 0 && idx < individualPlans.length - 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => copyDownRow(idx)}
+                                      className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded flex items-center gap-1 transition-all whitespace-nowrap"
+                                      title="Copy this row to all rows below"
+                                    >
+                                      <ChevronsDown className="w-3 h-3" />
+                                      <span>Copy</span>
+                                    </button>
+                                  )}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -2393,6 +2426,7 @@ export default function AddEditMoveframeModal({
                                 {repsType === 'Time' ? 'TIME & WEIGHTS' : 'REPS & WEIGHTS'}
                               </th>
                               <th className="border border-gray-300 px-2 py-2 text-center">REST & ALERTS</th>
+                              <th className="border border-gray-300 px-2 py-2 text-center w-20"></th>
                             </tr>
                             <tr>
                               <th className="border-b border-gray-300"></th>
@@ -2410,6 +2444,7 @@ export default function AddEditMoveframeModal({
                                   {!restType && 'Pause'}
                                 </span>
                               </th>
+                              <th className="border-b border-gray-300"></th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2487,6 +2522,19 @@ export default function AddEditMoveframeModal({
                                     ))}
                                   </select>
                                 </td>
+                                <td className="border border-gray-300 px-1 py-1.5 text-center">
+                                  {idx > 0 && idx < individualPlans.length - 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => copyDownRow(idx)}
+                                      className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded flex items-center gap-1 transition-all whitespace-nowrap"
+                                      title="Copy this row to all rows below"
+                                    >
+                                      <ChevronsDown className="w-3 h-3" />
+                                      <span>Copy</span>
+                                    </button>
+                                  )}
+                                </td>
                               </tr>
                             ))}
                           </tbody>
@@ -2527,6 +2575,7 @@ export default function AddEditMoveframeModal({
                                   {repsType === 'Time' ? 'TIME & TOOLS' : 'REPS & TOOLS'}
                                 </th>
                                 <th className="border border-gray-300 px-2 py-2 text-center">REST & ALERTS</th>
+                                <th className="border border-gray-300 px-2 py-2 text-center w-20"></th>
                               </tr>
                               <tr>
                                 <th className="border-b border-gray-300"></th>
@@ -2544,6 +2593,7 @@ export default function AddEditMoveframeModal({
                                     {!restType && 'Pause'}
                                   </span>
                                 </th>
+                                <th className="border-b border-gray-300"></th>
                               </tr>
                             </thead>
                             <tbody>
@@ -2581,6 +2631,19 @@ export default function AddEditMoveframeModal({
                                         <option key={p} value={p}>{p}</option>
                                       ))}
                                     </select>
+                                  </td>
+                                  <td className="border border-gray-300 px-1 py-1.5 text-center">
+                                    {idx > 0 && idx < individualPlans.length - 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => copyDownRow(idx)}
+                                        className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded flex items-center gap-1 transition-all whitespace-nowrap"
+                                        title="Copy this row to all rows below"
+                                      >
+                                        <ChevronsDown className="w-3 h-3" />
+                                        <span>Copy</span>
+                                      </button>
+                                    )}
                                   </td>
                                 </tr>
                               ))}

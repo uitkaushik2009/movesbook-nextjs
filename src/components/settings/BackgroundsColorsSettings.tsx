@@ -1032,6 +1032,16 @@ export default function BackgroundsColorsSettings({ isAdmin = false }: Backgroun
               bgColor={colors.moveframeHeader}
             />
             <ColorPicker
+              label="Alternate Row Background of the Moveframes"
+              value={colors.alternateRowMoveframe}
+              onChange={(v) => handleColorChange('alternateRowMoveframe', v)}
+            />
+            <ColorPicker
+              label="Alternate Row Text of the Moveframes"
+              value={colors.alternateRowTextMoveframe}
+              onChange={(v) => handleColorChange('alternateRowTextMoveframe', v)}
+            />
+            <ColorPicker
               label="Movelap Header Background (Odd Rows: 1, 3, 5...)"
               value={colors.movelapHeader}
               onChange={(v) => handleColorChange('movelapHeader', v)}
@@ -1042,6 +1052,11 @@ export default function BackgroundsColorsSettings({ isAdmin = false }: Backgroun
               onChange={(v) => handleColorChange('movelapHeaderText', v)}
               showContrast
               bgColor={colors.movelapHeader}
+            />
+            <ColorPicker
+              label="Alternate Row Background of the Movelaps (Even Rows: 2, 4, 6...)"
+              value={colors.alternateRowMovelap}
+              onChange={(v) => handleColorChange('alternateRowMovelap', v)}
             />
           </CollapsibleSection>
 
@@ -1134,21 +1149,6 @@ export default function BackgroundsColorsSettings({ isAdmin = false }: Backgroun
             expanded={expandedSections.rows}
             onToggle={() => toggleSection('rows')}
           >
-            <ColorPicker
-              label="Alternate Row Background of the Moveframes"
-              value={colors.alternateRowMoveframe}
-              onChange={(v) => handleColorChange('alternateRowMoveframe', v)}
-            />
-            <ColorPicker
-              label="Alternate Row Text of the Moveframes"
-              value={colors.alternateRowTextMoveframe}
-              onChange={(v) => handleColorChange('alternateRowTextMoveframe', v)}
-            />
-            <ColorPicker
-              label="Alternate Row Background of the Movelaps (Even Rows: 2, 4, 6...)"
-              value={colors.alternateRowMovelap}
-              onChange={(v) => handleColorChange('alternateRowMovelap', v)}
-            />
             <ColorPicker
               label="Microlap Background"
               value={colors.microlapBackground}

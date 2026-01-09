@@ -76,6 +76,7 @@ import CopyFromTemplateModal from '@/components/workouts/modals/CopyFromTemplate
 import DayPrintModal from '@/components/workouts/modals/DayPrintModal';
 import WorkoutPrintModal from '@/components/workouts/modals/WorkoutPrintModal';
 import ShareWorkoutModal from '@/components/workouts/modals/ShareWorkoutModal';
+import ShareDayModal from '@/components/workouts/modals/ShareDayModal';
 import WeekTotalsModal from '@/components/workouts/modals/WeekTotalsModal';
 import WeeklyInfoModal from '@/components/workouts/WeeklyInfoModal';
 import CopyWeekModal from '@/components/workouts/modals/CopyWeekModal';
@@ -322,6 +323,47 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     cycleWorkoutExpansion(workout.id, day.id);
   };
 
+  /**
+   * Handler to save a week to favorites
+   */
+  const handleSaveFavoriteWeek = async (week: any) => {
+    console.log('⭐ Save week to favorites:', week);
+    
+    if (!week || !week.id) {
+      showMessage('error', 'No week selected');
+      return;
+    }
+    
+    try {
+      const token = localStorage.getItem('token');
+      const weekNumber = week.weekNumber || 1;
+      const weekName = `Week ${weekNumber}`;
+      
+      const response = await fetch('/api/workouts/weeks/favorites', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          weekId: week.id,
+          name: weekName,
+          description: `Saved from ${new Date().toLocaleDateString()}`
+        })
+      });
+      
+      if (response.ok) {
+        showMessage('success', `"${weekName}" saved to favorites!`);
+      } else {
+        const error = await response.json();
+        showMessage('error', error.error || 'Failed to save to favorites');
+      }
+    } catch (error) {
+      console.error('Error saving week to favorites:', error);
+      showMessage('error', 'Error saving week to favorites');
+    }
+  };
+
   // ==================== MODAL MODE STATE ====================
   const [workoutModalMode, setWorkoutModalMode] = useState<'add' | 'edit'>('add');
   const [showWorkoutInfoModal, setShowWorkoutInfoModal] = useState(false);
@@ -337,6 +379,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [showShareWorkoutModal, setShowShareWorkoutModal] = useState(false);
   const [workoutToShare, setWorkoutToShare] = useState<any>(null);
   const [dayForWorkoutShare, setDayForWorkoutShare] = useState<any>(null);
+  const [showShareDayModal, setShowShareDayModal] = useState(false);
+  const [dayToShare, setDayToShare] = useState<any>(null);
   const [showCopyWeekModal, setShowCopyWeekModal] = useState(false);
   const [showMoveWeekModal, setShowMoveWeekModal] = useState(false);
   const [showWeekTotalsModal, setShowWeekTotalsModal] = useState(false);
@@ -1712,6 +1756,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                       setSelectedWeekForTable(day.weekNumber);
                       setViewMode('table'); // Switch to table view
                     }}
+                    onSaveFavoriteWeek={handleSaveFavoriteWeek}
                   />
                 </div>
               </div>
@@ -1846,41 +1891,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    }
                  }}
                  onShareDay={(day) => {
-                   const dayDate = new Date(day.date).toLocaleDateString('en-US', { 
-                     weekday: 'long', 
-                     year: 'numeric', 
-                     month: 'long', 
-                     day: 'numeric' 
-                   });
-                   
-                   let shareText = `📅 Workout Plan for ${dayDate}\n\n`;
-                   
-                   if (day.workouts && day.workouts.length > 0) {
-                     day.workouts.forEach((workout: any, idx: number) => {
-                       shareText += `🏋️ Workout ${idx + 1}: ${workout.name || 'Unnamed Workout'}\n`;
-                       
-                       if (workout.moveframes && workout.moveframes.length > 0) {
-                         workout.moveframes.forEach((mf: any) => {
-                           shareText += `  • ${mf.sport}: ${mf.description || 'No description'}\n`;
-                         });
-                       }
-                       shareText += '\n';
-                     });
-                   } else {
-                     shareText += 'No workouts planned for this day.\n';
-                   }
-                   
-                   shareText += `\n✨ Created with MovesBook`;
-                   
-                   // Copy to clipboard
-                   navigator.clipboard.writeText(shareText)
-                     .then(() => {
-                       showMessage('success', 'Workout plan copied to clipboard! You can now paste and share it.');
-                     })
-                     .catch((error) => {
-                     console.error('Error copying to clipboard:', error);
-                     showMessage('error', 'Could not copy to clipboard');
-                   });
+                   setDayToShare(day);
+                   setShowShareDayModal(true);
                  }}
                  onExportPdfDay={(day) => {
                    setDayToPrint(day);
@@ -3428,6 +3440,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           }}
           day={dayToPrint}
           autoPrint={autoPrintDay}
+          activeSection={activeSection}
         />
       )}
 
@@ -3459,6 +3472,18 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           }}
           workout={workoutToShare}
           day={dayForWorkoutShare}
+        />
+      )}
+
+      {/* Share Day Modal */}
+      {showShareDayModal && dayToShare && (
+        <ShareDayModal
+          isOpen={showShareDayModal}
+          onClose={() => {
+            setShowShareDayModal(false);
+            setDayToShare(null);
+          }}
+          day={dayToShare}
         />
       )}
 

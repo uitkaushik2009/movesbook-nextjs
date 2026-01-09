@@ -395,7 +395,7 @@ model FavoriteWeeklyPlan {
   userId        String
   name          String
   description   String?
-  planData      String   // JSON snapshot of the weekly plan structure
+  planData      String   @db.LongText // JSON snapshot of the weekly plan structure
   weeksCount    Int?
   daysCount     Int?
   workoutsCount Int?
@@ -674,6 +674,7 @@ enum MovelapStatus {
 enum SportType {
   SWIM
   BIKE
+  SPINNING
   RUN
   BODY_BUILDING
   ROWING
@@ -697,7 +698,9 @@ enum SportType {
   HIKING
   WALKING
   DANCING
+  CALISTENIC
   CROSSFIT
+  SPARTAN
   TRIATHLON
   TRACK_FIELD
 }

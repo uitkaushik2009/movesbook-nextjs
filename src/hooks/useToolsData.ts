@@ -150,6 +150,32 @@ export function useToolsData(): UseToolsDataReturn {
         loadPeriodsFromLocalStorage();
       }
       
+      // Load workout sections from Prisma WorkoutSection table (not from JSON settings)
+      const sectionsResponse = await fetch('/api/workouts/sections', {
+        headers: getAuthHeaders()
+      });
+      
+      if (sectionsResponse.ok) {
+        const sectionsData = await sectionsResponse.json();
+        if (sectionsData.sections && sectionsData.sections.length > 0) {
+          // Convert Prisma WorkoutSection format to local Section format
+          const formattedSections = sectionsData.sections.map((s: any) => ({
+            id: s.id,
+            title: s.name,
+            code: s.code || '',
+            description: s.description || '',
+            color: s.color,
+            order: 0
+          }));
+          setSections(formattedSections);
+          console.log('✅ Loaded workout sections from database:', formattedSections);
+        } else {
+          loadSectionsFromLocalStorage();
+        }
+      } else {
+        loadSectionsFromLocalStorage();
+      }
+      
       // Load other settings from UserSettings JSON
       const response = await fetch('/api/user/settings', {
         headers: getAuthHeaders()
@@ -159,12 +185,7 @@ export function useToolsData(): UseToolsDataReturn {
         const settings = await response.json();
         const toolsSettings = settings.toolsSettings || {};
 
-        // Sections, sports, equipment, exercises, devices are still in JSON
-        if (toolsSettings.sections && toolsSettings.sections.length > 0) {
-          setSections(toolsSettings.sections);
-        } else {
-          loadSectionsFromLocalStorage();
-        }
+        // Sports, equipment, exercises, devices are in JSON (sections now loaded from Prisma table above)
 
         if (toolsSettings.sports && toolsSettings.sports.length > 0) {
           setSports(toolsSettings.sports);
@@ -390,6 +411,37 @@ export function useToolsData(): UseToolsDataReturn {
         console.error('❌ Failed to sync periods');
       }
 
+      // Sync workout sections to Prisma WorkoutSection table (bulk sync)
+      const sectionsResponse = await fetch('/api/workouts/sections/sync', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ sections })
+      });
+
+      if (sectionsResponse.ok) {
+        const sectionsData = await sectionsResponse.json();
+        console.log('✅ Workout sections synced successfully:', sectionsData);
+        
+        // Reload sections from database to get updated IDs
+        if (sectionsData.sections && sectionsData.sections.length > 0) {
+          const formattedSections = sectionsData.sections.map((s: any) => ({
+            id: s.id,
+            title: s.name,
+            code: s.code || '',
+            description: s.description || '',
+            color: s.color,
+            order: 0
+          }));
+          setSections(formattedSections);
+          console.log('🔄 Workout sections reloaded:', formattedSections);
+        }
+      } else {
+        console.error('❌ Failed to sync workout sections');
+      }
+
       // Save other tools settings to UserSettings JSON
       const response = await fetch('/api/user/settings', {
         method: 'PATCH',
@@ -399,8 +451,7 @@ export function useToolsData(): UseToolsDataReturn {
         },
         body: JSON.stringify({
           toolsSettings: {
-            // Periods are now in Prisma table, not JSON
-            sections,
+            // Periods and sections are now in Prisma tables, not JSON
             sports,
             equipment,
             exercises,

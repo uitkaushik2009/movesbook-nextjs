@@ -349,13 +349,22 @@ export default function WorkoutTable({
         // Users must double-click the moveframe letter to set workType to 'MAIN' or 'SECONDARY'
         
         // Get display content - for manual mode, ALWAYS use notes first (full content)
+        // Prepend workout section CODE (max 5 chars) before description
         const getDisplayContent = (mf: any) => {
           if (!mf) return '';
-          // For manual mode, notes contains the full rich text content
-          // Description might be truncated due to database constraints
-          return mf.manualMode 
+          
+          // Get the description content
+          const description = mf.manualMode 
             ? (mf.notes || mf.description || '') 
             : (mf.description || '');
+          
+          // Prepend section code if it exists
+          const sectionCode = mf.section?.code;
+          if (sectionCode && description) {
+            return `${sectionCode} - ${description}`;
+          }
+          
+          return description;
         };
         
         sportsArray.push({

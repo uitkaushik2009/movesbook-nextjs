@@ -174,7 +174,7 @@ export default function MoveframesSection({
       aim_snd: <th key="aim_snd" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '40px' }}>Aim</th>,
       annotations: <th key="annotations" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '50px' }}>Notes</th>,
       mf: <th key="mf" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '25px' }}>MF</th>,
-      section: <th key="section" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '96px' }}>Period</th>,
+      section: <th key="section" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '96px' }}>Section</th>,
       sport: <th key="sport" className="border border-gray-200 px-1 py-1 text-left text-sm font-bold" style={{ width: '48px' }}>Sport</th>,
       description: <th key="description" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '623px' }}>Description</th>,
       duration: <th key="duration" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '42px' }}>Dur</th>,

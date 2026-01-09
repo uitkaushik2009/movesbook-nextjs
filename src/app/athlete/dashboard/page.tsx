@@ -741,6 +741,7 @@ function AthleteOverview({ t }: { t: (key: string) => string }) {
       if (response.ok) {
         const data = await response.json();
         const weeks = data.plan?.weeks || [];
+        const storageZone = data.plan?.storageZone;
         
         // Calculate statistics
         let thisWeekCount = 0;
@@ -763,6 +764,9 @@ function AthleteOverview({ t }: { t: (key: string) => string }) {
                   id: workout.id,
                   name: workout.name,
                   date: day.date,
+                  weekNumber: week.weekNumber,
+                  dayNumber: day.dayNumber,
+                  storageZone: storageZone,
                   moveframeCount: workout.moveframes?.length || 0
                 });
               }
@@ -843,19 +847,27 @@ function AthleteOverview({ t }: { t: (key: string) => string }) {
           </div>
         ) : (
           <div className="space-y-4">
-            {recentWorkouts.map((workout) => (
-              <div key={workout.id} className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 page-break-avoid">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-gray-900">{workout.name || 'Workout Session'}</h4>
-                    <p className="text-sm text-gray-500">
-                      {new Date(workout.date).toLocaleDateString()} • {workout.moveframeCount} moveframes
-                    </p>
+            {recentWorkouts.map((workout) => {
+              // For Section A (storage zones A, B, C), display week/day numbers instead of dates
+              const isTemplateSection = workout.storageZone === 'A' || workout.storageZone === 'B' || workout.storageZone === 'C';
+              const dateInfo = isTemplateSection 
+                ? `Week ${workout.weekNumber}, Day ${workout.dayNumber}`
+                : new Date(workout.date).toLocaleDateString();
+              
+              return (
+                <div key={workout.id} className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 page-break-avoid">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{workout.name || 'Workout Session'}</h4>
+                      <p className="text-sm text-gray-500">
+                        {dateInfo} • {workout.moveframeCount} moveframes
+                      </p>
+                    </div>
+                    <Activity className="w-6 h-6 text-blue-500 print:hidden" />
                   </div>
-                  <Activity className="w-6 h-6 text-blue-500 print:hidden" />
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

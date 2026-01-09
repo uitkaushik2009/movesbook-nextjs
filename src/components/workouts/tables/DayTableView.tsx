@@ -964,6 +964,55 @@ export default function DayTableView({
               </button>
               )}
               
+              {/* Save in Favourites Button - Only for Section A/C */}
+              {activeSection !== 'B' && (
+              <button
+                onClick={async () => {
+                  console.log('⭐ Save in Favourites button clicked');
+                  console.log('📅 Current week:', currentWeek);
+                  
+                  if (!currentWeek || !currentWeek.id) {
+                    alert('No week selected');
+                    return;
+                  }
+                  
+                  try {
+                    const token = localStorage.getItem('token');
+                    const weekNumber = currentWeek.weekNumber || 1;
+                    const weekName = `Week ${weekNumber}`;
+                    
+                    const response = await fetch('/api/workouts/weeks/favorites', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                      },
+                      body: JSON.stringify({
+                        weekId: currentWeek.id,
+                        name: weekName,
+                        description: `Saved from ${new Date().toLocaleDateString()}`
+                      })
+                    });
+                    
+                    if (response.ok) {
+                      alert(`"${weekName}" saved to favorites!`);
+                    } else {
+                      const error = await response.json();
+                      alert(error.error || 'Failed to save to favorites');
+                    }
+                  } catch (error) {
+                    console.error('Error saving week to favorites:', error);
+                    alert('Error saving week to favorites');
+                  }
+                }}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-all shadow-md hover:shadow-lg"
+                title="Save this week in favourites"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                Save in Favourites
+              </button>
+              )}
+              
               {/* Print Button - Only for Section A/C */}
               {activeSection !== 'B' && (
               <button
@@ -1379,6 +1428,51 @@ export default function DayTableView({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                       </svg>
                       Move
+                    </button>
+                    
+                    {/* Save in Favourites Button - Single week only */}
+                    <button
+                      onClick={async () => {
+                        if (!week || !week.id) {
+                          alert('No week selected');
+                          return;
+                        }
+
+                        try {
+                          const token = localStorage.getItem('token');
+                          const weekNumber = week.weekNumber || 1;
+                          const weekName = `Week ${weekNumber}`;
+
+                          const response = await fetch('/api/workouts/weeks/favorites', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify({
+                              weekId: week.id,
+                              name: weekName,
+                              description: `Saved from ${new Date().toLocaleDateString()}`
+                            })
+                          });
+
+                          if (response.ok) {
+                            alert(`"${weekName}" saved to favorites!`);
+                          } else {
+                            const error = await response.json();
+                            alert(error.error || 'Failed to save to favorites');
+                          }
+                        } catch (error) {
+                          console.error('Error saving week to favorites:', error);
+                          alert('Error saving week to favorites');
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-all shadow-md"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                      </svg>
+                      Save
                     </button>
                     
                     {/* Print Button - Single week only */}

@@ -27,18 +27,33 @@ export async function GET(req: NextRequest) {
       }
     });
     
-    // Parse and format the plans
-    const formattedPlans = favoritePlans.map(plan => ({
-      id: plan.id,
-      name: plan.name,
-      description: plan.description || '',
-      weeksCount: plan.weeksCount || 0,
-      daysCount: plan.daysCount || 0,
-      workoutsCount: plan.workoutsCount || 0,
-      lastUsed: plan.updatedAt.toISOString(),
-      createdAt: plan.createdAt,
-      planData: JSON.parse(plan.planData)
-    }));
+    console.log(`📊 Found ${favoritePlans.length} favorite weekly plans for user ${userId}`);
+    
+    // Parse and format the plans, skipping any with corrupted JSON
+    const formattedPlans = favoritePlans.map(plan => {
+      try {
+        return {
+          id: plan.id,
+          name: plan.name,
+          description: plan.description || '',
+          weeksCount: plan.weeksCount || 0,
+          daysCount: plan.daysCount || 0,
+          workoutsCount: plan.workoutsCount || 0,
+          lastUsed: plan.updatedAt.toISOString(),
+          createdAt: plan.createdAt,
+          planData: JSON.parse(plan.planData)
+        };
+      } catch (parseError) {
+        console.error(`Error parsing plan ${plan.id}:`, parseError);
+        // Delete corrupted plan from database
+        prisma.favoriteWeeklyPlan.delete({ where: { id: plan.id } }).catch(err => 
+          console.error('Error deleting corrupted plan:', err)
+        );
+        return null;
+      }
+    }).filter(plan => plan !== null);
+    
+    console.log(`✅ Returning ${formattedPlans.length} formatted plans`);
     
     return NextResponse.json({ plans: formattedPlans }, { status: 200 });
   } catch (error: any) {
