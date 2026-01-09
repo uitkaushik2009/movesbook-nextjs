@@ -241,7 +241,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
     });
 
     setActiveItems([...items, newEntry]);
-    setNewItem({ title: '', description: '', color: '#3b82f6' });
+    setNewItem({ title: '', code: '', description: '', color: '#3b82f6' });
     setNewItemTranslations({});
     setActiveInputLanguage('en');
     setShowAddDialog(false);

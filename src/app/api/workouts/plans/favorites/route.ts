@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
           include: {
             days: {
               include: {
-                workoutSessions: {
+                workouts: {
                   include: {
                     sports: true,
                     moveframes: {
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     plan.weeks.forEach(week => {
       totalDays += week.days.length;
       week.days.forEach(day => {
-        totalWorkouts += day.workoutSessions.length;
+        totalWorkouts += day.workouts.length;
       });
     });
     
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
               weather: day.weather,
               feelingStatus: day.feelingStatus,
               notes: day.notes,
-              workoutSessions: day.workoutSessions.map(session => ({
+              workouts: day.workouts.map(session => ({
                 name: session.name,
                 code: session.code,
                 sessionNumber: session.sessionNumber,

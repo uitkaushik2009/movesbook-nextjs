@@ -1516,7 +1516,7 @@ export default function DayTableView({
                             Day
                           </th>
                           {/* Match done column - Only for Section D */}
-                          {activeSection === 'D' && (
+                          {false && (
                             <th 
                               className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6"
                               style={{ 
@@ -1531,7 +1531,7 @@ export default function DayTableView({
                             </th>
                           )}
                           <th 
-                            className={`border border-gray-400 px-2 py-2 text-xs font-bold ${activeSection === 'D' ? 'sticky-header-7' : 'sticky-header-6'}`}
+                            className={`border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6`}
                             style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
                             rowSpan={2}
                           >

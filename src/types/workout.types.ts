@@ -101,11 +101,21 @@ export interface Moveframe extends BaseEntity {
   workoutId: string;
   code: string; // A, B, C, ..., Z, AA, AB, ...
   letter: string; // Same as code, used interchangeably
-  sport: Sport;
+  sport: string; // SportType enum value
   sectionId?: string | null;
   sectionName?: string | null;
   sectionColor?: string | null;
   description?: string | null;
+  notes?: string | null;
+  macroFinal?: string | null;
+  alarm?: number | null;
+  annotationBgColor?: string | null;
+  annotationText?: string | null;
+  annotationTextColor?: string | null;
+  annotationBold?: boolean | null;
+  workType?: string | null;
+  manualMode?: boolean | null;
+  favourite?: boolean | null;
   totalDistance?: number | null;
   totalReps?: number | null;
   macroRest?: string | null;

@@ -30,7 +30,7 @@ export async function GET(
           },
           orderBy: { letter: 'asc' }
         },
-        day: {
+        workoutDay: {
           include: {
             period: true
           }
@@ -81,11 +81,11 @@ export async function GET(
           }))
         }))
       },
-      day: workout.day ? {
-        date: workout.day.date,
-        weekNumber: workout.day.weekNumber,
-        period: workout.day.period ? {
-          name: workout.day.period.name
+      day: workout.workoutDay ? {
+        date: workout.workoutDay.date,
+        weekNumber: workout.workoutDay.weekNumber,
+        period: workout.workoutDay.period ? {
+          name: workout.workoutDay.period.name
         } : null
       } : null
     });
