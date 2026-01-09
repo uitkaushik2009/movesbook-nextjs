@@ -7,6 +7,9 @@ import { SPORTS_LIST } from '@/constants/moveframe.constants';
 import { getSportIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
 import Image from 'next/image';
+import FavoriteWorkoutCard from '@/components/workouts/FavoriteWorkoutCard';
+import WorkoutOverviewModal from '@/components/workouts/WorkoutOverviewModal';
+import UseInPlannerModal from '@/components/workouts/UseInPlannerModal';
 
 interface WeeklyPlan {
   id: string;
@@ -65,6 +68,10 @@ export default function FavouritesSettings() {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [showWorkoutDialog, setShowWorkoutDialog] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
+  const [showOverviewModal, setShowOverviewModal] = useState(false);
+  const [overviewWorkout, setOverviewWorkout] = useState<any>(null);
+  const [showUsePlannerModal, setShowUsePlannerModal] = useState(false);
+  const [plannerWorkout, setPlannerWorkout] = useState<any>(null);
   
   // Moveframes State
   const [moveframes, setMoveframes] = useState<Moveframe[]>([]);
@@ -518,6 +525,91 @@ export default function FavouritesSettings() {
     return [];
   };
 
+  // Handler functions for workout cards
+  const handleDeleteWorkout = async (workoutId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in');
+        return;
+      }
+
+      const response = await fetch(`/api/workouts/favorites/${workoutId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setWorkouts(workouts.filter(w => w.id !== workoutId));
+        alert('Workout removed from favorites');
+      } else {
+        alert('Failed to remove workout');
+      }
+    } catch (error) {
+      console.error('Error deleting workout:', error);
+      alert('Failed to remove workout');
+    }
+  };
+
+  const handleOverviewWorkout = (workout: any) => {
+    setOverviewWorkout(workout);
+    setShowOverviewModal(true);
+  };
+
+  const handleUseInPlanner = (workout: any) => {
+    setPlannerWorkout(workout);
+    setShowUsePlannerModal(true);
+  };
+
+  const handleAddToPlanner = async (weekId: string, dayId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in');
+        return;
+      }
+
+      // Parse the workout data
+      const workoutData = plannerWorkout.workoutData ? JSON.parse(plannerWorkout.workoutData) : null;
+      
+      if (!workoutData) {
+        alert('Invalid workout data');
+        return;
+      }
+
+      // Create a new workout session from the favorite
+      const response = await fetch('/api/workouts/sessions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          dayId,
+          name: workoutData.workout.name,
+          code: workoutData.workout.code,
+          notes: workoutData.workout.notes,
+          sports: workoutData.sports,
+          moveframes: workoutData.moveframes
+        })
+      });
+
+      if (response.ok) {
+        alert('Workout added to your planner successfully!');
+        setShowUsePlannerModal(false);
+        setPlannerWorkout(null);
+      } else {
+        const error = await response.json();
+        alert(`Failed to add workout: ${error.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error adding workout to planner:', error);
+      alert('Failed to add workout to planner');
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -793,7 +885,7 @@ export default function FavouritesSettings() {
 
       {/* Workouts Tab */}
       {activeTab === 'workouts' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-5">
           {workouts
             .filter(workout => 
               (searchQuery === '' || workout.name.toLowerCase().includes(searchQuery.toLowerCase())) &&
@@ -805,94 +897,13 @@ export default function FavouritesSettings() {
               return 0;
             })
             .map((workout) => (
-              <div
+              <FavoriteWorkoutCard
                 key={workout.id}
-                className="bg-white rounded-xl border-2 border-gray-200 p-6 hover:border-blue-300 hover:shadow-lg transition"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-                    <h3 className="font-bold text-gray-900">{workout.name}</h3>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        setEditingWorkout(workout);
-                        setShowWorkoutDialog(true);
-                      }}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm('Remove from favourites?')) {
-                          setWorkouts(workouts.filter(w => w.id !== workout.id));
-                        }
-                      }}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{workout.description}</p>
-                
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <Clock className="w-4 h-4 text-gray-400 mb-1" />
-                    <div className="text-lg font-bold text-gray-900">{workout.duration} min</div>
-                    <div className="text-xs text-gray-500">Duration</div>
-                  </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <Target className="w-4 h-4 text-gray-400 mb-1" />
-                    <div className="text-lg font-bold text-gray-900">{workout.moveframesCount}</div>
-                    <div className="text-xs text-gray-500">Moveframes</div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Sport:</span>
-                    <span className="font-semibold text-gray-900">{workout.sport}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Intensity:</span>
-                    <span className={`px-2 py-0.5 rounded font-semibold text-xs ${
-                      workout.intensity === 'Low' ? 'bg-green-100 text-green-700' :
-                      workout.intensity === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                      'bg-red-100 text-red-700'
-                    }`}>
-                      {workout.intensity}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Last used:</span>
-                    <span className="font-semibold text-gray-900">{formatDate(workout.lastUsed)}</span>
-                  </div>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {workout.tags.map((tag, idx) => (
-                    <span key={idx} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                
-                <div className="flex gap-2">
-                  <button className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition">
-                    Start Workout
-                  </button>
-                  <button className="px-4 py-2 border-2 border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition">
-                    <Copy className="w-4 h-4" />
-                  </button>
-                  <button className="px-4 py-2 border-2 border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition">
-                    <Eye className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+                workout={workout}
+                onDelete={handleDeleteWorkout}
+                onOverview={handleOverviewWorkout}
+                onUseInPlanner={handleUseInPlanner}
+              />
             ))}
         </div>
       )}
@@ -1682,6 +1693,29 @@ export default function FavouritesSettings() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Workout Overview Modal */}
+      {showOverviewModal && overviewWorkout && (
+        <WorkoutOverviewModal
+          workout={overviewWorkout}
+          onClose={() => {
+            setShowOverviewModal(false);
+            setOverviewWorkout(null);
+          }}
+        />
+      )}
+
+      {/* Use in Planner Modal */}
+      {showUsePlannerModal && plannerWorkout && (
+        <UseInPlannerModal
+          workout={plannerWorkout}
+          onClose={() => {
+            setShowUsePlannerModal(false);
+            setPlannerWorkout(null);
+          }}
+          onConfirm={handleAddToPlanner}
+        />
       )}
     </div>
   );

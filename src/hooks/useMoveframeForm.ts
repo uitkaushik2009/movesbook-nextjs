@@ -10,6 +10,13 @@ export interface IndividualRepetitionPlan {
   weight?: string; // For BODY_BUILDING
   tools?: string; // For Gymnastic, Stretching, Pilates, Yoga, etc.
   macroFinal?: string; // Macro final value per repetition
+  // New fields for enhanced planning
+  strokes?: string; // Strokes for work section
+  watts?: string; // Watts for work section
+  restType?: string; // Rest type for pause section
+  pauseMin?: string; // Pause minimum for pause section
+  pauseMode?: string; // Mode for pause section
+  pausePace?: string; // Pace for pause section
 }
 
 export interface MoveframeFormData {
@@ -48,6 +55,13 @@ export interface MoveframeFormData {
   breakTime: string;
   breakFromStandstill: string;
   breakVel100: string;
+  
+  // New fields for enhanced work and pause planning
+  strokes: string;
+  watts: string;
+  pauseMin: string;
+  pauseMode: string;
+  pausePace: string;
   
   // Body building specific fields
   muscularSector: string;
@@ -131,6 +145,13 @@ export function useMoveframeForm({
   const [breakFromStandstill, setBreakFromStandstill] = useState('');
   const [breakVel100, setBreakVel100] = useState('');
   
+  // New fields for enhanced work and pause planning
+  const [strokes, setStrokes] = useState('');
+  const [watts, setWatts] = useState('');
+  const [pauseMin, setPauseMin] = useState('');
+  const [pauseMode, setPauseMode] = useState('');
+  const [pausePace, setPausePace] = useState('');
+  
   // Body building specific fields
   const [muscularSector, setMuscularSector] = useState('');
   const [exercise, setExercise] = useState('');
@@ -190,6 +211,11 @@ export function useMoveframeForm({
     setBreakTime('');
     setBreakFromStandstill('');
     setBreakVel100('');
+    setStrokes('');
+    setWatts('');
+    setPauseMin('');
+    setPauseMode('');
+    setPausePace('');
     setMuscularSector('');
     setExercise('');
     setAnnotationText('');
@@ -253,7 +279,14 @@ export function useMoveframeForm({
       const plan: IndividualRepetitionPlan = {
         index: i + 1,
         pause: pause || '20"',
-        macroFinal: macroFinal || "0'"
+        macroFinal: macroFinal || "0'",
+        // Initialize new fields
+        strokes: strokes || '',
+        watts: watts || '',
+        restType: restType || 'Set time',
+        pauseMin: pauseMin || '',
+        pauseMode: pauseMode || '',
+        pausePace: pausePace || ''
       };
       
       if (isBodyBuilding) {
@@ -279,7 +312,7 @@ export function useMoveframeForm({
    * Update an individual plan value
    * If updating the first row (index 0), automatically copy the value to all subsequent rows
    */
-  const updateIndividualPlan = (index: number, field: 'speed' | 'time' | 'pause' | 'reps' | 'weight' | 'tools' | 'macroFinal', value: string) => {
+  const updateIndividualPlan = (index: number, field: 'speed' | 'time' | 'pause' | 'reps' | 'weight' | 'tools' | 'macroFinal' | 'strokes' | 'watts' | 'restType' | 'pauseMin' | 'pauseMode' | 'pausePace', value: string) => {
     // Force immediate update without batching
     setIndividualPlans(prev => {
       const updated = [...prev];
@@ -541,6 +574,11 @@ export function useMoveframeForm({
       reps: effectiveSport === 'BODY_BUILDING' ? parseInt(reps) : null,
       r1: effectiveSport === 'BIKE' ? r1 : null,
       r2: effectiveSport === 'BIKE' ? r2 : null,
+      strokes: strokes || null,
+      watts: watts || null,
+      pauseMin: pauseMin || null,
+      pauseMode: pauseMode || null,
+      pausePace: pausePace || null,
       muscularSector: effectiveSport === 'BODY_BUILDING' ? muscularSector : null,
       exercise: sportNeedsExerciseName(effectiveSport) ? exercise : null,
       sectionId: effectiveSectionId, // Workout section (for ALL sports)
@@ -684,6 +722,11 @@ export function useMoveframeForm({
       breakTime,
       breakFromStandstill,
       breakVel100,
+      strokes,
+      watts,
+      pauseMin,
+      pauseMode,
+      pausePace,
       muscularSector,
       exercise,
       annotationText,
@@ -726,6 +769,11 @@ export function useMoveframeForm({
       setBreakTime,
       setBreakFromStandstill,
       setBreakVel100,
+      setStrokes,
+      setWatts,
+      setPauseMin,
+      setPauseMode,
+      setPausePace,
       setMuscularSector,
       setExercise,
       setAnnotationText,

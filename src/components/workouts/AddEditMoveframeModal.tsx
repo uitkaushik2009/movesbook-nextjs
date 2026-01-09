@@ -129,6 +129,12 @@ export default function AddEditMoveframeModal({
       if (sourceRow.reps !== undefined) updateIndividualPlan(i, 'reps', sourceRow.reps);
       if (sourceRow.weight !== undefined) updateIndividualPlan(i, 'weight', sourceRow.weight);
       if (sourceRow.tools !== undefined) updateIndividualPlan(i, 'tools', sourceRow.tools);
+      if (sourceRow.strokes !== undefined) updateIndividualPlan(i, 'strokes', sourceRow.strokes);
+      if (sourceRow.watts !== undefined) updateIndividualPlan(i, 'watts', sourceRow.watts);
+      if (sourceRow.restType !== undefined) updateIndividualPlan(i, 'restType', sourceRow.restType);
+      if (sourceRow.pauseMin !== undefined) updateIndividualPlan(i, 'pauseMin', sourceRow.pauseMin);
+      if (sourceRow.pauseMode !== undefined) updateIndividualPlan(i, 'pauseMode', sourceRow.pauseMode);
+      if (sourceRow.pausePace !== undefined) updateIndividualPlan(i, 'pausePace', sourceRow.pausePace);
     }
   };
 
@@ -163,6 +169,11 @@ export default function AddEditMoveframeModal({
     breakTime,
     breakFromStandstill,
     breakVel100,
+    strokes,
+    watts,
+    pauseMin,
+    pauseMode,
+    pausePace,
     muscularSector,
     exercise,
     annotationText,
@@ -204,6 +215,11 @@ export default function AddEditMoveframeModal({
     setBreakTime,
     setBreakFromStandstill,
     setBreakVel100,
+    setStrokes,
+    setWatts,
+    setPauseMin,
+    setPauseMode,
+    setPausePace,
     setMuscularSector,
     setExercise,
     setAnnotationText,
@@ -1949,6 +1965,35 @@ export default function AddEditMoveframeModal({
                         )}
                       </div>
 
+                      {/* New WORK section fields: Strokes and Watts */}
+                      {parseInt(repetitions) > 0 && planningMode === 'all' && (
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <h4 className="text-xs font-semibold text-blue-700 mb-2">⚙️ WORK SETTINGS</h4>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Strokes:</label>
+                              <input
+                                type="text"
+                                value={strokes}
+                                onChange={(e) => setStrokes(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                                placeholder="Enter strokes value..."
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Watts:</label>
+                              <input
+                                type="text"
+                                value={watts}
+                                onChange={(e) => setWatts(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                                placeholder="Enter watts value..."
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Macro (Planning Mode) Selection for distance-based sports */}
                       {parseInt(repetitions) > 0 && (
                         <div className="mt-4 pt-3 border-t border-gray-300">
@@ -2046,6 +2091,60 @@ export default function AddEditMoveframeModal({
                             )}
                           </div>
                         </>
+                      )}
+
+                      {/* New PAUSE section fields: Rest type, Pause Min., Mode, Pace */}
+                      {parseInt(repetitions) > 0 && planningMode === 'all' && (
+                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                          <h4 className="text-xs font-semibold text-amber-700 mb-2">⏸️ PAUSE SETTINGS</h4>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Rest Type:</label>
+                              <select
+                                value={restType}
+                                onChange={(e) => setRestType(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                              >
+                                <option value="Set time">Set time</option>
+                                <option value="Restart time">Restart time</option>
+                                <option value="Restart pulse">Restart pulse</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Pause Min.:</label>
+                              <input
+                                type="text"
+                                value={pauseMin}
+                                onChange={(e) => setPauseMin(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                                placeholder="Enter pause minimum..."
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Mode:</label>
+                              <select
+                                value={pauseMode}
+                                onChange={(e) => setPauseMode(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                              >
+                                <option value="">Select mode...</option>
+                                <option value="stopped">Stopped</option>
+                                <option value="speed">Speed</option>
+                                <option value="watts">Watts</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Pace:</label>
+                              <input
+                                type="text"
+                                value={pausePace}
+                                onChange={(e) => setPausePace(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                                placeholder="Enter pace..."
+                              />
+                            </div>
+                          </div>
+                        </div>
                       )}
                             </>
                           );
@@ -2315,26 +2414,26 @@ export default function AddEditMoveframeModal({
                     
                     {/* Scrollable table - 6 rows visible */}
                     <div className="border border-gray-300 rounded overflow-hidden bg-white">
-                      <div className="overflow-y-auto" style={{ maxHeight: '300px' }}>
+                      <div className="overflow-y-auto overflow-x-auto" style={{ maxHeight: '300px' }}>
                         <table className="w-full text-xs">
                           <thead className="bg-gray-200 sticky top-0 z-10">
                             <tr>
                               <th className="border border-gray-300 px-2 py-2 text-center w-12">#</th>
-                              <th className="border border-gray-300 px-2 py-2 text-center">SPEED & PACING</th>
-                              <th className="border border-gray-300 px-2 py-2 text-center">REST & ALERTS</th>
+                              <th className="border border-gray-300 px-2 py-2 text-center" colSpan={4}>WORK</th>
+                              <th className="border border-gray-300 px-2 py-2 text-center" colSpan={5}>PAUSE</th>
                               <th className="border border-gray-300 px-2 py-2 text-center w-20"></th>
                             </tr>
                             <tr>
                               <th className="border-b border-gray-300"></th>
-                              <th className="border border-gray-300 px-2 py-1.5 text-left bg-gray-100">
-                                <div className="grid grid-cols-2 gap-2">
-                                  <span className="font-semibold">Speed</span>
-                                  <span className="font-semibold">Time</span>
-                                </div>
-                              </th>
-                              <th className="border border-gray-300 px-2 py-1.5 text-left bg-gray-100">
-                                <span className="font-semibold">Pause</span>
-                              </th>
+                              <th className="border border-gray-300 px-2 py-1.5 text-center bg-blue-50">Speed</th>
+                              <th className="border border-gray-300 px-2 py-1.5 text-center bg-blue-50">Time</th>
+                              <th className="border border-gray-300 px-2 py-1.5 text-center bg-blue-50">Strokes</th>
+                              <th className="border border-gray-300 px-2 py-1.5 text-center bg-blue-50">Watts</th>
+                              <th className="border border-gray-300 px-2 py-1.5 text-center bg-amber-50">Pause</th>
+                              <th className="border border-gray-300 px-2 py-1.5 text-center bg-amber-50">Rest Type</th>
+                              <th className="border border-gray-300 px-2 py-1.5 text-center bg-amber-50">Min</th>
+                              <th className="border border-gray-300 px-2 py-1.5 text-center bg-amber-50">Mode</th>
+                              <th className="border border-gray-300 px-2 py-1.5 text-center bg-amber-50">Pace</th>
                               <th className="border-b border-gray-300"></th>
                             </tr>
                           </thead>
@@ -2344,28 +2443,48 @@ export default function AddEditMoveframeModal({
                                 <td className="border border-gray-300 px-2 py-2 text-center font-bold bg-gray-50">
                                   {plan.index}
                                 </td>
+                                {/* WORK section columns */}
                                 <td className="border border-gray-300 px-2 py-1.5">
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <select
-                                      value={plan.speed}
-                                      onChange={(e) => updateIndividualPlan(idx, 'speed', e.target.value)}
-                                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
-                                    >
-                                      {sportConfig.speeds.map((s) => (
-                                        <option key={s} value={s}>{s}</option>
-                                      ))}
-                                    </select>
-                                    <input
-                                      type="text"
-                                      value={plan.time}
-                                      onChange={(e) => updateIndividualPlan(idx, 'time', e.target.value)}
-                                      onBlur={(e) => updateIndividualPlan(idx, 'time', formatTime(e.target.value))}
-                                      className="w-full px-2 py-1.5 border-2 border-green-300 rounded text-xs focus:ring-1 focus:ring-green-500 font-mono bg-green-50"
-                                      placeholder="0h05'30&quot;0 or 530"
-                                      title="⚡ Fast input: Type 530 for 0h05'30&quot;0"
-                                    />
-                                  </div>
+                                  <select
+                                    value={plan.speed}
+                                    onChange={(e) => updateIndividualPlan(idx, 'speed', e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
+                                  >
+                                    {sportConfig.speeds.map((s) => (
+                                      <option key={s} value={s}>{s}</option>
+                                    ))}
+                                  </select>
                                 </td>
+                                <td className="border border-gray-300 px-2 py-1.5">
+                                  <input
+                                    type="text"
+                                    value={plan.time}
+                                    onChange={(e) => updateIndividualPlan(idx, 'time', e.target.value)}
+                                    onBlur={(e) => updateIndividualPlan(idx, 'time', formatTime(e.target.value))}
+                                    className="w-full px-2 py-1.5 border-2 border-green-300 rounded text-xs focus:ring-1 focus:ring-green-500 font-mono bg-green-50"
+                                    placeholder="0h05'30&quot;0 or 530"
+                                    title="⚡ Fast input: Type 530 for 0h05'30&quot;0"
+                                  />
+                                </td>
+                                <td className="border border-gray-300 px-2 py-1.5">
+                                  <input
+                                    type="text"
+                                    value={plan.strokes || ''}
+                                    onChange={(e) => updateIndividualPlan(idx, 'strokes', e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
+                                    placeholder="Strokes"
+                                  />
+                                </td>
+                                <td className="border border-gray-300 px-2 py-1.5">
+                                  <input
+                                    type="text"
+                                    value={plan.watts || ''}
+                                    onChange={(e) => updateIndividualPlan(idx, 'watts', e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
+                                    placeholder="Watts"
+                                  />
+                                </td>
+                                {/* PAUSE section columns */}
                                 <td className="border border-gray-300 px-2 py-1.5">
                                   <select
                                     value={plan.pause}
@@ -2376,6 +2495,47 @@ export default function AddEditMoveframeModal({
                                       <option key={p} value={p}>{p}</option>
                                     ))}
                                   </select>
+                                </td>
+                                <td className="border border-gray-300 px-2 py-1.5">
+                                  <select
+                                    value={plan.restType || 'Set time'}
+                                    onChange={(e) => updateIndividualPlan(idx, 'restType', e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
+                                  >
+                                    <option value="Set time">Set time</option>
+                                    <option value="Restart time">Restart time</option>
+                                    <option value="Restart pulse">Restart pulse</option>
+                                  </select>
+                                </td>
+                                <td className="border border-gray-300 px-2 py-1.5">
+                                  <input
+                                    type="text"
+                                    value={plan.pauseMin || ''}
+                                    onChange={(e) => updateIndividualPlan(idx, 'pauseMin', e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
+                                    placeholder="Min"
+                                  />
+                                </td>
+                                <td className="border border-gray-300 px-2 py-1.5">
+                                  <select
+                                    value={plan.pauseMode || ''}
+                                    onChange={(e) => updateIndividualPlan(idx, 'pauseMode', e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
+                                  >
+                                    <option value="">Mode...</option>
+                                    <option value="stopped">Stopped</option>
+                                    <option value="speed">Speed</option>
+                                    <option value="watts">Watts</option>
+                                  </select>
+                                </td>
+                                <td className="border border-gray-300 px-2 py-1.5">
+                                  <input
+                                    type="text"
+                                    value={plan.pausePace || ''}
+                                    onChange={(e) => updateIndividualPlan(idx, 'pausePace', e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
+                                    placeholder="Pace"
+                                  />
                                 </td>
                                 <td className="border border-gray-300 px-1 py-1.5 text-center">
                                   {idx > 0 && idx < individualPlans.length - 1 && (

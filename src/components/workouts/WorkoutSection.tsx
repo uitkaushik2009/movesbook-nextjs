@@ -2084,6 +2084,10 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                       const data = await response.json();
                       showMessage('success', `"${workout.name}" saved to favorites!`);
                       // Note: Saving to favorites doesn't modify the workout plan, so no need to reload
+                    } else if (response.status === 409) {
+                      // Duplicate workout - show warning
+                      const error = await response.json();
+                      showMessage('warning', `⚠️ This workout is already in your favorites!`);
                     } else {
                       const error = await response.json();
                       showMessage('error', error.error || 'Failed to save to favorites');
