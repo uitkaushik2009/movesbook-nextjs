@@ -2029,17 +2029,17 @@ export default function AddEditMoveframeModal({
                                     value={breakFromStandstill || ''}
                                     onChange={(e) => setBreakFromStandstill(e.target.value)}
                                     className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                                    placeholder={breakMode === 'speed' ? 'Vel\km or Vel\h' : 'Watts'}
+                                    placeholder={breakMode === 'speed' ? 'Vel\\km or Vel\\h' : 'Watts'}
                                   />
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  <label className="text-xs text-gray-600">{breakMode === 'speed' ? 'Vel\100' : 'Watts ( for run, bike, rowing )'}</label>
+                                  <label className="text-xs text-gray-600">{breakMode === 'speed' ? 'Vel\\100' : 'Watts ( for run, bike, rowing )'}</label>
                                   <input
                                     type="text"
                                     value={breakVel100 || ''}
                                     onChange={(e) => setBreakVel100(e.target.value)}
                                     className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                                    placeholder={breakMode === 'speed' ? 'Vel\100' : 'Watts'}
+                                    placeholder={breakMode === 'speed' ? 'Vel\\100' : 'Watts'}
                                   />
                                 </div>
                               </div>

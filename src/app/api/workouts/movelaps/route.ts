@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { verifyToken } from '@/lib/auth';
 
 // Helper function to convert display rest type to enum value
-function convertRestTypeToEnum(restType: string | null | undefined): string | null {
+function convertRestTypeToEnum(restType: string | null | undefined) {
   if (!restType || restType.trim() === '') return null;
   
   const mapping: Record<string, string> = {
@@ -15,7 +15,8 @@ function convertRestTypeToEnum(restType: string | null | undefined): string | nu
     'RESTART_PULSE': 'RESTART_PULSE' // Already correct
   };
   
-  return mapping[restType] || null;
+  const result = mapping[restType] || null;
+  return result as any; // Cast to enum type for Prisma
 }
 
 // POST /api/workouts/movelaps - Create a new movelap
