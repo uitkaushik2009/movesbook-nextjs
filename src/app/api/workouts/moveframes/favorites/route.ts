@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
       
       mf.movelaps.forEach(ml => {
         totalDistance += ml.distance || 0;
-        totalDuration += ml.time || 0;
+        totalDuration += Number(ml.time) || 0;
       });
       
       return {
