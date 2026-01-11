@@ -161,10 +161,76 @@ export async function POST(request: NextRequest) {
     // Verify password (supports both SHA1 from old system and bcrypt from new system)
     console.log(`🔐 Verifying password for user: ${user.username}`);
     console.log(`🔐 Password hash: ${user.password.substring(0, 20)}... (length: ${user.password.length})`);
-    const isPasswordValid = await verifyPassword(password, user.password);
+    let isPasswordValid = await verifyPassword(password, user.password);
     console.log(`🔐 Password verification result: ${isPasswordValid ? '✅ VALID' : '❌ INVALID'}`);
+    
+    // If password verification fails, also check legacy table (user might exist in both databases)
     if (!isPasswordValid) {
-      console.log(`❌ Password verification failed for user: ${user.username}`);
+      console.log(`⚠️ Password verification failed in new table, checking legacy table...`);
+      try {
+        const legacyUser = await prisma.$queryRaw<any[]>`
+          SELECT id, username, email, password, alternate_pass, staff_password,
+                 COALESCE(firstname, '') as firstname,
+                 COALESCE(lastname, '') as lastname,
+                 role_id,
+                 CASE WHEN created IS NULL OR created = '0000-00-00' THEN NOW() ELSE created END as created
+          FROM users
+          WHERE (email = ${loginIdentifier} OR username = ${loginIdentifier})
+          AND delete_status = 'N'
+          LIMIT 1
+        `;
+
+        if (legacyUser.length > 0) {
+          const legacy = legacyUser[0];
+          console.log(`🔍 Found user in legacy table: ${legacy.username}`);
+          console.log(`🔐 Checking legacy password fields: main=${!!legacy.password}, alternate=${!!legacy.alternate_pass}, staff=${!!legacy.staff_password}`);
+          
+          // Try multiple password fields from old PHP system
+          let whichPasswordWorked = '';
+          
+          // 1. Try main password
+          if (legacy.password) {
+            isPasswordValid = await verifyPassword(password, legacy.password);
+            if (isPasswordValid) whichPasswordWorked = 'main';
+          }
+          
+          // 2. Try alternate password
+          if (!isPasswordValid && legacy.alternate_pass) {
+            isPasswordValid = await verifyPassword(password, legacy.alternate_pass);
+            if (isPasswordValid) whichPasswordWorked = 'alternate';
+          }
+          
+          // 3. Try plaintext staff password
+          if (!isPasswordValid && legacy.staff_password) {
+            isPasswordValid = password === legacy.staff_password;
+            if (isPasswordValid) whichPasswordWorked = 'staff';
+          }
+          
+          console.log(`🔐 Legacy password verification result: ${isPasswordValid ? `✅ VALID (${whichPasswordWorked})` : '❌ INVALID'}`);
+          
+          if (isPasswordValid) {
+            // Password valid in legacy table - use legacy user data
+            const name = `${legacy.firstname || ''} ${legacy.lastname || ''}`.trim() || legacy.username;
+            user = {
+              id: user.id, // Keep the new table ID
+              name: name,
+              username: legacy.username,
+              email: legacy.email,
+              password: legacy.password,
+              userType: mapUserType(legacy.role_id || 1),
+              createdAt: legacy.created || new Date(),
+            } as any;
+            console.log(`✅ Using legacy user credentials for login`);
+          }
+        }
+      } catch (legacyError: any) {
+        console.log('⚠️ Legacy table check failed (this is normal if table doesn\'t exist)');
+      }
+    }
+    
+    if (!isPasswordValid || !user) {
+      const username = user?.username || loginIdentifier;
+      console.log(`❌ Password verification failed for user: ${username}`);
       return NextResponse.json(
         { error: 'Invalid email/username or password' },
         { status: 401 }
