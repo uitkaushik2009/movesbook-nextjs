@@ -53,6 +53,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Workout ID is required' }, { status: 400 });
     }
     
+    // Check if this workout is already in favorites
+    const existingFavorite = await prisma.favoriteWorkout.findFirst({
+      where: {
+        userId,
+        workoutData: {
+          contains: `"workoutId":"${workoutId}"`
+        }
+      }
+    });
+    
+    if (existingFavorite) {
+      return NextResponse.json({ 
+        error: 'This workout is already in your favorites',
+        alreadyExists: true 
+      }, { status: 409 });
+    }
+    
     // Fetch the complete workout with all its data
     const workout = await prisma.workoutSession.findUnique({
       where: { id: workoutId },
@@ -104,6 +121,7 @@ export async function POST(req: NextRequest) {
         name: workout.name,
         description: workout.notes || `Saved from ${new Date().toLocaleDateString()}`,
         workoutData: JSON.stringify({
+          workoutId: workout.id, // Store the original workout ID for duplicate checking
           workout: {
             name: workout.name,
             code: workout.code,
