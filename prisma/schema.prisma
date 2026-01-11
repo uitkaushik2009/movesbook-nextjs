@@ -302,7 +302,7 @@ model UserSettings {
   imageQuality           String    @default("high")
   lazyLoading            Boolean   @default(true)
   dashboardLayout        String    @default("default")
-  widgetArrangement      String    @default("[]") @db.Text
+  widgetArrangement      String    @db.Text
   colorSettings          String    @db.Text
   language               String    @default("en")
   createdAt              DateTime  @default(now())
