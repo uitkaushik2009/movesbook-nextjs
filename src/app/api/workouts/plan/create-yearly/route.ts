@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
         myBestSettings: '{}',
         notificationSettings: '{}',
         socialSettings: '{}',
-        workoutPreferences: '{}'
+        workoutPreferences: '{}',
+        widgetArrangement: '[]'
       }
     });
 
