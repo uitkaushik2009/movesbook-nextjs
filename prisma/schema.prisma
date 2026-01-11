@@ -341,7 +341,7 @@ model WorkoutTemplate {
   category      String?
   tags          String?
   templateType  String   @default("workout")
-  templateData  String
+  templateData  String   @db.Text
   sports        String?
   totalDistance Int?
   totalDuration Int?
@@ -364,7 +364,7 @@ model FavoriteWorkout {
   userId        String
   name          String
   description   String?
-  workoutData   String
+  workoutData   String   @db.Text
   sports        String?
   totalDistance Int?
   totalDuration Int?
