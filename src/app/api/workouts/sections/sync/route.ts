@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = await verifyToken(token);
+    const decoded = verifyToken(token);
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
@@ -66,12 +66,18 @@ export async function POST(request: NextRequest) {
 
     // 2. Update or create sections
     for (const section of sections) {
+      const sectionName = section.title || section.name;
+      if (!sectionName || typeof sectionName !== 'string' || sectionName.trim() === '') {
+        console.warn('⚠️ Skipping section with missing or invalid name:', section);
+        continue;
+      }
+
       const sectionData = {
         userId: decoded.userId,
-        name: section.title || section.name, // Support both 'title' and 'name'
-        code: section.code || null, // Code field (max 5 chars)
-        description: section.description || '',
-        color: section.color || '#3b82f6'
+        name: sectionName.trim(),
+        code: section.code && typeof section.code === 'string' && section.code.length <= 5 ? section.code.trim() : null,
+        description: section.description && typeof section.description === 'string' ? section.description : '',
+        color: section.color && typeof section.color === 'string' ? section.color : '#3b82f6'
       };
 
       // If section has an ID and it exists in database, update it
@@ -106,8 +112,12 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error syncing workout sections:', error);
+    const errorDetails = error instanceof Error 
+      ? { message: error.message, stack: error.stack, name: error.name }
+      : { message: 'Unknown error', error: String(error) };
+    console.error('❌ Error details:', JSON.stringify(errorDetails, null, 2));
     return NextResponse.json(
-      { error: 'Failed to sync workout sections', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to sync workout sections', details: errorDetails },
       { status: 500 }
     );
   }
