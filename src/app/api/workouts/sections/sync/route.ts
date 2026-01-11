@@ -42,6 +42,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sections must be an array' }, { status: 400 });
     }
 
+    // Handle fallback admin (userId === 'admin') - not allowed to sync sections
+    if (decoded.userId === 'admin') {
+      return NextResponse.json({ error: 'Fallback admin cannot sync sections. Please use a real user account.' }, { status: 403 });
+    }
+
     // Verify user exists in database
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },

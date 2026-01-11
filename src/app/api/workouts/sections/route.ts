@@ -19,6 +19,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    // Handle fallback admin (userId === 'admin') - skip user existence check
+    if (decoded.userId === 'admin') {
+      return NextResponse.json({ sections: [] });
+    }
+
     // Verify user exists in database
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
@@ -103,6 +108,11 @@ export async function POST(request: NextRequest) {
     const decoded = verifyToken(token);
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Handle fallback admin (userId === 'admin') - not allowed to create sections
+    if (decoded.userId === 'admin') {
+      return NextResponse.json({ error: 'Fallback admin cannot create sections. Please use a real user account.' }, { status: 403 });
     }
 
     // Verify user exists in database
