@@ -87,6 +87,7 @@ export async function POST(request: Request) {
           workoutPreferences: JSON.stringify(workoutPreferences || {}),
           socialSettings: JSON.stringify({}),
           notificationSettings: JSON.stringify({}),
+          widgetArrangement: '[]',
           ...(displaySettings?.gridSize && { gridSize: displaySettings.gridSize }),
           ...(displaySettings?.columnCount && { columnCount: displaySettings.columnCount }),
           ...(displaySettings?.rowHeight && { rowHeight: displaySettings.rowHeight }),
