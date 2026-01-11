@@ -64,7 +64,7 @@ model Translation {
   id        String   @id @default(cuid())
   key       String
   language  String
-  value     String
+  value     String   @db.Text
   category  String   @default("general")
   isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())
@@ -302,19 +302,19 @@ model UserSettings {
   imageQuality           String    @default("high")
   lazyLoading            Boolean   @default(true)
   dashboardLayout        String    @default("default")
-  widgetArrangement      String    @default("[]")
-  colorSettings          String
+  widgetArrangement      String    @default("[]") @db.Text
+  colorSettings          String    @db.Text
   language               String    @default("en")
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @default(now()) @updatedAt
-  adminSettings          String
-  favouritesSettings     String
-  myBestSettings         String
-  notificationSettings   String
-  socialSettings         String
+  adminSettings          String    @db.Text
+  favouritesSettings     String    @db.Text
+  myBestSettings         String    @db.Text
+  notificationSettings   String    @db.Text
+  socialSettings         String    @db.Text
   sportIconType          String    @default("emoji")
-  toolsSettings          String
-  workoutPreferences     String
+  toolsSettings          String    @db.Text
+  workoutPreferences     String    @db.Text
   yearlyPlanStartDate    DateTime? // Start date for Section B (Yearly Plan)
   templateWeeksStartDate DateTime? // Start date for Section A (3 Weeks Plan)
   user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
