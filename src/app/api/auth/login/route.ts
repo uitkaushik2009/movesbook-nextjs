@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
 
     // Find user by email OR username in NEW table first (case-insensitive for MySQL)
     // Try with exact match first, then lowercase match
+    console.log(`🔍 Searching for user with identifier: ${loginIdentifier}`);
     let user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -40,6 +41,13 @@ export async function POST(request: NextRequest) {
         createdAt: true,
       }
     });
+    
+    if (user) {
+      console.log(`✅ User found: ${user.username} (${user.email}), ID: ${user.id}`);
+      console.log(`🔐 Password hash length: ${user.password?.length || 0}, starts with: ${user.password?.substring(0, 10) || 'N/A'}`);
+    } else {
+      console.log(`❌ User not found in new table for identifier: ${loginIdentifier}`);
+    }
 
     // If not found in new table, check LEGACY table and migrate on login (if legacy table exists)
     if (!user) {
@@ -151,13 +159,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify password (supports both SHA1 from old system and bcrypt from new system)
+    console.log(`🔐 Verifying password for user: ${user.username}`);
+    console.log(`🔐 Password hash: ${user.password.substring(0, 20)}... (length: ${user.password.length})`);
     const isPasswordValid = await verifyPassword(password, user.password);
+    console.log(`🔐 Password verification result: ${isPasswordValid ? '✅ VALID' : '❌ INVALID'}`);
     if (!isPasswordValid) {
+      console.log(`❌ Password verification failed for user: ${user.username}`);
       return NextResponse.json(
         { error: 'Invalid email/username or password' },
         { status: 401 }
       );
     }
+    console.log(`✅ Password verified successfully for user: ${user.username}`);
 
     // Auto-upgrade disabled - keeping SHA1 passwords as-is
 
@@ -190,9 +203,10 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
