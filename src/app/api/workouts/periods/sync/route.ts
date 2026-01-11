@@ -42,6 +42,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Periods must be an array' }, { status: 400 });
     }
 
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true }
+    });
+
+    if (!user) {
+      console.error(`❌ User ${decoded.userId} not found in database`);
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
+    }
+
     console.log(`🔄 Syncing ${periods.length} periods for user ${decoded.userId}`);
 
     // Get existing periods from database
@@ -105,8 +116,11 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error syncing periods:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : 'No stack trace';
+    console.error('❌ Error details:', { message: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { error: 'Failed to sync periods', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to sync periods', details: errorMessage },
       { status: 500 }
     );
   }

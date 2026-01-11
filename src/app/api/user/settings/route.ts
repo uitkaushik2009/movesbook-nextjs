@@ -98,6 +98,17 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    });
+
+    if (!user) {
+      console.error(`❌ User ${userId} not found in database`);
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
+    }
+
     let settings;
     try {
       settings = await prisma.userSettings.findUnique({
@@ -205,8 +216,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(response);
   } catch (error) {
-    console.error('Error fetching settings:', error);
-    return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
+    console.error('❌ Error fetching settings:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : 'No stack trace';
+    console.error('❌ Error details:', { message: errorMessage, stack: errorStack });
+    return NextResponse.json({ 
+      error: 'Failed to fetch settings',
+      details: errorMessage
+    }, { status: 500 });
   }
 }
 
@@ -358,6 +375,17 @@ export async function PATCH(request: NextRequest) {
         userId: 'admin',
         message: 'Admin settings accepted (not persisted to database)'
       });
+    }
+
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    });
+
+    if (!user) {
+      console.error(`❌ User ${userId} not found in database`);
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
     }
 
     const body = await request.json();

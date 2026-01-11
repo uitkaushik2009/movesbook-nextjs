@@ -30,6 +30,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ periods: defaultPeriods });
     }
 
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true }
+    });
+
+    if (!user) {
+      console.error(`❌ User ${decoded.userId} not found in database`);
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
+    }
+
     // Get all periods for this user
     const periods = await prisma.period.findMany({
       where: { userId: decoded.userId },
@@ -86,8 +97,11 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error fetching periods:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : 'No stack trace';
+    console.error('❌ Error details:', { message: errorMessage, stack: errorStack });
     return NextResponse.json(
-      { error: 'Failed to fetch periods', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to fetch periods', details: errorMessage },
       { status: 500 }
     );
   }
@@ -121,6 +135,17 @@ export async function POST(request: NextRequest) {
         },
         message: 'Admin period accepted (not persisted to database)'
       }, { status: 201 });
+    }
+
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true }
+    });
+
+    if (!user) {
+      console.error(`❌ User ${decoded.userId} not found in database`);
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
     }
 
     const body = await request.json();

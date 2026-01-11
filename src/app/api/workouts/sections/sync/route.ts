@@ -42,6 +42,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sections must be an array' }, { status: 400 });
     }
 
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true }
+    });
+
+    if (!user) {
+      console.error(`❌ User ${decoded.userId} not found in database`);
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
+    }
+
     console.log(`🔄 Syncing ${sections.length} workout sections for user ${decoded.userId}`);
 
     // Get existing sections from database

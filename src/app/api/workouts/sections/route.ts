@@ -19,6 +19,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true }
+    });
+
+    if (!user) {
+      console.error(`❌ User ${decoded.userId} not found in database`);
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
+    }
+
     // Get all sections for this user
     const sections = await prisma.workoutSection.findMany({
       where: { userId: decoded.userId },
@@ -61,12 +72,17 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error fetching sections:', error);
-    const errorDetails = error instanceof Error 
-      ? { message: error.message, stack: error.stack, name: error.name }
-      : { message: 'Unknown error', error: String(error) };
-    console.error('❌ Error details:', JSON.stringify(errorDetails, null, 2));
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : 'No stack trace';
+    const errorName = error instanceof Error ? error.name : 'Unknown';
+    console.error('❌ Error details:', { 
+      message: errorMessage, 
+      stack: errorStack, 
+      name: errorName,
+      type: typeof error
+    });
     return NextResponse.json(
-      { error: 'Failed to fetch sections', details: errorDetails },
+      { error: 'Failed to fetch sections', details: errorMessage },
       { status: 500 }
     );
   }
@@ -87,6 +103,17 @@ export async function POST(request: NextRequest) {
     const decoded = verifyToken(token);
     if (!decoded || !decoded.userId) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
+
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true }
+    });
+
+    if (!user) {
+      console.error(`❌ User ${decoded.userId} not found in database`);
+      return NextResponse.json({ error: 'User not found' }, { status: 401 });
     }
 
     const body = await request.json();
