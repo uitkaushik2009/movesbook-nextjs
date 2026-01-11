@@ -278,7 +278,8 @@ export async function POST(request: NextRequest) {
       adminSettings: '{}',
       workoutPreferences: '{}',
       socialSettings: '{}',
-      notificationSettings: '{}'
+      notificationSettings: '{}',
+      widgetArrangement: '[]'
     };
 
     // Upsert (update or create)
