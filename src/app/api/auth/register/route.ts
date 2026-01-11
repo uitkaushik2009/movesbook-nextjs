@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
         workoutPreferences: '{}',
         socialSettings: '{}',
         notificationSettings: '{}',
+        widgetArrangement: '[]',
         language: userLanguage
       }
     });
