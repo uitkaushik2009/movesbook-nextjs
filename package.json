@@ -15,7 +15,9 @@
         "postinstall": "prisma generate",
         "admin:reset": "node scripts/reset-super-admin.js",
         "admin:force-reset": "node scripts/force-reset-password.js",
-        "admin:full-reset": "node scripts/force-reset-password.js --full-reset"
+        "admin:full-reset": "node scripts/force-reset-password.js --full-reset",
+        "admin:update-password": "node scripts/update-admin-password.js",
+        "import:legacy-users": "node scripts/import-legacy-users.js"
     },
     "dependencies": {
         "@dnd-kit/core": "^6.3.1",

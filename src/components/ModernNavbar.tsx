@@ -358,7 +358,6 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
     }
 
     // Auto-cleanup old tokens before login
-    console.log('🔧 Auto-cleaning old tokens before login...');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('adminUser');
@@ -367,11 +366,46 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
     setIsLoggingIn(true);
     setLoginError('');
 
-    console.log('🔐 Login attempt:', { username: loginUsername, passwordLength: loginPassword.length });
-
     try {
-      // First try regular user login
-      let response = await fetch('/api/auth/login', {
+      // Check if this looks like an admin login attempt (common admin usernames/emails)
+      const isLikelyAdmin = loginUsername.toLowerCase() === 'admin' || 
+                           loginUsername.toLowerCase() === 'admin@movesbook.com' ||
+                           loginUsername.toLowerCase().includes('admin');
+      
+      let response;
+      let data;
+      
+      if (isLikelyAdmin) {
+        // Try admin login first to avoid 401 noise
+        response = await fetch('/api/auth/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            identifier: loginUsername,
+            password: loginPassword
+          })
+        });
+
+        data = await response.json();
+
+        if (response.ok && data.user) {
+          // Admin login successful
+          localStorage.setItem('adminToken', data.token);
+          localStorage.setItem('adminUser', JSON.stringify(data.user));
+          
+          // Clear form
+          setLoginUsername('');
+          setLoginPassword('');
+          setLoginError('');
+          
+          // Redirect to admin dashboard
+          router.push('/admin/dashboard');
+          return;
+        }
+      }
+      
+      // Try regular user login
+      response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -380,16 +414,10 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
         })
       });
 
-      console.log('📥 Response status:', response.status);
-      let data = await response.json();
-      console.log('📦 Response data:', JSON.stringify(data, null, 2));
-      if (!response.ok) {
-        console.error('❌ Login error:', data.error || data.message || 'Unknown error');
-      }
+      data = await response.json();
 
-      // If regular login fails, try admin login
-      if (!response.ok) {
-        console.log('Regular login failed, trying admin login...');
+      // If regular login fails and we haven't tried admin yet, try admin login
+      if (!response.ok && !isLikelyAdmin) {
         response = await fetch('/api/auth/admin/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

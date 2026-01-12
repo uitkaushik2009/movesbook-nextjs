@@ -35,25 +35,67 @@ export async function POST(request: NextRequest) {
       const isPasswordValid = await verifyPassword(password, FALLBACK_ADMIN.passwordHash);
       
       if (isPasswordValid) {
-        // Generate admin token
-        const token = generateToken(
-          'admin', 
-          FALLBACK_ADMIN.email, 
-          FALLBACK_ADMIN.username, 
-          'ADMIN'
-        );
-
-        return NextResponse.json({
-          success: true,
-          token,
-          user: {
-            id: 'admin',
-            name: 'Admin',
-            username: FALLBACK_ADMIN.username,
-            email: FALLBACK_ADMIN.email,
-            userType: 'ADMIN'
+        // Check if actual admin user exists in database (use real user ID if found)
+        // Note: We don't filter by userType because the admin user might have ATHLETE type
+        const realAdminUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { username: FALLBACK_ADMIN.username },
+              { email: FALLBACK_ADMIN.email },
+              { username: 'admin' },
+              { email: 'lerkos000@gmail.com' }
+            ]
+          },
+          select: {
+            id: true,
+            name: true,
+            username: true,
+            email: true,
+            userType: true
           }
         });
+
+        if (realAdminUser) {
+          // Use real admin user from database
+          const token = generateToken(
+            realAdminUser.id,
+            realAdminUser.email,
+            realAdminUser.username,
+            realAdminUser.userType
+          );
+
+          return NextResponse.json({
+            success: true,
+            token,
+            user: {
+              id: realAdminUser.id,
+              name: realAdminUser.name,
+              username: realAdminUser.username,
+              email: realAdminUser.email,
+              userType: realAdminUser.userType
+            }
+          });
+        } else {
+          // Fallback: use 'admin' ID if no real user found (shouldn't happen in production)
+          const token = generateToken(
+            'admin', 
+            FALLBACK_ADMIN.email, 
+            FALLBACK_ADMIN.username, 
+            'ADMIN'
+          );
+
+          return NextResponse.json({
+            success: true,
+            token,
+            user: {
+              id: 'admin',
+              name: 'Admin',
+              username: FALLBACK_ADMIN.username,
+              email: FALLBACK_ADMIN.email,
+              userType: 'ADMIN'
+            }
+          });
+        }
       }
     }
 
