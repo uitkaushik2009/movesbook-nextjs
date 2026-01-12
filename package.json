@@ -17,6 +17,7 @@
         "admin:force-reset": "node scripts/force-reset-password.js",
         "admin:full-reset": "node scripts/force-reset-password.js --full-reset",
         "admin:update-password": "node scripts/update-admin-password.js",
+        "admin:update-usertype": "node scripts/update-admin-usertype.js",
         "import:legacy-users": "node scripts/import-legacy-users.js"
     },
     "dependencies": {
