@@ -146,7 +146,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Try to find user in NEW database (regular admin users) - case-insensitive
+    // Try to find user in NEW database (check for admin username/email, don't filter by userType)
+    // Note: Admin user might have ATHLETE type but username 'admin'
     let user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -154,8 +155,7 @@ export async function POST(request: NextRequest) {
           { username: loginIdentifier },
           { email: loginIdentifier.toLowerCase() },
           { username: loginIdentifier.toLowerCase() }
-        ],
-        userType: 'ADMIN'
+        ]
       },
       select: {
         id: true,
