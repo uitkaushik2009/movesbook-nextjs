@@ -18,7 +18,10 @@
         "admin:full-reset": "node scripts/force-reset-password.js --full-reset",
         "admin:update-password": "node scripts/update-admin-password.js",
         "admin:update-usertype": "node scripts/update-admin-usertype.js",
-        "import:legacy-users": "node scripts/import-legacy-users.js"
+        "import:legacy-users": "node scripts/import-legacy-users.js",
+        "db:compare": "node scripts/compare-databases.js",
+        "db:check-prod": "node scripts/check-production-db.js",
+        "admin:check": "node scripts/check-admin.js"
     },
     "dependencies": {
         "@dnd-kit/core": "^6.3.1",
