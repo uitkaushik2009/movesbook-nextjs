@@ -146,16 +146,45 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Try to find user in NEW database (regular admin users) - case-insensitive
+    // Try to find user in NEW database
+    // First check for ADMIN userType, but also allow admin username/email regardless of type (for migration compatibility)
     let user = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: loginIdentifier },
-          { username: loginIdentifier },
-          { email: loginIdentifier.toLowerCase() },
-          { username: loginIdentifier.toLowerCase() }
-        ],
-        userType: 'ADMIN'
+          {
+            AND: [
+              {
+                OR: [
+                  { email: loginIdentifier },
+                  { username: loginIdentifier },
+                  { email: loginIdentifier.toLowerCase() },
+                  { username: loginIdentifier.toLowerCase() }
+                ]
+              },
+              { userType: 'ADMIN' }
+            ]
+          },
+          // Allow admin username/email even if userType is not ADMIN (for backward compatibility)
+          {
+            AND: [
+              {
+                OR: [
+                  { username: 'admin' },
+                  { email: 'admin@movesbook.com' },
+                  { email: 'lerkos000@gmail.com' }
+                ]
+              },
+              {
+                OR: [
+                  { email: loginIdentifier },
+                  { username: loginIdentifier },
+                  { email: loginIdentifier.toLowerCase() },
+                  { username: loginIdentifier.toLowerCase() }
+                ]
+              }
+            ]
+          }
+        ]
       },
       select: {
         id: true,
