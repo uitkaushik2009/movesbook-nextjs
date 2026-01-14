@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getSportConfig, sportNeedsExerciseName, DISTANCE_BASED_SPORTS } from '@/constants/moveframe.constants';
+import { getSportConfig, sportNeedsExerciseName, DISTANCE_BASED_SPORTS, isSeriesBasedSport, isAerobicSport, getRepsLabel } from '@/constants/moveframe.constants';
 
 export interface IndividualRepetitionPlan {
   index: number;
@@ -381,12 +381,20 @@ export function useMoveframeForm({
         }
       } else {
         // Distance-based sports (SWIM, BIKE, RUN, etc.) and other sports
-        const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
+        const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'];
         const isDistanceBased = distanceBasedSports.includes(sport);
         
         if (isDistanceBased) {
-          if (!distance && distance !== 'custom') newErrors.distance = 'Distance is required';
-          if (distance === 'custom' && !customDistance) newErrors.customDistance = 'Custom distance is required';
+          // Only require distance if repsType is NOT 'Time'
+          if (repsType !== 'Time') {
+            if (!distance && distance !== 'custom') newErrors.distance = 'Distance is required';
+            if (distance === 'custom' && !customDistance) newErrors.customDistance = 'Custom distance is required';
+          } else {
+            // If repsType is 'Time', require time instead
+            if (!time || time === '0h00\'00"0' || time.trim() === '') {
+              newErrors.time = 'Time is required when Type of execution is Time';
+            }
+          }
         }
         
         if (!repetitions || parseInt(repetitions) < 1) {
@@ -430,7 +438,7 @@ export function useMoveframeForm({
       const exerciseText = exercise || 'Exercise';
       const setsCount = parseInt(repetitions) || 1;
       const repsPerSet = repsType === 'Time' ? (time || '0\'') : (parseInt(reps) || 0);
-      const repsLabel = repsType === 'Time' ? 'Minutes' : 'reps';
+      const repsLabel = repsType === 'Time' ? time || '0\'' : getRepsLabel(sport);
       const tempoText = speed ? ` ${speed}` : ''; // Speed of execution
       // Format pause text based on rest type
       let pauseText = '';
@@ -445,7 +453,7 @@ export function useMoveframeForm({
           pauseText = ` Pause ${effectivePause}`;
         }
       }
-      // Format: "Shoulders - Bench Press: 3 sets x 10 reps Very slow Pause 30" M0'"
+      // Format: "Shoulders - Bench Press: 3 sets x 10 series Very slow Pause 30" M0'"
       return `${sectorText}${exerciseText}: ${setsCount} sets x ${repsPerSet} ${repsLabel}${tempoText}${pauseText}${macroFinalText}`;
     }
 
@@ -480,7 +488,7 @@ export function useMoveframeForm({
       const exerciseText = exercise || 'Exercise';
       const setsCount = parseInt(repetitions) || 1;
       const repsPerSet = repsType === 'Time' ? (time || '0\'') : (parseInt(reps) || 1);
-      const repsTypeText = repsType === 'Time' ? 'Minutes' : 'reps';
+      const repsTypeText = repsType === 'Time' ? time || '0\'' : getRepsLabel(sport);
       const styleText = style ? ` ${style}` : '';
       const speedText = speed ? ` ${speed}` : '';
       // Format pause text based on rest type
@@ -498,7 +506,7 @@ export function useMoveframeForm({
       }
       const macroFinalText = effectiveMacroFinal ? ` M${effectiveMacroFinal}` : '';
       
-      // Format: "Exercise name: 3 sets x 10 reps Pause 30" M0'"
+      // Format: "Exercise name: 3 sets x 10 series Pause 30" M0'" (or time value if Time-based)
       return `${exerciseText}: ${setsCount} sets x ${repsPerSet} ${repsTypeText}${styleText}${speedText}${pauseText}${macroFinalText}`;
     }
   };
@@ -507,30 +515,49 @@ export function useMoveframeForm({
    * Build moveframe data object for API submission
    */
   const buildMoveframeData = () => {
+    console.log('🔸 [FORM] buildMoveframeData called with:', {
+      planningMode,
+      individualPlansLength: individualPlans?.length,
+      repetitions,
+      sport,
+      manualMode,
+      manualPriority
+    });
     // Determine notes value based on mode
     let notesValue = note;
     let descriptionValue = generateDescription();
     
     if (manualMode && manualContent) {
       // For manual mode, clean the content
-      // Strip source code tags (pre, code, script, style)
+      // Strip source code tags (pre, code, script, style) and potentially dangerous content
       let cleanedContent = manualContent
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         .replace(/<pre[^>]*>[\s\S]*?<\/pre>/gi, '')
-        .replace(/<code[^>]*>[\s\S]*?<\/code>/gi, '');
+        .replace(/<code[^>]*>[\s\S]*?<\/code>/gi, '')
+        .replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')
+        .replace(/<object[^>]*>[\s\S]*?<\/object>/gi, '')
+        .replace(/<embed[^>]*>/gi, '');
       
       // Use cleaned content as notes (full content)
       notesValue = cleanedContent;
       
-      // For description, extract text content and limit to 90 characters
+      // For description, extract text content and limit to 190 characters (safe for database VARCHAR)
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = cleanedContent;
       const textContent = tempDiv.textContent || tempDiv.innerText || '';
-      descriptionValue = textContent.trim().substring(0, 90);
-      if (textContent.length > 90) {
+      const trimmedText = textContent.trim().replace(/\s+/g, ' '); // Normalize whitespace
+      descriptionValue = trimmedText.substring(0, 190);
+      if (trimmedText.length > 190) {
         descriptionValue += '...';
       }
+      
+      console.log('📝 [buildMoveframeData] Manual mode content:', {
+        cleanedContentLength: cleanedContent.length,
+        extractedTextLength: trimmedText.length,
+        descriptionValue: descriptionValue,
+        notesValueLength: notesValue.length
+      });
     }
 
     // For manual mode, provide defaults for required fields
@@ -541,7 +568,7 @@ export function useMoveframeForm({
     const distanceValue = (distance === 'custom' || distance === 'input') ? customDistance : distance;
     const distanceNum = parseInt(distanceValue) || 0;
 
-    return {
+    const data = {
       sport: effectiveSport,
       type,
       description: descriptionValue,
@@ -556,7 +583,7 @@ export function useMoveframeForm({
       planningMode,
       individualPlans: planningMode === 'individual' ? individualPlans : [],
       
-      // Standard fields
+      // Standard fields (for movelap generation)
       distance: distanceNum,
       repetitions: parseInt(repetitions),
       speed,
@@ -587,11 +614,31 @@ export function useMoveframeForm({
       manualMode,
       manualPriority,
       manualContent: manualMode ? manualContent : null,
+      // Manual mode specific fields for Moveframe model (different from movelap generation fields above)
+      manualRepetitions: manualMode && isSeriesBasedSport(effectiveSport) ? parseInt(repetitions) : null,
+      manualDistance: manualMode && !isSeriesBasedSport(effectiveSport) ? distanceNum : null,
       
       // Metadata
       workoutSessionId: workout.id,
       dayId: day.id
     };
+    
+    console.log('🔸 [FORM] buildMoveframeData returning:', {
+      planningMode: data.planningMode,
+      individualPlansLength: data.individualPlans?.length,
+      repetitions: data.repetitions, // For movelap generation
+      manualRepetitions: data.manualRepetitions, // For Moveframe model (manual mode)
+      distance: data.distance, // For movelap generation
+      manualDistance: data.manualDistance, // For Moveframe model (manual mode)
+      sport: data.sport,
+      manualMode: data.manualMode,
+      manualPriority: data.manualPriority,
+      descriptionLength: data.description?.length || 0,
+      descriptionPreview: data.description?.substring(0, 80) || '(empty)',
+      notesLength: data.notes?.length || 0
+    });
+    
+    return data;
   };
 
   // ==================== EFFECTS ====================
@@ -639,8 +686,26 @@ export function useMoveframeForm({
           setNote(firstMovelap.notes || '');
           
           // Rest and alerts
-          setPause(firstMovelap.pause || '20"');
-          setRestType(firstMovelap.restType || ''); // Load rest type
+          const loadedPause = firstMovelap.pause || '20"';
+          const loadedRestType = firstMovelap.restType || '';
+          
+          // Clean up pause value for "Restart time" - remove any malformed data
+          if (loadedRestType === 'Restart time') {
+            // Check if the pause value is malformed (e.g., "0h00'00"123213254")
+            // A valid format should be like "1h23'45"6" with reasonable digit counts
+            const isValidRestartTime = /^\d{1,2}h\d{2}'\d{2}"\d$/.test(loadedPause);
+            
+            if (!isValidRestartTime) {
+              console.log('⚠️ Clearing malformed restart time:', loadedPause);
+              setPause(''); // Clear malformed data
+            } else {
+              setPause(loadedPause);
+            }
+          } else {
+            setPause(loadedPause);
+          }
+          
+          setRestType(loadedRestType);
           setMacroFinal(firstMovelap.macroFinal || "0'");
           setAlarm(firstMovelap.alarm?.toString() || '-1');
           setSound(firstMovelap.sound || 'Beep');
@@ -651,11 +716,77 @@ export function useMoveframeForm({
         setR2(firstMovelap.r2 || '');
         setMuscularSector(firstMovelap.muscularSector || '');
         setExercise(firstMovelap.exercise || '');
+        
+        // 🔄 RESTORE INDIVIDUAL PLANNING MODE if moveframe was created with "Plan one by one"
+        // Check if there are multiple movelaps (2-12) - this indicates potential individual planning
+        const movelapsCount = existingMoveframe.movelaps?.length || 0;
+        if (movelapsCount >= 2 && movelapsCount <= 12) {
+          console.log(`🔍 Checking if moveframe was created with individual planning (${movelapsCount} movelaps)`);
+          
+          // Check if movelaps have different values (indicating individual planning was used)
+          const hasVariedValues = existingMoveframe.movelaps.some((lap: any, index: number) => {
+            if (index === 0) return false; // Skip first lap (we compare against it)
+            const firstLap = existingMoveframe.movelaps[0];
+            
+            // Check if ANY value differs from the first lap
+            return (
+              lap.speed !== firstLap.speed ||
+              lap.time !== firstLap.time ||
+              lap.pace !== firstLap.pace ||
+              lap.pause !== firstLap.pause ||
+              lap.reps !== firstLap.reps ||
+              lap.weight !== firstLap.weight ||
+              lap.tools !== firstLap.tools ||
+              lap.macroFinal !== firstLap.macroFinal ||
+              lap.strokes !== firstLap.strokes ||
+              lap.watts !== firstLap.watts ||
+              lap.pauseMin !== firstLap.pauseMin ||
+              lap.pauseMode !== firstLap.pauseMode ||
+              lap.pausePace !== firstLap.pausePace
+            );
+          });
+          
+          if (hasVariedValues) {
+            console.log('✅ Detected individual planning! Restoring individual lap data...');
+            
+            // Set planning mode to 'individual'
+            setPlanningMode('individual');
+            
+            // Restore individual plans from movelaps
+            const restoredPlans: IndividualRepetitionPlan[] = existingMoveframe.movelaps.map((lap: any, index: number) => ({
+              index: index + 1,
+              speed: lap.speed || '',
+              time: lap.time || lap.pace || '',
+              pause: lap.pause || '20"',
+              reps: lap.reps?.toString() || '',
+              weight: lap.weight || '',
+              tools: lap.tools || '',
+              macroFinal: lap.macroFinal || "0'",
+              strokes: lap.strokes || '',
+              watts: lap.watts || '',
+              restType: lap.restType || 'Set time',
+              pauseMin: lap.pauseMin || '',
+              pauseMode: lap.pauseMode || '',
+              pausePace: lap.pausePace || ''
+            }));
+            
+            setIndividualPlans(restoredPlans);
+            console.log(`✅ Restored ${restoredPlans.length} individual lap plans`);
+          } else {
+            console.log('ℹ️ All movelaps have same values - using "Plan for all" mode');
+            setPlanningMode('all');
+          }
+        } else {
+          console.log(`ℹ️ ${movelapsCount} movelaps - using "Plan for all" mode`);
+          setPlanningMode('all');
+        }
+        
         } else {
           console.log('⚠️ No movelaps found, loading defaults');
           setDistance('100');
           setRepetitions('1');
           setSpeed('A2');
+          setPlanningMode('all');
         }
         
         // Manual content - check both description and notes fields
@@ -666,8 +797,22 @@ export function useMoveframeForm({
         setManualContent(manualModeContent);
         
         // Check if manual mode was used
-        setManualMode(existingMoveframe.manualMode || false);
-        setManualPriority(false);
+        const loadedManualMode = existingMoveframe.manualMode || false;
+        const loadedManualPriority = existingMoveframe.manualPriority || false;
+        console.log('📥 [LOAD] Loading existing moveframe:', {
+          id: existingMoveframe.id,
+          letter: existingMoveframe.letter,
+          manualMode: loadedManualMode,
+          manualModeRaw: existingMoveframe.manualMode,
+          manualPriority: loadedManualPriority,
+          manualPriorityRaw: existingMoveframe.manualPriority,
+          manualPriorityType: typeof existingMoveframe.manualPriority,
+          manualPriorityIsNull: existingMoveframe.manualPriority === null,
+          manualPriorityIsUndefined: existingMoveframe.manualPriority === undefined
+        });
+        setManualMode(loadedManualMode);
+        setManualPriority(loadedManualPriority);
+        console.log('✅ [LOAD] Set manualPriority state to:', loadedManualPriority);
       }
     } else {
       resetForm();
@@ -688,6 +833,19 @@ export function useMoveframeForm({
       }
     }
   }, [planningMode, repetitions, sport]);
+
+  /**
+   * Clear pause field when rest type changes to avoid carrying over invalid formats
+   */
+  useEffect(() => {
+    // Skip initial load (only act on user changes)
+    if (!isOpen) return;
+    
+    // When user changes to "Restart time", clear the field for fresh input
+    if (restType === 'Restart time' && pause && !/^\d{1,2}h\d{2}'\d{2}"\d$/.test(pause)) {
+      setPause('');
+    }
+  }, [restType]);
 
   // ==================== RETURN VALUES ====================
   return {

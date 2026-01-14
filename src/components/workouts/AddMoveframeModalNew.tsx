@@ -210,10 +210,9 @@ export default function AddMoveframeModalNew({
           sport: selectedSport,
           type: 'MANUAL',
           description: manualData.htmlContent,
-          notes: JSON.stringify({
-            isPriority: manualData.isPriority,
-            isManual: true
-          }),
+          notes: manualData.htmlContent,
+          manualMode: true,
+          manualPriority: manualData.isPriority,
           movelaps: []
         })
       });
@@ -313,7 +312,7 @@ export default function AddMoveframeModalNew({
                         : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    Standard
+                    Standard Mode
                   </button>
                   <button
                     onClick={() => setEditSubTab('battery')}

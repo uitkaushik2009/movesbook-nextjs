@@ -6,6 +6,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { useTableColumns } from '@/hooks/useTableColumns';
 import { useColorSettings } from '@/hooks/useColorSettings';
 import TableColumnConfig from '../TableColumnConfig';
+import { formatMoveframeType } from '@/constants/moveframe.constants';
 
 interface MoveframeTableProps {
   day: any;
@@ -105,14 +106,45 @@ export default function MoveframeTable({
           }}></span>
         );
       case 'type':
-        return moveframe.section?.name || moveframe.type || 'Warm up';
+        return moveframe.section?.name || formatMoveframeType(moveframe.type) || 'Warm up';
       case 'sport':
         return moveframe.sport || 'Swim';
       case 'description':
-        return moveframe.description || '100s * 10 A2 R20*';
+        // For manual mode with priority, show full content from notes
+        // For manual mode WITHOUT priority, show blank (user wants to hide content)
+        // Otherwise show description
+        const content = (moveframe.manualMode && moveframe.manualPriority)
+          ? (moveframe.notes || moveframe.description || '100s * 10 A2 R20*')
+          : (moveframe.manualMode && !moveframe.manualPriority)
+          ? '' // Blank for manual mode without priority
+          : (moveframe.description || '100s * 10 A2 R20*');
+        console.log('📝 Description column:', {
+          moveframeId: moveframe.id,
+          manualMode: moveframe.manualMode,
+          manualPriority: moveframe.manualPriority,
+          hasNotes: !!moveframe.notes,
+          notesLength: moveframe.notes?.length || 0,
+          hasDescription: !!moveframe.description,
+          descriptionLength: moveframe.description?.length || 0,
+          contentLength: content?.length || 0,
+          willShowBlank: moveframe.manualMode && !moveframe.manualPriority
+        });
+        return content;
       case 'repetitions':
+        // For manual mode moveframes in series-based sports, show moveframe.repetitions
+        // For normal moveframes, show movelaps count
+        if (moveframe.manualMode) {
+          return moveframe.repetitions || '0';
+        }
         return moveframe.movelaps?.length || '0';
       case 'total_distance':
+        // Check if this is a time-based moveframe (Type of execution = Time)
+        const firstMovelap = moveframe.movelaps?.[0];
+        if (firstMovelap?.time && firstMovelap.time !== '0h00\'00"0') {
+          // Show time (duration) for time-based moveframes
+          return firstMovelap.time;
+        }
+        // Show total distance for distance-based moveframes
         return (moveframe.movelaps || []).reduce((sum: number, lap: any) => sum + (parseInt(lap.distance) || 0), 0);
       case 'macro':
         return moveframe.macroFinal || '—';
@@ -132,7 +164,7 @@ export default function MoveframeTable({
           className="border-collapse shadow-sm text-sm" 
           style={{ 
             tableLayout: 'fixed', 
-            width: '800px',
+            width: '650px',
             backgroundColor: colors.moveframeHeader,
             border: getBorderStyle('moveframe') || '1px solid #e5e7eb'
           }}

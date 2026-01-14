@@ -22,6 +22,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { sourceWeekId, targetWeekId } = body;
 
+    console.log('🚚 [API] Move week request:', {
+      sourceWeekId,
+      targetWeekId,
+      userId: decoded.userId
+    });
+
     if (!sourceWeekId || !targetWeekId) {
       return NextResponse.json(
         { error: 'Source and target week IDs are required' },
@@ -33,6 +39,7 @@ export async function POST(req: NextRequest) {
     const sourceWeek = await prisma.workoutWeek.findUnique({
       where: { id: sourceWeekId },
       include: {
+        workoutPlan: true,
         days: {
           include: {
             workouts: {
@@ -44,7 +51,15 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    console.log('🔍 [API] Source week query result:', {
+      found: !!sourceWeek,
+      weekNumber: sourceWeek?.weekNumber,
+      planType: sourceWeek?.workoutPlan?.type,
+      daysCount: sourceWeek?.days?.length
+    });
+
     if (!sourceWeek) {
+      console.error('❌ [API] Source week not found:', sourceWeekId);
       return NextResponse.json({ error: 'Source week not found' }, { status: 404 });
     }
 
@@ -52,13 +67,22 @@ export async function POST(req: NextRequest) {
     const targetWeek = await prisma.workoutWeek.findUnique({
       where: { id: targetWeekId },
       include: {
+        workoutPlan: true,
         days: {
           orderBy: { date: 'asc' }
         }
       }
     });
 
+    console.log('🔍 [API] Target week query result:', {
+      found: !!targetWeek,
+      weekNumber: targetWeek?.weekNumber,
+      planType: targetWeek?.workoutPlan?.type,
+      daysCount: targetWeek?.days?.length
+    });
+
     if (!targetWeek) {
+      console.error('❌ [API] Target week not found:', targetWeekId);
       return NextResponse.json({ error: 'Target week not found' }, { status: 404 });
     }
 

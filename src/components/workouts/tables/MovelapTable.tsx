@@ -5,6 +5,7 @@ import { Settings } from 'lucide-react';
 import { useTableColumns } from '@/hooks/useTableColumns';
 import { useColorSettings } from '@/hooks/useColorSettings';
 import TableColumnConfig from '../TableColumnConfig';
+import { formatMoveframeType } from '@/constants/moveframe.constants';
 
 interface MovelapTableProps {
   day: any;
@@ -57,13 +58,14 @@ export default function MovelapTable({
           }}></span>
         );
       case 'workout_type':
-        return moveframe.section?.name || moveframe.type || 'Warm up';
+        return moveframe.section?.name || formatMoveframeType(moveframe.type) || 'Warm up';
       case 'section_name':
         return moveframe.section?.name || 'No Section';
       case 'sport':
         return moveframe.sport || 'Swim';
       case 'distance':
-        return movelap.distance || '0';
+        // Show distance if set, otherwise show time (for time-based workouts)
+        return movelap.distance ? movelap.distance : (movelap.time || '—');
       case 'style':
         return movelap.style || '—';
       case 'speed':

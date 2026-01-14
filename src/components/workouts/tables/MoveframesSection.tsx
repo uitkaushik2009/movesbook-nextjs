@@ -285,92 +285,85 @@ export default function MoveframesSection({
 
   return (
     <>
-      <div className="mt-4 bg-purple-100 rounded-lg max-w-[1800px]">
-        {/* Header Bar - Simplified without redundant text */}
-        <div className="bg-purple-200 px-4 py-2 flex flex-wrap items-center justify-between rounded-t-lg gap-2">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="text-purple-700 hover:bg-purple-300 rounded px-2 py-1 transition-colors font-bold"
-              title="Toggle moveframes visibility"
-            >
-              {isExpanded ? '▼' : '►'}
-            </button>
-            <span className="font-bold text-sm text-purple-900">Moveframes</span>
-            <span className="text-xs text-purple-700 bg-purple-300 px-2 py-0.5 rounded">
-              {moveframes.length} total
-            </span>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onAddMoveframe) {
-                  onAddMoveframe();
-                }
-              }}
-              className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
-              title="Add a Moveframe"
-            >
-              Add a Moveframe
-            </button>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-wrap items-center gap-1">
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (moveframes.length > 0 && onCopyMoveframe) {
-                  // Pass ALL moveframes when copying from the section level
-                  onCopyMoveframe(moveframes, workout, day);
-                } else {
-                  alert('No moveframes to copy');
-                }
-              }}
-              className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-              title="Copy all moveframes"
-            >
-              Copy
-            </button>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (moveframes.length > 0 && onMoveMoveframe) {
-                  // Pass ALL moveframes when moving from the section level
-                  onMoveMoveframe(moveframes, workout, day);
-                } else {
-                  alert('No moveframes to move');
-                }
-              }}
-              className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
-              title="Move all moveframes"
-            >
-              Move
-            </button>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm('Delete all moveframes in this workout?')) {
-                  moveframes.forEach((mf: any) => onDeleteMoveframe?.(mf));
-                }
-              }}
-              className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-              title="Delete all moveframes"
-            >
-              Del
-            </button>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onOpenColumnSettings) {
-                  onOpenColumnSettings('moveframe');
-                }
-              }}
-              className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600"
-              title="Configure columns"
-            >
-              ⚙ Col
-            </button>
-          </div>
+      <div className="mt-4 bg-purple-100 rounded-lg w-fit">
+        {/* Header Bar - All buttons in one row */}
+        <div className="bg-purple-200 px-4 py-2 flex items-center gap-2 rounded-t-lg">
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="text-purple-700 hover:bg-purple-300 rounded px-2 py-1 transition-colors font-bold"
+            title="Toggle moveframes visibility"
+          >
+            {isExpanded ? '▼' : '►'}
+          </button>
+          <span className="font-bold text-sm text-purple-900">Moveframes</span>
+          <span className="text-xs text-purple-700 bg-purple-300 px-2 py-0.5 rounded">
+            {moveframes.length} total
+          </span>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onAddMoveframe) {
+                onAddMoveframe();
+              }
+            }}
+            className="px-2 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+            title="Add a Moveframe"
+          >
+            Add a Moveframe
+          </button>
+          {/* Action Buttons - Now beside Add button */}
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (moveframes.length > 0 && onCopyMoveframe) {
+                onCopyMoveframe(moveframes, workout, day);
+              } else {
+                alert('No moveframes to copy');
+              }
+            }}
+            className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+            title="Copy all moveframes"
+          >
+            Copy
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (moveframes.length > 0 && onMoveMoveframe) {
+                onMoveMoveframe(moveframes, workout, day);
+              } else {
+                alert('No moveframes to move');
+              }
+            }}
+            className="px-2 py-1 text-xs bg-gray-500 text-white rounded hover:bg-gray-600"
+            title="Move all moveframes"
+          >
+            Move
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm('Delete all moveframes in this workout?')) {
+                moveframes.forEach((mf: any) => onDeleteMoveframe?.(mf));
+              }
+            }}
+            className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+            title="Delete all moveframes"
+          >
+            Del
+          </button>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              if (onOpenColumnSettings) {
+                onOpenColumnSettings('moveframe');
+              }
+            }}
+            className="px-2 py-1 text-xs bg-purple-500 text-white rounded hover:bg-purple-600"
+            title="Configure columns"
+          >
+            ⚙ Col
+          </button>
         </div>
 
         {/* Moveframes Table */}
@@ -379,7 +372,7 @@ export default function MoveframesSection({
             items={orderedMoveframes.map((mf: any) => mf.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="p-4">
+            <div className="p-2">
               <table className="border-collapse text-xs bg-white" style={{ tableLayout: 'fixed', width: 'auto' }}>
                 <thead className="bg-purple-300 text-purple-900">
                   <tr>
@@ -400,6 +393,7 @@ export default function MoveframesSection({
                         isChecked={checkedMoveframes.has(moveframe.id)}
                         onToggleCheck={() => toggleMoveframeCheck(moveframe.id)}
                         onToggleExpand={() => setExpandedMoveframe(isMovelapsExpanded ? null : moveframe.id)}
+                        onNavigateToMoveframe={(moveframeId) => setExpandedMoveframe(moveframeId)}
                         onEditMoveframe={onEditMoveframe}
                         onDeleteMoveframe={onDeleteMoveframe}
                         onEditMovelap={onEditMovelap}

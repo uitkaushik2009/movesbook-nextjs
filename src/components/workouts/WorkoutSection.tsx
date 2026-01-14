@@ -368,6 +368,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [workoutModalMode, setWorkoutModalMode] = useState<'add' | 'edit'>('add');
   const [showWorkoutInfoModal, setShowWorkoutInfoModal] = useState(false);
   const [showCreateYearlyPlanModal, setShowCreateYearlyPlanModal] = useState(false);
+  const [showWeekNotesModal, setShowWeekNotesModal] = useState(false);
+  const [selectedWeekNotes, setSelectedWeekNotes] = useState<string>('');
   const [showCopyFromTemplateModal, setShowCopyFromTemplateModal] = useState(false);
   const [showDayPrintModal, setShowDayPrintModal] = useState(false);
   const [dayToPrint, setDayToPrint] = useState<any>(null);
@@ -501,14 +503,29 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     
     const repsCount = parseInt(moveframeData.repetitions) || 1;
     
+    console.log('🔧 [generateMovelaps] Starting generation:', {
+      repsCount,
+      planningMode: moveframeData.planningMode,
+      hasIndividualPlans: moveframeData.planningMode === 'individual',
+      individualPlansCount: moveframeData.individualPlans?.length || 0
+    });
+    
     // Check if we're using individual planning mode
     const hasIndividualPlans = moveframeData.planningMode === 'individual' && 
                               moveframeData.individualPlans && 
                               moveframeData.individualPlans.length > 0;
     
+    console.log('🔧 [generateMovelaps] hasIndividualPlans:', hasIndividualPlans);
+    
     for (let i = 0; i < repsCount; i++) {
       // If using individual plans, get values from the specific plan
       const plan = hasIndividualPlans ? moveframeData.individualPlans[i] : null;
+      
+      console.log(`🔧 [generateMovelaps] Iteration ${i + 1}:`, {
+        hasIndividualPlans,
+        planExists: !!plan,
+        planData: plan ? { reps: plan.reps, weight: plan.weight, tools: plan.tools } : null
+      });
       
       movelaps.push({
         repetitionNumber: i + 1,
@@ -1415,6 +1432,28 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           const totalWeeks = workoutPlan?.weeks?.length || 0;
           setCurrentPageStart(Math.min(totalWeeks, currentPageStart + weeksPerPage));
         }}
+        excludeStretchingCheckbox={
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="exclude-stretching"
+                checked={excludeStretchingFromTotals}
+                onChange={(e) => setExcludeStretchingFromTotals(e.target.checked)}
+                className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+              />
+              <label 
+                htmlFor="exclude-stretching"
+                className="text-sm font-medium text-gray-700 cursor-pointer select-none"
+              >
+                Exclude stretching from the totals
+              </label>
+            </div>
+            <span className="text-xs text-yellow-700">
+              ⚠️ Note: Stretching is auto-excluded when 4+ sports are selected in a day
+            </span>
+          </div>
+        }
           />
         );
       })()}
@@ -1541,8 +1580,13 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                             if (weekNotes) {
                               return (
                                 <div 
-                                  className="rich-text-preview text-gray-900 font-semibold leading-tight text-lg"
+                                  className="rich-text-preview text-gray-900 font-semibold leading-tight text-lg cursor-pointer hover:bg-blue-50 px-2 py-1 rounded transition-colors"
                                   dangerouslySetInnerHTML={{ __html: weekNotes }}
+                                  onClick={() => {
+                                    setSelectedWeekNotes(weekNotes);
+                                    setShowWeekNotesModal(true);
+                                  }}
+                                  title="Click to view full notes"
                                   style={{
                                     display: '-webkit-box',
                                     WebkitLineClamp: 2,
@@ -1778,21 +1822,23 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 <StyledTableWrapper>
                 <DayTableView
                  excludeStretchingCheckbox={
-                   <div className="flex items-center gap-2">
-                     <input
-                       type="checkbox"
-                       id="exclude-stretching"
-                       checked={excludeStretchingFromTotals}
-                       onChange={(e) => setExcludeStretchingFromTotals(e.target.checked)}
-                       className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-                     />
-                     <label 
-                       htmlFor="exclude-stretching"
-                       className="text-sm font-medium text-gray-700 cursor-pointer select-none"
-                     >
-                       Exclude stretching from the totals
-                     </label>
-                     <span className="text-xs text-gray-500 ml-2">
+                   <div className="flex flex-col gap-1">
+                     <div className="flex items-center gap-2">
+                       <input
+                         type="checkbox"
+                         id="exclude-stretching"
+                         checked={excludeStretchingFromTotals}
+                         onChange={(e) => setExcludeStretchingFromTotals(e.target.checked)}
+                         className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                       />
+                       <label 
+                         htmlFor="exclude-stretching"
+                         className="text-sm font-medium text-gray-700 cursor-pointer select-none"
+                       >
+                         Exclude stretching from the totals
+                       </label>
+                     </div>
+                     <span className="text-xs text-yellow-700">
                        ⚠️ Note: Stretching is auto-excluded when 4+ sports are selected in a day
                      </span>
                    </div>
@@ -2311,22 +2357,24 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                const deps = getHandlerDeps();
                
                if (moveframeModalMode === 'edit' && editingMoveframe) {
-                // UPDATE existing moveframe
-                await moveframeHandlers.updateMoveframe(editingMoveframe.id, {
-                   sport: moveframeData.sport,
-                   type: moveframeData.type,
-                   description: moveframeData.description,
-                   notes: moveframeData.notes,
-                   macroFinal: moveframeData.macroFinal,
-                  alarm: moveframeData.alarm,
-                  sectionId: moveframeData.sectionId,
-                  manualMode: moveframeData.manualMode || false,
-                  // Annotation fields
-                  annotationText: moveframeData.annotationText,
-                  annotationBgColor: moveframeData.annotationBgColor,
-                  annotationTextColor: moveframeData.annotationTextColor,
-                  annotationBold: moveframeData.annotationBold
-                }, deps);
+               // UPDATE existing moveframe
+               console.log('🔄 [UPDATE] Updating moveframe with manualPriority:', moveframeData.manualPriority);
+               await moveframeHandlers.updateMoveframe(editingMoveframe.id, {
+                  sport: moveframeData.sport,
+                  type: moveframeData.type,
+                  description: moveframeData.description,
+                  notes: moveframeData.notes,
+                  macroFinal: moveframeData.macroFinal,
+                 alarm: moveframeData.alarm,
+                 sectionId: moveframeData.sectionId,
+                 manualMode: moveframeData.manualMode || false,
+                 manualPriority: moveframeData.manualPriority || false,
+                 // Annotation fields
+                 annotationText: moveframeData.annotationText,
+                 annotationBgColor: moveframeData.annotationBgColor,
+                 annotationTextColor: moveframeData.annotationTextColor,
+                 annotationBold: moveframeData.annotationBold
+               }, deps);
                 
                  // ALWAYS regenerate movelaps for non-ANNOTATION types when editing
                  // This ensures Rip\Sets column and all movelap data stays in sync
@@ -2370,37 +2418,76 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  
                  // Reload data to show changes (updates Rip\Sets column)
                  await loadWorkoutData(activeSection);
-              } else {
-                // CREATE new moveframe
-                const movelaps = generateMovelaps(moveframeData);
-                
-                console.log('📤 Generated movelaps:', movelaps);
+                } else {
+                  // CREATE new moveframe
+                  console.log('🔍 [DEBUG] moveframeData before generateMovelaps:', {
+                    planningMode: moveframeData.planningMode,
+                    individualPlans: moveframeData.individualPlans,
+                    individualPlansLength: moveframeData.individualPlans?.length,
+                    repetitions: moveframeData.repetitions,
+                    sport: moveframeData.sport
+                  });
+                  
+                  // Log individual plans in detail
+                  if (moveframeData.individualPlans && moveframeData.individualPlans.length > 0) {
+                    console.log('📋 Individual Plans (detailed):');
+                    moveframeData.individualPlans.forEach((plan: any, index: number) => {
+                      console.log(`  Plan ${index + 1}:`, {
+                        reps: plan.reps,
+                        weight: plan.weight,
+                        tools: plan.tools,
+                        speed: plan.speed,
+                        time: plan.time,
+                        pause: plan.pause
+                      });
+                    });
+                  }
+
+                  const movelaps = generateMovelaps(moveframeData);
+
+                  console.log('📤 Generated movelaps (count):', movelaps.length);
+                  console.log('📤 Generated movelaps (detailed):');
+                  movelaps.forEach((lap, index) => {
+                    console.log(`  Movelap ${index + 1}:`, {
+                      reps: lap.reps,
+                      weight: lap.weight,
+                      tools: lap.tools,
+                      speed: lap.speed,
+                      time: lap.time,
+                      pause: lap.pause
+                    });
+                  });
                
-                const requestBody = {
-                   workoutSessionId: activeWorkout.id,
-                  sport: moveframeData.sport,
-                  type: moveframeData.type || 'STANDARD',
-                   description: moveframeData.description,
-                   notes: moveframeData.notes,
-                   macroFinal: moveframeData.macroFinal,
-                   alarm: moveframeData.alarm,
-                   movelaps,
-                  sectionId: moveframeData.sectionId || 'default',
-                  manualMode: moveframeData.manualMode || false,
-                  // Annotation fields
-                  annotationText: moveframeData.annotationText,
-                  annotationBgColor: moveframeData.annotationBgColor,
-                  annotationTextColor: moveframeData.annotationTextColor,
-                  annotationBold: moveframeData.annotationBold
-                };
+               const requestBody = {
+                  workoutSessionId: activeWorkout.id,
+                 sport: moveframeData.sport,
+                 type: moveframeData.type || 'STANDARD',
+                  description: moveframeData.description,
+                  notes: moveframeData.notes,
+                  macroFinal: moveframeData.macroFinal,
+                  alarm: moveframeData.alarm,
+                  movelaps,
+                 sectionId: moveframeData.sectionId || 'default',
+                 manualMode: moveframeData.manualMode || false,
+                 manualPriority: moveframeData.manualPriority || false,
+                 // Manual mode fields for Moveframe model
+                 manualRepetitions: moveframeData.manualRepetitions,
+                 manualDistance: moveframeData.manualDistance,
+                 // Annotation fields
+                 annotationText: moveframeData.annotationText,
+                 annotationBgColor: moveframeData.annotationBgColor,
+                 annotationTextColor: moveframeData.annotationTextColor,
+                 annotationBold: moveframeData.annotationBold
+               };
                
-                console.log('📤 Creating moveframe with request body:', {
-                  ...requestBody,
-                  manualMode: moveframeData.manualMode,
-                  hasNotes: !!requestBody.notes,
-                  notesLength: requestBody.notes?.length || 0,
-                  movelapCount: movelaps.length
-                });
+               console.log('📤 Creating moveframe with request body:', {
+                 ...requestBody,
+                 manualMode: moveframeData.manualMode,
+                 manualPriority: moveframeData.manualPriority,
+                 hasNotes: !!requestBody.notes,
+                 notesLength: requestBody.notes?.length || 0,
+                 movelapCount: movelaps.length
+               });
                  
                 const result = await moveframeHandlers.createMoveframe(requestBody, deps);
                  console.log('✅ Moveframe created successfully:', result);
@@ -3598,6 +3685,45 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             >
               OK
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Week Notes Modal */}
+      {showWeekNotesModal && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999999] p-4"
+          onClick={() => setShowWeekNotesModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-t-xl flex items-center justify-between">
+              <h3 className="text-xl font-bold">Week Planning Notes</h3>
+              <button
+                onClick={() => setShowWeekNotesModal(false)}
+                className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div
+                className="prose prose-lg max-w-none text-gray-800"
+                style={{
+                  lineHeight: '1.8',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  fontSize: '16px'
+                }}
+                dangerouslySetInnerHTML={{ __html: selectedWeekNotes }}
+              />
+            </div>
           </div>
         </div>
       )}

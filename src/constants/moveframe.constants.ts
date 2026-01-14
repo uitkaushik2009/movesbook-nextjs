@@ -622,12 +622,48 @@ export const DISTANCE_BASED_SPORTS = [
   'SPINNING',
   'RUN',
   'ROWING',
+  'CANOEING',
+  'KAYAKING',
+  'SKATE',
+  'SKI',
+  'SNOWBOARD',
+  'WALKING',
+  'HIKING',
+  'STRETCHING',
+  'CROSSFIT',
+  'SPARTAN'
+] as const;
+
+// Aerobic sports (use "reps" terminology)
+export const AEROBIC_SPORTS = [
+  'SWIM',
+  'BIKE',
+  'SPINNING',
+  'RUN',
+  'ROWING',
+  'CANOEING',
+  'KAYAKING',
   'SKATE',
   'SKI',
   'SNOWBOARD',
   'WALKING',
   'HIKING'
 ] as const;
+
+// Helper function to check if a sport is aerobic
+export const isAerobicSport = (sport: string): boolean => {
+  return AEROBIC_SPORTS.includes(sport as any);
+};
+
+// Helper function to get the correct label for repetitions (reps vs series)
+export const getRepsLabel = (sport: string): string => {
+  return isAerobicSport(sport) ? 'reps' : 'series';
+};
+
+// Helper function to get the correct label capitalized
+export const getRepsLabelCap = (sport: string): string => {
+  return isAerobicSport(sport) ? 'Reps' : 'Series';
+};
 
 // Sports that use Reps type selection (Reps vs Time)
 export const REPS_TYPE_SPORTS = [
@@ -675,8 +711,12 @@ export const getPaceLabel = (sport: string, meters: string): string => {
     return 'Speed\\500m'; // Speed per 500m (time format: 0'00")
   }
   
-  if (sport === 'SKI') {
+  if (sport === 'SKI' || sport === 'SNOWBOARD') {
     return 'Pace\\Refdist'; // Pace per reference distance (time format: 0'00")
+  }
+  
+  if (sport === 'SWIM') {
+    return 'Pace\\10m'; // SWIM uses min\10m
   }
   
   const config = getSportConfig(sport);
@@ -689,6 +729,7 @@ export const getPaceLabel = (sport: string, meters: string): string => {
     }
   }
   
+  // For RUN, SKATE, SKI, SNOWBOARD: Pace\km
   // Otherwise, show Pace\km (or Pace\mile for English)
   // TODO: Add language detection for Pace\mile
   return 'Pace\\km';
@@ -780,4 +821,47 @@ export function getPauseOptions(sport: string, restType: string): readonly strin
     return config.pauses;
   }
   return [];
+}
+
+// Helper function to get distance unit based on sport
+export function getDistanceUnit(sport: string): string {
+  if (sport === 'SWIM') {
+    return 'mt'; // meters for swimming
+  }
+  return 'm'; // meters for other sports
+}
+
+// Helper function to get pace unit based on sport
+export function getPaceUnit(sport: string): string {
+  if (sport === 'SWIM') {
+    return 'min\\10m';
+  }
+  if (sport === 'ROWING') {
+    return 'min\\500m';
+  }
+  if (sport === 'RUN' || sport === 'SKATE' || sport === 'SKI' || sport === 'SNOWBOARD') {
+    return 'min\\km';
+  }
+  return 'min\\km'; // default
+}
+
+// Helper function to check if sport should show distance in overview/print
+export function shouldShowDistance(sport: string): boolean {
+  // Non-aerobic sports that should NOT show distance
+  const noDistanceSports = ['BODY_BUILDING', 'CALISTENIC', 'GYMNASTIC', 'PILATES', 'YOGA', 'TECHNICAL_MOVES', 'FREE_MOVES'];
+  return !noDistanceSports.includes(sport);
+}
+
+// Helper function to format moveframe type for display
+export function formatMoveframeType(type: string): string {
+  if (type === 'STANDARD') {
+    return 'Standard Mode';
+  }
+  if (type === 'BATTERY') {
+    return 'Battery';
+  }
+  if (type === 'ANNOTATION') {
+    return 'Annotation';
+  }
+  return type;
 }

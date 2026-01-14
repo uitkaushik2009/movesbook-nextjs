@@ -5,6 +5,7 @@ import ReactDOM from 'react-dom';
 import { X, Edit, Copy, Move, Trash2, Plus, CheckCircle, Circle, Clock, MapPin, Zap, PlusCircle } from 'lucide-react';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
+import { formatMoveframeType, getRepsLabelCap, getRepsLabel } from '@/constants/moveframe.constants';
 
 interface MoveframeInfoPanelProps {
   isOpen: boolean;
@@ -77,28 +78,57 @@ export default function MoveframeInfoPanel({
   const movelaps = moveframe.movelaps || [];
   const totalMovelaps = movelaps.length;
   const completedMovelaps = movelaps.filter((ml: any) => ml.status === 'COMPLETED').length;
-  const totalDistance = movelaps.reduce((sum: number, ml: any) => sum + (ml.distance || 0), 0);
+  const totalDistance = movelaps.reduce((sum: number, ml: any) => sum + (parseInt(ml.distance) || 0), 0);
+  
+  // Parse time in format: HhMM'SS" (e.g., "1h23'45"")
   const totalTime = movelaps.reduce((sum: number, ml: any) => {
     if (ml.time) {
-      // Parse time string like "7:00" to minutes
-      const parts = ml.time.split(':');
-      const minutes = parseInt(parts[0] || '0');
-      const seconds = parseInt(parts[1] || '0');
-      return sum + minutes + (seconds / 60);
+      const timeStr = ml.time.toString();
+      let totalSeconds = 0;
+      
+      // Check for our custom format: 1h23'45"
+      if (timeStr.includes('h') || timeStr.includes("'")) {
+        const match = timeStr.match(/(\d+)h(\d+)'(\d+)"/);
+        if (match) {
+          const hours = parseInt(match[1]) || 0;
+          const minutes = parseInt(match[2]) || 0;
+          const seconds = parseInt(match[3]) || 0;
+          totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+        }
+      }
+      // Check for HH:MM:SS format
+      else if (timeStr.includes(':')) {
+        const parts = timeStr.split(':');
+        const hours = parseInt(parts[0]) || 0;
+        const minutes = parseInt(parts[1]) || 0;
+        const seconds = parseInt(parts[2]) || 0;
+        totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+      }
+      // Plain number (assume minutes)
+      else {
+        const mins = parseFloat(timeStr) || 0;
+        totalSeconds = mins * 60;
+      }
+      
+      // Return total in minutes for formatTime function
+      return sum + (totalSeconds / 60);
     }
     return sum;
   }, 0);
-  const totalReps = movelaps.reduce((sum: number, ml: any) => sum + (ml.reps || 0), 0);
+  
+  const totalReps = movelaps.reduce((sum: number, ml: any) => sum + (parseInt(ml.reps) || 0), 0);
 
   // Get section color
   const sectionColor = moveframe.section?.color || '#6366f1';
   const sectionName = moveframe.section?.name || 'Unknown';
 
-  // Format time
+  // Format time as HH:MM'SS"
   const formatTime = (minutes: number): string => {
-    const mins = Math.floor(minutes);
-    const secs = Math.round((minutes - mins) * 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    const totalSeconds = Math.round(minutes * 60);
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}'${secs.toString().padStart(2, '0')}"`;
   };
 
   // Format distance
@@ -151,7 +181,7 @@ export default function MoveframeInfoPanel({
                     Moveframe {moveframe.letter}
                   </h2>
                   <p className="text-indigo-200 text-sm">
-                    {moveframe.sport?.replace(/_/g, ' ')} • {moveframe.type}
+                    {moveframe.sport?.replace(/_/g, ' ')} • {formatMoveframeType(moveframe.type)}
                   </p>
                 </div>
               </div>
@@ -248,7 +278,7 @@ export default function MoveframeInfoPanel({
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Total reps ({totalMovelaps})
+              Total {getRepsLabel(moveframe.sport)} ({totalMovelaps})
             </button>
             <button
               onClick={() => setActiveTab('stats')}
@@ -274,16 +304,33 @@ export default function MoveframeInfoPanel({
             <div className="space-y-6">
               {/* Description */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 max-h-[300px] overflow-y-auto">
-                  {moveframe.description ? (
-                    <div 
-                      className="text-gray-700 prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: moveframe.description }}
-                    />
-                  ) : (
-                    <p className="text-gray-700">No description provided</p>
-                  )}
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  {moveframe.manualMode ? 'Extended Text' : 'Description'}
+                </h3>
+                <div className={`bg-gray-50 rounded-lg p-4 border border-gray-200 overflow-y-auto ${
+                  moveframe.manualMode ? 'max-h-[500px]' : 'max-h-[300px]'
+                }`}>
+                  {(() => {
+                    // For manual mode, use notes (full content) instead of description (truncated)
+                    const content = moveframe.manualMode 
+                      ? (moveframe.notes || moveframe.description)
+                      : moveframe.description;
+                    
+                    return content ? (
+                      <div 
+                        className={`text-gray-700 max-w-none ${
+                          moveframe.manualMode ? 'prose prose-lg' : 'prose prose-sm'
+                        }`}
+                        style={moveframe.manualMode ? {
+                          fontSize: '16px',
+                          lineHeight: '1.8'
+                        } : undefined}
+                        dangerouslySetInnerHTML={{ __html: content }}
+                      />
+                    ) : (
+                      <p className="text-gray-700">No description provided</p>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -313,7 +360,7 @@ export default function MoveframeInfoPanel({
                     </div>
                   </div>
                   <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                    <div className="text-orange-600 text-sm font-medium mb-1">Total Reps</div>
+                    <div className="text-orange-600 text-sm font-medium mb-1">Total {getRepsLabelCap(moveframe.sport)}</div>
                     <div className="text-2xl font-bold text-orange-900">
                       {totalReps > 0 ? totalReps : 'N/A'}
                     </div>
@@ -349,7 +396,7 @@ export default function MoveframeInfoPanel({
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Total reps ({totalMovelaps})
+                  Total {getRepsLabel(moveframe.sport)} ({totalMovelaps})
                 </h3>
                 <div className="flex gap-2">
                   <button
@@ -443,7 +490,7 @@ export default function MoveframeInfoPanel({
                               )}
                               {movelap.reps && (
                                 <div>
-                                  <span className="font-medium">Reps:</span> {movelap.reps}
+                                  <span className="font-medium">{getRepsLabelCap(moveframe.sport)}:</span> {movelap.reps}
                                 </div>
                               )}
                             </div>
@@ -564,13 +611,13 @@ export default function MoveframeInfoPanel({
                 </div>
               )}
 
-              {/* Reps Breakdown (for body building) */}
+              {/* Reps/Series Breakdown (for non-aerobic sports) */}
               {totalReps > 0 && (
                 <div className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg p-6 border border-orange-200">
                   <h4 className="font-semibold text-orange-900 mb-4">Repetitions Analysis</h4>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-orange-700">Total Reps:</span>
+                      <span className="text-sm text-orange-700">Total {getRepsLabelCap(moveframe.sport)}:</span>
                       <span className="font-bold text-orange-900">{totalReps}</span>
                     </div>
                     <div className="flex justify-between items-center">

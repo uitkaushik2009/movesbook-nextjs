@@ -63,9 +63,9 @@ model Language {
 model Translation {
   id        String   @id @default(cuid())
   key       String
-  language  String
+  language  String   
   value     String   @db.Text
-  category  String   @default("general")
+  category  String   @default("general") 
   isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -111,7 +111,7 @@ model WorkoutWeek {
   weekNumber    Int
   createdAt     DateTime     @default(now())
   periodId      String?
-  notes         String?
+  notes         String?      
   days          WorkoutDay[]
   period        Period?      @relation("WeekPeriod", fields: [periodId], references: [id])
   workoutPlan   WorkoutPlan  @relation(fields: [workoutPlanId], references: [id], onDelete: Cascade)
@@ -130,7 +130,7 @@ model WorkoutDay {
   periodId           String
   weather            String?
   feelingStatus      String?
-  notes              String?
+  notes              String?          
   createdAt          DateTime         @default(now())
   userId             String
   assignedToUserId   String?
@@ -210,9 +210,9 @@ model Moveframe {
   sport               SportType
   sectionId           String
   type                MoveframeType
-  description         String
+  description         String         @db.Text
   createdAt           DateTime       @default(now())
-  notes               String?
+  notes               String?        @db.Text        
   macroFinal          String?
   alarm               Int?
   annotationBgColor   String?
@@ -221,7 +221,10 @@ model Moveframe {
   annotationBold      Boolean?       @default(false)
   workType            WorkType?      @default(NONE)
   manualMode          Boolean?       @default(false)
+  manualPriority      Boolean?       @default(false) // Priority flag for manual mode display
   favourite           Boolean?       @default(false)
+  repetitions         Int?           // Number of series/repetitions for manual mode
+  distance            Int?           // Distance value for manual mode
   section             WorkoutSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   workoutSession      WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
   movelaps            Movelap[]
@@ -261,7 +264,7 @@ model Movelap {
   pause            String?
   alarm            Int?
   sound            String?
-  notes            String?
+  notes            String?        @db.Text
   status           MovelapStatus
   isSkipped        Boolean       @default(false)
   isDisabled       Boolean       @default(false)
@@ -537,7 +540,7 @@ model GroupMember {
 
 model SuperAdmin {
   id        String    @id @default(cuid())
-  username  String    @unique
+  username  String    @unique 
   email     String    @unique
   password  String
   name      String?
@@ -561,7 +564,7 @@ model SuperAdminSettings {
 
 model ColorDefaults {
   id        String   @id @default(cuid())
-  language  String   @unique
+  language  String   @unique 
   data      String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -571,7 +574,7 @@ model ColorDefaults {
 
 model ToolsDefaults {
   id        String   @id @default(cuid())
-  language  String   @unique
+  language  String   @unique 
   data      String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -581,7 +584,7 @@ model ToolsDefaults {
 
 model FavouritesDefaults {
   id        String   @id @default(cuid())
-  language  String   @unique
+  language  String   @unique 
   data      String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -591,7 +594,7 @@ model FavouritesDefaults {
 
 model MyBestDefaults {
   id        String   @id @default(cuid())
-  language  String   @unique
+  language  String   @unique 
   data      String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -601,7 +604,7 @@ model MyBestDefaults {
 
 model GridDefaults {
   id        String   @id @default(cuid())
-  language  String   @unique
+  language  String   @unique 
   data      String   @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

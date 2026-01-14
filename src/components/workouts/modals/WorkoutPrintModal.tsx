@@ -3,6 +3,7 @@
 import React, { useEffect } from 'react';
 import { X, Printer, FileDown } from 'lucide-react';
 import { getSportIcon } from '@/utils/sportIcons';
+import { formatMoveframeType } from '@/constants/moveframe.constants';
 
 interface WorkoutPrintModalProps {
   isOpen: boolean;
@@ -336,7 +337,7 @@ export default function WorkoutPrintModal({
                           {mf.sport}
                         </td>
                         <td className="border border-gray-300 px-3 py-2 text-center align-top">
-                          {mf.type || 'STANDARD'}
+                          {formatMoveframeType(mf.type || 'STANDARD')}
                         </td>
                         <td className="border border-gray-300 px-3 py-2 text-left align-top">
                           {mf.description ? (

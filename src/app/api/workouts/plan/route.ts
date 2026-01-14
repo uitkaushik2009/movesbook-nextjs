@@ -117,7 +117,9 @@ export async function GET(request: NextRequest) {
     // For TEMPLATE_WEEKS, use the section (A, B, or C) as the storage zone
     let planStorageZone: 'A' | 'B' | 'C' | 'D' = section as 'A' | 'B' | 'C';
     
-    if (actualPlanType === 'WORKOUTS_DONE') {
+    if (actualPlanType === 'YEARLY_PLAN') {
+      planStorageZone = 'B';
+    } else if (actualPlanType === 'WORKOUTS_DONE') {
       planStorageZone = 'C';
     } else if (actualPlanType === 'ARCHIVE') {
       planStorageZone = 'D';
@@ -237,11 +239,11 @@ export async function GET(request: NextRequest) {
     );
 
     // If plan is empty, doesn't start on Monday, or force recreate is requested, delete and recreate it
-    // IMPORTANT: For TEMPLATE_WEEKS, only recreate if explicitly forced - don't auto-recreate to prevent data loss
+    // IMPORTANT: For TEMPLATE_WEEKS and YEARLY_PLAN, only recreate if explicitly forced - don't auto-recreate to prevent data loss
     // ALSO: Don't recreate if plan was just created (prevents race condition from parallel API calls)
     const shouldRecreate = plan && !isRecentlyCreated && (
       forceRecreate || 
-      (type !== 'TEMPLATE_WEEKS' && (isPlanEmpty || needsRecreation))
+      (type !== 'TEMPLATE_WEEKS' && type !== 'YEARLY_PLAN' && (isPlanEmpty || needsRecreation))
     );
     
     if (shouldRecreate && plan) {

@@ -364,7 +364,7 @@ export default function AddMoveframeModal({
                         : 'border-gray-300 hover:border-gray-400'
                     }`}
                   >
-                    Standard
+                    Standard Mode
                   </button>
                   <button
                     onClick={() => setSelectedType('BATTERY')}

@@ -205,19 +205,19 @@ export default function WorkoutTreeView({
                   <div className="text-sm font-semibold opacity-90">
                     {dateRange}
                   </div>
-                  {onSaveFavoriteWeek && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (onSaveFavoriteWeek) {
                         onSaveFavoriteWeek(week);
-                      }}
-                      className="px-3 py-1.5 text-xs rounded-md transition-colors bg-yellow-500 bg-opacity-90 hover:bg-opacity-100 text-white font-semibold shadow-md hover:shadow-lg flex items-center gap-1.5"
-                      title="Save this week in favourites"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                      Save
-                    </button>
-                  )}
+                      }
+                    }}
+                    className="px-3 py-1.5 text-xs rounded-md transition-colors bg-yellow-500 bg-opacity-90 hover:bg-opacity-100 text-white font-semibold shadow-md hover:shadow-lg flex items-center gap-1.5"
+                    title="Save this week in favourites"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                    Save
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

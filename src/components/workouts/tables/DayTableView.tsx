@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, FileText, Flag } from 'lucide-react';
 // import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
 import { useColorSettings } from '@/hooks/useColorSettings';
+import { getContrastTextColor } from '@/utils/colorUtils';
 import DayRowTable from './DayRowTable';
 import WorkoutHierarchyView from './WorkoutHierarchyView';
 import WeeklyInfoModal from '../WeeklyInfoModal';
@@ -141,6 +142,8 @@ export default function DayTableView({
   const [periods, setPeriods] = useState<any[]>([]);
   const [showPeriodSelector, setShowPeriodSelector] = useState(false);
   const [selectedPeriodForRange, setSelectedPeriodForRange] = useState<any | null>(null);
+  const [showWeekNotesModal, setShowWeekNotesModal] = useState(false);
+  const [selectedWeekNotes, setSelectedWeekNotes] = useState<string>('');
   const [weekRangeStart, setWeekRangeStart] = useState<number>(1);
   const [weekRangeEnd, setWeekRangeEnd] = useState<number>(1);
   // Expand state: 0 = Collapsed, 1 = Workouts only (no moveframes), 2 = Workouts + Moveframes
@@ -596,13 +599,18 @@ export default function DayTableView({
   };
 
   const handleMoveWeek = async (targetWeekId: string) => {
-    const sourceWeekId = currentWeek?.id;
-    if (!sourceWeekId) {
-      console.error('❌ No source week ID available');
+    // Check if we're moving multiple weeks (from Section B group) or single week
+    const weekData = currentWeekForModal;
+    const isMultipleWeeks = weekData?.multipleWeeks && Array.isArray(weekData.multipleWeeks);
+    const weeksToMove = isMultipleWeeks ? weekData.multipleWeeks : [currentWeek].filter(Boolean);
+    
+    if (weeksToMove.length === 0) {
+      console.error('❌ No source week(s) available');
       return;
     }
 
-    console.log('🚚 Moving week:', { sourceWeekId, targetWeekId });
+    console.log(`🚚 Moving ${weeksToMove.length} week(s):`, weeksToMove.map((w: any) => `Week ${w.weekNumber} (${w.id})`).join(', '));
+    console.log(`🎯 Initial target week ID: ${targetWeekId}`);
 
     try {
       const token = localStorage.getItem('token');
@@ -611,31 +619,63 @@ export default function DayTableView({
         return;
       }
 
-      const response = await fetch('/api/workouts/weeks/move', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sourceWeekId,
-          targetWeekId
-        })
-      });
+      // Find the target week's weekNumber
+      const targetWeekObj = targetWeeks.find((w: any) => w.id === targetWeekId);
+      if (!targetWeekObj) {
+        throw new Error('Target week not found');
+      }
+      
+      const baseTargetWeekNumber = targetWeekObj.weekNumber;
+      console.log(`🎯 Base target week number: ${baseTargetWeekNumber}`);
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to move week');
+      // Sort source weeks by weekNumber to maintain order
+      const sortedWeeksToMove = [...weeksToMove].sort((a, b) => a.weekNumber - b.weekNumber);
+
+      // Move each week to consecutive target weeks
+      for (let i = 0; i < sortedWeeksToMove.length; i++) {
+        const sourceWeek = sortedWeeksToMove[i];
+        // Calculate target week number: baseTargetWeekNumber + offset
+        const targetWeekNumber = baseTargetWeekNumber + i;
+        
+        // Find the target week ID for this week number
+        const currentTargetWeek = targetWeeks.find((w: any) => w.weekNumber === targetWeekNumber);
+        
+        if (!currentTargetWeek) {
+          console.error(`❌ Target week ${targetWeekNumber} not found`);
+          continue;
+        }
+        
+        console.log(`🚚 Moving week ${sourceWeek.weekNumber} (${sourceWeek.id}) → week ${targetWeekNumber} (${currentTargetWeek.id})`);
+        
+        const response = await fetch('/api/workouts/weeks/move', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sourceWeekId: sourceWeek.id,
+            targetWeekId: currentTargetWeek.id
+          })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || `Failed to move week ${sourceWeek.weekNumber}`);
+        }
+
+        console.log(`✅ Week ${sourceWeek.weekNumber} → Week ${targetWeekNumber} moved successfully`);
       }
 
-      console.log('✅ Week moved successfully');
+      console.log(`✅ All ${weeksToMove.length} week(s) moved successfully`);
       
       // Reload the workout plan
       if (reloadWorkouts) {
         await reloadWorkouts();
       }
     } catch (error) {
-      console.error('❌ Error moving week:', error);
+      console.error('❌ Error moving week(s):', error);
+      alert(`Error moving week(s): ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -749,37 +789,7 @@ export default function DayTableView({
             </div>
               )}
 
-            {/* CENTER-LEFT: Period Badge for Section A/C */}
-            <div className="flex items-center px-4 py-3 bg-white border-r-2 border-gray-200">
-              {activeSection !== 'B' && (
-                /* 3-Week Plans (Section A/C): Show single week period button */
-              <button
-                  onClick={() => {
-                    // Initialize week range to current week
-                    const currentWeekNum = currentWeek?.weekNumber || 1;
-                    setWeekRangeStart(currentWeekNum);
-                    setWeekRangeEnd(currentWeekNum);
-                    setSelectedPeriodForRange(null);
-                    setShowPeriodSelector(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl transition-all hover:scale-105 shadow-lg border-2"
-                style={{
-                  backgroundColor: currentWeek?.period?.color || '#e5e7eb',
-                  borderColor: currentWeek?.period?.color || '#d1d5db',
-                  color: '#000000'
-                }}
-                title="Set period for this week"
-              >
-                <div
-                  className="w-6 h-6 rounded-full border-2 border-white shadow-sm"
-                  style={{ backgroundColor: currentWeek?.period?.color || '#3b82f6' }}
-                />
-                  <span className="font-bold text-sm">
-                  {currentWeek?.period?.name || 'Set Period'}
-                </span>
-              </button>
-              )}
-            </div>
+            {/* CENTER-LEFT: Period Badge for Section A/C - Removed */}
               
             {/* CENTER: Week Description Box (Simplified) - Only for Section A/C */}
             {activeSection !== 'B' && (
@@ -788,8 +798,13 @@ export default function DayTableView({
               <div className="flex-1 min-w-0">
                 {currentWeekData.notes ? (
                   <div 
-                    className="rich-text-preview text-gray-900 font-semibold leading-tight text-lg"
+                    className="rich-text-preview text-gray-900 font-semibold leading-tight text-lg cursor-pointer hover:bg-blue-50 px-2 py-1 rounded transition-colors"
                     dangerouslySetInnerHTML={{ __html: currentWeekData.notes }}
+                    onClick={() => {
+                      setSelectedWeekNotes(currentWeekData.notes);
+                      setShowWeekNotesModal(true);
+                    }}
+                    title="Click to view full notes"
                     style={{
                       display: '-webkit-box',
                       WebkitLineClamp: 2,
@@ -819,56 +834,6 @@ export default function DayTableView({
 
             {/* RIGHT: Action Buttons and Navigation */}
             <div className="flex items-center justify-between gap-4 px-4 py-3 bg-white flex-1">
-              {/* Exclude Stretching Checkbox - Left side */}
-              {activeSection === 'B' && excludeStretchingCheckbox && (
-                <div className="flex-shrink-0">
-                  {excludeStretchingCheckbox}
-                </div>
-              )}
-              
-              {/* Section B Navigation - Previous/Next buttons - Right side */}
-              {activeSection === 'B' && (
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (setCurrentPageStart) {
-                        const newStart = Math.max(1, currentPageStart - weeksPerPage);
-                        if (newStart !== currentPageStart) {
-                          setCurrentPageStart(newStart);
-                          console.log('⬅️ Previous clicked, moving to week', newStart);
-                        }
-                      }
-                    }}
-                    disabled={currentPageStart <= 1}
-                    className="flex items-center gap-1 px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
-                    title="Previous weeks"
-                  >
-                    <ChevronLeft size={16} />
-                    Previous
-                  </button>
-                  <span className="px-3 py-1 text-sm font-semibold text-gray-700 bg-gray-100 rounded-lg whitespace-nowrap">
-                    Weeks {currentPageStart} - {Math.min(currentPageStart + weeksPerPage - 1, totalYearWeeks)} of {totalYearWeeks}
-                  </span>
-                  <button
-                    onClick={() => {
-                      if (setCurrentPageStart) {
-                        const newStart = currentPageStart + weeksPerPage;
-                        if (newStart <= totalYearWeeks) {
-                          setCurrentPageStart(newStart);
-                          console.log('➡️ Next clicked, moving to week', newStart);
-                        }
-                      }
-                    }}
-                    disabled={currentPageStart + weeksPerPage > totalYearWeeks}
-                    className="flex items-center gap-1 px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md"
-                    title="Next weeks"
-                  >
-                    Next
-                    <ChevronRight size={16} />
-                  </button>
-                </div>
-              )}
-
               {/* Copy Week Button - Only show in Section A (3 Weeks Plan) */}
               {activeSection === 'A' && (
               <button
@@ -908,50 +873,13 @@ export default function DayTableView({
               </button>
               )}
               
-              {/* Move Week Button - Show in Section B (Yearly Plan), C (Workouts Done), and D (Archive) */}
-              {activeSection !== 'A' && (
-                <button
-                  onClick={async () => {
-                    const token = localStorage.getItem('token');
-                    if (!token) {
-                      console.error('❌ Please log in first');
-                      return;
-                    }
-                    
-                    try {
-                      // Always fetch from Yearly Plan (Section B) for Move operation
-                      const targetPlanType = 'YEARLY_PLAN';
-                      console.log('📥 Fetching target weeks for Move from:', targetPlanType);
-                      
-                      const response = await fetch(`/api/workouts/plan?type=${targetPlanType}`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                      });
-                      
-                      if (response.ok) {
-                        const data = await response.json();
-                        console.log('✅ Loaded target plan:', data.plan?.type, 'with', data.plan?.weeks?.length || 0, 'weeks');
-                        setTargetWeeks(data.plan?.weeks || []);
-                        setShowMoveWeekModal(true);
-                      } else {
-                        console.error('❌ Failed to load target weeks');
-                      }
-                    } catch (error) {
-                      console.error('Error loading target weeks:', error);
-                    }
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all shadow-md hover:shadow-lg"
-                  title="Move this week"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
-                  Move
-                </button>
-              )}
-              
               {/* Overview Button - For Section A/C */}
               {activeSection !== 'B' && (
               <button
                 onClick={() => {
-                    console.log('📊 Overview button clicked - single week');
+                    console.log('📊 Overview button clicked for Section', activeSection);
+                    console.log('   - sortedWeeks:', sortedWeeks?.length || 0, 'weeks');
+                    console.log('   - currentWeek:', currentWeek?.weekNumber);
                   setAutoPrintWeek(false);
                     setShowAllWeeksInModal(false);
                   setShowWeekTotalsModal(true);
@@ -1048,7 +976,7 @@ export default function DayTableView({
         <div className="p-4 pt-0">
            {/* Action Bar - Only for Section B (Yearly Plan) */}
            {activeSection === 'B' && (
-             <div className="sticky top-[76px] z-40 bg-gray-100 py-3 flex items-center justify-between gap-3 border-b border-gray-300 shadow-md">
+             <div className="bg-gray-100 py-3 flex items-center justify-between gap-3 border-b border-gray-300 shadow-md">
                {/* Left side - Set periods for Section B */}
                <div className="flex items-center gap-3">
           <button
@@ -1112,55 +1040,16 @@ export default function DayTableView({
                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                    Print
                  </button>
-
-                 {/* Save Grid Settings */}
+                 
+                 {/* Move Button */}
                  <button
-                   onClick={async () => {
-                     try {
-                       const gridSettings = {
-                         savedAt: new Date().toISOString(),
-                         message: 'Grid settings saved successfully!'
-                       };
-                       localStorage.setItem('workoutGridSettings', JSON.stringify(gridSettings));
-                       alert('✅ Grid settings saved successfully!');
-                     } catch (error) {
-                       console.error('Error saving grid settings:', error);
-                       alert('❌ Failed to save grid settings');
-                     }
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-              <polyline points="17 21 17 13 7 13 7 21"></polyline>
-              <polyline points="7 3 7 8 15 8"></polyline>
-            </svg>
-            Save Grid Settings
-          </button>
-
-                 {/* Reset to Default */}
-          <button
-            onClick={() => {
-              if (confirm('Are you sure you want to reset grid settings to default?')) {
-                       try {
-                         localStorage.removeItem('workoutGridSettings');
-                         alert('✅ Grid settings reset to default!');
-                         window.location.reload();
-                       } catch (error) {
-                         console.error('Error resetting grid settings:', error);
-                         alert('❌ Failed to reset grid settings');
-                       }
-              }
-            }}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="1 4 1 10 7 10"></polyline>
-              <polyline points="23 20 23 14 17 14"></polyline>
-              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-            </svg>
-            Reset to Default
-          </button>
+                   onClick={() => alert('Move functionality coming soon')}
+                   className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all shadow-md"
+                   title="Move selected items"
+                 >
+                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="5 9 2 12 5 15"></polyline><polyline points="9 5 12 2 15 5"></polyline><polyline points="15 19 12 22 9 19"></polyline><polyline points="19 9 22 12 19 15"></polyline><line x1="2" y1="12" x2="22" y2="12"></line><line x1="12" y1="2" x2="12" y2="22"></line></svg>
+                   Move
+                 </button>
         </div>
              </div>
            )}
@@ -1169,7 +1058,7 @@ export default function DayTableView({
       {activeSection === 'B' ? (
         <>
           {/* Options for Selected Days - Section B */}
-          <div className="sticky top-[140px] z-30 flex items-center gap-3 mb-3 px-4 py-2 bg-gray-50 border border-gray-300 rounded shadow-md">
+          <div className="flex items-center gap-3 mb-3 px-4 py-2 bg-gray-50 border border-gray-300 rounded shadow-md">
             <label className="text-sm font-semibold text-gray-700">Options of the selected days</label>
             <select 
               className="px-3 py-1 border border-gray-300 rounded text-sm"
@@ -1244,7 +1133,10 @@ export default function DayTableView({
                 {/* Week Header Bar */}
                 <div 
                   className="rounded-t-lg px-4 py-3 flex items-center justify-between border-b-2 border-gray-300"
-                  style={{ backgroundColor: week.period?.color || '#f3f4f6' }}
+                  style={{ 
+                    backgroundColor: week.period?.color || '#f3f4f6',
+                    color: getContrastTextColor(week.period?.color || '#f3f4f6')
+                  }}
                 >
                   {/* Left: Period Badge and Description */}
                   <div className="flex items-center gap-4 flex-1">
@@ -1277,8 +1169,13 @@ export default function DayTableView({
                     <div className="flex-1 max-w-xl">
                       {weeklyNotes[week.id]?.notes ? (
                         <div 
-                          className="text-sm font-medium text-gray-700"
+                          className="text-sm font-medium cursor-pointer hover:bg-blue-50 px-2 py-1 rounded transition-colors"
                           dangerouslySetInnerHTML={{ __html: weeklyNotes[week.id].notes }}
+                          onClick={() => {
+                            setSelectedWeekNotes(weeklyNotes[week.id].notes);
+                            setShowWeekNotesModal(true);
+                          }}
+                          title="Click to view full notes"
                           style={{
                             display: '-webkit-box',
                             WebkitLineClamp: 1,
@@ -1287,33 +1184,13 @@ export default function DayTableView({
                           }}
                         />
                       ) : (
-                        <span className="text-sm text-gray-500 italic">Click Edit to add description...</span>
+                        <span className="text-sm italic opacity-70">Click Edit to add description...</span>
                       )}
                     </div>
                   </div>
                   
                   {/* Right: Action Buttons */}
                   <div className="flex items-center gap-2">
-                    {/* Set periods Button */}
-                    <button
-                      onClick={() => {
-                        setCurrentWeekForModal(week);
-                        const weekNum = week.weekNumber || 1;
-                        setWeekRangeStart(weekNum);
-                        setWeekRangeEnd(weekNum);
-                        setSelectedPeriodForRange(null);
-                        setShowPeriodSelector(true);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all shadow-md"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                      </svg>
-                      Set periods
-                    </button>
                     
                     {/* Edit Button */}
                     <button
@@ -1621,6 +1498,7 @@ export default function DayTableView({
                                   onToggleWorkout={onToggleWorkout}
                                   onExpandOnlyThisWorkout={onExpandOnlyThisWorkout}
                                   onExpandDayWithAllWorkouts={onExpandDayWithAllWorkouts}
+                                  onCycleWorkoutExpansion={onCycleWorkoutExpansion}
                                   onEditDay={onEditDay}
                                   onAddWorkout={onAddWorkout}
                                   onShowDayInfo={handleShowDayInfo}
@@ -1770,55 +1648,6 @@ export default function DayTableView({
                   )}
                 </div>
 
-                {/* Right side: Save Grid Settings + Reset to Default */}
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={async () => {
-                      try {
-                        const gridSettings = {
-                          savedAt: new Date().toISOString(),
-                          message: 'Grid settings saved successfully!'
-                        };
-                        localStorage.setItem('workoutGridSettings', JSON.stringify(gridSettings));
-                        alert('✅ Grid settings saved successfully!');
-                      } catch (error) {
-                        console.error('Error saving grid settings:', error);
-                        alert('❌ Failed to save grid settings');
-                      }
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium shadow-md hover:shadow-lg"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                      <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                      <polyline points="7 3 7 8 15 8"></polyline>
-                    </svg>
-                    Save Grid Settings
-                  </button>
-                  
-                  <button
-                    onClick={() => {
-                      if (confirm('Are you sure you want to reset grid settings to default?')) {
-                        try {
-                          localStorage.removeItem('workoutGridSettings');
-                          alert('✅ Grid settings reset to default!');
-                          window.location.reload();
-                        } catch (error) {
-                          console.error('Error resetting grid settings:', error);
-                          alert('❌ Failed to reset grid settings');
-                        }
-                      }
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium shadow-md hover:shadow-lg"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="1 4 1 10 7 10"></polyline>
-                      <polyline points="23 20 23 14 17 14"></polyline>
-                      <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
-                    </svg>
-                    Reset to Default
-                  </button>
-                </div>
           </div>
 
           {/* Table Wrapper */}
@@ -2104,7 +1933,7 @@ export default function DayTableView({
       <WeekTotalsModal
         isOpen={showWeekTotalsModal}
         week={currentWeekForModal || currentWeek}
-        weeks={showAllWeeksInModal && activeSection === 'B' ? (allWeeks || workoutPlan?.weeks) : undefined}
+        weeks={sortedWeeks}
         isMultiWeekView={showAllWeeksInModal && activeSection === 'B'}
         autoPrint={autoPrintWeek}
         activeSection={activeSection}
@@ -2147,9 +1976,9 @@ export default function DayTableView({
       {/* Period Selector Modal with Week Range */}
       {showPeriodSelector && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100000]">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">Select Period for Week {(currentWeekForModal || currentWeek)?.weekNumber}</h2>
+          <div className="bg-white rounded-lg shadow-xl p-4 max-w-lg w-full mx-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-bold text-gray-900">Select Period for Week {(currentWeekForModal || currentWeek)?.weekNumber}</h2>
               <button
                 onClick={() => {
                   setShowPeriodSelector(false);
@@ -2164,42 +1993,88 @@ export default function DayTableView({
               </button>
             </div>
             
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-xs text-gray-600 mb-3">
               This will set the period for the entire week and update all days in this week.
             </p>
             
             {/* Period Selection */}
-            <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
-              {periods && periods.length > 0 ? periods.map((period) => (
-                <button
-                  key={period.id}
-                  onClick={() => {
-                    setSelectedPeriodForRange(period);
-                    // Initialize range to current week
-                    setWeekRangeStart(currentWeek?.weekNumber || 1);
-                    setWeekRangeEnd(currentWeek?.weekNumber || 1);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 border-2 rounded-lg hover:bg-gray-50 transition-colors"
-                  style={{
-                    borderColor: selectedPeriodForRange?.id === period.id ? period.color : '#e5e7eb',
-                    backgroundColor: selectedPeriodForRange?.id === period.id ? period.color + '20' : 'white'
-                  }}
-                >
-                  <div
-                    className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex-shrink-0"
-                    style={{ backgroundColor: period.color }}
-                  />
-                  <div className="flex-1 text-left">
-                    <div className="font-semibold text-gray-900">{period.name}</div>
-                    {period.description && (
-                      <div className="text-xs text-gray-600">{period.description}</div>
+            <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
+              {periods && periods.length > 0 ? periods.map((period) => {
+                // For sections B and C, calculate date range from weeks in this period
+                const getWeekDateRange = () => {
+                  if (activeSection === 'A' || !sortedWeeks || sortedWeeks.length === 0) {
+                    return null;
+                  }
+                  
+                  // Find all weeks that belong to this period
+                  const periodWeeks = sortedWeeks.filter((week: any) => week.period?.id === period.id);
+                  
+                  if (periodWeeks.length === 0) {
+                    return null;
+                  }
+                  
+                  // Sort by week number to get first and last
+                  const sortedPeriodWeeks = [...periodWeeks].sort((a: any, b: any) => a.weekNumber - b.weekNumber);
+                  const firstWeek = sortedPeriodWeeks[0];
+                  const lastWeek = sortedPeriodWeeks[sortedPeriodWeeks.length - 1];
+                  
+                  // Get start date from first week's first day
+                  const firstDays = firstWeek.days || [];
+                  const sortedFirstDays = [...firstDays].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                  const firstDay = sortedFirstDays[0];
+                  const startDate = firstDay?.date ? new Date(firstDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+                  
+                  // Get end date from last week's last day
+                  const lastDays = lastWeek.days || [];
+                  const sortedLastDays = [...lastDays].sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                  const lastDay = sortedLastDays[0];
+                  const endDate = lastDay?.date ? new Date(lastDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
+                  
+                  if (startDate && endDate) {
+                    return `${startDate} - ${endDate}`;
+                  }
+                  
+                  return null;
+                };
+                
+                const dateRange = getWeekDateRange();
+                
+                const isSelected = selectedPeriodForRange?.id === period.id;
+                const bgColor = isSelected ? period.color : 'white';
+                const textColor = isSelected ? getContrastTextColor(period.color) : '#111827';
+                
+                return (
+                  <button
+                    key={period.id}
+                    onClick={() => {
+                      setSelectedPeriodForRange(period);
+                      // Initialize range to current week
+                      setWeekRangeStart(currentWeek?.weekNumber || 1);
+                      setWeekRangeEnd(currentWeek?.weekNumber || 1);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 border-2 rounded-lg hover:opacity-90 transition-all"
+                    style={{
+                      borderColor: isSelected ? period.color : '#e5e7eb',
+                      backgroundColor: bgColor,
+                      color: textColor
+                    }}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full border-2 border-white shadow-sm flex-shrink-0"
+                      style={{ backgroundColor: period.color }}
+                    />
+                    <div className="flex-1 text-left">
+                      <div className="font-semibold">{period.name}</div>
+                      {dateRange && (
+                        <div className="text-xs opacity-80 mt-0.5">{dateRange}</div>
+                      )}
+                    </div>
+                    {isSelected && (
+                      <div className="font-bold opacity-90">✓</div>
                     )}
-                  </div>
-                  {selectedPeriodForRange?.id === period.id && (
-                    <div className="text-green-600 font-bold">✓</div>
-                  )}
-                </button>
-              )) : null}
+                  </button>
+                );
+              }) : null}
               
               {(!periods || periods.length === 0) && (
                 <div className="text-center py-8 text-gray-500">
@@ -2211,14 +2086,14 @@ export default function DayTableView({
 
             {/* Week Range Selectors */}
             {selectedPeriodForRange && (
-              <div className="space-y-3 mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="text-sm font-semibold text-gray-700 mb-2">
+              <div className="space-y-2 mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="text-xs font-semibold text-gray-700 mb-1">
                   Apply to week range:
                 </div>
                 
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-700 whitespace-nowrap">
-                    From the start of week number
+                  <label className="text-xs text-gray-700 whitespace-nowrap">
+                    From week:
                   </label>
                   <select
                     value={weekRangeStart}
@@ -2230,19 +2105,41 @@ export default function DayTableView({
                         setWeekRangeEnd(start);
                       }
                     }}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    size={5}
                   >
-                    {sortedWeeks.map((week: any) => (
-                      <option key={week.id} value={week.weekNumber}>
-                        Week {week.weekNumber}
-                      </option>
-                    ))}
+                    {sortedWeeks.map((week: any) => {
+                      // Get week date range
+                      const weekDays = week.days || [];
+                      const sortedDays = [...weekDays].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                      const startDate = sortedDays[0]?.date ? new Date(sortedDays[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+                      const endDate = sortedDays[sortedDays.length - 1]?.date ? new Date(sortedDays[sortedDays.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+                      const dateRange = startDate && endDate ? ` (${startDate} - ${endDate})` : '';
+                      const periodName = week.period?.name || 'No Period';
+                      
+                      // Format based on section
+                      if (activeSection === 'A') {
+                        // Section A: ● Period Name - Week N (no dates)
+                        return (
+                          <option key={week.id} value={week.weekNumber}>
+                            ● {periodName} - Week {week.weekNumber}
+                          </option>
+                        );
+                      } else {
+                        // Sections B & C: ● Period Name - Week N (dates)
+                        return (
+                          <option key={week.id} value={week.weekNumber}>
+                            ● {periodName} - Week {week.weekNumber}{dateRange}
+                          </option>
+                        );
+                      }
+                    })}
                   </select>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-700 whitespace-nowrap">
-                    To the end of week number
+                  <label className="text-xs text-gray-700 whitespace-nowrap">
+                    To week:
                   </label>
                   <select
                     value={weekRangeEnd}
@@ -2254,21 +2151,43 @@ export default function DayTableView({
                         setWeekRangeStart(end);
                       }
                     }}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    size={5}
                   >
-                    {sortedWeeks.map((week: any) => (
-                      <option key={week.id} value={week.weekNumber}>
-                        Week {week.weekNumber}
-                      </option>
-                    ))}
+                    {sortedWeeks.map((week: any) => {
+                      // Get week date range
+                      const weekDays = week.days || [];
+                      const sortedDays = [...weekDays].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                      const startDate = sortedDays[0]?.date ? new Date(sortedDays[0].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+                      const endDate = sortedDays[sortedDays.length - 1]?.date ? new Date(sortedDays[sortedDays.length - 1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+                      const dateRange = startDate && endDate ? ` (${startDate} - ${endDate})` : '';
+                      const periodName = week.period?.name || 'No Period';
+                      
+                      // Format based on section
+                      if (activeSection === 'A') {
+                        // Section A: ● Period Name - Week N (no dates)
+                        return (
+                          <option key={week.id} value={week.weekNumber}>
+                            ● {periodName} - Week {week.weekNumber}
+                          </option>
+                        );
+                      } else {
+                        // Sections B & C: ● Period Name - Week N (dates)
+                        return (
+                          <option key={week.id} value={week.weekNumber}>
+                            ● {periodName} - Week {week.weekNumber}{dateRange}
+                          </option>
+                        );
+                      }
+                    })}
                   </select>
                 </div>
 
-                <div className="mt-2 p-2 bg-white rounded text-sm text-gray-700">
-                  <strong>Preview:</strong> Period "{selectedPeriodForRange.name}" will be applied to{' '}
+                <div className="mt-2 p-2 bg-white rounded text-xs text-gray-700">
+                  <strong>Preview:</strong> "{selectedPeriodForRange.name}" → {' '}
                   {weekRangeStart === weekRangeEnd 
                     ? `Week ${weekRangeStart}` 
-                    : `Weeks ${weekRangeStart} to ${weekRangeEnd} (${weekRangeEnd - weekRangeStart + 1} weeks)`}
+                    : `Weeks ${weekRangeStart}-${weekRangeEnd} (${weekRangeEnd - weekRangeStart + 1} weeks)`}
                 </div>
               </div>
             )}
@@ -2363,6 +2282,45 @@ export default function DayTableView({
           setSelectedDayForInfo(null);
         }}
       />
+
+      {/* Week Notes Modal */}
+      {showWeekNotesModal && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[999999] p-4"
+          onClick={() => setShowWeekNotesModal(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-t-xl flex items-center justify-between">
+              <h3 className="text-xl font-bold">Week Planning Notes</h3>
+              <button
+                onClick={() => setShowWeekNotesModal(false)}
+                className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div
+                className="prose prose-lg max-w-none text-gray-800"
+                style={{
+                  lineHeight: '1.8',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  fontSize: '16px'
+                }}
+                dangerouslySetInnerHTML={{ __html: selectedWeekNotes }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

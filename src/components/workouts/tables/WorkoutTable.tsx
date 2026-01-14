@@ -229,13 +229,13 @@ export default function WorkoutTable({
     console.log(`🔍 [WorkoutTable] Using sports:`, workoutSportNames);
     
     // Build a map of totals from moveframes
-    const sportMap = new Map<string, { distance: number; durationMinutes: number; series: number; repetitions: number; k: string }>();
+    const sportMap = new Map<string, { distance: number; durationSeconds: number; series: number; repetitions: number; k: string }>();
     
     // Calculate from moveframes
     (workout.moveframes || []).forEach((mf: any) => {
       const sport = mf.sport || 'Unknown';
       if (!sportMap.has(sport)) {
-        sportMap.set(sport, { distance: 0, durationMinutes: 0, series: 0, repetitions: 0, k: '' });
+        sportMap.set(sport, { distance: 0, durationSeconds: 0, series: 0, repetitions: 0, k: '' });
       }
       
       const totals = sportMap.get(sport)!;
@@ -244,18 +244,16 @@ export default function WorkoutTable({
       if (isSeries) {
         // For NON-AEROBIC (series-based) sports
         if (mf.manualMode) {
-          // For manual input: use the total series from movelaps count
-          const totalSeries = mf.movelaps?.length || 0;
+          // For manual input: use the repetitions field from moveframe (since movelaps may not exist)
+          const totalSeries = mf.repetitions || 0;
           totals.series += totalSeries;
           
-          // Calculate total repetitions (sum of all reps across all series)
-          (mf.movelaps || []).forEach((lap: any) => {
-            totals.repetitions += parseInt(lap.reps) || 0;
-          });
+          // Manual mode series-based sports don't have movelaps, so repetitions is the count
+          totals.repetitions += totalSeries;
         } else {
-          // For standard mode: use repetitions field
-          const moveframeRepetitions = parseInt(mf.repetitions) || 0;
-          totals.series += moveframeRepetitions;
+          // For standard mode: count movelaps as series
+          const totalSeries = mf.movelaps?.length || 0;
+          totals.series += totalSeries;
           
           // Sum actual reps from all movelaps
           (mf.movelaps || []).forEach((lap: any) => {
@@ -271,32 +269,50 @@ export default function WorkoutTable({
             totals.distance += parseInt(lap.distance) || 0;
           }
           
-          // Add duration (if available as time in format like "00:05:30" or minutes)
+          // Add duration (parse time in various formats: "1h23'45"6", "00:05:30", or minutes)
           if (lap.time) {
             const timeStr = lap.time.toString();
-            if (timeStr.includes(':')) {
+            let totalSeconds = 0;
+            
+            // Check for our custom format: 1h23'45"6
+            if (timeStr.includes('h') || timeStr.includes("'")) {
+              const match = timeStr.match(/(\d+)h(\d+)'(\d+)"(\d)?/);
+              if (match) {
+                const hours = parseInt(match[1]) || 0;
+                const minutes = parseInt(match[2]) || 0;
+                const seconds = parseInt(match[3]) || 0;
+                totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+              }
+            }
+            // Check for HH:MM:SS format
+            else if (timeStr.includes(':')) {
               const parts = timeStr.split(':');
               const hours = parseInt(parts[0]) || 0;
               const minutes = parseInt(parts[1]) || 0;
               const seconds = parseInt(parts[2]) || 0;
-              totals.durationMinutes += (hours * 60) + minutes + (seconds / 60);
-            } else {
-              totals.durationMinutes += parseFloat(timeStr) || 0;
+              totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+            }
+            // Plain number (assume minutes)
+            else {
+              const mins = parseFloat(timeStr) || 0;
+              totalSeconds = mins * 60;
+            }
+            
+            if (totalSeconds > 0) {
+              totals.durationSeconds += totalSeconds;
             }
           }
         });
       }
     });
     
-    // Format duration as HH:MM
-    const formatDuration = (minutes: number): string => {
-      if (minutes === 0) return '';
-      const hours = Math.floor(minutes / 60);
-      const mins = Math.floor(minutes % 60);
-      if (hours > 0) {
-        return `${hours}:${mins.toString().padStart(2, '0')}`;
-      }
-      return `0:${mins.toString().padStart(2, '0')}`;
+    // Format duration as HH:MM:SS (compact)
+    const formatDuration = (seconds: number): string => {
+      if (seconds === 0) return '00:00:00';
+      const hours = Math.floor(seconds / 3600);
+      const minutes = Math.floor((seconds % 3600) / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
     
     // Build array of sports (up to 4), using the sports found
@@ -372,7 +388,7 @@ export default function WorkoutTable({
           icon: getSportIcon(sportName, iconType),
           isSeriesBased: isSeries,
           distance: totals ? (isSeries ? totals.series : totals.distance) : 0,
-          duration: totals ? (isSeries ? totals.repetitions.toString() : formatDuration(totals.durationMinutes)) : '',
+          duration: totals ? (isSeries ? totals.repetitions.toString() : formatDuration(totals.durationSeconds)) : '00:00:00',
           k: totals ? totals.k : '',
           mainWork: getDisplayContent(mainWork),
           secondaryWork: getDisplayContent(secondaryWork),
@@ -700,7 +716,7 @@ export default function WorkoutTable({
                   const words = sportName.split(' ');
                   const isOneWord = words.length === 1;
                   const icon = sports[0].icon && (useImageIcons ? 
-                    <img src={sports[0].icon} alt={sportName} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
+                    <img src={sports[0].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '60px', height: '60px', filter: 'grayscale(100%)' }} /> : 
                     <span className="text-base flex-shrink-0">{sports[0].icon}</span>
                   );
                   
@@ -728,8 +744,8 @@ export default function WorkoutTable({
               </td>
               <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-black font-bold text-base">{sports[0].distance > 0 ? sports[0].distance : ''}</div>
-                  <div className="mt-1 font-bold text-sm">{sports[0].duration}</div>
+                  <div className="text-black font-bold text-base">{sports[0].distance > 0 ? `${sports[0].distance}m` : ''}</div>
+                  <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sports[0].duration}</div>
                 </div>
               </td>
               <td className="border border-gray-200 px-2 text-xs text-center align-middle text-red-600 font-bold" style={{ width: '50px', height: '60px' }}>{sports[0].k}</td>
@@ -807,7 +823,7 @@ export default function WorkoutTable({
                   const words = sportName.split(' ');
                   const isOneWord = words.length === 1;
                   const icon = sports[1].icon && (useImageIcons ? 
-                    <img src={sports[1].icon} alt={sportName} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
+                    <img src={sports[1].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '60px', height: '60px', filter: 'grayscale(100%)' }} /> : 
                     <span className="text-base flex-shrink-0">{sports[1].icon}</span>
                   );
                   
@@ -835,8 +851,8 @@ export default function WorkoutTable({
               </td>
               <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-black font-bold text-base">{sports[1].distance > 0 ? sports[1].distance : ''}</div>
-                  <div className="mt-1 font-bold text-sm">{sports[1].duration}</div>
+                  <div className="text-black font-bold text-base">{sports[1].distance > 0 ? `${sports[1].distance}m` : ''}</div>
+                  <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sports[1].duration}</div>
                 </div>
               </td>
               <td className="border border-gray-200 px-2 text-xs text-center align-middle text-red-600 font-bold" style={{ width: '50px', height: '60px' }}>{sports[1].k}</td>
@@ -910,7 +926,7 @@ export default function WorkoutTable({
                   const words = sportName.split(' ');
                   const isOneWord = words.length === 1;
                   const icon = sports[2].icon && (useImageIcons ? 
-                    <img src={sports[2].icon} alt={sportName} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
+                    <img src={sports[2].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '60px', height: '60px', filter: 'grayscale(100%)' }} /> : 
                     <span className="text-base flex-shrink-0">{sports[2].icon}</span>
                   );
                   
@@ -938,8 +954,8 @@ export default function WorkoutTable({
               </td>
               <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-black font-bold text-base">{sports[2].distance > 0 ? sports[2].distance : ''}</div>
-                  <div className="mt-1 font-bold text-sm">{sports[2].duration}</div>
+                  <div className="text-black font-bold text-base">{sports[2].distance > 0 ? `${sports[2].distance}m` : ''}</div>
+                  <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sports[2].duration}</div>
                 </div>
               </td>
               <td className="border border-gray-200 px-2 text-xs text-center align-middle text-red-600 font-bold" style={{ width: '50px', height: '60px' }}>{sports[2].k}</td>
@@ -1013,7 +1029,7 @@ export default function WorkoutTable({
                   const words = sportName.split(' ');
                   const isOneWord = words.length === 1;
                   const icon = sports[3].icon && (useImageIcons ? 
-                    <img src={sports[3].icon} alt={sportName} className="w-5 h-5 object-cover rounded flex-shrink-0" /> : 
+                    <img src={sports[3].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '60px', height: '60px', filter: 'grayscale(100%)' }} /> : 
                     <span className="text-base flex-shrink-0">{sports[3].icon}</span>
                   );
                   
@@ -1041,8 +1057,8 @@ export default function WorkoutTable({
               </td>
               <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-black font-bold text-base">{sports[3].distance > 0 ? sports[3].distance : ''}</div>
-                  <div className="mt-1 font-bold text-sm">{sports[3].duration}</div>
+                  <div className="text-black font-bold text-base">{sports[3].distance > 0 ? `${sports[3].distance}m` : ''}</div>
+                  <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sports[3].duration}</div>
                 </div>
               </td>
               <td className="border border-gray-200 px-2 text-xs text-center align-middle text-red-600 font-bold" style={{ width: '50px', height: '60px' }}>{sports[3].k}</td>
@@ -1260,8 +1276,8 @@ export default function WorkoutTable({
               )}
             </div>
 
-            {/* Notes */}
-            {clickedMoveframe.notes && (
+            {/* Notes - Only show for non-manual moveframes, as manual mode uses notes for content */}
+            {clickedMoveframe.notes && !clickedMoveframe.manualMode && (
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <div className="font-semibold text-gray-700 mb-1 text-[10px]">Notes:</div>
                 <div className="text-gray-900 bg-gray-50 p-2 rounded text-[10px]">

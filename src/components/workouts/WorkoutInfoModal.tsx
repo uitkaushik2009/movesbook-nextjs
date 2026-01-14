@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { SPORT_OPTIONS, WORKOUT_SYMBOLS } from '@/constants/workout.constants';
-import { isSeriesBasedSport } from '@/constants/moveframe.constants';
+import { isSeriesBasedSport, shouldShowDistance, getDistanceUnit } from '@/constants/moveframe.constants';
 
 interface WorkoutInfoModalProps {
   isOpen: boolean;
@@ -112,14 +112,24 @@ export default function WorkoutInfoModal({
       currentTotals.moveframeCount += 1;
       currentTotals.movelapCount += (mf.movelaps || []).length;
       
-      // For ALL sports: sum the series from each moveframe
-      const moveframeRepetitions = parseInt(mf.repetitions) || 0;
-      currentTotals.series += moveframeRepetitions;
-      
       if (isSeries) {
-        // For series-based sports: sum actual reps from all movelaps
+        // For series-based sports
+        // For manual mode: use repetitions field, for standard mode: count movelaps
+        const seriesCount = mf.manualMode ? (mf.repetitions || 0) : (mf.movelaps?.length || 0);
+        console.log(`  [WorkoutInfoModal] Series-based sport ${sport}:`, {
+          moveframeId: mf.id,
+          letter: mf.letter,
+          movelapCount: seriesCount,
+          movelaps: mf.movelaps,
+          repetitions: mf.repetitions
+        });
+        currentTotals.series += seriesCount;
+        
+        // Sum actual reps from all movelaps
         (mf.movelaps || []).forEach((lap: any) => {
-          currentTotals.repetitions += parseInt(lap.reps) || 0;
+          const reps = parseInt(lap.reps) || 0;
+          currentTotals.repetitions += reps;
+          console.log(`    Lap: ${reps} reps`);
         });
       } else {
         // For distance-based sports: sum distances and duration from movelaps
@@ -127,17 +137,37 @@ export default function WorkoutInfoModal({
           // Add distance
           currentTotals.distance += parseInt(lap.distance) || 0;
           
-          // Add duration (parse time in format like "00:05:30" or minutes)
+          // Add duration (parse time in various formats: "1h23'45"6", "00:05:30", or minutes)
           const timeStr = lap.time?.toString() || '';
           if (timeStr) {
-            if (timeStr.includes(':')) {
+            let totalMins = 0;
+            
+            // Check for our custom format: 1h23'45"6
+            if (timeStr.includes('h') || timeStr.includes("'")) {
+              const match = timeStr.match(/(\d+)h(\d+)'(\d+)"(\d)?/);
+              if (match) {
+                const hours = parseInt(match[1]) || 0;
+                const minutes = parseInt(match[2]) || 0;
+                const seconds = parseInt(match[3]) || 0;
+                const deciseconds = parseInt(match[4]) || 0;
+                totalMins = (hours * 60) + minutes + (seconds / 60) + (deciseconds / 600);
+              }
+            }
+            // Check for HH:MM:SS format
+            else if (timeStr.includes(':')) {
               const parts = timeStr.split(':');
               const hours = parseInt(parts[0]) || 0;
               const minutes = parseInt(parts[1]) || 0;
               const seconds = parseInt(parts[2]) || 0;
-              currentTotals.durationMinutes += (hours * 60) + minutes + (seconds / 60);
-            } else {
-              currentTotals.durationMinutes += parseFloat(timeStr) || 0;
+              totalMins = (hours * 60) + minutes + (seconds / 60);
+            }
+            // Plain number (minutes)
+            else {
+              totalMins = parseFloat(timeStr) || 0;
+            }
+            
+            if (totalMins > 0) {
+              currentTotals.durationMinutes += totalMins;
             }
           }
         });
@@ -150,6 +180,14 @@ export default function WorkoutInfoModal({
     let sportsArray = Array.from(sportMap.entries()).map(([sportValue, totals]) => {
       const sportOption = SPORT_OPTIONS.find(s => s.value === sportValue);
       const isSeries = isSeriesBasedSport(sportValue);
+      
+      console.log(`[WorkoutInfoModal] Final totals for ${sportValue}:`, {
+        series: totals.series,
+        repetitions: totals.repetitions,
+        distance: totals.distance,
+        moveframeCount: totals.moveframeCount,
+        movelapCount: totals.movelapCount
+      });
       
       return {
         sport: sportValue,
@@ -272,19 +310,32 @@ export default function WorkoutInfoModal({
           </div>
 
           {/* Main Sport (Editable) */}
-          <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 rounded-lg border border-indigo-200">
+          <div className={`p-4 rounded-lg border ${
+            mainSport 
+              ? 'bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-200' 
+              : 'bg-gradient-to-br from-orange-50 to-yellow-50 border-orange-300'
+          }`}>
             <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-              <span>🏆</span>
+              <span>{mainSport ? '🏆' : '⚠️'}</span>
               <span>Main Sport (Note)</span>
+              {!mainSport && (
+                <span className="text-xs bg-orange-200 text-orange-800 px-2 py-0.5 rounded-full font-semibold animate-pulse">
+                  Not Set
+                </span>
+              )}
             </h3>
             <div className="relative">
               <select
                 value={mainSport}
                 onChange={(e) => handleMainSportChange(e.target.value)}
                 disabled={isSavingMainSport}
-                className="w-full px-3 py-2.5 pr-10 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all bg-white"
+                className={`w-full px-3 py-2.5 pr-10 border rounded-lg focus:ring-2 text-sm transition-all ${
+                  mainSport 
+                    ? 'border-indigo-300 focus:ring-indigo-500 focus:border-indigo-500 bg-white'
+                    : 'border-orange-400 focus:ring-orange-500 focus:border-orange-500 bg-orange-50 font-medium'
+                }`}
               >
-                <option value="">Select main sport...</option>
+                <option value="">⚠️ Select main sport...</option>
                 {SPORT_OPTIONS.map((sport) => (
                   <option key={sport.value} value={sport.value}>
                     {sport.icon} {sport.label}
@@ -298,7 +349,9 @@ export default function WorkoutInfoModal({
               )}
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              This is a note field that can be freely edited and does not affect workout structure.
+              {mainSport 
+                ? 'This is a note field that can be freely edited and does not affect workout structure.'
+                : '💡 Tip: Setting the main sport helps organize and identify your workout type.'}
             </p>
           </div>
 
@@ -359,12 +412,14 @@ export default function WorkoutInfoModal({
                                 <span className="text-gray-500">Movelaps:</span>
                                 <span className="font-semibold text-purple-600">{sport.movelapCount}</span>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-gray-500">Distance:</span>
-                                <span className="font-semibold text-blue-600">
-                                  {sport.distance > 0 ? `${sport.distance}m` : '—'}
-                                </span>
-                              </div>
+                              {shouldShowDistance(sport.sport) && (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-gray-500">Distance:</span>
+                                  <span className="font-semibold text-blue-600">
+                                    {sport.distance > 0 ? `${sport.distance}${getDistanceUnit(sport.sport)}` : '—'}
+                                  </span>
+                                </div>
+                              )}
                               <div className="flex items-center gap-1">
                                 <span className="text-gray-500">Duration:</span>
                                 <span className="font-semibold text-green-600">

@@ -51,8 +51,25 @@ export async function POST(request: NextRequest) {
       annotationTextColor,
       annotationBold,
       movelaps,
-      manualMode
+      manualMode,
+      manualPriority,    // Priority flag for manual mode display
+      manualRepetitions, // For storing on Moveframe model (manual mode only)
+      manualDistance     // For storing on Moveframe model (manual mode only)
     } = body;
+
+    // 🔍 DEBUG: Log manual mode fields
+    if (manualMode) {
+      console.log('🔍 [API POST] Manual mode moveframe creation:');
+      console.log('   Sport:', sport);
+      console.log('   manualMode:', manualMode);
+      console.log('   manualPriority:', manualPriority);
+      console.log('   manualRepetitions (raw):', manualRepetitions);
+      console.log('   manualRepetitions (type):', typeof manualRepetitions);
+      console.log('   manualRepetitions (parsed):', manualRepetitions !== undefined ? parseInt(manualRepetitions) : null);
+      console.log('   manualDistance (raw):', manualDistance);
+      console.log('   manualDistance (type):', typeof manualDistance);
+      console.log('   manualDistance (parsed):', manualDistance !== undefined ? parseInt(manualDistance) : null);
+    }
     
     // Validate required fields
     if (!workoutSessionId) {
@@ -124,11 +141,21 @@ export async function POST(request: NextRequest) {
       macroFinal: macroFinal || null,
       alarm: alarm ? parseInt(alarm) : null,
       manualMode: manualMode || false,
+      manualPriority: manualPriority || false,
+      repetitions: manualRepetitions !== undefined && manualRepetitions !== null && manualRepetitions !== '' ? parseInt(manualRepetitions) : null,
+      distance: manualDistance !== undefined && manualDistance !== null && manualDistance !== '' ? parseInt(manualDistance) : null,
       annotationText: annotationText || null,
       annotationBgColor: annotationBgColor || null,
       annotationTextColor: annotationTextColor || null,
       annotationBold: annotationBold !== undefined ? annotationBold : false,
     };
+
+    // 🔍 DEBUG: Log what's being saved
+    if (manualMode) {
+      console.log('📝 [API POST] Moveframe data being saved to database:');
+      console.log('   repetitions (from manualRepetitions):', moveframeData.repetitions);
+      console.log('   distance (from manualDistance):', moveframeData.distance);
+    }
     
     const movelapsData = movelaps && movelaps.length > 0 ? movelaps.map((lap: any, index: number) => ({
       repetitionNumber: index + 1,
@@ -175,6 +202,15 @@ export async function POST(request: NextRequest) {
     });
 
     console.log('✅ Moveframe created successfully:', moveframe.id);
+    
+    // 🔍 DEBUG: Log what was saved and returned
+    if (manualMode) {
+      console.log('✅ [API POST] Moveframe saved and returned:');
+      console.log('   ID:', moveframe.id);
+      console.log('   repetitions (stored on Moveframe):', moveframe.repetitions);
+      console.log('   distance (stored on Moveframe):', moveframe.distance);
+      console.log('   manualMode:', moveframe.manualMode);
+    }
 
     return NextResponse.json({ moveframe });
   } catch (error: any) {

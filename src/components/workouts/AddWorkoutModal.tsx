@@ -317,27 +317,36 @@ export default function AddWorkoutModal({
           </div>
 
           {/* Section 2: Sports Selection */}
-          <div className="space-y-3 bg-gradient-to-br from-gray-50 to-blue-50 p-3 rounded-lg border border-gray-200">
+          <div className={`space-y-3 p-3 rounded-lg border ${
+            mainSportValue
+              ? 'bg-gradient-to-br from-gray-50 to-blue-50 border-gray-200'
+              : 'bg-gradient-to-br from-orange-50 to-yellow-50 border-orange-300'
+          }`}>
             {/* Main Type of Activity - Freely Selectable */}
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5 flex items-center gap-1">
-                <span>⭐</span>
+                <span>{mainSportValue ? '⭐' : '⚠️'}</span>
                 <span>Main Type of Activity</span>
+                {!mainSportValue && (
+                  <span className="text-xs bg-orange-200 text-orange-800 px-1.5 py-0.5 rounded-full font-semibold animate-pulse">
+                    Not Set
+                  </span>
+                )}
                 <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded font-normal">Optional - Note Only</span>
               </label>
               <select
                 value={mainSportValue || ''}
                 onChange={(e) => handleMainSportChange(e.target.value || null)}
                 disabled={isViewMode}
-                className={`w-full px-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 text-sm transition-all ${
+                className={`w-full px-3 py-2.5 border rounded-lg focus:ring-2 text-sm transition-all ${
                   isViewMode
                     ? 'bg-gray-100 cursor-not-allowed text-gray-600'
                     : mainSportValue
-                    ? 'bg-yellow-50 border-yellow-300 font-medium'
-                    : 'bg-white hover:border-gray-400 border-gray-300'
+                    ? 'bg-yellow-50 border-yellow-300 font-medium focus:ring-yellow-500 focus:border-yellow-500'
+                    : 'bg-orange-50 hover:border-orange-400 border-orange-400 focus:ring-orange-500 focus:border-orange-500'
                 }`}
               >
-                <option value="">Select main type of activity (optional)...</option>
+                <option value="">{mainSportValue ? 'Select main type of activity (optional)...' : '⚠️ Select main type of activity...'}</option>
                 {SPORT_OPTIONS.map((sport) => (
                   <option key={sport.value} value={sport.value}>
                     {sport.icon} {sport.label}
@@ -345,7 +354,9 @@ export default function AddWorkoutModal({
                 ))}
               </select>
               <p className="text-xs text-gray-500 mt-1">
-                This can be selected independently from the 4 sports below. Used for manual mode or FREE_MOVES.
+                {mainSportValue 
+                  ? 'This can be selected independently from the 4 sports below. Used for manual mode or FREE_MOVES.'
+                  : '💡 Tip: Setting the main sport helps organize and identify your workout type.'}
               </p>
             </div>
 

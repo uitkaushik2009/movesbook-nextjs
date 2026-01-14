@@ -2,8 +2,9 @@ import React from 'react';
 import { X } from 'lucide-react';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
-import { DISTANCE_BASED_SPORTS } from '@/constants/moveframe.constants';
+import { DISTANCE_BASED_SPORTS, shouldShowDistance, getDistanceUnit, formatMoveframeType } from '@/constants/moveframe.constants';
 import PrintOptionsModal, { PrintOptions } from './PrintOptionsModal';
+import { useAuth } from '@/hooks/useAuth';
 
 interface WeekTotalsModalProps {
   isOpen: boolean;
@@ -19,10 +20,13 @@ interface WeekTotalsModalProps {
 export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView = false, onClose, autoPrint = false, activeSection = 'A', showMovelapsDetails = false }: WeekTotalsModalProps) {
   const iconType = useSportIconType();
   const useImageIcons = isImageIcon(iconType);
+  const { user } = useAuth();
   const [shouldAutoPrint, setShouldAutoPrint] = React.useState(false);
   const [currentWeekIndex, setCurrentWeekIndex] = React.useState(0);
   const [showMovelaps, setShowMovelaps] = React.useState(showMovelapsDetails);
   const [showPrintOptionsModal, setShowPrintOptionsModal] = React.useState(false);
+  const [showAggregatedTotals, setShowAggregatedTotals] = React.useState(false);
+  const [showWeekNotes, setShowWeekNotes] = React.useState(true); // Show week planning notes by default
   
   // Section A is template mode (no dates), Section B is yearly plan (with dates)
   const isTemplateMode = activeSection === 'A';
@@ -42,12 +46,15 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
     if (isOpen) {
       setCurrentWeekIndex(0);
       console.log('📊 WeekTotalsModal opened:', {
+        activeSection,
         isMultiWeekView,
         weeksCount: weeks?.length || 0,
-        weekNumbers: weeks?.map((w: any) => w.weekNumber) || []
+        weekNumbers: weeks?.map((w: any) => w.weekNumber) || [],
+        hasWeeks: !!weeks,
+        shouldShowNavigation: weeks && weeks.length > 1
       });
     }
-  }, [isOpen, isMultiWeekView, weeks]);
+  }, [isOpen, isMultiWeekView, weeks, activeSection]);
 
   // Get the current week to display
   const displayWeek = React.useMemo(() => {
@@ -116,8 +123,27 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               sportData.distance += parseInt(lap.distance) || 0;
             });
           } else {
-            // For series-based sports, count total reps/series
-            sportData.series += mf.movelaps?.length || 0;
+            // For series-based sports
+            if (mf.manualMode) {
+              // For manual mode: use the repetitions field directly
+              sportData.series += mf.repetitions || 0;
+            } else {
+              // For standard mode: count total reps/series (Rip\Series)
+              // Exclude movelaps where reps=1 AND pause=0 (unless it's a macro)
+              const hasMacro = mf.macroRest || mf.macroFinal;
+              mf.movelaps?.forEach((lap: any) => {
+                const reps = parseInt(lap.reps) || 1;
+                const pause = parseFloat(lap.pause) || 0;
+                
+                // Count this movelap if:
+                // - It's part of a macro, OR
+                // - reps > 1, OR
+                // - reps = 1 but pause > 0
+                if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
+                  sportData.series += 1;
+                }
+              });
+            }
           }
         });
       });
@@ -194,9 +220,13 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
       };
     }
 
+    // Track which sports appear in which workouts for workout count
+    const sportWorkouts = new Map<string, Set<string>>();
+    
     displayWeek.days.forEach((day: any) => {
       day.workouts.forEach((workout: any) => {
         totalWorkouts++;
+        const workoutId = workout.id;
         
         (workout.sports || []).forEach((ws: any) => {
           if (!sportMap.has(ws.sport)) {
@@ -220,11 +250,18 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
             totalSeries: 0
           };
 
+          // Track that this sport appears in this workout
+          if (!sportWorkouts.has(sport)) {
+            sportWorkouts.set(sport, new Set());
+          }
+          sportWorkouts.get(sport)!.add(workoutId);
+
           totalMoveframes++;
           currentTotals.moveframeCount += 1;
 
           const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
 
+          const hasMacro = mf.macroRest || mf.macroFinal;
           (mf.movelaps || []).forEach((lap: any) => {
             if (isDistanceBased) {
               const distance = parseInt(lap.distance) || 0;
@@ -235,14 +272,28 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               totalDistance += distance;
               totalDuration += duration;
             } else {
-              // For series-based sports, count reps/series
-              currentTotals.totalSeries += 1;
+              // For series-based sports, count reps/series (Rip\Series)
+              // Exclude movelaps where reps=1 AND pause=0 (unless it's a macro)
+              const reps = parseInt(lap.reps) || 1;
+              const pause = parseFloat(lap.pause) || 0;
+              
+              if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
+                currentTotals.totalSeries += 1;
+              }
             }
           });
 
           sportMap.set(sport, currentTotals);
         });
       });
+    });
+    
+    // Update workout counts for each sport
+    sportWorkouts.forEach((workoutIds, sport) => {
+      const totals = sportMap.get(sport);
+      if (totals) {
+        totals.workoutCount = workoutIds.size;
+      }
     });
 
     const sportTotals = Array.from(sportMap.entries())
@@ -263,6 +314,122 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
 
   const { sportTotals, totalWorkouts, totalMoveframes, totalDistance, totalDuration } = calculateWeekTotals();
   const { rows: dailySummaries, totals: dailyTotals } = calculateDailySummaries();
+
+  // Calculate aggregated totals across ALL displayed weeks
+  const calculateAggregatedTotals = () => {
+    if (!weeks || weeks.length === 0) {
+      return {
+        sportTotals: [],
+        totalWorkouts: 0,
+        totalMoveframes: 0,
+        totalDistance: 0,
+        totalDuration: 0,
+        weekRange: ''
+      };
+    }
+
+    const sportMap = new Map<string, {
+      distance: number;
+      durationMinutes: number;
+      moveframeCount: number;
+      workoutCount: number;
+      totalSeries: number;
+      workoutIds: Set<string>;
+    }>();
+
+    let totalWorkoutsSum = 0;
+    let totalMoveframesSum = 0;
+    let totalDistanceSum = 0;
+    let totalDurationSum = 0;
+
+    // Aggregate data from all weeks
+    weeks.forEach((week: any) => {
+      if (!week.days) return;
+
+      week.days.forEach((day: any) => {
+        if (!day.workouts) return;
+
+        totalWorkoutsSum += day.workouts.length;
+
+        day.workouts.forEach((workout: any) => {
+          if (!workout.moveframes) return;
+
+          workout.moveframes.forEach((mf: any) => {
+            if (!mf.sport) return;
+
+            totalMoveframesSum++;
+            const sport = mf.sport;
+
+            if (!sportMap.has(sport)) {
+              sportMap.set(sport, {
+                distance: 0,
+                durationMinutes: 0,
+                moveframeCount: 0,
+                workoutCount: 0,
+                totalSeries: 0,
+                workoutIds: new Set()
+              });
+            }
+
+            const currentTotals = sportMap.get(sport)!;
+            currentTotals.moveframeCount++;
+            currentTotals.workoutIds.add(workout.id);
+
+            const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
+            const hasMacro = mf.macroRest || mf.macroFinal;
+
+            if (!mf.movelaps) return;
+
+            mf.movelaps.forEach((lap: any) => {
+              if (isDistanceBased) {
+                const distance = parseFloat(lap.distance) || 0;
+                const duration = parseFloat(lap.time) || 0;
+
+                currentTotals.distance += distance;
+                currentTotals.durationMinutes += duration;
+                totalDistanceSum += distance;
+                totalDurationSum += duration;
+              } else {
+                const reps = parseInt(lap.reps) || 1;
+                const pause = parseFloat(lap.pause) || 0;
+
+                if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
+                  currentTotals.totalSeries += 1;
+                }
+              }
+            });
+          });
+        });
+      });
+    });
+
+    // Update workout counts
+    sportMap.forEach((totals) => {
+      totals.workoutCount = totals.workoutIds.size;
+    });
+
+    const sportTotalsArray = Array.from(sportMap.entries())
+      .map(([sport, totals]) => ({
+        sport,
+        ...totals
+      }))
+      .sort((a, b) => b.distance - a.distance);
+
+    // Create week range string
+    const weekNumbers = weeks.map((w: any) => w.weekNumber).sort((a: number, b: number) => a - b);
+    const weekRange = `Weeks ${weekNumbers[0]}-${weekNumbers[weekNumbers.length - 1]} (${weeks.length} weeks)`;
+
+    return {
+      sportTotals: sportTotalsArray,
+      totalWorkouts: totalWorkoutsSum,
+      totalMoveframes: totalMoveframesSum,
+      totalDistance: totalDistanceSum,
+      totalDuration: totalDurationSum,
+      weekRange
+    };
+  };
+
+  const aggregatedData = React.useMemo(() => calculateAggregatedTotals(), [weeks]);
 
   const handlePrint = React.useCallback(() => {
     console.log('🖨️ handlePrint called');
@@ -682,8 +849,8 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
         {/* Header (Screen Only) */}
         <div className="bg-gradient-to-r from-indigo-600 to-blue-600 text-white p-4 flex items-center justify-between print:hidden">
           <div className="flex items-center gap-4">
-            {/* Navigation buttons for multi-week view */}
-            {isMultiWeekView && weeks && weeks.length > 1 && (
+            {/* Navigation buttons - Available when there are multiple weeks to navigate */}
+            {weeks && weeks.length > 1 && !showAggregatedTotals && (
               <>
                 <button
                   onClick={goToPreviousWeek}
@@ -711,10 +878,29 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               </>
             )}
             <h2 className="text-xl font-bold">
-              Week {displayWeek.weekNumber} - Overview & Print Preview
+              {showAggregatedTotals ? 'Aggregated Totals Summary' : `Week ${displayWeek.weekNumber} - Overview & Print Preview`}
             </h2>
           </div>
           <div className="flex items-center gap-2">
+            {/* Toggle Week Notes Button */}
+            <button
+              onClick={() => setShowWeekNotes(!showWeekNotes)}
+              className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm flex items-center gap-2 ${
+                showWeekNotes 
+                  ? 'bg-purple-500 text-white hover:bg-purple-600' 
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+              title={showWeekNotes ? 'Hide week planning notes' : 'Show week planning notes'}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              {showWeekNotes ? 'Hide Week Notes' : 'Show Week Notes'}
+            </button>
             {/* Toggle Movelaps Details Button */}
             <button
               onClick={() => setShowMovelaps(!showMovelaps)}
@@ -730,6 +916,25 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               </svg>
               {showMovelaps ? 'Hide Movelaps' : 'Show Movelaps'}
             </button>
+            {/* Totals of Weeks Displayed Button - Only show in multi-week view */}
+            {isMultiWeekView && weeks && weeks.length > 1 && (
+              <button
+                onClick={() => setShowAggregatedTotals(!showAggregatedTotals)}
+                className={`px-4 py-2 rounded-lg transition-colors font-medium text-sm flex items-center gap-2 ${
+                  showAggregatedTotals
+                    ? 'bg-orange-500 text-white hover:bg-orange-600'
+                    : 'bg-white text-orange-600 hover:bg-orange-50'
+                }`}
+                title={showAggregatedTotals ? 'Show individual weeks' : 'Show totals of all displayed weeks'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="3" y1="9" x2="21" y2="9"></line>
+                  <line x1="9" y1="21" x2="9" y2="9"></line>
+                </svg>
+                {showAggregatedTotals ? 'Show Weeks' : 'Totals'}
+              </button>
+            )}
             <button
               onClick={handlePrint}
               className="px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm flex items-center gap-2"
@@ -749,23 +954,111 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
 
         {/* Scrollable Content */}
         <div className="overflow-y-auto flex-1 p-3 print:!overflow-visible print:!h-auto print:!flex-none print:!p-0">
-          {/* Document Header (Print & Screen) */}
-          <div className="mb-3 pb-2 border-b border-gray-300 print-header">
-            <div className="text-center mb-2">
-              <h1 className="text-xl font-bold text-gray-900 mb-1">
-                {isTemplateMode ? `Weekly Template - Week ${displayWeek.weekNumber}` : `Training Plan - Week ${displayWeek.weekNumber}`}
-              </h1>
-              {!isTemplateMode && <p className="text-sm text-gray-600">{dateRange}</p>}
-            </div>
+          
+          {/* AGGREGATED TOTALS VIEW - Shows totals from all displayed weeks */}
+          {showAggregatedTotals && isMultiWeekView && weeks && weeks.length > 0 ? (
+            <>
+              {/* Aggregated Document Header */}
+              <div className="mb-3 pb-2 border-b border-gray-300 print-header">
+                <div className="text-center mb-2">
+                  <h1 className="text-xl font-bold text-gray-900 mb-1">
+                    Training Plan - Totals Summary
+                  </h1>
+                  <p className="text-sm text-gray-600">{aggregatedData.weekRange}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+                  <div>
+                    <span className="font-semibold text-gray-700">Athlete:</span>
+                    <span className="text-gray-600 ml-1">{user?.name || user?.username || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">Coach:</span>
+                    <span className="text-gray-600 ml-1">N/A</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">Total Weeks:</span>
+                    <span className="text-gray-600 ml-1">{weeks.length}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-700">Generated:</span>
+                    <span className="text-gray-600 ml-1">{new Date().toLocaleDateString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Aggregated Summary Table - Week Summary by Sport */}
+              <div className="mb-3">
+                <h2 className="text-base font-bold text-gray-900 mb-2 border-b border-gray-300 pb-1">
+                  Aggregated Summary by Sport ({aggregatedData.weekRange})
+                </h2>
+                <table className="border-collapse border border-gray-300 text-sm w-full">
+                  <thead className="bg-gray-200">
+                    <tr>
+                      <th className="border border-gray-300 px-2 py-2 text-center font-semibold text-xs">Sport</th>
+                      <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">WO</th>
+                      <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">MF</th>
+                      <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Dist(m)</th>
+                      <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Series</th>
+                      <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aggregatedData.sportTotals.map((sportData: any, index: number) => (
+                      <tr key={index} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-2 py-2 font-medium text-xs text-center">
+                          {sportData.sport.replace(/_/g, ' ')}
+                        </td>
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                          {sportData.workoutCount}
+                        </td>
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                          {sportData.moveframeCount}
+                        </td>
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                          {sportData.distance > 0 ? sportData.distance.toLocaleString() : '—'}
+                        </td>
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                          {sportData.totalSeries > 0 ? sportData.totalSeries : '—'}
+                        </td>
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                          {sportData.durationMinutes > 0 ? formatTime(sportData.durationMinutes) : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                    {/* Grand Total row */}
+                    <tr className="bg-gray-100 font-bold">
+                      <td className="border border-gray-300 px-2 py-2 text-xs text-center">TOTAL</td>
+                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">{aggregatedData.totalWorkouts}</td>
+                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">{aggregatedData.totalMoveframes}</td>
+                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">{aggregatedData.totalDistance.toLocaleString()}</td>
+                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">—</td>
+                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">{formatTime(aggregatedData.totalDuration)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : (
+            /* REGULAR WEEK VIEW - Shows individual week data */
+            <>
+              {/* Document Header (Print & Screen) */}
+              <div className="mb-3 pb-2 border-b border-gray-300 print-header">
+                <div className="text-center mb-2">
+                  <h1 className="text-xl font-bold text-gray-900 mb-1">
+                    {isTemplateMode ? `Weekly Template - Week ${displayWeek.weekNumber}` : `Training Plan - Week ${displayWeek.weekNumber}`}
+                  </h1>
+                  {!isTemplateMode && <p className="text-sm text-gray-600">{dateRange}</p>}
+                </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
               <div>
                 <span className="font-semibold text-gray-700">Athlete:</span>
-                <span className="text-gray-600 ml-1">[Athlete Name]</span>
+                <span className="text-gray-600 ml-1">{user?.name || user?.username || 'N/A'}</span>
               </div>
               <div>
                 <span className="font-semibold text-gray-700">Coach:</span>
-                <span className="text-gray-600 ml-1">[Coach Name]</span>
+                <span className="text-gray-600 ml-1">N/A</span>
               </div>
               <div>
                 <span className="font-semibold text-gray-700">Period:</span>
@@ -777,6 +1070,26 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               </div>
             </div>
           </div>
+
+          {/* Week Planning Notes Section - Toggleable */}
+          {showWeekNotes && displayWeek.notes && (
+            <div className="mb-4 p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-700">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                <h3 className="text-base font-bold text-amber-900">Week Planning Notes</h3>
+              </div>
+              <div 
+                className="text-sm text-gray-800 bg-white border border-amber-200 rounded-lg p-3 whitespace-pre-wrap"
+                dangerouslySetInnerHTML={{ __html: displayWeek.notes }}
+              />
+            </div>
+          )}
 
           {/* Two-Column Summary Layout */}
           <div className="mb-3 print-summary grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -790,7 +1103,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                     <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">WO</th>
                     <th className="border border-gray-300 px-2 py-2 text-center font-semibold text-xs">Sport</th>
                     <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Dist(m)</th>
-                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Series</th>
+                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Rip\Series</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -851,6 +1164,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                 <thead className="bg-gray-200">
                   <tr>
                     <th className="border border-gray-300 px-2 py-2 text-center font-semibold text-xs">Sport</th>
+                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">WO</th>
                     <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">MF</th>
                     <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Dist(m)</th>
                     <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Series</th>
@@ -866,6 +1180,9 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                           <tr key={index} className="hover:bg-gray-50">
                             <td className="border border-gray-300 px-2 py-2 font-medium text-xs text-center">
                               {sportData.sport.replace(/_/g, ' ')}
+                            </td>
+                            <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                              {sportData.workoutCount}
                             </td>
                             <td className="border border-gray-300 px-1 py-2 text-center text-xs">
                               {sportData.moveframeCount}
@@ -885,6 +1202,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                       {/* Grand Total Row */}
                       <tr className="bg-gray-100 font-bold">
                         <td className="border border-gray-300 px-2 py-2 text-xs text-center">TOTAL</td>
+                        <td className="border border-gray-300 px-1 py-2 text-center text-xs">{totalWorkouts}</td>
                         <td className="border border-gray-300 px-1 py-2 text-center text-xs">{totalMoveframes}</td>
                         <td className="border border-gray-300 px-1 py-2 text-center text-xs">{totalDistance.toLocaleString()}</td>
                         <td className="border border-gray-300 px-1 py-2 text-center text-xs">—</td>
@@ -893,7 +1211,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                     </>
                   ) : (
                     <tr>
-                      <td colSpan={5} className="border border-gray-300 px-3 py-3 text-center text-gray-500">
+                      <td colSpan={6} className="border border-gray-300 px-3 py-3 text-center text-gray-500">
                         No data available
                       </td>
                     </tr>
@@ -1009,7 +1327,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                                           {mf.sport.replace(/_/g, ' ')}
                                         </td>
                                         <td className="border border-gray-300 px-1 py-2 text-xs text-center">
-                                          {mf.type}
+                                          {formatMoveframeType(mf.type)}
                                         </td>
                                         <td className="border border-gray-300 px-1 py-2 text-xs">
                                           {mf.description ? (
@@ -1113,10 +1431,10 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <p className="font-semibold text-gray-700">Notes:</p>
-                {displayWeek.notes ? (
+                {!showAggregatedTotals && displayWeek.notes ? (
                   <div dangerouslySetInnerHTML={{ __html: displayWeek.notes }} />
                 ) : (
-                  <p>No notes for this week</p>
+                  <p>{showAggregatedTotals ? 'Aggregated summary of all displayed weeks' : 'No notes for this week'}</p>
                 )}
               </div>
               <div>
@@ -1130,6 +1448,8 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               </div>
             </div>
           </div>
+          </>
+          )}
         </div>
 
         {/* Footer (Screen Only) */}

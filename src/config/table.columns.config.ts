@@ -221,7 +221,7 @@ export const DEFAULT_MOVEFRAME_COLUMNS: ColumnConfig[] = [
   },
   {
     id: 'total_distance',
-    label: 'Dist',
+    label: 'Dist/Dur',
     align: 'right',
     visible: true,
     dataKey: 'totalDistance'
@@ -282,7 +282,7 @@ export const DEFAULT_MOVELAP_COLUMNS: ColumnConfig[] = [
   },
   {
     id: 'distance',
-    label: 'Dist',
+    label: 'Dist/Dur',
     align: 'right',
     visible: true,
     dataKey: 'distance'

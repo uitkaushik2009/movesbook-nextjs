@@ -95,9 +95,21 @@ export function useWorkoutData({
         const { plan } = response.data;
         console.log('✅ Plan loaded:', plan?.id);
         console.log('📊 Number of weeks:', plan?.weeks?.length);
+        console.log('🔍 [CRITICAL] Plan weeks details:', {
+          planId: plan?.id,
+          planType: plan?.type,
+          weeksCount: plan?.weeks?.length,
+          firstWeek: plan?.weeks?.[0] ? {
+            id: plan.weeks[0].id,
+            weekNumber: plan.weeks[0].weekNumber,
+            daysCount: plan.weeks[0].days?.length
+          } : 'NO WEEKS'
+        });
         
         // Check if any weekly plan has less than 3 weeks - if so, force recreation
-        if ((targetSection === 'A' || targetSection === 'B' || targetSection === 'C') && plan?.weeks && plan.weeks.length < 3) {
+        // IMPORTANT: For Section B (YEARLY_PLAN), we should NOT check for < 3 weeks!
+        // This check is ONLY for Section A (TEMPLATE_WEEKS) which should have exactly 3 weeks
+        if (targetSection === 'A' && plan?.weeks && plan.weeks.length < 3) {
           console.warn(`⚠️ Section ${targetSection} (storage: ${storageSection}) has only ${plan.weeks.length} weeks! Force recreating plan...`);
           const recreateResponse = await workoutPlanApi.get(planType, true, storageSection); // forceRecreate = true
           if (recreateResponse.success && recreateResponse.data) {
@@ -106,6 +118,13 @@ export function useWorkoutData({
           }
           setIsLoading(false);
           return;
+        } else if ((targetSection === 'B' || targetSection === 'C') && plan?.weeks && plan.weeks.length < 3) {
+          console.error(`❌❌❌ CRITICAL BUG DETECTED ❌❌❌`);
+          console.error(`Section ${targetSection} has only ${plan.weeks.length} weeks!`);
+          console.error(`This should NOT happen! Section B should have 10+ weeks.`);
+          console.error(`Plan ID: ${plan.id}, Type: ${plan.type}`);
+          console.error(`DO NOT force recreate - this would delete all user data!`);
+          // DO NOT recreate - just show a warning
         }
         
         // Debug: Check weeks structure
@@ -113,19 +132,21 @@ export function useWorkoutData({
           console.log('✅ First week:', plan.weeks[0]);
           console.log('✅ First week days:', plan.weeks[0].days);
         } else {
-          // Only warn for sections A, B, C where weeks are expected to be pre-created
-          if (targetSection === 'A' || targetSection === 'B' || targetSection === 'C') {
-            console.warn('⚠️ No weeks found in plan! Force recreating...');
+          // Only Section A (TEMPLATE_WEEKS) should force recreate if empty
+          // Section B (YEARLY_PLAN) starts with 10 weeks initially, so if empty, API will auto-create
+          // Section C and D can start empty and grow dynamically
+          if (targetSection === 'A') {
+            console.warn('⚠️ No weeks found in Section A plan! Force recreating...');
             const recreateResponse = await workoutPlanApi.get(planType, true, storageSection);
             if (recreateResponse.success && recreateResponse.data) {
               setWorkoutPlan(recreateResponse.data.plan);
-              console.log('✅ Plan recreated successfully');
+              console.log('✅ Section A plan recreated successfully');
             }
             setIsLoading(false);
             return;
           } else {
-            // Other sections are expected to start empty
-            console.log(`ℹ️ Section ${targetSection} plan is empty (expected)`);
+            // For Section B, C, D - if no weeks, the API will create them on first load
+            console.log(`ℹ️ Section ${targetSection} plan has no weeks yet (will be created by API if needed)`);
           }
         }
         

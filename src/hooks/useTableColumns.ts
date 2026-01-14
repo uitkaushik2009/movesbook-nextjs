@@ -34,7 +34,33 @@ export function useTableColumns(tableType: TableType) {
   // Load column configuration from localStorage on mount
   useEffect(() => {
     const storageKey = getStorageKey(tableType);
+    const versionKey = `${storageKey}_version`;
+    const currentVersion = '2.0'; // Increment this to force reset
     const saved = localStorage.getItem(storageKey);
+    const savedVersion = localStorage.getItem(versionKey);
+    
+    // Force reset if version mismatch or no version
+    if (savedVersion !== currentVersion) {
+      console.log(`Column config version mismatch. Resetting ${tableType} columns...`);
+      let defaultColumns: ColumnConfig[];
+      switch (tableType) {
+        case 'workout':
+          defaultColumns = DEFAULT_WORKOUT_COLUMNS;
+          break;
+        case 'moveframe':
+          defaultColumns = DEFAULT_MOVEFRAME_COLUMNS;
+          break;
+        case 'movelap':
+          defaultColumns = DEFAULT_MOVELAP_COLUMNS;
+          break;
+        default:
+          defaultColumns = [];
+      }
+      localStorage.setItem(storageKey, JSON.stringify(defaultColumns));
+      localStorage.setItem(versionKey, currentVersion);
+      setColumns(defaultColumns);
+      return;
+    }
     
     if (saved) {
       try {

@@ -1,6 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
+import { shouldShowDistance, getDistanceUnit } from '@/constants/moveframe.constants';
 
 interface WorkoutOverviewModalProps {
   workout: any;
@@ -158,9 +159,9 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
                       <div>
                         <span className="font-medium">Series:</span> {stat.totalReps}
                       </div>
-                      {stat.totalDistance > 0 && (
+                      {shouldShowDistance(stat.sport) && stat.totalDistance > 0 && (
                         <div>
-                          <span className="font-medium">Distance:</span> {stat.totalDistance}m
+                          <span className="font-medium">Distance:</span> {stat.totalDistance}{getDistanceUnit(stat.sport)}
                         </div>
                       )}
                     </div>

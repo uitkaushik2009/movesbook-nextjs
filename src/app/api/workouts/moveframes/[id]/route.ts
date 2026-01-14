@@ -90,10 +90,16 @@ export async function PATCH(
       annotationTextColor,
       annotationBold,
       manualMode,
-      favourite
+      manualPriority,    // Priority flag for manual mode display
+      favourite,
+      manualRepetitions, // For storing on Moveframe model (manual mode only)
+      manualDistance     // For storing on Moveframe model (manual mode only)
     } = body;
 
-    console.log('📝 Updating moveframe:', params.id, body);
+    console.log('📝 [API UPDATE] Updating moveframe:', params.id, {
+      ...body,
+      manualPriority: body.manualPriority
+    });
 
     // First verify user ownership through workout session -> day
     const existingMoveframe = await prisma.moveframe.findUnique({
@@ -126,6 +132,13 @@ export async function PATCH(
       manualMode: manualMode
     });
 
+    // 🔍 DEBUG: Log what's being updated
+    if (manualMode) {
+      console.log('🔍 [API PATCH] Manual mode moveframe update:');
+      console.log('   manualRepetitions (raw):', manualRepetitions);
+      console.log('   manualDistance (raw):', manualDistance);
+    }
+
     // Update moveframe
     const moveframe = await prisma.moveframe.update({
       where: { id: params.id },
@@ -139,7 +152,10 @@ export async function PATCH(
         macroFinal: macroFinal !== undefined ? macroFinal : undefined,
         alarm: alarm !== undefined ? (alarm ? parseInt(alarm) : null) : undefined,
         manualMode: manualMode !== undefined ? manualMode : undefined,
+        manualPriority: manualPriority !== undefined ? manualPriority : undefined,
         favourite: favourite !== undefined ? favourite : undefined,
+        repetitions: manualRepetitions !== undefined && manualRepetitions !== null && manualRepetitions !== '' ? parseInt(manualRepetitions) : (manualRepetitions === null || manualRepetitions === '' ? null : undefined),
+        distance: manualDistance !== undefined && manualDistance !== null && manualDistance !== '' ? parseInt(manualDistance) : (manualDistance === null || manualDistance === '' ? null : undefined),
         // Annotation fields: only save if type is ANNOTATION, otherwise clear them
         annotationText: type === 'ANNOTATION' ? (annotationText || null) : null,
         annotationBgColor: type === 'ANNOTATION' ? (annotationBgColor || null) : null,
@@ -154,7 +170,20 @@ export async function PATCH(
       }
     });
 
-    console.log('✅ Moveframe updated:', moveframe.id);
+    // 🔍 DEBUG: Log what was saved
+    if (manualMode || moveframe.manualMode) {
+      console.log('✅ [API PATCH] Moveframe updated and returned:');
+      console.log('   ID:', moveframe.id);
+      console.log('   repetitions (stored on Moveframe):', moveframe.repetitions);
+      console.log('   distance (stored on Moveframe):', moveframe.distance);
+    }
+
+    console.log('✅ Moveframe updated:', {
+      id: moveframe.id,
+      manualMode: moveframe.manualMode,
+      manualPriority: moveframe.manualPriority,
+      manualPriorityType: typeof moveframe.manualPriority
+    });
 
     return NextResponse.json(moveframe);
   } catch (error: any) {

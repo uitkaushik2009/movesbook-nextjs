@@ -21,6 +21,8 @@ interface MovelapDetailTableProps {
   onAddMovelap?: () => void;
   onAddMovelapAfter?: (movelap: any, index: number) => void;
   onRefresh?: () => void;
+  allMoveframes?: any[]; // All moveframes in the workout for navigation
+  onNavigateMoveframe?: (moveframeId: string) => void; // Navigate to another moveframe
 }
 
 // Sortable Row Component
@@ -148,12 +150,15 @@ function SortableMovelapRow({
   const sport = moveframe.sport || 'SWIM';
   const isSwim = sport === 'SWIM';
   const isBike = sport === 'BIKE';
-  const isRun = sport === 'RUN';
+  const isRun = sport === 'RUN' || sport === 'HIKING' || sport === 'WALKING';
   const isBodyBuilding = sport === 'BODY_BUILDING';
   
   // Distance-based sports (no tools)
-  const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
+  const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'];
   const isDistanceBased = distanceBasedSports.includes(sport);
+  
+  // Debug logging
+  console.log('🏃 MovelapDetailTable sport:', sport, 'isDistanceBased:', isDistanceBased, 'hasTools:', !isBodyBuilding && !isDistanceBased);
   
   // Other sports have tools (Gymnastic, Stretching, Pilates, Yoga, Technical moves, Free moves, etc.)
   const hasTools = !isBodyBuilding && !isDistanceBased;
@@ -259,9 +264,9 @@ function SortableMovelapRow({
        {/* SWIM, BIKE, RUN, ROWING, SKATE, SKI, SNOWBOARD - Distance-based sports */}
        {isDistanceBased && (
          <>
-           {/* Distance (m) */}
+           {/* Distance/Duration - Show distance if set, otherwise show time (for time-based workouts) */}
            <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
-             {movelap.distance || '—'}
+             {movelap.distance ? movelap.distance : (movelap.time || '—')}
            </td>
            
            {/* Style - Only for SWIM and RUN */}
@@ -327,17 +332,17 @@ function SortableMovelapRow({
          </div>
        </td>
       
-      {/* Notes - Display only first 20 characters, full text shown in Edit modal */}
-      <td className="border border-gray-300 px-2 py-1 text-left text-xs" style={{ width: '200px', maxWidth: '200px', minWidth: '200px' }}>
+      {/* Notes - Display with increased width for better readability */}
+      <td className="border border-gray-300 px-2 py-1 text-left text-xs" style={{ width: '300px', maxWidth: '300px', minWidth: '300px' }}>
         <div 
           className="overflow-hidden text-ellipsis whitespace-nowrap" 
           title={stripHtmlTags(movelap.notes || '—')}
-          style={{ maxWidth: '200px' }}
+          style={{ maxWidth: '300px' }}
         >
           {movelap.notes 
             ? (() => {
                 const stripped = stripHtmlTags(movelap.notes);
-                return stripped.length > 20 ? stripped.substring(0, 20) + '...' : stripped;
+                return stripped.length > 40 ? stripped.substring(0, 40) + '...' : stripped;
               })()
             : '—'
           }
@@ -468,7 +473,9 @@ export default function MovelapDetailTable({
   onDeleteMovelap, 
   onAddMovelap,
   onAddMovelapAfter,
-  onRefresh
+  onRefresh,
+  allMoveframes = [],
+  onNavigateMoveframe
 }: MovelapDetailTableProps) {
   const [movelaps, setMovelaps] = useState(moveframe.movelaps || []);
   const moveframeLetter = moveframe.letter || 'A'; // Parent moveframe letter
@@ -477,6 +484,12 @@ export default function MovelapDetailTable({
   const [copiedMovelap, setCopiedMovelap] = useState<any>(null);
   const [noteValue, setNoteValue] = useState(stripHtmlTags(moveframe.notes || ''));
   const [isSavingNote, setIsSavingNote] = useState(false);
+  const [currentMovelapIndex, setCurrentMovelapIndex] = useState(0); // Current movelap being viewed
+  const [showManualContentPopup, setShowManualContentPopup] = useState(false); // Popup for manual content
+  
+  // Navigation for movelaps within the same moveframe
+  const hasPreviousMovelap = currentMovelapIndex > 0;
+  const hasNextMovelap = currentMovelapIndex < movelaps.length - 1;
   
   // Check if this moveframe is manual mode
   const isManualMode = moveframe.manualMode === true;
@@ -518,6 +531,8 @@ export default function MovelapDetailTable({
     });
     
     setMovelaps(newMovelaps);
+    // Reset navigation to first movelap when moveframe changes
+    setCurrentMovelapIndex(0);
     
     // Regenerate all sequence numbers when movelaps change (e.g., when adding new movelaps)
     setMovelapSequences((prevSequences) => {
@@ -724,9 +739,39 @@ export default function MovelapDetailTable({
     }
 
     return (
+      <>
       <div className="bg-gray-50 p-2 pr-0">
         {/* Note Box, Save Button, and Add Movelap Button for Manual Mode - Above Table */}
         <div className="mb-3 flex items-center gap-4">
+          {/* Movelap Navigation */}
+          {movelaps.length > 0 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentMovelapIndex(Math.max(0, currentMovelapIndex - 1))}
+                disabled={!hasPreviousMovelap}
+                className="p-1 bg-gray-200 hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed rounded transition-colors"
+                title={hasPreviousMovelap ? `Previous movelap ${currentMovelapIndex}` : 'First movelap'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="15,18 9,12 15,6" />
+                </svg>
+              </button>
+              <span className="text-xs font-semibold text-gray-700">
+                Movelaps of {moveframeLetter} ({currentMovelapIndex + 1}/{movelaps.length})
+              </span>
+              <button
+                onClick={() => setCurrentMovelapIndex(Math.min(movelaps.length - 1, currentMovelapIndex + 1))}
+                disabled={!hasNextMovelap}
+                className="p-1 bg-gray-200 hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed rounded transition-colors"
+                title={hasNextMovelap ? `Next movelap ${currentMovelapIndex + 2}` : 'Last movelap'}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="9,6 15,12 9,18" />
+                </svg>
+              </button>
+            </div>
+          )}
+          
           {/* Add Movelap Button */}
           {onAddMovelap && (
             <button
@@ -763,14 +808,13 @@ export default function MovelapDetailTable({
           </div>
         </div>
 
-        {/* Simplified Manual Mode Table - Single Row with 4 Columns */}
+        {/* Simplified Manual Mode Table - Single Row with 3 Columns */}
         <table className="w-full border-collapse text-xs table-fixed">
           <thead className="bg-gradient-to-r from-purple-200 to-pink-200">
             <tr>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '100px' }}>Sport</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '250px' }}>Summary</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '330px', maxWidth: '330px' }}>Detail of workout</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '120px', minWidth: '120px' }}>Options</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '85px' }}>Sport</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold">Detail of workout</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '150px', minWidth: '150px' }}>Options</th>
             </tr>
           </thead>
           <tbody>
@@ -783,20 +827,12 @@ export default function MovelapDetailTable({
                   </span>
                 </div>
               </td>
-              {/* Summary - shows moveframe description */}
-              <td className="border border-gray-300 px-1 py-1 text-xs">
-                <div 
-                  className="text-gray-800"
-                  style={{
-                    lineHeight: '1.6',
-                    fontFamily: 'system-ui, -apple-system, sans-serif',
-                    fontSize: '12px'
-                  }}
-                  dangerouslySetInnerHTML={{ __html: moveframe.description || '' }}
-                />
-              </td>
               {/* Detail of workout (Manual Content) */}
-              <td className="border border-gray-300 px-1 py-1 text-xs">
+              <td 
+                className="border border-gray-300 px-1 py-1 text-xs cursor-pointer hover:bg-blue-50"
+                onClick={() => setShowManualContentPopup(true)}
+                title="Click to view full text"
+              >
                 <div 
                   className="p-2 bg-gradient-to-br from-white to-gray-50 rounded border border-gray-300 max-h-96 overflow-y-auto text-left"
                   style={{
@@ -808,7 +844,7 @@ export default function MovelapDetailTable({
                 />
               </td>
               {/* Options - Simplified for manual mode */}
-              <td className="border border-gray-300 px-1 py-1 text-center" style={{ width: '120px', minWidth: '120px' }}>
+              <td className="border border-gray-300 px-1 py-1 text-center" style={{ width: '150px', minWidth: '150px' }}>
                 <div className="flex items-center justify-center">
                   <button
                     onClick={(e) => {
@@ -852,6 +888,48 @@ export default function MovelapDetailTable({
           </tbody>
         </table>
       </div>
+
+      {/* Manual Content Popup Modal */}
+      {showManualContentPopup && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[9999999] p-4"
+          onClick={() => setShowManualContentPopup(false)}
+          style={{ margin: 0 }}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-t-xl flex items-center justify-between">
+              <h3 className="text-xl font-bold">Detail of workout - Extended Text</h3>
+              <button
+                onClick={() => setShowManualContentPopup(false)}
+                className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <div
+                className="prose prose-lg max-w-none text-gray-800"
+                style={{
+                  lineHeight: '1.8',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  fontSize: '16px'
+                }}
+                dangerouslySetInnerHTML={{ __html: manualContent }}
+              />
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
     );
   }
 
@@ -867,6 +945,35 @@ export default function MovelapDetailTable({
         <div className="bg-gray-50 p-2 pr-0">
           {/* Top Controls - Note and Add Movelap Button */}
           <div className="mb-3 flex items-center gap-4">
+            {/* Movelap Navigation */}
+            {movelaps.length > 0 && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentMovelapIndex(Math.max(0, currentMovelapIndex - 1))}
+                  disabled={!hasPreviousMovelap}
+                  className="p-1 bg-gray-200 hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed rounded transition-colors"
+                  title={hasPreviousMovelap ? `Previous movelap ${currentMovelapIndex}` : 'First movelap'}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="15,18 9,12 15,6" />
+                  </svg>
+                </button>
+                <span className="text-xs font-semibold text-gray-700">
+                  Movelaps of {moveframeLetter} ({currentMovelapIndex + 1}/{movelaps.length})
+                </span>
+                <button
+                  onClick={() => setCurrentMovelapIndex(Math.min(movelaps.length - 1, currentMovelapIndex + 1))}
+                  disabled={!hasNextMovelap}
+                  className="p-1 bg-gray-200 hover:bg-gray-300 disabled:opacity-30 disabled:cursor-not-allowed rounded transition-colors"
+                  title={hasNextMovelap ? `Next movelap ${currentMovelapIndex + 2}` : 'Last movelap'}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="9,6 15,12 9,18" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            
             {/* Add Movelap Button */}
             {onAddMovelap && (
               <button
@@ -909,11 +1016,11 @@ export default function MovelapDetailTable({
               const sport = moveframe.sport || 'SWIM';
               const isSwim = sport === 'SWIM';
               const isBike = sport === 'BIKE';
-              const isRun = sport === 'RUN';
+              const isRun = sport === 'RUN' || sport === 'HIKING' || sport === 'WALKING';
               const isBodyBuilding = sport === 'BODY_BUILDING';
               
-              // Distance-based sports (no tools)
-              const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
+              // Distance-based sports (no tools) - MUST match the array at top of component!
+              const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'];
               const isDistanceBased = distanceBasedSports.includes(sport);
               
               // Other sports have tools (Gymnastic, Stretching, Pilates, Yoga, Technical moves, Free moves, etc.)
@@ -927,13 +1034,13 @@ export default function MovelapDetailTable({
                     <col style={{ width: '30px' }} />
                     <col style={{ width: '120px' }} />
                     <col style={{ width: '80px' }} />
-                    {isBodyBuilding && <><col style={{ width: '100px' }} /><col style={{ width: '120px' }} /><col style={{ width: '50px' }} /><col style={{ width: '60px' }} /><col style={{ width: '80px' }} /><col style={{ width: '80px' }} /></>}
+                    {isBodyBuilding && <><col style={{ width: '100px' }} /><col style={{ width: '120px' }} /><col style={{ width: '50px' }} /><col style={{ width: '60px' }} /><col style={{ width: '50px' }} /><col style={{ width: '80px' }} /></>}
                     {hasTools && <><col style={{ width: '50px' }} /><col style={{ width: '120px' }} /></>}
-                    {isDistanceBased && <><col style={{ width: '60px' }} />{(isSwim || isRun) && <col style={{ width: '100px' }} />}{isBike && <><col style={{ width: '50px' }} /><col style={{ width: '50px' }} /></>}<col style={{ width: '60px' }} /><col style={{ width: '60px' }} /><col style={{ width: '60px' }} /></>}
+                    {isDistanceBased && <><col style={{ width: '60px' }} />{(isSwim || isRun) && <col style={{ width: '100px' }} />}{isBike && <><col style={{ width: '50px' }} /><col style={{ width: '50px' }} /></>}<col style={{ width: '50px' }} /><col style={{ width: '60px' }} /><col style={{ width: '60px' }} /></>}
+                    <col style={{ width: '45px' }} />
+                    <col style={{ width: '40px' }} />
                     <col style={{ width: '60px' }} />
-                    <col style={{ width: '50px' }} />
-                    <col style={{ width: '80px' }} />
-                    <col style={{ width: '200px' }} />
+                    <col style={{ width: '300px' }} />
                     <col style={{ width: '120px' }} />
                   </colgroup>
                   <thead className="bg-gray-200">
@@ -964,7 +1071,7 @@ export default function MovelapDetailTable({
                       
                       {isDistanceBased && (
                         <>
-                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Dist (m)</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Dist/Dur</th>
                           {(isSwim || isRun) && (
                             <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Style</th>
                           )}
@@ -987,7 +1094,7 @@ export default function MovelapDetailTable({
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Pause</th>
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Macro</th>
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Alarm&Snd</th>
-                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" style={{ width: '200px', maxWidth: '200px', minWidth: '200px' }}>Notes</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" style={{ width: '300px', maxWidth: '300px', minWidth: '300px' }}>Notes</th>
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" style={{ width: '120px', maxWidth: '120px', minWidth: '120px' }}>Options</th>
                     </tr>
                   </thead>

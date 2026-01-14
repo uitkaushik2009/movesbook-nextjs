@@ -37,7 +37,7 @@ export function calculateSportSummaries(
     return [];
   }
 
-  const sportMap = new Map<string, SportSummary & { series: number; repetitions: number; descriptions: string[]; mainWork: string; secondaryWork: string; moveframes: any[]; mainWorkMoveframe: any | null; secondaryWorkMoveframe: any | null }>();
+  const sportMap = new Map<string, SportSummary & { series: number; repetitions: number; descriptions: string[]; mainWork: string; secondaryWork: string; moveframes: any[]; mainWorkMoveframe: any | null; secondaryWorkMoveframe: any | null; durationSeconds?: number }>();
 
   day.workouts.forEach((workout: any) => {
     if (workout.moveframes) {
@@ -141,11 +141,47 @@ export function calculateSportSummaries(
           }
         } else {
           // For AEROBIC (distance-based) sports
-          // Sum distances from movelaps (works for both manual and standard mode)
+          // Sum distances and duration from movelaps (works for both manual and standard mode)
           if (moveframe.movelaps) {
             moveframe.movelaps.forEach((movelap: any) => {
               if (movelap.distance) {
                 summary.distance += Number(movelap.distance);
+              }
+              
+              // Parse and sum time duration
+              if (movelap.time) {
+                const timeStr = movelap.time.toString();
+                let totalSeconds = 0;
+                
+                // Check for our custom format: 1h23'45"6
+                if (timeStr.includes('h') || timeStr.includes("'")) {
+                  const match = timeStr.match(/(\d+)h(\d+)'(\d+)"(\d)?/);
+                  if (match) {
+                    const hours = parseInt(match[1]) || 0;
+                    const minutes = parseInt(match[2]) || 0;
+                    const seconds = parseInt(match[3]) || 0;
+                    totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+                  }
+                }
+                // Check for HH:MM:SS format
+                else if (timeStr.includes(':')) {
+                  const parts = timeStr.split(':');
+                  const hours = parseInt(parts[0]) || 0;
+                  const minutes = parseInt(parts[1]) || 0;
+                  const seconds = parseInt(parts[2]) || 0;
+                  totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+                }
+                // Plain number (assume minutes)
+                else {
+                  const mins = parseFloat(timeStr) || 0;
+                  totalSeconds = mins * 60;
+                }
+                
+                // Add to duration (stored in summary as total seconds for now)
+                if (!summary.durationSeconds) {
+                  summary.durationSeconds = 0;
+                }
+                summary.durationSeconds += totalSeconds;
               }
             });
           }
@@ -172,20 +208,35 @@ export function calculateSportSummaries(
   });
 
   // Convert to final format
-  const summaries = Array.from(sportMap.values()).map(summary => ({
-    sport: summary.sport,
-    icon: summary.icon,
-    name: summary.name,
-    distance: summary.isSeriesBased ? summary.series : summary.distance,
-    duration: summary.isSeriesBased ? summary.repetitions.toString() : summary.duration,
-    color: summary.color,
-    isSeriesBased: summary.isSeriesBased,
-    descriptions: summary.descriptions,
-    mainWork: summary.mainWork,
-    secondaryWork: summary.secondaryWork,
-    mainWorkMoveframe: summary.mainWorkMoveframe,
-    secondaryWorkMoveframe: summary.secondaryWorkMoveframe
-  }));
+  const summaries = Array.from(sportMap.values()).map(summary => {
+    // Format duration as HH:MM:SS for distance-based sports
+    let durationDisplay = '0:00:00';
+    if (summary.isSeriesBased) {
+      durationDisplay = summary.repetitions.toString();
+    } else if (summary.durationSeconds && summary.durationSeconds > 0) {
+      const hours = Math.floor(summary.durationSeconds / 3600);
+      const minutes = Math.floor((summary.durationSeconds % 3600) / 60);
+      const seconds = Math.floor(summary.durationSeconds % 60);
+      
+      // Format as HH:MM:SS
+      durationDisplay = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    
+    return {
+      sport: summary.sport,
+      icon: summary.icon,
+      name: summary.name,
+      distance: summary.isSeriesBased ? summary.series : summary.distance,
+      duration: durationDisplay,
+      color: summary.color,
+      isSeriesBased: summary.isSeriesBased,
+      descriptions: summary.descriptions,
+      mainWork: summary.mainWork,
+      secondaryWork: summary.secondaryWork,
+      mainWorkMoveframe: summary.mainWorkMoveframe,
+      secondaryWorkMoveframe: summary.secondaryWorkMoveframe
+    };
+  });
 
   // Return up to 4 sports
   return summaries.slice(0, 4);

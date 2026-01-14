@@ -149,48 +149,38 @@ export default function AddEditMovelapModal({
     );
   };
 
-  // Fast input parsing functions with decisecond support
-  // Format: 113255 → 1h13'25"5 (hours, minutes, seconds, deciseconds)
+  // Fast input parsing functions - Format: 123456 → 12h34'56"
   const parsePaceInput = (input: string): string => {
     // Remove all non-digit characters
     const digits = input.replace(/\D/g, '');
     if (!digits) return '';
 
-    // Parse from right to left: decisecond, seconds, minutes
+    // Parse from right to left: seconds, minutes
     const len = digits.length;
-    let decisec = '0';
     let sec = '00';
     let min = '0';
     
     if (len === 1) {
-      // "5" → "0'00"5"
-      decisec = digits[0];
+      // "5" → "0'05""
+      sec = digits.padStart(2, '0');
     } else if (len === 2) {
-      // "25" → "0'02"5"
-      sec = digits[0].padStart(2, '0');
-      decisec = digits[1];
+      // "25" → "0'25""
+      sec = digits;
     } else if (len === 3) {
-      // "255" → "0'25"5"
-      sec = digits.slice(0, 2);
-      decisec = digits[2];
-    } else if (len === 4) {
-      // "1325" → "1'32"5"
+      // "325" → "3'25""
       min = digits[0];
       sec = digits.slice(1, 3);
-      decisec = digits[3];
-    } else if (len === 5) {
-      // "13255" → "13'25"5"
+    } else if (len === 4) {
+      // "1325" → "13'25""
       min = digits.slice(0, 2);
       sec = digits.slice(2, 4);
-      decisec = digits[4];
     } else {
-      // 6+ digits: treat first digits as extra minutes
-      min = digits.slice(0, -3);
-      sec = digits.slice(-3, -1);
-      decisec = digits.slice(-1);
+      // 5+ digits: treat first digits as extra minutes
+      min = digits.slice(0, -2);
+      sec = digits.slice(-2);
     }
     
-    return `${min}'${sec}"${decisec}`;
+    return `${min}'${sec}"`;
   };
 
   const parseTimeInput = (input: string): string => {
@@ -198,49 +188,45 @@ export default function AddEditMovelapModal({
     const digits = input.replace(/\D/g, '');
     if (!digits) return '';
 
-    // Parse from right to left: decisecond, seconds, minutes, hours
+    // Parse from right to left: seconds, minutes, hours
+    // Format: 123456 → 12h34'56"
     const len = digits.length;
-    let decisec = '0';
     let sec = '00';
     let min = '00';
     let hour = '0';
     
     if (len === 1) {
-      // "5" → "0h00'00"5"
-      decisec = digits[0];
+      // "5" → "0h00'05""
+      sec = digits.padStart(2, '0');
     } else if (len === 2) {
-      // "25" → "0h00'02"5"
-      sec = digits[0].padStart(2, '0');
-      decisec = digits[1];
+      // "25" → "0h00'25""
+      sec = digits;
     } else if (len === 3) {
-      // "255" → "0h00'25"5"
-      sec = digits.slice(0, 2);
-      decisec = digits[2];
-    } else if (len === 4) {
-      // "1325" → "0h01'32"5"
+      // "325" → "0h03'25""
       min = digits[0].padStart(2, '0');
       sec = digits.slice(1, 3);
-      decisec = digits[3];
-    } else if (len === 5) {
-      // "13255" → "0h13'25"5"
+    } else if (len === 4) {
+      // "1325" → "0h13'25""
       min = digits.slice(0, 2);
       sec = digits.slice(2, 4);
-      decisec = digits[4];
-    } else if (len === 6) {
-      // "113255" → "1h13'25"5"
+    } else if (len === 5) {
+      // "13255" → "1h32'55""
       hour = digits[0];
       min = digits.slice(1, 3);
       sec = digits.slice(3, 5);
-      decisec = digits[5];
+    } else if (len === 6) {
+      // "123456" → "12h34'56""
+      hour = digits.slice(0, 2);
+      min = digits.slice(2, 4);
+      sec = digits.slice(4, 6);
     } else {
-      // 7+ digits: HH+:MM'SS"D
-      hour = digits.slice(0, -5);
-      min = digits.slice(-5, -3);
-      sec = digits.slice(-3, -1);
-      decisec = digits.slice(-1);
+      // 7+ digits: HH+:MM'SS"
+      hour = digits.slice(0, -4);
+      min = digits.slice(-4, -2);
+      sec = digits.slice(-2);
     }
     
-    return `${hour}h${min}'${sec}"${decisec}`;
+    return `${hour}h${min}'${sec}"`;
   };
 
   const handlePaceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -270,6 +256,7 @@ export default function AddEditMovelapModal({
   // Initialize form
   useEffect(() => {
     if (mode === 'edit' && existingMovelap) {
+      // EDIT MODE: Pre-fill with the movelap being edited
       setSequence(existingMovelap.repetitionNumber || 1);
       setDistance(existingMovelap.distance?.toString() || '');
       setSpeed(existingMovelap.speed || '');
@@ -290,29 +277,54 @@ export default function AddEditMovelapModal({
       setR1(existingMovelap.r1 || '');
       setR2(existingMovelap.r2 || '');
     } else {
-      // Inherit from moveframe for new movelap
+      // ADD MODE: Pre-fill with the LAST movelap's data (for faster input)
       const movelaps = moveframe.movelaps || [];
       const nextSequence = movelaps.length + 1;
+      const lastMovelap = movelaps[movelaps.length - 1]; // Get the last movelap
       
       setSequence(nextSequence);
-      setDistance(moveframe.distance?.toString() || '');
-      setSpeed(moveframe.speed || '');
-      setStyle(moveframe.style || '');
-      setPause(moveframe.pause || '');
-      setPace('');  // Always start empty for new movelaps
-      setTime('');  // Always start empty for new movelaps
-      setNotes('');
-      setAlarm('');
-      setSound('Beep');
-      setMacroFinal("0'");
-      setReps('');
-      setWeight('');
-      setTools('');
-      setMuscularSector('');
-      setExercise('');
-      setRestType('');
-      setR1('');
-      setR2('');
+      
+      // If there's a previous movelap, inherit its data for faster data entry
+      if (lastMovelap) {
+        setDistance(lastMovelap.distance?.toString() || '');
+        setSpeed(lastMovelap.speed || '');
+        setStyle(lastMovelap.style || '');
+        setPause(lastMovelap.pause || '');
+        setPace('');  // Clear pace/time for new lap
+        setTime('');
+        setNotes('');  // Clear notes for new lap
+        setAlarm(lastMovelap.alarm?.toString() || '');
+        setSound(lastMovelap.sound || 'Beep');
+        setMacroFinal(lastMovelap.macroFinal || "0'");
+        setReps(lastMovelap.reps?.toString() || '');
+        setWeight(lastMovelap.weight || '');
+        setTools(lastMovelap.tools || '');
+        setMuscularSector(lastMovelap.muscularSector || '');
+        setExercise(lastMovelap.exercise || '');
+        setRestType(lastMovelap.restType || '');
+        setR1(lastMovelap.r1 || '');
+        setR2(lastMovelap.r2 || '');
+      } else {
+        // No previous movelap, inherit from moveframe
+        setDistance(moveframe.distance?.toString() || '');
+        setSpeed(moveframe.speed || '');
+        setStyle(moveframe.style || '');
+        setPause(moveframe.pause || '');
+        setPace('');
+        setTime('');
+        setNotes('');
+        setAlarm('');
+        setSound('Beep');
+        setMacroFinal("0'");
+        setReps('');
+        setWeight('');
+        setTools('');
+        setMuscularSector('');
+        setExercise('');
+        setRestType('');
+        setR1('');
+        setR2('');
+      }
     }
   }, [mode, existingMovelap, moveframe, isOpen]);
 
@@ -440,443 +452,437 @@ export default function AddEditMovelapModal({
             </div>
           </div>
 
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Column */}
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-bold text-sm text-gray-700 mb-3">
-                  {sport === 'BODY_BUILDING' ? '💪 EXERCISE DETAILS' : '🏃 MOVEMENT DETAILS'}
-                </h3>
+          {/* Single Column Layout - matches table column order (left to right = top to bottom) */}
+          <div className="space-y-3">
 
-                {sport === 'BODY_BUILDING' ? (
-                  <>
-                    {/* Body Building Fields */}
-                    <div className="mb-3">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Muscular Sector:
-                      </label>
-                      <div className="flex items-center">
-                        <select
-                          value={muscularSector}
-                          onChange={(e) => setMuscularSector(e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select...</option>
-                          {(config as any).muscularSectors?.map((m: string) => (
-                            <option key={m} value={m}>
-                              {m}
-                            </option>
-                          ))}
-                        </select>
-                        <CopyButton fieldName="muscularSector" fieldValue={muscularSector} />
-                      </div>
-                    </div>
-                    <div className="mb-3">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Exercise:
-                      </label>
-                      <div className="flex items-center">
-                        <input
-                          type="text"
-                          value={exercise}
-                          onChange={(e) => setExercise(e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          placeholder="e.g., Bench Press, Squat..."
-                        />
-                        <CopyButton fieldName="exercise" fieldValue={exercise} />
-                      </div>
-                    </div>
-                    <div className="mb-3">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Reps: <span className="text-red-500">*</span>
-                      </label>
-                      <div className="flex items-center">
-                        <input
-                          type="number"
-                          value={reps}
-                          onChange={(e) => setReps(e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          placeholder="12"
-                        />
-                        <CopyButton fieldName="reps" fieldValue={reps} />
-                      </div>
-                      {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
-                    </div>
-                    <div className="mb-3">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Weight:
-                      </label>
-                      <div className="flex items-center">
-                        <input
-                          type="text"
-                          value={weight}
-                          onChange={(e) => setWeight(e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          placeholder="12 kg, 50 lbs, etc."
-                        />
-                        <CopyButton fieldName="weight" fieldValue={weight} />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Tempo/Speed:
-                      </label>
-                      <div className="flex items-center">
-                        <select
-                          value={speed}
-                          onChange={(e) => setSpeed(e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select...</option>
-                          {config.speeds.map((s: string) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                        <CopyButton fieldName="speed" fieldValue={speed} />
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {/* Check if it's a tools-based sport (not distance-based) */}
-                    {(() => {
-                      const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
-                      const isDistanceBased = distanceBasedSports.includes(sport);
-                      const hasTools = !isDistanceBased;
-                      
-                      if (hasTools) {
-                        // Sports with tools (Gymnastic, Stretching, Pilates, Yoga, etc.)
-                        return (
-                          <>
-                            <div className="mb-3">
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Reps: <span className="text-red-500">*</span>
-                              </label>
-                              <div className="flex items-center">
-                                <input
-                                  type="number"
-                                  value={reps}
-                                  onChange={(e) => setReps(e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                  placeholder="12"
-                                />
-                                <CopyButton fieldName="reps" fieldValue={reps} />
-                              </div>
-                              {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Tools:
-                              </label>
-                              <div className="flex items-center">
-                                <input
-                                  type="text"
-                                  value={tools}
-                                  onChange={(e) => setTools(e.target.value)}
-                                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                  placeholder="Enter tools (alphanumeric)"
-                                />
-                                <CopyButton fieldName="tools" fieldValue={tools} />
-                              </div>
-                            </div>
-                          </>
-                        );
-                      }
-                      return null;
-                    })()}
-                    
-                    {/* Distance-based sports (SWIM, BIKE, RUN, ROWING, SKATE, SKI, SNOWBOARD) */}
-                    {(() => {
-                      const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD'];
-                      const isDistanceBased = distanceBasedSports.includes(sport);
-                      
-                      if (!isDistanceBased) return null;
-                      
-                      return (
-                        <>
-                    <div className="mb-3">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
-                        Distance (m): <span className="text-red-500">*</span>
-                      </label>
-                      <div className="flex items-center">
-                        {'distances' in config && (
-                          <select
-                            value={distance}
-                            onChange={(e) => setDistance(e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">Select...</option>
-                            {config.distances.map((d: string) => (
-                              <option key={d} value={d}>
-                                {d}m
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        <CopyButton fieldName="distance" fieldValue={distance} />
-                      </div>
-                      {errors.distance && <p className="mt-1 text-xs text-red-500">{errors.distance}</p>}
-                    </div>
-
-                    {/* Style - Only for SWIM and RUN */}
-                    {(sport === 'SWIM' || sport === 'RUN') && 'styles' in config && (
-                      <div className="mb-3">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Style:</label>
-                        <div className="flex items-center">
-                          <select
-                            value={style}
-                            onChange={(e) => setStyle(e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                          >
-                            <option value="">Select...</option>
-                            {config.styles.map((s: string) => (
-                              <option key={s} value={s}>
-                                {s}
-                              </option>
-                            ))}
-                          </select>
-                          <CopyButton fieldName="style" fieldValue={style} />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* R1, R2 - Only for BIKE */}
-                    {sport === 'BIKE' && 'ranges' in config && (
-                      <>
-                        <div className="mb-3">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">R1 (Range 1):</label>
-                          <div className="flex items-center">
-                            <select
-                              value={r1}
-                              onChange={(e) => setR1(e.target.value)}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">Select...</option>
-                              {config.ranges.map((r: string) => (
-                                <option key={r} value={r}>
-                                  {r}
-                                </option>
-                              ))}
-                            </select>
-                            <CopyButton fieldName="r1" fieldValue={r1} />
-                          </div>
-                        </div>
-                        <div className="mb-3">
-                          <label className="block text-xs font-medium text-gray-700 mb-1">R2 (Range 2):</label>
-                          <div className="flex items-center">
-                            <select
-                              value={r2}
-                              onChange={(e) => setR2(e.target.value)}
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                            >
-                              <option value="">Select...</option>
-                              {config.ranges.map((r: string) => (
-                                <option key={r} value={r}>
-                                  {r}
-                                </option>
-                              ))}
-                            </select>
-                            <CopyButton fieldName="r2" fieldValue={r2} />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* Speed - For all distance-based sports */}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-700 mb-1">Speed/Zone:</label>
-                      <div className="flex items-center">
-                        <select
-                          value={speed}
-                          onChange={(e) => setSpeed(e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select...</option>
-                          {config.speeds.map((s: string) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                        <CopyButton fieldName="speed" fieldValue={speed} />
-                      </div>
-                    </div>
-                          </>
-                        );
-                    })()}
-                  </>
-                )}
-              </div>
-
-              {/* Timing Section - Only for distance-based sports */}
-              {sport !== 'BODY_BUILDING' && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-bold text-sm text-gray-700 mb-3">⏱️ TIMING</h3>
-                  <div className="mb-3">
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      TIME <span className="text-gray-400 font-normal text-[10px]">(optional)</span>
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={time}
-                        onChange={handleTimeChange}
-                        onBlur={handleTimeBlur}
-                        autoComplete="off"
-                        className="flex-1 px-3 py-2 text-base border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
-                        placeholder="0h00'00&quot;0"
-                      />
-                      <CopyButton fieldName="time" fieldValue={time} />
-                    </div>
-                    <p className="mt-1 text-[10px] text-blue-600">
-                      💡 Type: <strong>1'30, 1.30.5, or 1'30</strong> — formats to <strong>0h01'30&quot;0</strong> or <strong>0h01'30&quot;5</strong>
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-700 mb-1">
-                      Pace/100: <span className="text-[10px] text-green-600 font-semibold">✨ Flexible input</span>
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={pace}
-                        onChange={handlePaceChange}
-                        onBlur={handlePaceBlur}
-                        autoComplete="off"
-                        className="flex-1 px-3 py-2 text-lg border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono bg-green-50"
-                        placeholder="130 or 1:30 or 1.30"
-                      />
-                      <CopyButton fieldName="pace" fieldValue={pace} />
-                    </div>
-                    <p className="mt-1 text-[10px] text-green-600">
-                      ⚡ Fast input: Type <strong>130</strong> → <strong>1'30&quot;0</strong>
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column */}
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-bold text-sm text-gray-700 mb-3">⏸️ REST & RECOVERY</h3>
-                
-                {/* Rest Type - Only for BODY_BUILDING */}
-                {sport === 'BODY_BUILDING' && 'restTypes' in config && (
-                  <div className="mb-3">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">Rest Type:</label>
-                    <div className="flex items-center">
-                      <select
-                        value={restType}
-                        onChange={(e) => setRestType(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select...</option>
-                        {config.restTypes.map((rt: string) => (
-                          <option key={rt} value={rt}>
-                            {rt.replace(/_/g, ' ')}
-                          </option>
-                        ))}
-                      </select>
-                      <CopyButton fieldName="restType" fieldValue={restType} />
-                    </div>
-                  </div>
-                )}
-                
-                <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Pause:</label>
+            {sport === 'BODY_BUILDING' ? (
+              <>
+                {/* BODY BUILDING - Vertical layout matching table columns */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Muscular Sector:
+                  </label>
                   <div className="flex items-center">
                     <select
-                      value={pause}
-                      onChange={(e) => setPause(e.target.value)}
+                      value={muscularSector}
+                      onChange={(e) => setMuscularSector(e.target.value)}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select...</option>
-                      {config.pauses.map((p: string) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
-                    <CopyButton fieldName="pause" fieldValue={pause} />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Macro Final:</label>
-                  <div className="flex items-center">
-                    <select
-                      value={macroFinal}
-                      onChange={(e) => setMacroFinal(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                    >
-                      {MACRO_FINALS.map((m) => (
+                      {(config as any).muscularSectors?.map((m: string) => (
                         <option key={m} value={m}>
                           {m}
                         </option>
                       ))}
                     </select>
-                    <CopyButton fieldName="macroFinal" fieldValue={macroFinal} />
+                    <CopyButton fieldName="muscularSector" fieldValue={muscularSector} />
                   </div>
                 </div>
-              </div>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h3 className="font-bold text-sm text-gray-700 mb-3">🔔 ALERTS</h3>
-                <div className="mb-3">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Alarm:</label>
-                  <div className="flex items-center">
-                    <select
-                      value={alarm}
-                      onChange={(e) => setAlarm(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">None</option>
-                      {ALARMS.map((a) => (
-                        <option key={a} value={a}>
-                          {a}
-                        </option>
-                      ))}
-                    </select>
-                    <CopyButton fieldName="alarm" fieldValue={alarm} />
-                  </div>
-                </div>
+                
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Sound:</label>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Exercise:
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      type="text"
+                      value={exercise}
+                      onChange={(e) => setExercise(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., Bench Press, Squat..."
+                    />
+                    <CopyButton fieldName="exercise" fieldValue={exercise} />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Reps: <span className="text-red-500">*</span>
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      type="number"
+                      value={reps}
+                      onChange={(e) => setReps(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      placeholder="12"
+                    />
+                    <CopyButton fieldName="reps" fieldValue={reps} />
+                  </div>
+                  {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Weight:
+                  </label>
+                  <div className="flex items-center">
+                    <input
+                      type="text"
+                      value={weight}
+                      onChange={(e) => setWeight(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      placeholder="12 kg, 50 lbs, etc."
+                    />
+                    <CopyButton fieldName="weight" fieldValue={weight} />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Tempo/Speed:
+                  </label>
                   <div className="flex items-center">
                     <select
-                      value={sound}
-                      onChange={(e) => setSound(e.target.value)}
+                      value={speed}
+                      onChange={(e) => setSpeed(e.target.value)}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                     >
-                      {SOUNDS.map((s) => (
+                      <option value="">Select...</option>
+                      {config.speeds.map((s: string) => (
                         <option key={s} value={s}>
                           {s}
                         </option>
                       ))}
                     </select>
-                    <CopyButton fieldName="sound" fieldValue={sound} />
+                    <CopyButton fieldName="speed" fieldValue={speed} />
                   </div>
                 </div>
+              </>
+            ) : (
+              <>
+                {/* Check if it's a tools-based sport (not distance-based) */}
+                {(() => {
+                  const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'WALKING', 'HIKING'];
+                  const isDistanceBased = distanceBasedSports.includes(sport);
+                  const hasTools = !isDistanceBased;
+                  
+                  if (hasTools) {
+                    // Sports with tools (Gymnastic, Stretching, Pilates, Yoga, etc.)
+                    return (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Reps: <span className="text-red-500">*</span>
+                          </label>
+                          <div className="flex items-center">
+                            <input
+                              type="number"
+                              value={reps}
+                              onChange={(e) => setReps(e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              placeholder="12"
+                            />
+                            <CopyButton fieldName="reps" fieldValue={reps} />
+                          </div>
+                          {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
+                        </div>
+                        
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Tools:
+                          </label>
+                          <div className="flex items-center">
+                            <input
+                              type="text"
+                              value={tools}
+                              onChange={(e) => setTools(e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              placeholder="Enter tools (alphanumeric)"
+                            />
+                            <CopyButton fieldName="tools" fieldValue={tools} />
+                          </div>
+                        </div>
+                      </>
+                    );
+                  }
+                  return null;
+                })()}
+                
+                {/* Distance-based sports (SWIM, BIKE, RUN, ROWING, SKATE, SKI, SNOWBOARD, WALKING, HIKING) */}
+                {(() => {
+                  const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'WALKING', 'HIKING'];
+                  const isDistanceBased = distanceBasedSports.includes(sport);
+                  
+                  if (!isDistanceBased) return null;
+                  
+                  return (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Distance (m): <span className="text-red-500">*</span>
+                        </label>
+                        <div className="flex items-center">
+                          {'distances' in config && (
+                            <select
+                              value={distance}
+                              onChange={(e) => setDistance(e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Select...</option>
+                              {config.distances.map((d: string) => (
+                                <option key={d} value={d}>
+                                  {d}m
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          <CopyButton fieldName="distance" fieldValue={distance} />
+                        </div>
+                        {errors.distance && <p className="mt-1 text-xs text-red-500">{errors.distance}</p>}
+                      </div>
+
+                      {/* Style - Only for SWIM, RUN, WALKING, HIKING */}
+                      {(sport === 'SWIM' || sport === 'RUN' || sport === 'WALKING' || sport === 'HIKING') && 'styles' in config && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">Style:</label>
+                          <div className="flex items-center">
+                            <select
+                              value={style}
+                              onChange={(e) => setStyle(e.target.value)}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Select...</option>
+                              {config.styles.map((s: string) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                            <CopyButton fieldName="style" fieldValue={style} />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Speed - For all distance-based sports */}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Speed/Zone:</label>
+                        <div className="flex items-center">
+                          <select
+                            value={speed}
+                            onChange={(e) => setSpeed(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Select...</option>
+                            {config.speeds.map((s: string) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                          <CopyButton fieldName="speed" fieldValue={speed} />
+                        </div>
+                      </div>
+                      
+                      {/* R1, R2 - Only for BIKE */}
+                      {sport === 'BIKE' && 'ranges' in config && (
+                        <>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">R1 (Range 1):</label>
+                            <div className="flex items-center">
+                              <select
+                                value={r1}
+                                onChange={(e) => setR1(e.target.value)}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="">Select...</option>
+                                {config.ranges.map((r: string) => (
+                                  <option key={r} value={r}>
+                                    {r}
+                                  </option>
+                                ))}
+                              </select>
+                              <CopyButton fieldName="r1" fieldValue={r1} />
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">R2 (Range 2):</label>
+                            <div className="flex items-center">
+                              <select
+                                value={r2}
+                                onChange={(e) => setR2(e.target.value)}
+                                className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="">Select...</option>
+                                {config.ranges.map((r: string) => (
+                                  <option key={r} value={r}>
+                                    {r}
+                                  </option>
+                                ))}
+                              </select>
+                              <CopyButton fieldName="r2" fieldValue={r2} />
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              </>
+            )}
+            
+            {/* Timing Section - Only for distance-based sports */}
+            {sport !== 'BODY_BUILDING' && (
+              <>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    TIME <span className="text-gray-400 font-normal text-[10px]">(optional)</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={time}
+                      onChange={handleTimeChange}
+                      onBlur={handleTimeBlur}
+                      autoComplete="off"
+                      className="flex-1 px-3 py-2 text-base border-2 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                      placeholder="123456"
+                    />
+                    <CopyButton fieldName="time" fieldValue={time} />
+                  </div>
+                  <p className="mt-1 text-[10px] text-blue-600">
+                    ⚡ Fast input: Type <strong>123456</strong> → <strong>12h34'56"</strong>
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1">
+                    Pace/100: <span className="text-[10px] text-green-600 font-semibold">✨ Flexible input</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={pace}
+                      onChange={handlePaceChange}
+                      onBlur={handlePaceBlur}
+                      autoComplete="off"
+                      className="flex-1 px-3 py-2 text-lg border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono bg-green-50"
+                      placeholder="1234"
+                    />
+                    <CopyButton fieldName="pace" fieldValue={pace} />
+                  </div>
+                  <p className="mt-1 text-[10px] text-green-600">
+                    ⚡ Fast input: Type <strong>1234</strong> → <strong>12'34"</strong>
+                  </p>
+                </div>
+              </>
+            )}
+            
+            {/* Rest Type - Only for BODY_BUILDING */}
+            {sport === 'BODY_BUILDING' && 'restTypes' in config && (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Rest Type:</label>
+                <div className="flex items-center">
+                  <select
+                    value={restType}
+                    onChange={(e) => setRestType(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select...</option>
+                    {config.restTypes.map((rt: string) => (
+                      <option key={rt} value={rt}>
+                        {rt.replace(/_/g, ' ')}
+                      </option>
+                    ))}
+                  </select>
+                  <CopyButton fieldName="restType" fieldValue={restType} />
+                </div>
+              </div>
+            )}
+            
+            {/* Pause */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Pause:</label>
+              <div className="flex items-center">
+                <select
+                  value={pause}
+                  onChange={(e) => setPause(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select...</option>
+                  {config.pauses.map((p: string) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+                <CopyButton fieldName="pause" fieldValue={pause} />
               </div>
             </div>
-          </div>
-
-          {/* Notes */}
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
-              Notes:
-              <CopyButton fieldName="notes" fieldValue={notes} />
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              rows={3}
-              placeholder="Add any notes or special instructions..."
-            />
+            
+            {/* Macro Final */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Macro Final:</label>
+              <div className="flex items-center">
+                <select
+                  value={macroFinal}
+                  onChange={(e) => setMacroFinal(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                >
+                  {MACRO_FINALS.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <CopyButton fieldName="macroFinal" fieldValue={macroFinal} />
+              </div>
+            </div>
+            
+            {/* Alarm */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Alarm:</label>
+              <div className="flex items-center">
+                <select
+                  value={alarm}
+                  onChange={(e) => setAlarm(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">None</option>
+                  {ALARMS.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+                <CopyButton fieldName="alarm" fieldValue={alarm} />
+              </div>
+            </div>
+            
+            {/* Sound */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Sound:</label>
+              <div className="flex items-center">
+                <select
+                  value={sound}
+                  onChange={(e) => setSound(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                >
+                  {SOUNDS.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+                <CopyButton fieldName="sound" fieldValue={sound} />
+              </div>
+            </div>
+            
+            {/* Notes */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center">
+                Notes:
+                <CopyButton fieldName="notes" fieldValue={notes} />
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                rows={3}
+                placeholder="Add any notes or special instructions..."
+              />
+            </div>
           </div>
         </div>
 

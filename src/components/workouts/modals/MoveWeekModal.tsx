@@ -21,14 +21,19 @@ export default function MoveWeekModal({
 
   if (!isOpen || !sourceWeek) return null;
 
+  // Check if we're moving multiple weeks or a single week
+  const isMultipleWeeks = sourceWeek.multipleWeeks && Array.isArray(sourceWeek.multipleWeeks);
+  const weeksToMove = isMultipleWeeks ? sourceWeek.multipleWeeks : [sourceWeek];
+  const sourceWeekIds = weeksToMove.map((w: any) => w.id);
+
   const handleMove = async () => {
     if (!selectedWeekId) {
       alert('Please select a target week');
       return;
     }
 
-    if (selectedWeekId === sourceWeek.id) {
-      alert('Cannot move to the same week');
+    if (sourceWeekIds.includes(selectedWeekId)) {
+      alert('Cannot move to one of the source weeks');
       return;
     }
 
@@ -38,8 +43,8 @@ export default function MoveWeekModal({
       onClose();
       setSelectedWeekId('');
     } catch (error) {
-      console.error('Error moving week:', error);
-      alert('Failed to move week. Please try again.');
+      console.error('Error moving week(s):', error);
+      alert(`Failed to move week(s). Please try again.`);
     } finally {
       setIsLoading(false);
     }
@@ -72,10 +77,16 @@ export default function MoveWeekModal({
         <div className="p-6 space-y-6">
         <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
           <p className="text-sm text-gray-700">
-            <span className="font-semibold">Source:</span> Week {sourceWeek.weekNumber}
+            <span className="font-semibold">Source:</span> {isMultipleWeeks 
+              ? `Weeks ${weeksToMove.map((w: any) => w.weekNumber).join(', ')} (${weeksToMove.length} weeks)`
+              : `Week ${sourceWeek.weekNumber}`
+            }
           </p>
           <p className="text-xs text-gray-600 mt-1">
-            This will move all workouts, moveframes, and movelaps from Week {sourceWeek.weekNumber} to the selected target week.
+            {isMultipleWeeks 
+              ? `This will move all workouts, moveframes, and movelaps from ${weeksToMove.length} week(s) to the selected target week.`
+              : `This will move all workouts, moveframes, and movelaps from Week ${sourceWeek.weekNumber} to the selected target week.`
+            }
           </p>
         </div>
 
@@ -91,7 +102,7 @@ export default function MoveWeekModal({
           >
             <option value="">-- Select a week --</option>
             {allWeeks
-              .filter((w) => w.id !== sourceWeek.id)
+              .filter((w) => !sourceWeekIds.includes(w.id))
               .map((week) => (
                 <option key={week.id} value={week.id}>
                   Week {week.weekNumber} - {week.days?.[0] ? new Date(week.days[0].date).toLocaleDateString() : 'N/A'}

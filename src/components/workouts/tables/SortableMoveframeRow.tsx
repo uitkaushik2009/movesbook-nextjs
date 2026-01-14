@@ -32,6 +32,7 @@ interface SortableMoveframeRowProps {
   setShowInfoPanel: (show: boolean) => void;
   setSelectedMoveframe: (moveframe: any) => void;
   orderedVisibleColumns?: string[];
+  onNavigateToMoveframe?: (moveframeId: string) => void; // For navigation between moveframes
 }
 
 export default function SortableMoveframeRow({
@@ -56,7 +57,8 @@ export default function SortableMoveframeRow({
   day,
   setShowInfoPanel,
   setSelectedMoveframe,
-  orderedVisibleColumns
+  orderedVisibleColumns,
+  onNavigateToMoveframe
 }: SortableMoveframeRowProps) {
   // Disable sorting for annotation moveframes
   const isAnnotation = moveframe.type === 'ANNOTATION';
@@ -457,41 +459,35 @@ export default function SortableMoveframeRow({
       case 'description':
         // Check if this is a manual mode moveframe
         const isManualMode = moveframe.manualMode === true;
-        // Check if Priority checkbox is selected
         const hasManualPriority = moveframe.manualPriority === true;
-        // For manual mode WITHOUT priority, don't show description
-        // For manual mode, ALWAYS use notes field first (it contains the full rich text content)
+        console.log('📋 [DISPLAY] Moveframe', moveframe.letter, ':', {
+          manualMode: isManualMode,
+          manualPriority: hasManualPriority,
+          willShowManualContent: isManualMode && hasManualPriority
+        });
+        // For manual mode with priority, use notes field first (it contains the full rich text content)
         // Description field might be truncated for database constraints
-        const manualContent = (isManualMode && hasManualPriority) ? (moveframe.notes || moveframe.description || '') : 
-                             (isManualMode && !hasManualPriority) ? '' :
-                             moveframe.description;
+        // If manual mode WITHOUT priority, show blank (user wants to hide content)
+        const manualContent = (isManualMode && hasManualPriority)
+          ? (moveframe.notes || moveframe.description || '') 
+          : isManualMode && !hasManualPriority
+          ? '' // Blank for manual mode without priority
+          : moveframe.description;
         
         // Debug logging for manual mode
         if (isManualMode) {
-          console.log(`🔍 [SortableMoveframeRow] Manual mode moveframe ${moveframe.letter}:`, {
+          console.log(`📝 [SortableMoveframeRow] Manual mode moveframe ${moveframe.letter}:`, {
             manualMode: moveframe.manualMode,
-            manualPriority: moveframe.manualPriority,
+            manualPriority: hasManualPriority,
             hasDescription: !!moveframe.description,
             hasNotes: !!moveframe.notes,
             descriptionLength: moveframe.description?.length || 0,
             notesLength: moveframe.notes?.length || 0,
-            manualContentLength: manualContent?.length || 0,
-            willShowContent: hasManualPriority
+            manualContentLength: manualContent?.length || 0
           });
         }
         
         const hasHtmlContent = manualContent && (manualContent.includes('<') || manualContent.includes('\n'));
-        
-        // Function to truncate HTML content to first 2 lines
-        const getTruncatedPreview = (html: string) => {
-          // Strip HTML tags for line counting
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = html;
-          const text = tempDiv.textContent || tempDiv.innerText || '';
-          const lines = text.split('\n').filter(line => line.trim());
-          const preview = lines.slice(0, 2).join('\n');
-          return preview || text.slice(0, 100) + (text.length > 100 ? '...' : '');
-        };
         
         return (
           <td 
@@ -509,8 +505,8 @@ export default function SortableMoveframeRow({
                 color: annotationTextColor || '#ffffff'
               } : {})
             }}
-            onClick={(e) => {
-              if (isManualMode && hasManualPriority && manualContent) {
+           onClick={(e) => {
+             if (isManualMode && hasManualPriority && manualContent) {
                 e.stopPropagation();
                 console.log('🔍 [SortableMoveframeRow] Opening popup with content:', {
                   contentLength: manualContent.length,
@@ -525,9 +521,9 @@ export default function SortableMoveframeRow({
                 setShowManualPopup(true);
               }
             }}
-            title={isManualMode && hasManualPriority && manualContent ? "Click to view full content" : ""}
-          >
-            {isManualMode && hasManualPriority && manualContent ? (
+           title={isManualMode && hasManualPriority && manualContent ? "Click to view full content" : ""}
+         >
+           {isManualMode && hasManualPriority && manualContent ? (
               <div 
                 className="text-left text-sm overflow-hidden manual-content-preview break-words"
                 dangerouslySetInnerHTML={{ __html: manualContent }}
@@ -538,15 +534,19 @@ export default function SortableMoveframeRow({
                   overflow: 'hidden'
                 }}
               />
-            ) : isManualMode && !hasManualPriority ? (
-              <div className="overflow-hidden break-words text-gray-400 italic">
-                —
-              </div>
             ) : hasHtmlContent ? (
-              <div className="text-sm overflow-hidden break-words" dangerouslySetInnerHTML={{ __html: moveframe.description }} />
+              <div className="text-sm overflow-hidden break-words" dangerouslySetInnerHTML={{ __html: manualContent }} />
             ) : (
               <div className="overflow-hidden break-words">
-                {moveframe.description || moveframe.annotationText || 'No description'}
+                {(() => {
+                  // For manual mode without priority, show blank (empty string)
+                  if (isManualMode && !hasManualPriority) {
+                    console.log(`📄 [SortableMoveframeRow] Manual mode without priority for ${moveframe.letter}: showing BLANK`);
+                    return ''; // Return empty string for blank cell
+                  }
+                  const displayText = manualContent || moveframe.annotationText || 'No description';
+                  return displayText;
+                })()}
               </div>
             )}
           </td>
@@ -635,8 +635,9 @@ export default function SortableMoveframeRow({
         if (moveframe.type === 'ANNOTATION') {
           ripDisplay = '—';
         } else if (isManualModeRip && !isAerobicSport) {
-          // For non-aerobic sports in manual mode, show total series (movelaps count)
-          ripDisplay = movelapsCount;
+          // For non-aerobic sports in manual mode, show repetitions from moveframe.repetitions field
+          // (not movelaps count, because manual mode has no movelaps)
+          ripDisplay = moveframe.repetitions || 0;
         } else if (isManualModeRip && isAerobicSport) {
           // For aerobic sports in manual mode, show "—"
           ripDisplay = '—';
@@ -879,7 +880,7 @@ export default function SortableMoveframeRow({
       {isMovelapsExpanded && (
         <tr>
           <td colSpan={visibleColumns.length} className="border border-gray-200 p-0 bg-gray-50">
-            <div className="pl-8">
+            <div className="pl-8" style={{ maxWidth: '1400px' }}>
               <MovelapDetailTable 
                 moveframe={moveframe}
                 onEditMovelap={(movelap) => onEditMovelap?.(movelap, moveframe)}
@@ -887,6 +888,8 @@ export default function SortableMoveframeRow({
                 onAddMovelap={() => onAddMovelap?.(moveframe)}
                 onAddMovelapAfter={(movelap, index) => onAddMovelapAfter?.(movelap, index, moveframe, workout, day)}
                 onRefresh={onRefresh}
+                allMoveframes={workout?.moveframes || []}
+                onNavigateMoveframe={onNavigateToMoveframe}
               />
             </div>
           </td>
@@ -940,11 +943,18 @@ export default function SortableMoveframeRow({
             <div>
               <div className="font-semibold text-gray-700 mb-1">Description:</div>
               <div className="text-gray-900 bg-gray-50 p-2 rounded max-h-[150px] overflow-y-auto">
-                {hoveredMoveframe.description ? (
-                  <div dangerouslySetInnerHTML={{ __html: hoveredMoveframe.description }} />
-                ) : (
-                  'No description'
-                )}
+                {(() => {
+                  // For manual mode, show full content from notes, otherwise show description
+                  const content = hoveredMoveframe.manualMode 
+                    ? (hoveredMoveframe.notes || hoveredMoveframe.description)
+                    : hoveredMoveframe.description;
+                  
+                  return content ? (
+                    <div dangerouslySetInnerHTML={{ __html: content }} />
+                  ) : (
+                    'No description'
+                  );
+                })()}
               </div>
             </div>
 
@@ -1023,8 +1033,8 @@ export default function SortableMoveframeRow({
               )}
             </div>
 
-            {/* Notes */}
-            {hoveredMoveframe.notes && (
+            {/* Notes - Only show for non-manual moveframes, as manual mode uses notes for content */}
+            {hoveredMoveframe.notes && !hoveredMoveframe.manualMode && (
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <div className="font-semibold text-gray-700 mb-1 text-[10px]">Notes:</div>
                 <div className="text-gray-900 bg-yellow-50 p-2 rounded text-[10px]">

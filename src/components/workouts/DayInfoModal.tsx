@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { SPORT_OPTIONS } from '@/constants/workout.constants';
-import { isSeriesBasedSport } from '@/constants/moveframe.constants';
+import { isSeriesBasedSport, shouldShowDistance, getDistanceUnit } from '@/constants/moveframe.constants';
 
 interface DayInfoModalProps {
   isOpen: boolean;
@@ -95,15 +95,14 @@ export default function DayInfoModal({
           console.log(`      ✏️ Manual Distance: +${manualDist}m`);
         }
         
-        // For ALL sports: sum the series count from moveframe repetitions
-        const moveframeRepetitions = parseInt(mf.repetitions) || 0;
-        if (moveframeRepetitions > 0) {
-          currentTotals.series += moveframeRepetitions;
-          console.log(`      📊 Moveframe Repetitions (Series): +${moveframeRepetitions}`);
-        }
-        
         if (isSeries) {
-          // For series-based sports: sum actual reps from all movelaps
+          // For series-based sports (Body Building, etc.)
+          // For manual mode: use repetitions field, for standard mode: count movelaps
+          const seriesCount = mf.manualMode ? (mf.repetitions || 0) : (mf.movelaps?.length || 0);
+          currentTotals.series += seriesCount;
+          console.log(`      📊 Series (sets): +${seriesCount}`);
+          
+          // Sum actual reps from all movelaps
           (mf.movelaps || []).forEach((lap: any, lapIdx: number) => {
             const reps = parseInt(lap.reps) || 0;
             if (reps > 0) {
@@ -121,21 +120,38 @@ export default function DayInfoModal({
               console.log(`      📏 Lap ${lapIdx + 1}: +${dist}m distance`);
             }
             
-            // Add duration (parse time in format like "00:05:30" or minutes)
+            // Add duration (parse time in various formats: "1h23'45"6", "00:05:30", or minutes)
             const timeStr = lap.time?.toString() || '';
             if (timeStr) {
-              if (timeStr.includes(':')) {
+              let totalMins = 0;
+              
+              // Check for our custom format: 1h23'45"6
+              if (timeStr.includes('h') || timeStr.includes("'")) {
+                const match = timeStr.match(/(\d+)h(\d+)'(\d+)"(\d)?/);
+                if (match) {
+                  const hours = parseInt(match[1]) || 0;
+                  const minutes = parseInt(match[2]) || 0;
+                  const seconds = parseInt(match[3]) || 0;
+                  const deciseconds = parseInt(match[4]) || 0;
+                  totalMins = (hours * 60) + minutes + (seconds / 60) + (deciseconds / 600);
+                }
+              }
+              // Check for HH:MM:SS format
+              else if (timeStr.includes(':')) {
                 const parts = timeStr.split(':');
                 const hours = parseInt(parts[0]) || 0;
                 const minutes = parseInt(parts[1]) || 0;
                 const seconds = parseInt(parts[2]) || 0;
-                const totalMins = (hours * 60) + minutes + (seconds / 60);
+                totalMins = (hours * 60) + minutes + (seconds / 60);
+              }
+              // Plain number (minutes)
+              else {
+                totalMins = parseFloat(timeStr) || 0;
+              }
+              
+              if (totalMins > 0) {
                 currentTotals.durationMinutes += totalMins;
                 console.log(`      ⏱️ Lap ${lapIdx + 1}: +${totalMins.toFixed(2)}min time`);
-              } else {
-                const mins = parseFloat(timeStr) || 0;
-                currentTotals.durationMinutes += mins;
-                console.log(`      ⏱️ Lap ${lapIdx + 1}: +${mins}min time`);
               }
             }
           });
@@ -405,12 +421,14 @@ export default function DayInfoModal({
                                 <span className="text-gray-500">Movelaps:</span>
                                 <span className="font-semibold text-purple-600">{sport.movelapCount}</span>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-gray-500">Distance:</span>
-                                <span className="font-semibold text-blue-600">
-                                  {sport.distance > 0 ? `${sport.distance}m` : '—'}
-                                </span>
-                              </div>
+                              {shouldShowDistance(sport.sport) && (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-gray-500">Distance:</span>
+                                  <span className="font-semibold text-blue-600">
+                                    {sport.distance > 0 ? `${sport.distance}${getDistanceUnit(sport.sport)}` : '—'}
+                                  </span>
+                                </div>
+                              )}
                               <div className="flex items-center gap-1">
                                 <span className="text-gray-500">Duration:</span>
                                 <span className="font-semibold text-green-600">

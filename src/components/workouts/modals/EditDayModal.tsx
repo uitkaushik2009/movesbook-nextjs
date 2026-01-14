@@ -32,6 +32,7 @@ export default function EditDayModal({
   onSuccess
 }: EditDayModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notesContent, setNotesContent] = useState(day.notes || '');
   
   // Show weather and feeling status only in section C (Workouts Done)
   const showWeatherAndFeeling = activeSection === 'C';
@@ -106,7 +107,7 @@ export default function EditDayModal({
 
     try {
       const response = await dayApi.update(day.id, {
-        notes: formData.get('notes'),
+        notes: notesContent,
         weather: formData.get('weather'),
         feelingStatus: formData.get('feelingStatus'),
         periodId: day.periodId // Keep existing period
@@ -229,21 +230,36 @@ export default function EditDayModal({
             </div>
           )}
 
-          {/* Notes / Annotations */}
+          {/* Notes / Annotations - Rich Text Editor */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Notes / Annotations
             </label>
-            <textarea
-              name="notes"
-              defaultValue={day.notes || ''}
-              placeholder="Add any notes, observations, or annotations for this day..."
-              rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
-              disabled={isSubmitting}
-            />
+            <div className="border border-gray-300 rounded-lg overflow-hidden">
+              <div 
+                contentEditable={!isSubmitting}
+                onInput={(e) => setNotesContent(e.currentTarget.innerHTML)}
+                onPaste={(e) => {
+                  // Allow default paste behavior to preserve formatting from HTML
+                  console.log('📋 Paste event in EditDayModal - allowing formatted paste');
+                  // The contentEditable will handle the paste automatically with formatting
+                  setTimeout(() => {
+                    const target = e.currentTarget as HTMLDivElement;
+                    if (target) {
+                      setNotesContent(target.innerHTML);
+                    }
+                  }, 0);
+                }}
+                dangerouslySetInnerHTML={{ __html: notesContent }}
+                className="w-full min-h-[150px] max-h-[300px] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 overflow-y-auto bg-white"
+                style={{
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word'
+                }}
+              />
+            </div>
             <p className="text-xs text-gray-500 mt-1">
-              Use this field to store day annotations, training observations, how you felt, etc.
+              Type or paste content with formatting. Use Ctrl+B for bold, Ctrl+I for italic, etc.
             </p>
           </div>
 

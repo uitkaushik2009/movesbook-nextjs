@@ -19,6 +19,12 @@ export async function POST(request: NextRequest) {
     // Support both email/username separately or combined in identifier field
     const loginIdentifier = identifier || email || username;
 
+    // Debug logging (only in production to help diagnose issues)
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`[Admin Login] Attempt: ${loginIdentifier?.substring(0, 20)}...`);
+      console.log(`[Admin Login] Fallback admin username: ${FALLBACK_ADMIN.username}, email: ${FALLBACK_ADMIN.email}`);
+    }
+
     // Validate input
     if (!loginIdentifier || !password) {
       return NextResponse.json(
@@ -28,11 +34,22 @@ export async function POST(request: NextRequest) {
     }
 
     // First, check fallback admin credentials (for quick access)
-    if (loginIdentifier === FALLBACK_ADMIN.username || 
-        loginIdentifier === FALLBACK_ADMIN.email) {
+    const isFallbackAdmin = loginIdentifier === FALLBACK_ADMIN.username || 
+                            loginIdentifier === FALLBACK_ADMIN.email ||
+                            loginIdentifier?.toLowerCase() === FALLBACK_ADMIN.username?.toLowerCase() ||
+                            loginIdentifier?.toLowerCase() === FALLBACK_ADMIN.email?.toLowerCase();
+    
+    if (isFallbackAdmin) {
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`[Admin Login] Checking fallback admin credentials...`);
+      }
       
       // Verify password against hashed value
       const isPasswordValid = await verifyPassword(password, FALLBACK_ADMIN.passwordHash);
+      
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`[Admin Login] Fallback password valid: ${isPasswordValid}`);
+      }
       
       if (isPasswordValid) {
         // Check if actual admin user exists in database (use real user ID if found)
@@ -148,6 +165,10 @@ export async function POST(request: NextRequest) {
 
     // Try to find user in NEW database
     // First try with ADMIN userType, then try without userType filter for admin username/email (backward compatibility)
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`[Admin Login] Searching for user with ADMIN userType...`);
+    }
+    
     let user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -168,6 +189,50 @@ export async function POST(request: NextRequest) {
         createdAt: true,
       }
     });
+
+    if (process.env.NODE_ENV === 'production') {
+      if (user) {
+        console.log(`[Admin Login] Found user with ADMIN type: ${user.username} (${user.email}), userType: ${user.userType}`);
+      } else {
+        console.log(`[Admin Login] No user found with ADMIN type, trying without userType filter...`);
+      }
+    }
+
+    // If not found as ADMIN, try again for specific admin identifiers regardless of userType
+    if (!user && (loginIdentifier === 'admin' || loginIdentifier === 'admin@movesbook.com' || loginIdentifier === 'lerkos000@gmail.com' ||
+                  loginIdentifier?.toLowerCase() === 'admin' || loginIdentifier?.toLowerCase() === 'admin@movesbook.com' || loginIdentifier?.toLowerCase() === 'lerkos000@gmail.com')) {
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`[Admin Login] Trying to find admin user without userType filter...`);
+      }
+      
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: loginIdentifier },
+            { username: loginIdentifier },
+            { email: loginIdentifier.toLowerCase() },
+            { username: loginIdentifier.toLowerCase() }
+          ]
+        },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          email: true,
+          password: true,
+          userType: true,
+          createdAt: true,
+        }
+      });
+      
+      if (process.env.NODE_ENV === 'production') {
+        if (user) {
+          console.log(`[Admin Login] Found user without userType filter: ${user.username} (${user.email}), userType: ${user.userType}`);
+        } else {
+          console.log(`[Admin Login] No user found even without userType filter`);
+        }
+      }
+    }
 
     // If not found in new table, check LEGACY table (if it exists)
     if (!user) {
@@ -205,9 +270,21 @@ export async function POST(request: NextRequest) {
 
     if (user) {
       // User found in database - verify password
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`[Admin Login] Verifying password for user: ${user.username}`);
+        console.log(`[Admin Login] Password hash type: ${user.password.length === 40 ? 'SHA1' : user.password.startsWith('$2') ? 'bcrypt' : 'Unknown'} (length: ${user.password.length})`);
+      }
+      
       const isPasswordValid = await verifyPassword(password, user.password);
       
+      if (process.env.NODE_ENV === 'production') {
+        console.log(`[Admin Login] Password verification result: ${isPasswordValid}`);
+      }
+      
       if (!isPasswordValid) {
+        if (process.env.NODE_ENV === 'production') {
+          console.log(`[Admin Login] ❌ Password verification failed - returning 401`);
+        }
         return NextResponse.json(
           { error: 'Invalid email/username or password' },
           { status: 401 }
@@ -235,6 +312,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Invalid credentials
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`[Admin Login] ❌ No user found and fallback failed - returning 401`);
+    }
+    
     return NextResponse.json(
       { error: 'Invalid email/username or password' },
       { status: 401 }

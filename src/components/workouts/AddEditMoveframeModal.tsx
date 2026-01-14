@@ -31,7 +31,7 @@ export default function AddEditMoveframeModal({
   day,
   existingMoveframe,
   onSetInsertIndex
-}: AddEditMoveframeModalProps) {
+}: AddEditMoveframeModalProps): JSX.Element | null {
   // Debug: Log mode only when it changes (moved to useEffect below)
   
   // Get sport icon type from localStorage
@@ -113,6 +113,11 @@ export default function AddEditMoveframeModal({
     workout,
     day
   });
+  
+  // Debug: Track manualPriority state changes
+  useEffect(() => {
+    console.log('🔄 [MODAL] manualPriority state changed to:', formData.manualPriority);
+  }, [formData.manualPriority]);
 
   // Copy down function: copies current row data to all rows below
   const copyDownRow = (fromIdx: number) => {
@@ -505,8 +510,8 @@ export default function AddEditMoveframeModal({
     
     // Check if user typed with separators
     if (/[.:'"h]/.test(value)) {
-      // Extract hours, minutes, seconds, decimals from separated input
-      const parts = value.match(/(\d+)?[h:]?(\d+)?[.:']?(\d+)?[.:"]?(\d)?/);
+      // Extract hours, minutes, seconds from separated input (ignore deciseconds)
+      const parts = value.match(/(\d+)?[h:]?(\d+)?[.:']?(\d+)?/);
       if (parts) {
         // If only 2 parts (e.g., "5:30"), assume minutes:seconds
         const hasHours = value.includes('h') || value.split(/[.:]/).length > 2;
@@ -514,18 +519,15 @@ export default function AddEditMoveframeModal({
         let hours = '0';
         let minutes = '0';
         let seconds = '0';
-        let decimals = '0';
         
         if (hasHours) {
           hours = (parts[1] || '0');
           minutes = (parts[2] || '0').padStart(2, '0').slice(0, 2);
           seconds = (parts[3] || '0').padStart(2, '0').slice(0, 2);
-          decimals = parts[4] || '0';
     } else {
           // Assume format is MM:SS or MM.SS
           minutes = (parts[1] || '0').padStart(2, '0').slice(0, 2);
           seconds = (parts[2] || '0').padStart(2, '0').slice(0, 2);
-          decimals = parts[3] || '0';
         }
         
         const h = parseInt(hours);
@@ -534,22 +536,51 @@ export default function AddEditMoveframeModal({
         
         // Validate range
         if (h > 9) return value;
-        if (h === 9) return "9h00'00\"0";
+        if (h === 9) return "9h00'00\"";
         if (m > 59 || s > 59) return value;
         
-        return `${hours}h${minutes}'${seconds}"${decimals}`;
+        return `${hours}h${minutes}'${seconds}"`;
       }
     }
     
-    // Fallback: pure digit input like "530" → "0h05'30"0"
+    // Fallback: pure digit input (no deciseconds shown)
+    // Format based on number of digits:
+    // 1-2 digits: 1 → 0h00'01", 12 → 0h00'12" (seconds)
+    // 3-4 digits: 123 → 0h01'23", 1234 → 0h12'34" (minutes:seconds)
+    // 5+ digits: 12345 → 1h23'45", 123456 → 12h34'56" (hours:minutes:seconds)
+    
     const digits = value.replace(/\D/g, '');
     if (!digits) return '';
     
-    const padded = digits.padStart(6, '0');
-    const hours = padded.slice(0, 1);
-    const minutes = padded.slice(1, 3);
-    const seconds = padded.slice(3, 5);
-    const decimals = padded.slice(5, 6);
+    const len = digits.length;
+    let hours, minutes, seconds;
+    
+    if (len === 1) {
+      // 1 → 0h00'01"
+      hours = '0';
+      minutes = '00';
+      seconds = '0' + digits[0];
+    } else if (len === 2) {
+      // 12 → 0h00'12"
+      hours = '0';
+      minutes = '00';
+      seconds = digits;
+    } else if (len === 3) {
+      // 123 → 0h01'23"
+      hours = '0';
+      minutes = '0' + digits[0];
+      seconds = digits.slice(1, 3);
+    } else if (len === 4) {
+      // 1234 → 0h12'34"
+      hours = '0';
+      minutes = digits.slice(0, 2);
+      seconds = digits.slice(2, 4);
+    } else {
+      // 5+ digits: 12345 → 1h23'45", 123456 → 1h23'45" (ignore extra digits)
+      hours = digits[0];
+      minutes = digits.slice(1, 3);
+      seconds = digits.slice(3, 5);
+    }
     
     const h = parseInt(hours);
     const m = parseInt(minutes);
@@ -557,10 +588,10 @@ export default function AddEditMoveframeModal({
     
     // Validate range
     if (h > 9) return value;
-    if (h === 9) return "9h00'00\"0";
+    if (h === 9) return "9h00'00\"";
     if (m > 59 || s > 59) return value;
     
-    return `${hours}h${minutes}'${seconds}"${decimals}`;
+    return `${hours}h${minutes}'${seconds}"`;
   };
   
   // R1 and R2 options for BIKE
@@ -685,23 +716,26 @@ export default function AddEditMoveframeModal({
       return;
     }
 
+    console.log('🔹 [MODAL] handleSave called, mode:', mode);
     setIsSaving(true);
 
     try {
       const moveframeData = buildMoveframeData();
-      console.log('📤 Sending moveframe data:', {
-        ...moveframeData,
-        descriptionLength: moveframeData.description?.length || 0,
-        notesLength: moveframeData.notes?.length || 0,
-        descriptionPreview: moveframeData.description?.substring(0, 200) || '',
-        notesPreview: moveframeData.notes?.substring(0, 200) || ''
+      console.log('🔹 [MODAL] Built moveframe data:', {
+        planningMode: moveframeData.planningMode,
+        individualPlans: moveframeData.individualPlans,
+        individualPlansLength: moveframeData.individualPlans?.length,
+        repetitions: moveframeData.repetitions,
+        sport: moveframeData.sport,
+        manualMode: moveframeData.manualMode
       });
+      console.log('🔹 [MODAL] Calling onSave prop...');
       await onSave(moveframeData);
-      console.log('✅ Save successful, closing modal');
+      console.log('✅ [MODAL] Save successful, closing modal');
       onClose();
       resetForm();
     } catch (error) {
-      console.error('❌ Error saving moveframe:', error);
+      console.error('❌ [MODAL] Error saving moveframe:', error);
       alert('Error saving moveframe: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setIsSaving(false);
@@ -792,21 +826,21 @@ export default function AddEditMoveframeModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, type, mode, workout?.moveframes?.length]);
 
-  // Auto-enable/disable manual mode when switching tabs
+  // Auto-enable manual mode when switching to manual tab (but never auto-disable)
   React.useEffect(() => {
-    if (type === 'STANDARD') {
-      if (activeTab === 'manual' && !manualMode) {
-        // Enable manual mode when switching TO manual tab
-        setManualMode(true);
-        // Also set manualPriority to true by default
+    if (type === 'STANDARD' && activeTab === 'manual' && !manualMode) {
+      // Enable manual mode when switching TO manual tab (only if not already enabled)
+      console.log('🔄 [MODAL] Switching to manual tab, enabling manual mode');
+      setManualMode(true);
+      // Only set manualPriority to true for NEW manual moveframes (not when editing existing ones)
+      if (mode === 'add') {
         setManualPriority(true);
-      } else if (activeTab === 'edit' && manualMode) {
-        // Disable manual mode when switching back TO edit tab
-        setManualMode(false);
       }
     }
+    // NOTE: We don't automatically disable manual mode when switching to edit tab
+    // because the moveframe might have been created in manual mode and we want to preserve that
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, type, manualMode]);
+  }, [activeTab, type, manualMode, mode]);
 
   // Reset scroll position when switching tabs
   React.useEffect(() => {
@@ -824,11 +858,7 @@ export default function AddEditMoveframeModal({
     }
   }, [activeTab]);
 
-  if (!isOpen) {
-    return null;
-  }
-
-  console.log('🎨 AddEditMoveframeModal rendering, isOpen:', isOpen);
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4 animate-fadeIn">
@@ -1166,7 +1196,7 @@ export default function AddEditMoveframeModal({
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 } ${mode === 'edit' ? 'cursor-not-allowed opacity-50 pointer-events-none' : ''}`}
               >
-                Standard
+                Standard Mode
               </button>
               <button
                 type="button"
@@ -1226,29 +1256,46 @@ export default function AddEditMoveframeModal({
             <select
               value={sectionId}
                   onChange={(e) => {
-                    console.log('🔄 Workout section selected:', e.target.value);
+                    const selectedValue = e.target.value;
+                    const selected = workoutSections.find(s => s.id === selectedValue);
+                    console.log('🔄 Workout section selected:', selectedValue);
+                    console.log('🎨 Section color:', selected?.color);
                     console.log('🔍 Available sections:', workoutSections);
-                    setSectionId(e.target.value);
+                    setSectionId(selectedValue);
                   }}
-                  className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm text-gray-900 bg-white"
-                  style={{ color: '#000000' }}
+                  className="flex-1 px-2.5 py-1.5 border-2 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 text-sm font-semibold"
+                  style={{ 
+                    color: '#000000',
+                    backgroundColor: (() => {
+                      const selected = workoutSections.find(s => s.id === sectionId);
+                      return selected?.color ? `${selected.color}20` : '#ffffff';
+                    })(),
+                    borderColor: (() => {
+                      const selected = workoutSections.find(s => s.id === sectionId);
+                      return selected?.color || '#d1d5db';
+                    })()
+                  }}
                 >
                   <option value="" style={{ color: '#666666' }}>Select workout section...</option>
                   {workoutSections.length === 0 && (
                     <option disabled style={{ color: '#999999' }}>No workout sections available</option>
                   )}
-                  {workoutSections.map((section, index) => (
-                    <option 
-                      key={section.id || `section-${index}`} 
-                      value={section.id}
-                      style={{ 
-                        color: '#000000',
-                        backgroundColor: '#ffffff'
-                      }}
-                    >
-                  {section.name}
-                </option>
-              ))}
+                  {workoutSections.map((section, index) => {
+                    // Create a visual color indicator using Unicode block character
+                    const colorIndicator = '⬤'; // Circle character
+                    return (
+                      <option 
+                        key={section.id || `section-${index}`} 
+                        value={section.id}
+                        style={{ 
+                          color: '#000000',
+                          backgroundColor: '#ffffff'
+                        }}
+                      >
+                        {colorIndicator} {section.name}{section.code ? ` (${section.code})` : ''}
+                      </option>
+                    );
+                  })}
             </select>
                 {/* Show selected workout section color */}
                 {sectionId && (() => {
@@ -1523,60 +1570,20 @@ export default function AddEditMoveframeModal({
                               type="text"
                               value={time}
                               onChange={(e) => {
-                                const input = e.target.value;
-                                // Allow clearing the field
-                                if (input === '') {
-                                  setTime('');
-                                  return;
-                                }
-                                // If user is typing numbers only, auto-format
-                                if (/^\d+$/.test(input)) {
-                                  const digits = input.replace(/\D/g, '');
-                                  const len = digits.length;
-                                  let decisec = '0';
-                                  let sec = '00';
-                                  let min = '00';
-                                  let hour = '0';
-                                  
-                                  if (len === 1) {
-                                    decisec = digits[0];
-                                  } else if (len === 2) {
-                                    sec = digits[0].padStart(2, '0');
-                                    decisec = digits[1];
-                                  } else if (len === 3) {
-                                    sec = digits.slice(0, 2);
-                                    decisec = digits[2];
-                                  } else if (len === 4) {
-                                    min = digits[0].padStart(2, '0');
-                                    sec = digits.slice(1, 3);
-                                    decisec = digits[3];
-                                  } else if (len === 5) {
-                                    min = digits.slice(0, 2);
-                                    sec = digits.slice(2, 4);
-                                    decisec = digits[4];
-                                  } else if (len === 6) {
-                                    hour = digits[0];
-                                    min = digits.slice(1, 3);
-                                    sec = digits.slice(3, 5);
-                                    decisec = digits[5];
-                                  } else {
-                                    hour = digits.slice(0, -5);
-                                    min = digits.slice(-5, -3);
-                                    sec = digits.slice(-3, -1);
-                                    decisec = digits.slice(-1);
-                                  }
-                                  
-                                  setTime(`${hour}h${min}'${sec}"${decisec}`);
-                                } else {
-                                  // Allow manual editing with quotes and apostrophes
-                                  setTime(input);
-                                }
+                                // Just update the value, don't format while typing
+                                setTime(e.target.value);
                               }}
+                              onBlur={(e) => {
+                                // Only format on blur when user is done typing
+                                const formatted = formatTime(e.target.value);
+                                setTime(formatted);
+                              }}
+                              placeholder="123456"
+                              autoComplete="off"
                               className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                              placeholder="1h23'45&quot;6"
                             />
                             <p className="mt-0.5 text-[10px] text-blue-600">
-                              💡 Just type the number and select the unit | Range: 0'01" - 9'59" · Format 123456 will be = 1h23'45"6
+                              💡 Type: 123456 → formats to 1h23'45"6 when you finish typing
                             </p>
                             {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
                           </>
@@ -1853,11 +1860,18 @@ export default function AddEditMoveframeModal({
                             type="text"
                             value={time}
                             onChange={(e) => {
-                              const input = e.target.value;
+                              // Just update the value, don't format while typing
+                              setTime(e.target.value);
+                            }}
+                            onBlur={(e) => {
+                              // Only format on blur when user is done typing
+                              const input = e.target.value.trim();
                               if (input === '') {
                                 setTime('');
                                 return;
                               }
+                              
+                              // Check if it's all digits - if so, format it
                               if (/^\d+$/.test(input)) {
                                 const digits = input.replace(/\D/g, '');
                                 const len = digits.length;
@@ -1895,15 +1909,15 @@ export default function AddEditMoveframeModal({
                                 }
                                 
                                 setTime(`${hour}h${min}'${sec}"${decisec}`);
-                              } else {
-                                setTime(input);
                               }
+                              // If it's not all digits, keep it as-is (might already be formatted)
                             }}
                             className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                            placeholder="1h23'45&quot;6"
+                            placeholder="123456"
+                            autoComplete="off"
                           />
                           <p className="mt-0.5 text-[10px] text-blue-600">
-                            💡 Just type the number and select the unit | Range: 0'01" - 9'59" · Format 123456 will be = 1h23'45"6
+                            💡 Type: 123456 → formats to 1h23'45"6 when you finish typing
                           </p>
                         </div>
                       ) : (
@@ -2462,8 +2476,9 @@ export default function AddEditMoveframeModal({
                                     onChange={(e) => updateIndividualPlan(idx, 'time', e.target.value)}
                                     onBlur={(e) => updateIndividualPlan(idx, 'time', formatTime(e.target.value))}
                                     className="w-full px-2 py-1.5 border-2 border-green-300 rounded text-xs focus:ring-1 focus:ring-green-500 font-mono bg-green-50"
-                                    placeholder="0h05'30&quot;0 or 530"
-                                    title="⚡ Fast input: Type 530 for 0h05'30&quot;0"
+                                    placeholder="123456"
+                                    autoComplete="off"
+                                    title="Type: 123456 → formats to 1h23'45&quot;6"
                                   />
                                 </td>
                                 <td className="border border-gray-300 px-2 py-1.5">
@@ -2962,13 +2977,21 @@ export default function AddEditMoveframeModal({
                     <input
                       type="text"
                       value={time}
-                      onChange={(e) => setTime(formatTime(e.target.value))}
-                      onBlur={(e) => setTime(formatTime(e.target.value))}
-                      placeholder="0h00'00&quot;0"
+                      onChange={(e) => {
+                        // Just update the value, don't format while typing
+                        setTime(e.target.value);
+                      }}
+                      onBlur={(e) => {
+                        // Only format on blur when user is done typing
+                        const formatted = formatTime(e.target.value);
+                        setTime(formatted);
+                      }}
+                      placeholder="123456"
+                      autoComplete="off"
                       className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
                     />
                     <p className="mt-1 text-[10px] text-blue-600">
-                      💡 Type: <strong>1:30</strong>, <strong>1.30.5</strong>, or <strong>130</strong> → formats to <strong>0h01'30"0</strong> or <strong>0h01'30"5</strong>
+                      💡 Type: 123456 → formats to 1h23'45"6 when you finish typing
                     </p>
                   </div>
                 )}
@@ -3061,68 +3084,62 @@ export default function AddEditMoveframeModal({
                               return true;
                             };
 
+                            // Helper function to format digits into time
+                            const formatTimeFromDigits = (digits: string): string => {
+                              if (!digits) return '';
+                              
+                              const len = digits.length;
+                              if (len === 1) return `0h00'00"${digits}`;
+                              if (len === 2) return `0h00'0${digits[0]}"${digits[1]}`;
+                              if (len === 3) return `0h00'${digits.slice(0, 2)}"${digits[2]}`;
+                              if (len === 4) return `0h0${digits[0]}'${digits.slice(1, 3)}"${digits[3]}`;
+                              if (len === 5) return `0h${digits.slice(0, 2)}'${digits.slice(2, 4)}"${digits[4]}`;
+                              if (len === 6) return `${digits[0]}h${digits.slice(1, 3)}'${digits.slice(3, 5)}"${digits[5]}`;
+                              return `${digits.slice(0, -5)}h${digits.slice(-5, -3)}'${digits.slice(-3, -1)}"${digits.slice(-1)}`;
+                            };
+
                             return (
                               <>
                                 <input
                                   type="text"
                                   value={pause}
                                   onChange={(e) => {
+                                    // Allow free typing - just store raw input
+                                    setPause(e.target.value);
+                                  }}
+                                  onBlur={(e) => {
                                     const input = e.target.value;
-                                    if (input === '') {
+                                    
+                                    // If empty, leave empty
+                                    if (!input) {
+                                      setPause('');
+                                      // Validate after clearing
+                                      setTimeout(() => validateRestartTime(), 100);
+                                      return;
+                                    }
+                                    
+                                    // Extract only digits
+                                    const digits = input.replace(/\D/g, '');
+                                    
+                                    // If no valid digits, clear
+                                    if (!digits) {
                                       setPause('');
                                       return;
                                     }
-                                    // If user is typing numbers only, auto-format
-                                    if (/^\d+$/.test(input)) {
-                                      const digits = input.replace(/\D/g, '');
-                                      const len = digits.length;
-                                      let decisec = '0';
-                                      let sec = '00';
-                                      let min = '00';
-                                      let hour = '0';
-                                      
-                                      if (len === 1) {
-                                        decisec = digits[0];
-                                      } else if (len === 2) {
-                                        sec = digits[0].padStart(2, '0');
-                                        decisec = digits[1];
-                                      } else if (len === 3) {
-                                        sec = digits.slice(0, 2);
-                                        decisec = digits[2];
-                                      } else if (len === 4) {
-                                        min = digits[0].padStart(2, '0');
-                                        sec = digits.slice(1, 3);
-                                        decisec = digits[3];
-                                      } else if (len === 5) {
-                                        min = digits.slice(0, 2);
-                                        sec = digits.slice(2, 4);
-                                        decisec = digits[4];
-                                      } else if (len === 6) {
-                                        hour = digits[0];
-                                        min = digits.slice(1, 3);
-                                        sec = digits.slice(3, 5);
-                                        decisec = digits[5];
-                                      } else {
-                                        hour = digits.slice(0, -5);
-                                        min = digits.slice(-5, -3);
-                                        sec = digits.slice(-3, -1);
-                                        decisec = digits.slice(-1);
-                                      }
-                                      
-                                      setPause(`${hour}h${min}'${sec}"${decisec}`);
-                                    } else {
-                                      setPause(input);
-                                    }
-                                  }}
-                                  onBlur={() => {
-                                    // Validate that restart time > time
+                                    
+                                    // Limit to 7 digits and format
+                                    const limitedDigits = digits.slice(0, 7);
+                                    const formatted = formatTimeFromDigits(limitedDigits);
+                                    setPause(formatted);
+                                    
+                                    // Validate restart time > time after formatting
                                     setTimeout(() => validateRestartTime(), 100);
                                   }}
                                   className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 mb-1"
-                                  placeholder="0h00'00&quot;0"
+                                  placeholder="Type: 123456"
                                 />
                                 <p className="mt-0.5 text-[10px] text-red-600 font-semibold">
-                                  💡 Type: 1:30, 1:30,5, or 130 → formats to 0h01'30"0 or 0h01'30"5 | <span className="text-red-700 font-bold">MANDATORY: Must be &gt; Time ({time || '0h00\'00"0'})</span>
+                                  💡 Type: <strong>123456</strong> then press Tab/Enter → formats to <strong>1h23'45"6</strong> | <span className="text-red-700 font-bold">MANDATORY: Must be &gt; Time ({time || '0h00\'00"0'})</span>
                                 </p>
                               </>
                             );
@@ -3389,10 +3406,16 @@ export default function AddEditMoveframeModal({
                     <input
                       type="checkbox"
                       checked={manualPriority}
-                      onChange={(e) => setManualPriority(e.target.checked)}
+                      onChange={(e) => {
+                        console.log('🔲 [CHECKBOX] Manual Priority changed:', {
+                          oldValue: manualPriority,
+                          newValue: e.target.checked
+                        });
+                        setManualPriority(e.target.checked);
+                      }}
                         className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                     />
-                    <span className="text-sm text-gray-700">Priority 'manual' in the display</span>
+                    <span className="text-sm text-gray-700">Priority 'manual' in the display (current: {String(manualPriority)})</span>
                   </label>
                     <div className="ml-2 flex items-center justify-center w-6 h-6 bg-green-500 rounded">
                       <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
       annotationTextColor,
       annotationBold,
       manualMode,
+      manualPriority,
       macroFinal
     } = body;
 
@@ -92,6 +93,7 @@ export async function POST(request: NextRequest) {
           description,
           notes: notes || null,
           manualMode: manualMode || false,
+          manualPriority: manualPriority || false,
           macroFinal: macroFinal || null,
           // Annotation fields: only save if type is ANNOTATION
           annotationText: moveframeType === 'ANNOTATION' ? (annotationText || null) : null,

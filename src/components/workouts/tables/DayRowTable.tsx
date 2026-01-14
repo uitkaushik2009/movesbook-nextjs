@@ -342,9 +342,9 @@ export default function DayRowTable({
       </td>
       <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-blue-100 text-black">
         {sportSummaries[0] ? (
-          <div>
-            <div className="font-bold text-sm">{sportSummaries[0].distance > 0 ? `${sportSummaries[0].distance}m` : '—'}</div>
-            <div className="font-bold text-xs">{sportSummaries[0]?.duration || '—'}</div>
+          <div className="leading-tight">
+            <div className="font-bold text-base">{sportSummaries[0].distance > 0 ? `${sportSummaries[0].distance}m` : '—'}</div>
+            <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sportSummaries[0]?.duration || '00:00:00'}</div>
           </div>
         ) : '—'}
       </td>
@@ -393,9 +393,9 @@ export default function DayRowTable({
       </td>
       <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-green-100 text-black">
         {sportSummaries[1] ? (
-          <div>
-            <div className="font-bold text-sm">{sportSummaries[1].distance > 0 ? `${sportSummaries[1].distance}m` : '—'}</div>
-            <div className="font-bold text-xs">{sportSummaries[1]?.duration || '—'}</div>
+          <div className="leading-tight">
+            <div className="font-bold text-base">{sportSummaries[1].distance > 0 ? `${sportSummaries[1].distance}m` : '—'}</div>
+            <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sportSummaries[1]?.duration || '00:00:00'}</div>
           </div>
         ) : '—'}
       </td>
@@ -444,9 +444,9 @@ export default function DayRowTable({
       </td>
       <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-orange-100 text-black">
         {sportSummaries[2] ? (
-          <div>
-            <div className="font-bold text-sm">{sportSummaries[2].distance > 0 ? `${sportSummaries[2].distance}m` : '—'}</div>
-            <div className="font-bold text-xs">{sportSummaries[2]?.duration || '—'}</div>
+          <div className="leading-tight">
+            <div className="font-bold text-base">{sportSummaries[2].distance > 0 ? `${sportSummaries[2].distance}m` : '—'}</div>
+            <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sportSummaries[2]?.duration || '00:00:00'}</div>
           </div>
         ) : '—'}
       </td>
@@ -495,9 +495,9 @@ export default function DayRowTable({
       </td>
       <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-pink-100 text-black">
         {sportSummaries[3] ? (
-          <div>
-            <div className="font-bold text-sm">{sportSummaries[3].distance > 0 ? `${sportSummaries[3].distance}m` : '—'}</div>
-            <div className="font-bold text-xs">{sportSummaries[3]?.duration || '—'}</div>
+          <div className="leading-tight">
+            <div className="font-bold text-base">{sportSummaries[3].distance > 0 ? `${sportSummaries[3].distance}m` : '—'}</div>
+            <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sportSummaries[3]?.duration || '00:00:00'}</div>
           </div>
         ) : '—'}
       </td>
@@ -706,12 +706,23 @@ export default function DayRowTable({
             {/* Description */}
             <div>
               <div className="font-semibold text-gray-700 mb-1">Description:</div>
-              <div className="text-gray-900 bg-gray-50 p-2 rounded">
-                {clickedMoveframe.description ? (
-                  <div dangerouslySetInnerHTML={{ __html: clickedMoveframe.description }} />
-                ) : (
-                  'No description'
-                )}
+              <div className="text-gray-900 bg-gray-50 p-2 rounded max-h-[200px] overflow-y-auto">
+                {(() => {
+                  // For manual mode with priority, show full content from notes
+                  // For manual mode WITHOUT priority, show blank (user wants to hide content)
+                  // Otherwise show description
+                  const content = (clickedMoveframe.manualMode && clickedMoveframe.manualPriority)
+                    ? (clickedMoveframe.notes || clickedMoveframe.description)
+                    : (clickedMoveframe.manualMode && !clickedMoveframe.manualPriority)
+                    ? '' // Blank for manual mode without priority
+                    : clickedMoveframe.description;
+                  
+                  return content ? (
+                    <div dangerouslySetInnerHTML={{ __html: content }} />
+                  ) : (
+                    'No description'
+                  );
+                })()}
               </div>
             </div>
 
@@ -790,8 +801,8 @@ export default function DayRowTable({
               )}
             </div>
 
-            {/* Notes */}
-            {clickedMoveframe.notes && (
+            {/* Notes - Only show for non-manual moveframes, as manual mode uses notes for content */}
+            {clickedMoveframe.notes && !clickedMoveframe.manualMode && (
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <div className="font-semibold text-gray-700 mb-1 text-[10px]">Notes:</div>
                 <div className="text-gray-900 bg-gray-50 p-2 rounded text-[10px]">

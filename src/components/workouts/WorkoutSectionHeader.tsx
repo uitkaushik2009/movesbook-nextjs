@@ -16,6 +16,7 @@ interface WorkoutSectionHeaderProps {
   currentPageStart?: number; // Starting week number for current page
   totalWeeks?: number; // Total weeks in the plan
   workoutPlan?: any; // Workout plan data for color calculation
+  excludeStretchingCheckbox?: React.ReactNode; // Checkbox for excluding stretching
   
   // Actions
   onSectionChange: (section: SectionId) => void;
@@ -45,6 +46,7 @@ export default function WorkoutSectionHeader({
   currentPageStart = 1,
   totalWeeks = 0,
   workoutPlan,
+  excludeStretchingCheckbox,
   onSectionChange,
   onViewModeChange,
   onImportClick,
@@ -154,15 +156,6 @@ export default function WorkoutSectionHeader({
               {getSectionTitle(section)}
             </button>
           ))}
-          
-          {/* Import Button - All sections */}
-          <button
-            onClick={onImportClick}
-            className="ml-auto px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded text-sm font-medium flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Import from Coach/Team/Club
-          </button>
         </div>
       </div>
 
@@ -267,6 +260,40 @@ export default function WorkoutSectionHeader({
                 </div>
               </div>
             )}
+            
+            {/* Buttons for Section B (Yearly Plan) - Right of Title */}
+            {activeSection === 'B' && (
+              <>
+                {onCreatePlan && (
+                  <button
+                    onClick={onCreatePlan}
+                    className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                    title="Set starting date and create yearly plan"
+                  >
+                    <Calendar className="w-4 h-4" />
+                    Set Start Date
+                  </button>
+                )}
+                {onImportClick && (
+                  <button
+                    onClick={onImportClick}
+                    className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                    title="Copy weeks from template plans"
+                  >
+                    <Download className="w-4 h-4" />
+                    Copy from Templates
+                  </button>
+                )}
+                <button
+                  onClick={onImportClick}
+                  className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                  title="Import from your coach"
+                >
+                  <Download className="w-4 h-4" />
+                  Import from your coach
+                </button>
+              </>
+            )}
           </div>
           
           <div className="flex gap-2 items-center">
@@ -298,29 +325,48 @@ export default function WorkoutSectionHeader({
               </button>
             )}
             
-            {/* Buttons for Section B (Yearly Plan) */}
+            {/* Save/Reset Buttons for Section B - Far Right */}
             {activeSection === 'B' && (
               <>
-                {onCreatePlan && (
-                  <button
-                    onClick={onCreatePlan}
-                    className="px-3 py-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                    title="Set starting date and create yearly plan"
-                  >
-                    <Calendar className="w-4 h-4" />
-                    Set Start Date
-                  </button>
-                )}
-                {onImportClick && (
-                  <button
-                    onClick={onImportClick}
-                    className="px-3 py-1.5 bg-purple-600 text-white hover:bg-purple-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
-                    title="Copy weeks from template plans"
-                  >
-                    <Download className="w-4 h-4" />
-                    Copy from Templates
-                  </button>
-                )}
+                <button
+                  onClick={async () => {
+                    try {
+                      const gridSettings = {
+                        savedAt: new Date().toISOString(),
+                        message: 'Grid settings saved successfully!'
+                      };
+                      localStorage.setItem('workoutGridSettings', JSON.stringify(gridSettings));
+                      alert('✅ Grid settings saved successfully!');
+                    } catch (error) {
+                      console.error('Error saving grid settings:', error);
+                      alert('❌ Failed to save grid settings');
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                  title="Save current grid settings"
+                >
+                  <Download className="w-4 h-4" />
+                  Save Grid Settings
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm('Are you sure you want to reset grid settings to default?')) {
+                      try {
+                        localStorage.removeItem('workoutGridSettings');
+                        alert('✅ Grid settings reset to default!');
+                        window.location.reload();
+                      } catch (error) {
+                        console.error('Error resetting grid settings:', error);
+                        alert('❌ Failed to reset grid settings');
+                      }
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-gray-600 text-white hover:bg-gray-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
+                  title="Reset grid settings to default"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Reset to Default
+                </button>
               </>
             )}
             
@@ -336,30 +382,116 @@ export default function WorkoutSectionHeader({
               </button>
             )}
             
-            {/* View Toggle */}
-            <button
-              onClick={() => onViewModeChange('tree')}
-              className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
-                viewMode === 'tree' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <List className="w-4 h-4" />
-              Tree
-            </button>
+            {/* View Toggle - Only for non-B sections */}
+            {activeSection !== 'B' && (
+              <>
+                <button
+                  onClick={() => onViewModeChange('tree')}
+                  className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                    viewMode === 'tree' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                  Tree
+                </button>
+                
+                <button
+                  onClick={() => onViewModeChange('table')}
+                  className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                    viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  <Table className="w-4 h-4" />
+                  Table
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Section B - Second Row: Controls and Navigation */}
+      {activeSection === 'B' && (
+        <div className="bg-white px-4 py-3 border-b border-gray-200" style={{ position: 'relative', zIndex: 0 }}>
+          <div className="flex items-center justify-between gap-4">
+              {/* Left - Exclude checkbox, Display dropdown and navigation */}
+              <div className="flex items-center gap-4">
+                {excludeStretchingCheckbox}
+                
+                <div className="flex items-center gap-3">
+                  {viewMode !== 'calendar' && onWeeksPerPageChange && (
+                    <div className="flex items-center gap-2" style={{ position: 'relative', zIndex: 0 }}>
+                      <label htmlFor="weeks-per-page" className="text-sm font-medium text-gray-700">
+                        Display:
+                      </label>
+                      <select
+                        id="weeks-per-page"
+                        value={weeksPerPage}
+                        onChange={(e) => onWeeksPerPageChange(parseInt(e.target.value))}
+                        className="px-3 py-1.5 rounded border border-gray-300 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        style={{ position: 'relative', zIndex: 'auto' }}
+                      >
+                        <option value={1}>Weeks 1 - 1</option>
+                        <option value={2}>Weeks 1 - 2</option>
+                        <option value={3}>Weeks 1 - 3</option>
+                        <option value={4}>Weeks 1 - 4</option>
+                        <option value={6}>Weeks 1 - 6</option>
+                        <option value={8}>Weeks 1 - 8</option>
+                        <option value={13}>Weeks 1 - 13 (3 months)</option>
+                      </select>
+                    </div>
+                  )}
+                  
+                  {/* Week Navigation */}
+                  {viewMode !== 'calendar' && onPrevPage && onNextPage && (
+                    <>
+                      <button
+                        onClick={onPrevPage}
+                        disabled={currentPageStart === 1}
+                        className="px-3 py-1.5 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Previous
+                      </button>
+                      <span className="text-sm font-medium text-gray-700">
+                        Weeks {currentPageStart} - {Math.min(currentPageStart + weeksPerPage - 1, totalWeeks)} of {totalWeeks}
+                      </span>
+                      <button
+                        onClick={onNextPage}
+                        disabled={currentPageStart + weeksPerPage > totalWeeks}
+                        className="px-3 py-1.5 rounded text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 transition-colors"
+                      >
+                        Next
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+             </div>
             
-            <button
-              onClick={() => onViewModeChange('table')}
-              className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
-                viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <Table className="w-4 h-4" />
-              Table
-            </button>
-            
-            {/* Calendar view only for Section B (Planned - with dates) */}
-            {/* Section A (Template Plans) doesn't have calendar view since templates don't have specific dates */}
-            {activeSection === 'B' && (
+            {/* Right - View Toggle Buttons */}
+            <div className="flex items-center gap-2">
+              {/* View Toggle Buttons */}
+              <button
+                onClick={() => onViewModeChange('tree')}
+                className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                  viewMode === 'tree' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <List className="w-4 h-4" />
+                Tree
+              </button>
+              
+              <button
+                onClick={() => onViewModeChange('table')}
+                className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                  viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <Table className="w-4 h-4" />
+                Table
+              </button>
+              
               <button
                 onClick={() => onViewModeChange('calendar')}
                 className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
@@ -369,35 +501,10 @@ export default function WorkoutSectionHeader({
                 <Calendar className="w-4 h-4" />
                 Calendar
               </button>
-            )}
-            
-            {/* Week Grouping Selector for Section B (Table/Tree view only) */}
-            {activeSection === 'B' && viewMode !== 'calendar' && onWeeksPerPageChange && (
-              <>
-                <div className="flex items-center gap-2 ml-4 border-l pl-4">
-                  <label htmlFor="weeks-per-page" className="text-sm font-medium text-gray-700">
-                    Display:
-                  </label>
-                  <select
-                    id="weeks-per-page"
-                    value={weeksPerPage}
-                    onChange={(e) => onWeeksPerPageChange(parseInt(e.target.value))}
-                    className="px-3 py-1.5 rounded border border-gray-300 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value={1}>Week {currentPageStart}</option>
-                    <option value={2}>Weeks {currentPageStart} - {Math.min(currentPageStart + 1, totalWeeks)}</option>
-                    <option value={3}>Weeks {currentPageStart} - {Math.min(currentPageStart + 2, totalWeeks)}</option>
-                    <option value={4}>Weeks {currentPageStart} - {Math.min(currentPageStart + 3, totalWeeks)}</option>
-                    <option value={6}>Weeks {currentPageStart} - {Math.min(currentPageStart + 5, totalWeeks)}</option>
-                    <option value={8}>Weeks {currentPageStart} - {Math.min(currentPageStart + 7, totalWeeks)}</option>
-                    <option value={13}>Weeks {currentPageStart} - {Math.min(currentPageStart + 12, totalWeeks)} (3 months)</option>
-                  </select>
-                </div>
-              </>
-            )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Week Context Header - Show when viewing filtered weeks */}
       {selectedWeekForTable && viewMode === 'table' && (

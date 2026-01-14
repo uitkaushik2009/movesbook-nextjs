@@ -378,13 +378,13 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
       if (isLikelyAdmin) {
         // Try admin login first to avoid 401 noise
         response = await fetch('/api/auth/admin/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            identifier: loginUsername,
-            password: loginPassword
-          })
-        });
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          identifier: loginUsername,
+          password: loginPassword
+        })
+      });
 
         data = await response.json();
 
@@ -403,7 +403,7 @@ export default function ModernNavbar({ onLoginClick, onAdminClick }: ModernNavba
           return;
         }
       }
-      
+
       // Try regular user login
       response = await fetch('/api/auth/login', {
         method: 'POST',
