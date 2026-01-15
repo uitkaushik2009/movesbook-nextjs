@@ -18,6 +18,7 @@ interface WorkoutTableProps {
   weekNumber?: number;
   periodName?: string;
   activeSection?: 'A' | 'B' | 'C' | 'D';
+  iconType?: 'emoji' | 'icon'; // Icon type override from parent
   isExpanded?: boolean;
   expandedMoveframeId?: string | null;
   showMoveframes?: boolean; // Control whether to show moveframes (for 3-state expand)
@@ -57,6 +58,7 @@ export default function WorkoutTable({
   weekNumber,
   periodName,
   activeSection,
+  iconType: iconTypeProp,
   isExpanded = false,
   expandedMoveframeId,
   showMoveframes = true,
@@ -86,8 +88,9 @@ export default function WorkoutTable({
   onRefreshWorkouts,
   columnSettings
 }: WorkoutTableProps) {
-  // Get sport icon type from user settings
-  const iconType = useSportIconType();
+  // Get sport icon type from user settings or prop
+  const defaultIconType = useSportIconType();
+  const iconType = iconTypeProp || defaultIconType;
   const { colors, getBorderStyle } = useColorSettings();
   
   // Track if user clicked the workout number to expand all movelaps
@@ -1153,6 +1156,7 @@ export default function WorkoutTable({
             workout={workout}
             workoutIndex={workoutIndex}
             day={day}
+            iconType={iconType}
             expandedMoveframeId={expandedMoveframeId}
             autoExpandAll={expandMovelaps}
             onAddMoveframe={onAddMoveframe}

@@ -1695,25 +1695,42 @@ export default function AddEditMoveframeModal({
                                       <label className="block text-xs font-medium text-gray-700 mb-1">
                                         Reps (per series): <span className="text-red-500">*</span>
                                       </label>
-                                      <input
-                                        type="number"
-                                        value={reps}
-                                        onChange={(e) => setReps(e.target.value)}
-                                        onBlur={(e) => {
-                                          const value = parseInt(e.target.value);
-                                          if (e.target.value && value < 1) {
-                                            alert('⚠️ Reps value too low!\n\nMinimum allowed: 1\nPlease enter a value within the valid range (01-99).');
-                                            setReps('1');
-                                          } else if (value > 99) {
-                                            alert('⚠️ Reps value too high!\n\nMaximum allowed: 99\nPlease enter a value within the valid range (01-99).');
-                                            setReps('99');
-                                          }
-                                        }}
-                                        min="1"
-                                        max="99"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                        placeholder="12"
-                                      />
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="number"
+                                          value={reps}
+                                          onChange={(e) => setReps(e.target.value)}
+                                          onBlur={(e) => {
+                                            const value = parseInt(e.target.value);
+                                            if (e.target.value && value < 1) {
+                                              alert('⚠️ Reps value too low!\n\nMinimum allowed: 1\nPlease enter a value within the valid range (01-99).');
+                                              setReps('1');
+                                            } else if (value > 99) {
+                                              alert('⚠️ Reps value too high!\n\nMaximum allowed: 99\nPlease enter a value within the valid range (01-99).');
+                                              setReps('99');
+                                            }
+                                          }}
+                                          min="1"
+                                          max="99"
+                                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                          placeholder="12"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (reps && parseInt(reps) > 0) {
+                                              // Apply reps value to all rows in individualPlans
+                                              for (let i = 0; i < individualPlans.length; i++) {
+                                                updateIndividualPlan(i, 'reps', reps);
+                                              }
+                                            }
+                                          }}
+                                          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-xs font-semibold whitespace-nowrap"
+                                          title="Apply this value to all Reps cells below"
+                                        >
+                                          ↓ Apply to All
+                                        </button>
+                                      </div>
                                       <p className="mt-0.5 text-[10px] text-gray-500">Range: 01-99</p>
                                     </>
                                   ) : (

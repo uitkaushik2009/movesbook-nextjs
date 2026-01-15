@@ -10,6 +10,7 @@ interface MoveframesSectionProps {
   workout: any;
   workoutIndex: number;
   day: any;
+  iconType?: 'emoji' | 'icon'; // Icon type override from parent
   expandedMoveframeId?: string | null;
   autoExpandAll?: boolean;
   onAddMoveframe: () => void;
@@ -32,6 +33,7 @@ export default function MoveframesSection({
   workout, 
   workoutIndex, 
   day,
+  iconType,
   expandedMoveframeId,
   autoExpandAll = false,
   onAddMoveframe,
@@ -389,6 +391,7 @@ export default function MoveframesSection({
                         key={moveframe.id}
                         moveframe={moveframe}
                         mfIndex={mfIndex}
+                        iconType={iconType}
                         isMovelapsExpanded={isMovelapsExpanded}
                         isChecked={checkedMoveframes.has(moveframe.id)}
                         onToggleCheck={() => toggleMoveframeCheck(moveframe.id)}

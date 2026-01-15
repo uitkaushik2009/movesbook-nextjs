@@ -1607,6 +1607,7 @@ export default function DayTableView({
                                           <WorkoutHierarchyView
                                         day={{ ...day, weekNumber: week?.weekNumber }}
                                         activeSection={activeSection}
+                                        iconType={iconType}
                                         expandedWorkouts={expandedWorkoutsSet}
                                         fullyExpandedWorkouts={fullyExpandedWorkouts}
                                         workoutsWithExpandedMovelaps={workoutsWithExpandedMovelaps}
@@ -1912,6 +1913,7 @@ export default function DayTableView({
                             <WorkoutHierarchyView
                               day={{ ...day, weekNumber: week?.weekNumber }}
                               activeSection={activeSection}
+                              iconType={iconType}
                               expandedWorkouts={expandedWorkoutsSet}
                               fullyExpandedWorkouts={fullyExpandedWorkouts}
                               workoutsWithExpandedMovelaps={workoutsWithExpandedMovelaps}

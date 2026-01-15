@@ -12,6 +12,7 @@ import { getSportDisplayName, DISTANCE_BASED_SPORTS } from '@/constants/movefram
 interface SortableMoveframeRowProps {
   moveframe: any;
   mfIndex: number;
+  iconType?: 'emoji' | 'icon'; // Icon type override from parent
   isMovelapsExpanded: boolean;
   isChecked: boolean;
   onToggleCheck: () => void;
@@ -38,6 +39,7 @@ interface SortableMoveframeRowProps {
 export default function SortableMoveframeRow({
   moveframe,
   mfIndex,
+  iconType: iconTypeProp,
   isMovelapsExpanded,
   isChecked,
   onToggleCheck,
@@ -104,8 +106,9 @@ export default function SortableMoveframeRow({
     cursor: isDragging ? 'grabbing' : 'auto',
   };
   
-  // Get icon type preference
-  const iconType = useSportIconType();
+  // Get icon type preference from prop or hook
+  const defaultIconType = useSportIconType();
+  const iconType = iconTypeProp || defaultIconType;
   const useImageIcons = isImageIcon(iconType);
   
   const movelapsCount = moveframe.movelaps?.length || 0;

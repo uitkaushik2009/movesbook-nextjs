@@ -8,6 +8,7 @@ import MovelapTable from './MovelapTable';
 interface WorkoutHierarchyViewProps {
   day: any;
   activeSection?: 'A' | 'B' | 'C' | 'D';
+  iconType?: 'emoji' | 'icon'; // Icon type override from parent
   expandedWorkouts?: Set<string>;
   fullyExpandedWorkouts?: Set<string>; // Workouts with moveframes visible
   workoutsWithExpandedMovelaps?: Set<string>; // Workouts with movelaps expanded
@@ -43,6 +44,7 @@ interface WorkoutHierarchyViewProps {
 export default function WorkoutHierarchyView({
   day,
   activeSection,
+  iconType,
   expandedWorkouts,
   fullyExpandedWorkouts,
   workoutsWithExpandedMovelaps,
@@ -119,6 +121,7 @@ export default function WorkoutHierarchyView({
               weekNumber={day.weekNumber}
               periodName={day.period?.name}
               activeSection={activeSection}
+              iconType={iconType}
               isExpanded={isWorkoutExpanded}
               expandedMoveframeId={expandedMoveframeId}
               showMoveframes={expandState === 2 || (fullyExpandedWorkouts && fullyExpandedWorkouts.has(workout.id))} // Show moveframes when Expand All is in state 2 OR when individually fully expanded
