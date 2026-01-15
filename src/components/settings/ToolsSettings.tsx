@@ -62,7 +62,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
   const [editingItem, setEditingItem] = useState<Period | WorkoutSection | null>(null);
   const [editItemTranslations, setEditItemTranslations] = useState<Record<string, { title: string; description: string }>>({});
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [newItem, setNewItem] = useState({ title: '', code: '', description: '', color: '#3b82f6' });
+  const [newItem, setNewItem] = useState({ title: '', code: '', description: '', color: '#3b82f6', sports: [] as string[] });
   const [newItemTranslations, setNewItemTranslations] = useState<Record<string, { title: string; description: string }>>({});
   const [activeInputLanguage, setActiveInputLanguage] = useState('en');
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
@@ -238,7 +238,8 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
       description: currentLangData.description || '',
       color: newItem.color,
       order: items.length,
-      ...(activeTab === 'sections' && { code: newItem.code || '' }) // Add code field for sections
+      ...(activeTab === 'sections' && { code: newItem.code || '' }), // Add code field for sections
+      ...(activeTab === 'bodyBuildingTechniques' && { sports: newItem.sports || [] }) // Add sports field for execution techniques
     };
 
     // Save translations to localStorage for each language
@@ -266,7 +267,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
     });
 
     setActiveItems([...items, newEntry]);
-    setNewItem({ title: '', code: '', description: '', color: '#3b82f6' });
+    setNewItem({ title: '', code: '', description: '', color: '#3b82f6', sports: [] as string[] });
     setNewItemTranslations({});
     setActiveInputLanguage('en');
     setShowAddDialog(false);
@@ -2019,6 +2020,49 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   />
                 </div>
               </div>
+              
+              {/* Sports Multi-Selector (only for Execution Techniques) */}
+              {activeTab === 'bodyBuildingTechniques' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Sports <span className="text-gray-500">(select which sports can use this technique)</span>
+                  </label>
+                  <div className="border border-gray-300 rounded-lg p-3 max-h-64 overflow-y-auto">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {SPORTS_LIST.map((sport) => {
+                        const isSelected = newItem.sports?.includes(sport) || false;
+                        return (
+                          <label
+                            key={sport}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-blue-100 border-2 border-blue-500'
+                                : 'bg-gray-50 border-2 border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const currentSports = newItem.sports || [];
+                                const updatedSports = e.target.checked
+                                  ? [...currentSports, sport]
+                                  : currentSports.filter((s: string) => s !== sport);
+                                setNewItem({ ...newItem, sports: updatedSports });
+                              }}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-sm font-medium">{getSportDisplayName(sport)}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Select at least one sport. This technique will only appear in the moveframe modal for the selected sports.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Per-Language Fields */}
@@ -2101,7 +2145,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
               <button
                 onClick={() => {
                   setShowAddDialog(false);
-                  setNewItem({ title: '', code: '', description: '', color: '#3b82f6' });
+                  setNewItem({ title: '', code: '', description: '', color: '#3b82f6', sports: [] as string[] });
                   setNewItemTranslations({});
                   setActiveInputLanguage('en');
                 }}
@@ -2180,6 +2224,49 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   />
                 </div>
               </div>
+              
+              {/* Sports Multi-Selector (only for Execution Techniques) */}
+              {activeTab === 'bodyBuildingTechniques' && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Sports <span className="text-gray-500">(select which sports can use this technique)</span>
+                  </label>
+                  <div className="border border-gray-300 rounded-lg p-3 max-h-64 overflow-y-auto">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {SPORTS_LIST.map((sport) => {
+                        const isSelected = (editingItem as any).sports?.includes(sport) || false;
+                        return (
+                          <label
+                            key={sport}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-blue-100 border-2 border-blue-500'
+                                : 'bg-gray-50 border-2 border-gray-200 hover:border-gray-300'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                const currentSports = (editingItem as any).sports || [];
+                                const updatedSports = e.target.checked
+                                  ? [...currentSports, sport]
+                                  : currentSports.filter((s: string) => s !== sport);
+                                setEditingItem({ ...editingItem, sports: updatedSports } as any);
+                              }}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-sm font-medium">{getSportDisplayName(sport)}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Select at least one sport. This technique will only appear in the moveframe modal for the selected sports.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Per-Language Fields */}

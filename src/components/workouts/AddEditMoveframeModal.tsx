@@ -65,8 +65,16 @@ export default function AddEditMoveframeModal({
   // Get favorite sports
   const { favoriteSports, loading: loadingFavorites, reload: reloadFavorites } = useFavoriteSports();
   
-  // Get body building techniques from settings
+  // Get execution techniques from settings
   const { bodyBuildingTechniques } = useToolsData();
+  
+  // Filter techniques based on current sport
+  const availableTechniques = React.useMemo(() => {
+    if (!sport) return [];
+    return bodyBuildingTechniques.filter(technique => 
+      technique.sports && technique.sports.includes(sport)
+    );
+  }, [bodyBuildingTechniques, sport]);
   
   // Get FREE_MOVES exercise history
   const { 
@@ -1544,7 +1552,7 @@ export default function AddEditMoveframeModal({
                           className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
                         >
                           <option value="">None</option>
-                          {bodyBuildingTechniques.map((technique) => (
+                          {availableTechniques.map((technique) => (
                             <option key={technique.id} value={technique.title}>
                               {technique.title}
                             </option>
