@@ -19,6 +19,7 @@ interface DayRowTableProps {
   isLastDayOfWeek?: boolean; // Add thick bottom border for week separator
   isSelected?: boolean; // Whether this day is selected
   activeSection?: 'A' | 'B' | 'C' | 'D'; // Active section for conditional display
+  iconType?: 'emoji' | 'icon'; // Optional icon type override from parent
   onToggleDay: (dayId: string) => void;
   onToggleDaySelection?: (dayId: string) => void; // Toggle day selection
   onToggleWorkout?: (workoutId: string) => void;  // Added for clickable workout numbers
@@ -59,10 +60,12 @@ export default function DayRowTable({
   onShareDay,
   onExportPdfDay,
   onPrintDay,
-  onDeleteDay
+  onDeleteDay,
+  iconType: iconTypeProp
 }: DayRowTableProps) {
   const { colors, getBorderStyle } = useColorSettings();
-  const iconType = useSportIconType();
+  const defaultIconType = useSportIconType();
+  const iconType = iconTypeProp || defaultIconType;
   const hasWorkouts = day.workouts && day.workouts.length > 0;
   const dayWithWeek = { ...day, weekNumber: currentWeek?.weekNumber };
   const sportSummaries = calculateSportSummaries(day, iconType);

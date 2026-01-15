@@ -1584,6 +1584,7 @@ export default function DayTableView({
                                   isLastDayOfWeek={false}
                                   isSelected={selectedDays.has(day.id)}
                                   activeSection={activeSection}
+                                  iconType={iconType}
                                   onToggleDay={onToggleDay!}
                                   onToggleDaySelection={(dayId) => {
                                     setSelectedDays(prev => {
@@ -1878,6 +1879,7 @@ export default function DayTableView({
                       isLastDayOfWeek={shouldShowWeekSeparator}
                         isSelected={selectedDays.has(day.id)}
                         activeSection={activeSection}
+                        iconType={iconType}
                       onToggleDay={onToggleDay!}
                         onToggleDaySelection={(dayId) => {
                           setSelectedDays(prev => {
