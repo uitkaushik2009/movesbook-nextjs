@@ -1595,13 +1595,25 @@ export default function AddEditMoveframeModal({
                                 type="number"
                                 value={reps}
                                 onChange={(e) => setReps(e.target.value)}
+                                onBlur={(e) => {
+                                  const value = parseInt(e.target.value);
+                                  if (e.target.value && value < 0) {
+                                    alert('⚠️ Reps value too low!\n\nMinimum allowed: 0\nPlease enter a value within the valid range (0-99).');
+                                    setReps('0');
+                                  } else if (value > 99) {
+                                    alert('⚠️ Reps value too high!\n\nMaximum allowed: 99\nPlease enter a value within the valid range (0-99).');
+                                    setReps('99');
+                                  }
+                                }}
+                                min="0"
+                                max="99"
                                 className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
                                 placeholder="20"
                               />
                               <button
                                 type="button"
                                 onClick={() => {
-                                  if (reps && parseInt(reps) > 0) {
+                                  if (reps !== '' && parseInt(reps) >= 0) {
                                     // Apply reps value to all rows in individualPlans
                                     for (let i = 0; i < individualPlans.length; i++) {
                                       updateIndividualPlan(i, 'reps', reps);
@@ -1614,6 +1626,7 @@ export default function AddEditMoveframeModal({
                                 ↓ Apply to All
                               </button>
                             </div>
+                            <p className="mt-0.5 text-[10px] text-gray-500">Range: 0-99</p>
                             {errors.reps && <p className="mt-1 text-xs text-red-500">{errors.reps}</p>}
                           </>
                         )}
@@ -1719,15 +1732,15 @@ export default function AddEditMoveframeModal({
                                           onChange={(e) => setReps(e.target.value)}
                                           onBlur={(e) => {
                                             const value = parseInt(e.target.value);
-                                            if (e.target.value && value < 1) {
-                                              alert('⚠️ Reps value too low!\n\nMinimum allowed: 1\nPlease enter a value within the valid range (01-99).');
-                                              setReps('1');
+                                            if (e.target.value && value < 0) {
+                                              alert('⚠️ Reps value too low!\n\nMinimum allowed: 0\nPlease enter a value within the valid range (0-99).');
+                                              setReps('0');
                                             } else if (value > 99) {
-                                              alert('⚠️ Reps value too high!\n\nMaximum allowed: 99\nPlease enter a value within the valid range (01-99).');
+                                              alert('⚠️ Reps value too high!\n\nMaximum allowed: 99\nPlease enter a value within the valid range (0-99).');
                                               setReps('99');
                                             }
                                           }}
-                                          min="1"
+                                          min="0"
                                           max="99"
                                           className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                                           placeholder="12"
@@ -1735,7 +1748,7 @@ export default function AddEditMoveframeModal({
                                         <button
                                           type="button"
                                           onClick={() => {
-                                            if (reps && parseInt(reps) > 0) {
+                                            if (reps !== '' && parseInt(reps) >= 0) {
                                               // Apply reps value to all rows in individualPlans
                                               for (let i = 0; i < individualPlans.length; i++) {
                                                 updateIndividualPlan(i, 'reps', reps);
@@ -1748,68 +1761,85 @@ export default function AddEditMoveframeModal({
                                           ↓ Apply to All
                                         </button>
                                       </div>
-                                      <p className="mt-0.5 text-[10px] text-gray-500">Range: 01-99</p>
+                                      <p className="mt-0.5 text-[10px] text-gray-500">Range: 0-99</p>
                                     </>
                                   ) : (
                                     <>
                                       <label className="block text-xs font-medium text-gray-700 mb-1">
-                                        Time (per series): <span className="text-red-500">*</span>
+                                        Minutes (per series): <span className="text-red-500">*</span>
                                       </label>
-                                      <input
-                                        type="text"
-                                        value={time}
-                                        onChange={(e) => {
-                                          const input = e.target.value;
-                                          if (input === '') {
-                                            setTime('');
-                                            return;
-                                          }
-                                          if (/^\d+$/.test(input)) {
-                                            const digits = input.replace(/\D/g, '');
-                                            const len = digits.length;
-                                            let decisec = '0';
-                                            let sec = '00';
-                                            let min = '00';
-                                            let hour = '0';
-                                            
-                                            if (len === 1) {
-                                              decisec = digits[0];
-                                            } else if (len === 2) {
-                                              sec = digits[0].padStart(2, '0');
-                                              decisec = digits[1];
-                                            } else if (len === 3) {
-                                              sec = digits.slice(0, 2);
-                                              decisec = digits[2];
-                                            } else if (len === 4) {
-                                              min = digits[0].padStart(2, '0');
-                                              sec = digits.slice(1, 3);
-                                              decisec = digits[3];
-                                            } else if (len === 5) {
-                                              min = digits.slice(0, 2);
-                                              sec = digits.slice(2, 4);
-                                              decisec = digits[4];
-                                            } else if (len === 6) {
-                                              hour = digits[0];
-                                              min = digits.slice(1, 3);
-                                              sec = digits.slice(3, 5);
-                                              decisec = digits[5];
-                                            } else {
-                                              hour = digits.slice(0, -5);
-                                              min = digits.slice(-5, -3);
-                                              sec = digits.slice(-3, -1);
-                                              decisec = digits.slice(-1);
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="text"
+                                          value={time}
+                                          onChange={(e) => {
+                                            const input = e.target.value;
+                                            if (input === '') {
+                                              setTime('');
+                                              return;
                                             }
-                                            
-                                            setTime(`${hour}h${min}'${sec}"${decisec}`);
-                                          } else {
-                                            setTime(input);
-                                          }
-                                        }}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                        placeholder="1h23'45&quot;6"
-                                      />
+                                            if (/^\d+$/.test(input)) {
+                                              const digits = input.replace(/\D/g, '');
+                                              const len = digits.length;
+                                              let decisec = '0';
+                                              let sec = '00';
+                                              let min = '00';
+                                              let hour = '0';
+                                              
+                                              if (len === 1) {
+                                                decisec = digits[0];
+                                              } else if (len === 2) {
+                                                sec = digits[0].padStart(2, '0');
+                                                decisec = digits[1];
+                                              } else if (len === 3) {
+                                                sec = digits.slice(0, 2);
+                                                decisec = digits[2];
+                                              } else if (len === 4) {
+                                                min = digits[0].padStart(2, '0');
+                                                sec = digits.slice(1, 3);
+                                                decisec = digits[3];
+                                              } else if (len === 5) {
+                                                min = digits.slice(0, 2);
+                                                sec = digits.slice(2, 4);
+                                                decisec = digits[4];
+                                              } else if (len === 6) {
+                                                hour = digits[0];
+                                                min = digits.slice(1, 3);
+                                                sec = digits.slice(3, 5);
+                                                decisec = digits[5];
+                                              } else {
+                                                hour = digits.slice(0, -5);
+                                                min = digits.slice(-5, -3);
+                                                sec = digits.slice(-3, -1);
+                                                decisec = digits.slice(-1);
+                                              }
+                                              
+                                              setTime(`${hour}h${min}'${sec}"${decisec}`);
+                                            } else {
+                                              setTime(input);
+                                            }
+                                          }}
+                                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                          placeholder="1h23'45&quot;6"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (time && time.trim() !== '') {
+                                              // Apply time value to all rows in individualPlans
+                                              for (let i = 0; i < individualPlans.length; i++) {
+                                                updateIndividualPlan(i, 'time', time);
+                                              }
+                                            }
+                                          }}
+                                          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-xs font-semibold whitespace-nowrap"
+                                          title="Apply this value to all Minutes cells below"
+                                        >
+                                          ↓ Apply to All
+                                        </button>
+                                      </div>
                                       <p className="mt-0.5 text-[10px] text-blue-600">
-                                        💡 Just type the number and select the unit | Range: 0'01" - 9'59" · Format 123456 will be = 1h23'45"6
+                                        💡 Type: 123456 → formats to 1h23'45"6 when you finish typing
                                       </p>
                                       </>
                                     )}
