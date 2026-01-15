@@ -446,7 +446,8 @@ export default function SortableMoveframeRow({
                 <img 
                   src={sportIcon} 
                   alt={sportName} 
-                  className="w-15 h-15 object-cover rounded flex-shrink-0" 
+                  className="object-cover rounded flex-shrink-0"
+                  style={{ width: '60px', height: '60px' }}
                 />
               ) : (
                 <span className="text-base">{sportIcon}</span>
