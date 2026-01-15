@@ -140,7 +140,8 @@ export function useToolsData(): UseToolsDataReturn {
             title: p.name,
             description: p.description || '',
             color: p.color,
-            order: 0 // Order is not stored in Prisma Period
+            order: 0, // Order is not stored in Prisma Period
+            userId: p.userId // Track ownership
           }));
           setPeriods(formattedPeriods);
         } else {
@@ -165,7 +166,8 @@ export function useToolsData(): UseToolsDataReturn {
             code: s.code || '',
             description: s.description || '',
             color: s.color,
-            order: 0
+            order: 0,
+            userId: s.userId // Track ownership
           }));
           setSections(formattedSections);
           console.log('✅ Loaded workout sections from database:', formattedSections);
@@ -402,7 +404,8 @@ export function useToolsData(): UseToolsDataReturn {
             title: p.name,
             description: p.description || '',
             color: p.color,
-            order: 0
+            order: 0,
+            userId: p.userId
           }));
           setPeriods(formattedPeriods);
           console.log('🔄 Periods reloaded:', formattedPeriods);
@@ -433,7 +436,8 @@ export function useToolsData(): UseToolsDataReturn {
             code: s.code || '',
             description: s.description || '',
             color: s.color,
-            order: 0
+            order: 0,
+            userId: s.userId
           }));
           setSections(formattedSections);
           console.log('🔄 Workout sections reloaded:', formattedSections);

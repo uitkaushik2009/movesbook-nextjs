@@ -261,7 +261,6 @@ export default function DayTableView({
     weekNumber: 60,     // Week
     dayNumber: 50,      // Day
     dayname: 80,
-    matchDone: 60,
     workouts: 80,
     icoSport: 100,      // "Ico Sport" column
     distTime: 100,      // "Dist & Time" column
@@ -280,7 +279,6 @@ export default function DayTableView({
     COL_WIDTHS.weekNumber + 
     COL_WIDTHS.dayNumber + 
     ((activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? 0 : COL_WIDTHS.dayname) + // No Dayname for 3 weeks plans
-    COL_WIDTHS.matchDone + 
     COL_WIDTHS.workouts + 
     (COL_WIDTHS.icoSport + COL_WIDTHS.distTime + COL_WIDTHS.mainWork) * 4 + // 4 sport sections (3 cols each)
     COL_WIDTHS.options;
@@ -373,15 +371,31 @@ export default function DayTableView({
   // Debug logging for Section B
   React.useEffect(() => {
     if (activeSection === 'B') {
-      console.log('📊 DayTableView - Section B:', {
+      console.log('📊 [DayTableView] Section B RENDERING:', {
         totalWeeks: workoutPlan?.weeks?.length || 0,
         weeksToDisplay: weeksToDisplay.length,
         weekNumbers: weeksToDisplay.map((w: any) => w.weekNumber),
+        weeksData: weeksToDisplay.map((w: any) => ({
+          weekNumber: w.weekNumber,
+          daysCount: w.days?.length || 0
+        })),
         currentPageStart,
         weeksPerPage
       });
+      
+      // Log each week's days
+      weeksToDisplay.forEach((week: any) => {
+        console.log(`📊 [DayTableView] Week ${week.weekNumber}:`, {
+          daysCount: week.days?.length || 0,
+          days: week.days?.map((d: any) => ({
+            id: d.id,
+            date: d.date,
+            workoutsCount: d.workouts?.length || 0
+          })) || []
+        });
+      });
     }
-  }, [activeSection, weeksToDisplay.length, currentPageStart, weeksPerPage]);
+  }, [activeSection, weeksToDisplay, currentPageStart, weeksPerPage]);
   
   // Legacy variables for backward compatibility
   const currentWeek = sortedWeeks[currentWeekIndex];
@@ -1392,21 +1406,6 @@ export default function DayTableView({
                           <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                             Day
                           </th>
-                          {/* Match done column - Only for Section D */}
-                          {false && (
-                            <th 
-                              className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6"
-                              style={{ 
-                                width: COL_WIDTHS.matchDone, 
-                                minWidth: COL_WIDTHS.matchDone,
-                                backgroundColor: colors.weekHeader,
-                                color: colors.weekHeaderText
-                              }} 
-                              rowSpan={2}
-                            >
-                              Match<br/>done
-                            </th>
-                          )}
                           <th 
                             className={`border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6`}
                             style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
@@ -1512,7 +1511,7 @@ export default function DayTableView({
                                 />
                                 {expandedDaysSet.has(day.id) && (
                                   <tr className="workout-expanded-row">
-                                    <td colSpan={32} className="p-0 bg-transparent">
+                                    <td colSpan={activeSection === 'D' ? 21 : 20} className="p-0 bg-transparent">
                                       <div className="workout-details-wrapper">
                                         <div className="workout-details-container">
                                           <div className="mb-2 text-sm font-semibold text-gray-700">
@@ -1678,23 +1677,8 @@ export default function DayTableView({
                  Dayname
                </th>
               )}
-             {/* Match done column - Only for Section D */}
-             {activeSection === 'D' && (
-               <th 
-                 className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-7"
-                 style={{ 
-                   width: COL_WIDTHS.matchDone, 
-                   minWidth: COL_WIDTHS.matchDone,
-                   backgroundColor: colors.weekHeader,
-                   color: colors.weekHeaderText
-                 }} 
-                 rowSpan={2}
-               >
-                 Match<br/>done
-               </th>
-             )}
               <th 
-                className={`border border-gray-400 px-2 py-2 text-xs font-bold ${activeSection === 'D' ? 'sticky-header-8' : 'sticky-header-6'}`}
+                className={`border border-gray-400 px-2 py-2 text-xs font-bold ${(activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? 'sticky-header-6' : 'sticky-header-7'}`}
                  style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
                  rowSpan={2}
                >
@@ -1807,7 +1791,7 @@ export default function DayTableView({
                   {/* Expanded Workouts Section */}
                     {expandedDaysSet.has(day.id) && (
                       <tr className="workout-expanded-row">
-                       <td colSpan={32} className="p-0 bg-transparent">
+                       <td colSpan={activeSection === 'D' ? 21 : 20} className="p-0 bg-transparent">
                         <div className="workout-details-wrapper">
                          <div className="workout-details-container">
                           <div className="mb-2 flex items-center gap-3">

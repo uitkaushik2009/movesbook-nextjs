@@ -105,6 +105,28 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('table'); // Default to table view
   const [selectedWeekForTable, setSelectedWeekForTable] = useState<number | null>(null);
   
+  // Debug logging for Section B view mode
+  useEffect(() => {
+    if (activeSection === 'B') {
+      console.log('🔍 [WorkoutSection] Section B Active - Current View Mode:', viewMode);
+      console.log('🔍 [WorkoutSection] Workout Plan:', {
+        exists: !!workoutPlan,
+        weeksCount: workoutPlan?.weeks?.length || 0,
+        currentPageStart,
+        weeksPerPage
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection, viewMode]);
+  
+  // Ensure Section B defaults to table view
+  useEffect(() => {
+    if (activeSection === 'B' && viewMode === 'tree') {
+      console.log('⚠️ [WorkoutSection] Section B was in tree view, switching to table view');
+      setViewMode('table');
+    }
+  }, [activeSection]);
+  
   // Week grouping for Section B pagination
   const [weeksPerPage, setWeeksPerPage] = useState<number>(3); // 1, 2, 3, 4, 6, 8, 13
   const [currentPageStart, setCurrentPageStart] = useState<number>(1); // Starting week number for current page
@@ -1823,20 +1845,20 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 <DayTableView
                  excludeStretchingCheckbox={
                    <div className="flex flex-col gap-1">
-                     <div className="flex items-center gap-2">
-                       <input
-                         type="checkbox"
-                         id="exclude-stretching"
-                         checked={excludeStretchingFromTotals}
-                         onChange={(e) => setExcludeStretchingFromTotals(e.target.checked)}
-                         className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
-                       />
-                       <label 
-                         htmlFor="exclude-stretching"
-                         className="text-sm font-medium text-gray-700 cursor-pointer select-none"
-                       >
-                         Exclude stretching from the totals
-                       </label>
+                   <div className="flex items-center gap-2">
+                     <input
+                       type="checkbox"
+                       id="exclude-stretching"
+                       checked={excludeStretchingFromTotals}
+                       onChange={(e) => setExcludeStretchingFromTotals(e.target.checked)}
+                       className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer"
+                     />
+                     <label 
+                       htmlFor="exclude-stretching"
+                       className="text-sm font-medium text-gray-700 cursor-pointer select-none"
+                     >
+                       Exclude stretching from the totals
+                     </label>
                      </div>
                      <span className="text-xs text-yellow-700">
                        ⚠️ Note: Stretching is auto-excluded when 4+ sports are selected in a day
@@ -1856,17 +1878,10 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        }
                      : activeSection === 'B' && workoutPlan
                      ? (() => {
-                         console.log('📊 Section B Table View - Filtering weeks:', {
-                           totalWeeks: workoutPlan.weeks?.length,
-                           currentPageStart,
-                           weeksPerPage,
-                           filterRange: `${currentPageStart} to ${currentPageStart + weeksPerPage - 1}`
-                         });
-                         const filteredWeeks = workoutPlan.weeks?.filter((week: any) => {
-                           const weekNum = week.weekNumber;
-                           return weekNum >= currentPageStart && weekNum < currentPageStart + weeksPerPage;
-                         }) || [];
-                         console.log('📊 Filtered weeks count:', filteredWeeks.length);
+                        const filteredWeeks = workoutPlan.weeks?.filter((week: any) => {
+                          const weekNum = week.weekNumber;
+                          return weekNum >= currentPageStart && weekNum < currentPageStart + weeksPerPage;
+                        }) || [];
                          return {
                            ...workoutPlan,
                            weeks: filteredWeeks
@@ -2357,24 +2372,24 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                const deps = getHandlerDeps();
                
                if (moveframeModalMode === 'edit' && editingMoveframe) {
-               // UPDATE existing moveframe
+                // UPDATE existing moveframe
                console.log('🔄 [UPDATE] Updating moveframe with manualPriority:', moveframeData.manualPriority);
-               await moveframeHandlers.updateMoveframe(editingMoveframe.id, {
-                  sport: moveframeData.sport,
-                  type: moveframeData.type,
-                  description: moveframeData.description,
-                  notes: moveframeData.notes,
-                  macroFinal: moveframeData.macroFinal,
-                 alarm: moveframeData.alarm,
-                 sectionId: moveframeData.sectionId,
-                 manualMode: moveframeData.manualMode || false,
+                await moveframeHandlers.updateMoveframe(editingMoveframe.id, {
+                   sport: moveframeData.sport,
+                   type: moveframeData.type,
+                   description: moveframeData.description,
+                   notes: moveframeData.notes,
+                   macroFinal: moveframeData.macroFinal,
+                  alarm: moveframeData.alarm,
+                  sectionId: moveframeData.sectionId,
+                  manualMode: moveframeData.manualMode || false,
                  manualPriority: moveframeData.manualPriority || false,
-                 // Annotation fields
-                 annotationText: moveframeData.annotationText,
-                 annotationBgColor: moveframeData.annotationBgColor,
-                 annotationTextColor: moveframeData.annotationTextColor,
-                 annotationBold: moveframeData.annotationBold
-               }, deps);
+                  // Annotation fields
+                  annotationText: moveframeData.annotationText,
+                  annotationBgColor: moveframeData.annotationBgColor,
+                  annotationTextColor: moveframeData.annotationTextColor,
+                  annotationBold: moveframeData.annotationBold
+                }, deps);
                 
                  // ALWAYS regenerate movelaps for non-ANNOTATION types when editing
                  // This ensures Rip\Sets column and all movelap data stays in sync
@@ -2458,36 +2473,36 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                     });
                   });
                
-               const requestBody = {
-                  workoutSessionId: activeWorkout.id,
-                 sport: moveframeData.sport,
-                 type: moveframeData.type || 'STANDARD',
-                  description: moveframeData.description,
-                  notes: moveframeData.notes,
-                  macroFinal: moveframeData.macroFinal,
-                  alarm: moveframeData.alarm,
-                  movelaps,
-                 sectionId: moveframeData.sectionId || 'default',
-                 manualMode: moveframeData.manualMode || false,
+                const requestBody = {
+                   workoutSessionId: activeWorkout.id,
+                  sport: moveframeData.sport,
+                  type: moveframeData.type || 'STANDARD',
+                   description: moveframeData.description,
+                   notes: moveframeData.notes,
+                   macroFinal: moveframeData.macroFinal,
+                   alarm: moveframeData.alarm,
+                   movelaps,
+                  sectionId: moveframeData.sectionId || 'default',
+                  manualMode: moveframeData.manualMode || false,
                  manualPriority: moveframeData.manualPriority || false,
-                 // Manual mode fields for Moveframe model
-                 manualRepetitions: moveframeData.manualRepetitions,
-                 manualDistance: moveframeData.manualDistance,
-                 // Annotation fields
-                 annotationText: moveframeData.annotationText,
-                 annotationBgColor: moveframeData.annotationBgColor,
-                 annotationTextColor: moveframeData.annotationTextColor,
-                 annotationBold: moveframeData.annotationBold
-               };
+                  // Manual mode fields for Moveframe model
+                  manualRepetitions: moveframeData.manualRepetitions,
+                  manualDistance: moveframeData.manualDistance,
+                  // Annotation fields
+                  annotationText: moveframeData.annotationText,
+                  annotationBgColor: moveframeData.annotationBgColor,
+                  annotationTextColor: moveframeData.annotationTextColor,
+                  annotationBold: moveframeData.annotationBold
+                };
                
-               console.log('📤 Creating moveframe with request body:', {
-                 ...requestBody,
-                 manualMode: moveframeData.manualMode,
+                console.log('📤 Creating moveframe with request body:', {
+                  ...requestBody,
+                  manualMode: moveframeData.manualMode,
                  manualPriority: moveframeData.manualPriority,
-                 hasNotes: !!requestBody.notes,
-                 notesLength: requestBody.notes?.length || 0,
-                 movelapCount: movelaps.length
-               });
+                  hasNotes: !!requestBody.notes,
+                  notesLength: requestBody.notes?.length || 0,
+                  movelapCount: movelaps.length
+                });
                  
                 const result = await moveframeHandlers.createMoveframe(requestBody, deps);
                  console.log('✅ Moveframe created successfully:', result);

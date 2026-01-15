@@ -7,7 +7,7 @@ import { useDraggable, useDroppable } from '@dnd-kit/core';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
 import { useColorSettings } from '@/hooks/useColorSettings';
-import { isSeriesBasedSport } from '@/constants/moveframe.constants';
+import { isSeriesBasedSport, getDistTimeColumnHeader, isDistanceBasedSport } from '@/constants/moveframe.constants';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 import MoveframesSection from './MoveframesSection';
 
@@ -676,7 +676,7 @@ export default function WorkoutTable({
               {sports.map((sport, index) => (
                   <React.Fragment key={index}>
                     <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '107px' }}>Sport</th>
-                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '80px' }}>Dist & Time</th>
+                    <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '80px' }}>{getDistTimeColumnHeader(sport.name)}</th>
                     <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-center" style={{ width: '50px' }}>K</th>
                     <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-left" style={{ width: '300px' }}>Main work</th>
                     <th className="border border-gray-200 px-2 py-1 text-xs font-bold text-left" style={{ width: '300px' }}>Secondary work</th>
@@ -744,7 +744,11 @@ export default function WorkoutTable({
               </td>
               <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-black font-bold text-base">{sports[0].distance > 0 ? `${sports[0].distance}m` : ''}</div>
+                  <div className="text-black font-bold text-base">
+                    {sports[0].distance > 0 
+                      ? (isDistanceBasedSport(sports[0].name) ? `${sports[0].distance}m` : sports[0].distance)
+                      : ''}
+                  </div>
                   <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sports[0].duration}</div>
                 </div>
               </td>
@@ -851,7 +855,11 @@ export default function WorkoutTable({
               </td>
               <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-black font-bold text-base">{sports[1].distance > 0 ? `${sports[1].distance}m` : ''}</div>
+                  <div className="text-black font-bold text-base">
+                    {sports[1].distance > 0 
+                      ? (isDistanceBasedSport(sports[1].name) ? `${sports[1].distance}m` : sports[1].distance)
+                      : ''}
+                  </div>
                   <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sports[1].duration}</div>
                 </div>
               </td>
@@ -954,7 +962,11 @@ export default function WorkoutTable({
               </td>
               <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-black font-bold text-base">{sports[2].distance > 0 ? `${sports[2].distance}m` : ''}</div>
+                  <div className="text-black font-bold text-base">
+                    {sports[2].distance > 0 
+                      ? (isDistanceBasedSport(sports[2].name) ? `${sports[2].distance}m` : sports[2].distance)
+                      : ''}
+                  </div>
                   <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sports[2].duration}</div>
                 </div>
               </td>
@@ -1057,7 +1069,11 @@ export default function WorkoutTable({
               </td>
               <td className="border border-gray-200 px-1 text-xs text-center align-middle" style={{ width: '80px', height: '60px' }}>
                 <div className="leading-tight">
-                  <div className="text-black font-bold text-base">{sports[3].distance > 0 ? `${sports[3].distance}m` : ''}</div>
+                  <div className="text-black font-bold text-base">
+                    {sports[3].distance > 0 
+                      ? (isDistanceBasedSport(sports[3].name) ? `${sports[3].distance}m` : sports[3].distance)
+                      : ''}
+                  </div>
                   <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sports[3].duration}</div>
                 </div>
               </td>
@@ -1299,7 +1315,7 @@ export default function WorkoutTable({
                         {clickedMoveframe.sport === 'BODY_BUILDING' ? (
                           lap.exercise && <div>Exercise: <span className="font-semibold">{lap.exercise}</span></div>
                         ) : (
-                          lap.distance && <div>Distance: <span className="font-semibold">{lap.distance}m</span></div>
+                          lap.distance && <div>Distance: <span className="font-semibold">{isDistanceBasedSport(clickedMoveframe.sport) ? `${lap.distance}m` : lap.distance}</span></div>
                         )}
                         {lap.reps && <div>Reps: <span className="font-semibold">{lap.reps}</span></div>}
                         {lap.time && <div>Time: <span className="font-semibold">{lap.time}</span></div>}

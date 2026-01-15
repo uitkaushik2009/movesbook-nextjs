@@ -139,7 +139,8 @@ export async function GET(request: NextRequest) {
             period: true, // Include week-level period
             days: {
               where: {
-                storageZone: planStorageZone,  // CRITICAL: Only load days from this section!
+                // For YEARLY_PLAN (Section B), don't filter by storageZone - show all days in the plan
+                ...(actualPlanType !== 'YEARLY_PLAN' ? { storageZone: planStorageZone } : {}),
                 ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {})
               },
               include: {

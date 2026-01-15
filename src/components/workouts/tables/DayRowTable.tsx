@@ -10,6 +10,7 @@ import { isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 import { calculateSportSummaries, type SportSummary } from '@/utils/workoutHelpers';
+import { isDistanceBasedSport } from '@/constants/moveframe.constants';
 
 interface DayRowTableProps {
   day: any;
@@ -264,28 +265,9 @@ export default function DayRowTable({
         </td>
       )}
 
-      {/* Match Done (Workout Completion Status) - Only for Section D */}
-      {activeSection === 'D' && (
-        <td 
-          className="border border-gray-200 px-1 py-2 text-center sticky-col-7 w-[60px] min-w-[60px]"
-          style={{ 
-            backgroundColor: bgStyle,
-            color: rowTextColor
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={hasWorkouts}
-            readOnly
-            className="w-4 h-4"
-            title={hasWorkouts ? 'Workouts planned' : 'No workouts'}
-          />
-        </td>
-      )}
-
       {/* Workout Sessions - Show numbers with symbols for each workout + Day Description */}
       <td 
-        className={`border border-gray-200 px-1 py-2 text-center ${activeSection === 'A' || activeSection === 'B' || activeSection === 'C' ? 'sticky-col-6' : 'sticky-col-8'}`}
+        className={`border border-gray-200 px-1 py-2 text-center ${(activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? 'sticky-col-6' : 'sticky-col-7'}`}
         style={{ backgroundColor: bgStyle }}
         onClick={(e) => e.stopPropagation()} // Prevent row click when clicking on workout numbers
       >
@@ -343,7 +325,11 @@ export default function DayRowTable({
       <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-blue-100 text-black">
         {sportSummaries[0] ? (
           <div className="leading-tight">
-            <div className="font-bold text-base">{sportSummaries[0].distance > 0 ? `${sportSummaries[0].distance}m` : '—'}</div>
+            <div className="font-bold text-base">
+              {sportSummaries[0].distance > 0 
+                ? (isDistanceBasedSport(sportSummaries[0].sport) ? `${sportSummaries[0].distance}m` : sportSummaries[0].distance)
+                : '—'}
+            </div>
             <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sportSummaries[0]?.duration || '00:00:00'}</div>
           </div>
         ) : '—'}
@@ -394,7 +380,11 @@ export default function DayRowTable({
       <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-green-100 text-black">
         {sportSummaries[1] ? (
           <div className="leading-tight">
-            <div className="font-bold text-base">{sportSummaries[1].distance > 0 ? `${sportSummaries[1].distance}m` : '—'}</div>
+            <div className="font-bold text-base">
+              {sportSummaries[1].distance > 0 
+                ? (isDistanceBasedSport(sportSummaries[1].sport) ? `${sportSummaries[1].distance}m` : sportSummaries[1].distance)
+                : '—'}
+            </div>
             <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sportSummaries[1]?.duration || '00:00:00'}</div>
           </div>
         ) : '—'}
@@ -445,7 +435,11 @@ export default function DayRowTable({
       <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-orange-100 text-black">
         {sportSummaries[2] ? (
           <div className="leading-tight">
-            <div className="font-bold text-base">{sportSummaries[2].distance > 0 ? `${sportSummaries[2].distance}m` : '—'}</div>
+            <div className="font-bold text-base">
+              {sportSummaries[2].distance > 0 
+                ? (isDistanceBasedSport(sportSummaries[2].sport) ? `${sportSummaries[2].distance}m` : sportSummaries[2].distance)
+                : '—'}
+            </div>
             <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sportSummaries[2]?.duration || '00:00:00'}</div>
           </div>
         ) : '—'}
@@ -496,7 +490,11 @@ export default function DayRowTable({
       <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-pink-100 text-black">
         {sportSummaries[3] ? (
           <div className="leading-tight">
-            <div className="font-bold text-base">{sportSummaries[3].distance > 0 ? `${sportSummaries[3].distance}m` : '—'}</div>
+            <div className="font-bold text-base">
+              {sportSummaries[3].distance > 0 
+                ? (isDistanceBasedSport(sportSummaries[3].sport) ? `${sportSummaries[3].distance}m` : sportSummaries[3].distance)
+                : '—'}
+            </div>
             <div className="mt-0.5 font-semibold text-[10px] text-gray-700">{sportSummaries[3]?.duration || '00:00:00'}</div>
           </div>
         ) : '—'}
@@ -824,7 +822,7 @@ export default function DayRowTable({
                         {clickedMoveframe.sport === 'BODY_BUILDING' ? (
                           lap.exercise && <div>Exercise: <span className="font-semibold">{lap.exercise}</span></div>
                         ) : (
-                          lap.distance && <div>Distance: <span className="font-semibold">{lap.distance}m</span></div>
+                          lap.distance && <div>Distance: <span className="font-semibold">{isDistanceBasedSport(clickedMoveframe.sport) ? `${lap.distance}m` : lap.distance}</span></div>
                         )}
                         {lap.reps && <div>Reps: <span className="font-semibold">{lap.reps}</span></div>}
                         {lap.time && <div>Time: <span className="font-semibold">{lap.time}</span></div>}

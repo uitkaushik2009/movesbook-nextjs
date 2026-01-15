@@ -852,6 +852,16 @@ export function shouldShowDistance(sport: string): boolean {
   return !noDistanceSports.includes(sport);
 }
 
+// Helper function to check if sport is distance-based (has meters field)
+export function isDistanceBasedSport(sport: string): boolean {
+  return DISTANCE_BASED_SPORTS.includes(sport as any);
+}
+
+// Helper function to get the distance/duration column header based on sport
+export function getDistTimeColumnHeader(sport: string): string {
+  return isDistanceBasedSport(sport) ? 'Dist & Time' : 'Duration & time';
+}
+
 // Helper function to format moveframe type for display
 export function formatMoveframeType(type: string): string {
   if (type === 'STANDARD') {

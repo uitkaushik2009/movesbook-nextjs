@@ -505,7 +505,7 @@ export default function SortableMoveframeRow({
                 color: annotationTextColor || '#ffffff'
               } : {})
             }}
-           onClick={(e) => {
+            onClick={(e) => {
              if (isManualMode && hasManualPriority && manualContent) {
                 e.stopPropagation();
                 console.log('🔍 [SortableMoveframeRow] Opening popup with content:', {
@@ -522,7 +522,7 @@ export default function SortableMoveframeRow({
               }
             }}
            title={isManualMode && hasManualPriority && manualContent ? "Click to view full content" : ""}
-         >
+          >
            {isManualMode && hasManualPriority && manualContent ? (
               <div 
                 className="text-left text-sm overflow-hidden manual-content-preview break-words"

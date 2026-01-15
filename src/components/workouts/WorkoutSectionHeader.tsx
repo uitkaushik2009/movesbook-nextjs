@@ -328,7 +328,7 @@ export default function WorkoutSectionHeader({
             {/* Save/Reset Buttons for Section B - Far Right */}
             {activeSection === 'B' && (
               <>
-                <button
+                  <button
                   onClick={async () => {
                     try {
                       const gridSettings = {
@@ -344,11 +344,11 @@ export default function WorkoutSectionHeader({
                   }}
                   className="px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
                   title="Save current grid settings"
-                >
+                  >
                   <Download className="w-4 h-4" />
                   Save Grid Settings
-                </button>
-                <button
+                  </button>
+                  <button
                   onClick={() => {
                     if (confirm('Are you sure you want to reset grid settings to default?')) {
                       try {
@@ -363,10 +363,10 @@ export default function WorkoutSectionHeader({
                   }}
                   className="px-3 py-1.5 bg-gray-600 text-white hover:bg-gray-700 rounded text-sm font-medium flex items-center gap-2 transition-colors"
                   title="Reset grid settings to default"
-                >
+                  >
                   <Calendar className="w-4 h-4" />
                   Reset to Default
-                </button>
+                  </button>
               </>
             )}
             
@@ -472,26 +472,26 @@ export default function WorkoutSectionHeader({
             {/* Right - View Toggle Buttons */}
             <div className="flex items-center gap-2">
               {/* View Toggle Buttons */}
-              <button
-                onClick={() => onViewModeChange('tree')}
-                className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
-                  viewMode === 'tree' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                <List className="w-4 h-4" />
-                Tree
-              </button>
-              
-              <button
-                onClick={() => onViewModeChange('table')}
-                className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
-                  viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                <Table className="w-4 h-4" />
-                Table
-              </button>
-              
+            <button
+              onClick={() => onViewModeChange('tree')}
+              className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                viewMode === 'tree' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              Tree
+            </button>
+            
+            <button
+              onClick={() => onViewModeChange('table')}
+              className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <Table className="w-4 h-4" />
+              Table
+            </button>
+            
               <button
                 onClick={() => onViewModeChange('calendar')}
                 className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
@@ -501,9 +501,9 @@ export default function WorkoutSectionHeader({
                 <Calendar className="w-4 h-4" />
                 Calendar
               </button>
-            </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* Week Context Header - Show when viewing filtered weeks */}

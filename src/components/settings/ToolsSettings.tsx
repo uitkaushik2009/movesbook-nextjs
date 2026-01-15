@@ -85,6 +85,22 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
   const [superAdminPassword, setSuperAdminPassword] = useState('');
   const [showLoadDialog, setShowLoadDialog] = useState(false);
   
+  // Get current user ID for ownership checking
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Get user ID from localStorage
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setCurrentUserId(user.id || null);
+      } catch (e) {
+        console.error('Error parsing user from localStorage:', e);
+      }
+    }
+  }, []);
+  
   // Auto-update selected language when user's language changes
   useEffect(() => {
     if (currentLanguage) {
@@ -248,13 +264,28 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
   };
 
   const handleEdit = (item: Period | WorkoutSection) => {
+    // Check if user owns this item
+    if (currentUserId && item.userId && item.userId !== currentUserId) {
+      alert('⚠️ You cannot edit this item because it was not created by you.\n\nOnly items you created can be edited.');
+      return;
+    }
+    
     setEditingItem({ ...item });
     
-    // Load translations from all languages
-    const itemType = activeTab === 'periods' ? 'periods' : 'sections';
+    // Initialize translations with current values from the database item
+    // Since periods/sections are now in Prisma database (not localStorage language libraries),
+    // we initialize all languages with the same values from the database
     const translations: Record<string, { title: string; description: string }> = {};
     
     SUPPORTED_LANGUAGES.forEach(lang => {
+      // Initialize with current database values
+      translations[lang.code] = {
+        title: item.title || '',
+        description: item.description || ''
+      };
+      
+      // Also try to load from localStorage for backward compatibility
+      const itemType = activeTab === 'periods' ? 'periods' : 'sections';
       const storageKey = `tools_${itemType}_${lang.code}`;
       const existingDataStr = localStorage.getItem(storageKey);
       if (existingDataStr) {
@@ -263,8 +294,8 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
           const existingItem = existingData.find((i: any) => i.id === item.id);
           if (existingItem) {
             translations[lang.code] = {
-              title: existingItem.title || '',
-              description: existingItem.description || ''
+              title: existingItem.title || item.title || '',
+              description: existingItem.description || item.description || ''
             };
           }
         } catch (e) {
@@ -289,6 +320,13 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         alert(`Description in ${lang.toUpperCase()} must be 255 characters or less`);
         return;
       }
+    }
+
+    // Update the editingItem with the current language's values (use English as default)
+    const currentLangData = editItemTranslations[currentLanguage] || editItemTranslations['en'] || Object.values(editItemTranslations)[0];
+    if (currentLangData) {
+      editingItem.title = currentLangData.title || editingItem.title;
+      editingItem.description = currentLangData.description || editingItem.description;
     }
 
     // Update in current state
@@ -857,7 +895,11 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                 onDragOver={(e) => handleDragOver(e, item.id)}
                 onDragEnd={handleDragEnd}
                 className={`bg-white rounded-xl border-2 p-4 cursor-move transition ${
-                  draggedItem === item.id ? 'opacity-50 border-blue-500' : 'border-gray-200 hover:border-gray-300'
+                  draggedItem === item.id 
+                    ? 'opacity-50 border-blue-500' 
+                    : currentUserId && item.userId && item.userId !== currentUserId
+                      ? 'border-gray-300 bg-gray-50'
+                      : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -870,6 +912,11 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                         style={{ backgroundColor: item.color }}
                       />
                       <h3 className="font-semibold text-gray-900 truncate">{item.title}</h3>
+                      {currentUserId && item.userId && item.userId !== currentUserId && (
+                        <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full flex-shrink-0">
+                          Read-only
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-gray-600 line-clamp-2">{item.description}</p>
                   </div>
@@ -877,13 +924,25 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   <div className="flex gap-2 flex-shrink-0">
                     <button
                       onClick={() => handleEdit(item)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      disabled={currentUserId && item.userId && item.userId !== currentUserId}
+                      className={`p-2 rounded-lg transition ${
+                        currentUserId && item.userId && item.userId !== currentUserId
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-blue-600 hover:bg-blue-50'
+                      }`}
+                      title={currentUserId && item.userId && item.userId !== currentUserId ? 'Cannot edit - not created by you' : 'Edit'}
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(item.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+                      disabled={currentUserId && item.userId && item.userId !== currentUserId}
+                      className={`p-2 rounded-lg transition ${
+                        currentUserId && item.userId && item.userId !== currentUserId
+                          ? 'text-gray-300 cursor-not-allowed'
+                          : 'text-red-600 hover:bg-red-50'
+                      }`}
+                      title={currentUserId && item.userId && item.userId !== currentUserId ? 'Cannot delete - not created by you' : 'Delete'}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

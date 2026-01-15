@@ -12,6 +12,7 @@ export interface Period {
   description: string;
   color: string;
   order: number;
+  userId?: string; // Track ownership
 }
 
 export interface WorkoutSection {
@@ -20,6 +21,7 @@ export interface WorkoutSection {
   description: string;
   color: string;
   order: number;
+  userId?: string; // Track ownership
 }
 
 export interface Sport {

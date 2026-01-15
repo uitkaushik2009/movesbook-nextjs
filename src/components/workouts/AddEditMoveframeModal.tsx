@@ -1088,7 +1088,7 @@ export default function AddEditMoveframeModal({
             <label className="block text-xs font-bold text-gray-700 mb-1">
               Sport <span className="text-red-500">*</span>
             </label>
-            <div className="flex items-start justify-center gap-3">
+            <div className="flex items-center justify-center gap-3">
               <select
                 value={sport}
                 onChange={(e) => {
@@ -1142,7 +1142,7 @@ export default function AddEditMoveframeModal({
                 const icon = getSportIcon(sport, iconType);
                 const isImage = icon.startsWith('/');
                 return isImage ? (
-                  <div className="w-18 h-18 flex items-center justify-center border-2 border-gray-300 rounded bg-gray-50 flex-shrink-0">
+                  <div className="w-18 h-18 flex items-center justify-center flex-shrink-0">
                     <Image 
                       src={icon} 
                       alt={sport}
@@ -1152,7 +1152,7 @@ export default function AddEditMoveframeModal({
                     />
                   </div>
                 ) : (
-                  <div className="w-18 h-18 flex items-center justify-center text-5xl border-2 border-gray-300 rounded bg-gray-50 flex-shrink-0">
+                  <div className="w-18 h-18 flex items-center justify-center text-5xl flex-shrink-0">
                     {icon}
                   </div>
                 );
