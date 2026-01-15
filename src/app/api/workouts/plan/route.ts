@@ -101,11 +101,10 @@ export async function GET(request: NextRequest) {
       // User sets their own start date, so show all 52 weeks from that date
       console.log(`Section B: No date filter, showing all 52 weeks from user's chosen start date`);
     } else if (type === 'WORKOUTS_DONE') {
-      // Section C: Show past completed workouts (before today)
-      dateFilter = {
-        lt: today
-      };
-      console.log(`Section C date filter: before ${today.toISOString()}`);
+      // Section C: Show all 52 weeks (same as Section B) - no date filter
+      // This allows users to fill in completed workouts for the entire year
+      // No date filter for Section C
+      console.log('Section C: No date filter, showing all 52 weeks (same structure as Section B)');
     } else if (type === 'ARCHIVE') {
       // Section D: No specific date filter, can show any archived data
       console.log(`Section D: No date filter, showing all archived days`);
@@ -865,4 +864,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+
 

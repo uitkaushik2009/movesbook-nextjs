@@ -77,20 +77,19 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
     }
   };
 
-  // Format duration as HH:MM
+  // Format duration as 00h00'00''
   const formatTime = (minutes: number): string => {
-    if (minutes === 0) return '0:00';
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.floor(minutes % 60);
-    if (hours > 0) {
-      return `${hours}:${mins.toString().padStart(2, '0')}`;
-    }
-    return `0:${mins.toString().padStart(2, '0')}`;
+    if (minutes === 0) return "00h00'00''";
+    const totalSeconds = Math.floor(minutes * 60);
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    return `${hours.toString().padStart(2, '0')}h${mins.toString().padStart(2, '0')}'${secs.toString().padStart(2, '0')}''`;
   };
 
   // Calculate daily summaries - each sport gets its own row
   const calculateDailySummaries = () => {
-    if (!displayWeek || !displayWeek.days) return { rows: [], totals: { workouts: 0, distance: 0, series: 0 } };
+    if (!displayWeek || !displayWeek.days) return { rows: [], totals: { workouts: 0, distance: 0, series: 0, time: 0 } };
 
     const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const rows: any[] = [];
@@ -99,20 +98,21 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
     let totalWorkoutsCount = 0;
     let totalDistanceSum = 0;
     let totalSeriesSum = 0;
+    let totalTimeSum = 0;
     
     displayWeek.days.forEach((day: any, index: number) => {
       const workoutsCount = day.workouts?.length || 0;
       totalWorkoutsCount += workoutsCount;
       
       // Group data by sport for this day
-      const sportDataMap = new Map<string, { distance: number; series: number }>();
+      const sportDataMap = new Map<string, { distance: number; series: number; time: number }>();
       
       day.workouts?.forEach((workout: any) => {
         workout.moveframes?.forEach((mf: any) => {
           const sport = mf.sport || 'UNKNOWN';
           
           if (!sportDataMap.has(sport)) {
-            sportDataMap.set(sport, { distance: 0, series: 0 });
+            sportDataMap.set(sport, { distance: 0, series: 0, time: 0 });
           }
           
           const sportData = sportDataMap.get(sport)!;
@@ -121,12 +121,15 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
           if (isDistanceBased) {
             mf.movelaps?.forEach((lap: any) => {
               sportData.distance += parseInt(lap.distance) || 0;
+              sportData.time += parseFloat(lap.time) || 0;
             });
           } else {
             // For series-based sports
             if (mf.manualMode) {
               // For manual mode: use the repetitions field directly
               sportData.series += mf.repetitions || 0;
+              // Add time for manual mode if available
+              sportData.time += parseFloat(mf.duration) || 0;
             } else {
               // For standard mode: count total reps/series (Rip\Series)
               // Exclude movelaps where reps=1 AND pause=0 (unless it's a macro)
@@ -142,6 +145,9 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                 if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
                   sportData.series += 1;
                 }
+                
+                // Add time for non-distance sports
+                sportData.time += parseFloat(lap.time) || 0;
               });
             }
           }
@@ -160,6 +166,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
             workoutsCount: sportIndex === 0 ? workoutsCount : null, // Only show workout count on first row
             sport: sport.replace(/_/g, ' '),
             totalDistance: isDistanceBased ? data.distance : null,
+            totalTime: data.time,
             totalSeries: !isDistanceBased ? data.series : null,
             rowSpan: sportIndex === 0 ? sportsArray.length : 0 // For potential rowspan usage
           });
@@ -170,6 +177,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
           } else {
             totalSeriesSum += data.series;
           }
+          totalTimeSum += data.time;
         });
       } else {
         // Day with no workouts
@@ -178,6 +186,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
           workoutsCount: 0,
           sport: '—',
           totalDistance: null,
+          totalTime: null,
           totalSeries: null,
           rowSpan: 1
         });
@@ -189,7 +198,8 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
       totals: { 
         workouts: totalWorkoutsCount, 
         distance: totalDistanceSum, 
-        series: totalSeriesSum 
+        series: totalSeriesSum,
+        time: totalTimeSum 
       } 
     };
   };
@@ -615,14 +625,14 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
       htmlContent += '<h3 style="font-size: 13pt; margin: 16pt 0 10pt 0; font-weight: bold;">📊 Daily Summary</h3>';
       
       // Calculate sport totals for this day
-      const sportDataMap = new Map<string, { distance: number; series: number }>();
+      const sportDataMap = new Map<string, { distance: number; series: number; time: number }>();
       
       selectedDay.workouts?.forEach((workout: any) => {
         workout.moveframes?.forEach((mf: any) => {
           const sport = mf.sport || 'UNKNOWN';
           
           if (!sportDataMap.has(sport)) {
-            sportDataMap.set(sport, { distance: 0, series: 0 });
+            sportDataMap.set(sport, { distance: 0, series: 0, time: 0 });
           }
           
           const sportData = sportDataMap.get(sport)!;
@@ -631,10 +641,14 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
           if (isDistanceBased) {
             mf.movelaps?.forEach((lap: any) => {
               sportData.distance += parseInt(lap.distance) || 0;
+              sportData.time += parseFloat(lap.time) || 0;
             });
           } else {
             // For series-based sports, count total reps/series
             sportData.series += mf.movelaps?.length || 0;
+            mf.movelaps?.forEach((lap: any) => {
+              sportData.time += parseFloat(lap.time) || 0;
+            });
           }
         });
       });
@@ -648,6 +662,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               <th style="border: 1px solid #999; padding: 6pt; text-align: center;">Workouts</th>
               <th style="border: 1px solid #999; padding: 6pt; text-align: left;">Sport</th>
               <th style="border: 1px solid #999; padding: 6pt; text-align: center;">Total Distance (m)</th>
+              <th style="border: 1px solid #999; padding: 6pt; text-align: center;">Time</th>
               <th style="border: 1px solid #999; padding: 6pt; text-align: center;">Total Series</th>
             </tr>
           </thead>
@@ -665,6 +680,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
             ${index === 0 ? `<td rowspan="${sportsArray.length}" style="border: 1px solid #999; padding: 6pt; text-align: center;">${selectedDay.workouts.length}</td>` : ''}
             <td style="border: 1px solid #999; padding: 6pt;">${useImageIcons ? `<img src="${sportIcon}" alt="${sport}" style="width: 14pt; height: 14pt; vertical-align: middle; margin-right: 4pt;" />` : sportIcon} ${sport.replace(/_/g, ' ')}</td>
             <td style="border: 1px solid #999; padding: 6pt; text-align: center;">${isDistanceBased ? data.distance : '—'}</td>
+            <td style="border: 1px solid #999; padding: 6pt; text-align: center;">${data.time > 0 ? formatTime(data.time) : '—'}</td>
             <td style="border: 1px solid #999; padding: 6pt; text-align: center;">${!isDistanceBased ? data.series : '—'}</td>
           </tr>
         `;
@@ -1103,6 +1119,7 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                     <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">WO</th>
                     <th className="border border-gray-300 px-2 py-2 text-center font-semibold text-xs">Sport</th>
                     <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Dist(m)</th>
+                    <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Time</th>
                     <th className="border border-gray-300 px-1 py-2 text-center font-semibold text-xs">Rip\Series</th>
                   </tr>
                 </thead>
@@ -1131,6 +1148,9 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                         {row.totalDistance !== null ? row.totalDistance.toLocaleString() : '—'}
                       </td>
                       <td className="border border-gray-300 px-1 py-2 text-center text-xs">
+                        {row.totalTime !== null && row.totalTime > 0 ? formatTime(row.totalTime) : '—'}
+                      </td>
+                      <td className="border border-gray-300 px-1 py-2 text-center text-xs">
                       {row.totalSeries !== null ? row.totalSeries : '—'}
                     </td>
                   </tr>
@@ -1148,6 +1168,9 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                   </td>
                   <td className="border border-gray-300 px-1 py-2 text-center text-xs font-bold">
                     {dailyTotals.distance > 0 ? dailyTotals.distance.toLocaleString() : '—'}
+                  </td>
+                  <td className="border border-gray-300 px-1 py-2 text-center text-xs font-bold">
+                    {dailyTotals.time > 0 ? formatTime(dailyTotals.time) : '—'}
                   </td>
                   <td className="border border-gray-300 px-1 py-2 text-center text-xs font-bold">
                     {dailyTotals.series > 0 ? dailyTotals.series : '—'}
@@ -1552,6 +1575,18 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
           /* Hide buttons */
           [role="dialog"] button,
           [role="dialog"] .print\\:hidden {
+            display: none !important;
+            visibility: hidden !important;
+          }
+          
+          /* Hide source code elements */
+          [role="dialog"] pre,
+          [role="dialog"] code,
+          [role="dialog"] .hljs,
+          [role="dialog"] .language-*,
+          [role="dialog"] [class*="language-"],
+          [role="dialog"] .code-block,
+          [role="dialog"] .source-code {
             display: none !important;
             visibility: hidden !important;
           }

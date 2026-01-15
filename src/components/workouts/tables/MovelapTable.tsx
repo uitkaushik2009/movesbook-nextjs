@@ -169,7 +169,11 @@ export default function MovelapTable({
                   key={column.id}
                   className="border border-gray-200 px-1 py-1 text-xs font-bold text-center"
                   style={{ 
-                    width: column.id === 'annotation' ? '150px' : column.id === 'mf' ? '40px' : '65px'
+                    width: column.id === 'annotation' ? '150px' : 
+                           column.id === 'mf' ? '40px' : 
+                           column.id === 'time' ? '85px' : 
+                           column.id === 'pace' ? '85px' : 
+                           '65px'
                   }}
                 >
                   {column.label}
@@ -194,7 +198,11 @@ export default function MovelapTable({
                       column.id === 'mf' ? 'font-bold' : ''
                     }`}
                     style={{ 
-                      width: column.id === 'annotation' ? '150px' : column.id === 'mf' ? '40px' : '65px'
+                      width: column.id === 'annotation' ? '150px' : 
+                             column.id === 'mf' ? '40px' : 
+                             column.id === 'time' ? '85px' : 
+                             column.id === 'pace' ? '85px' : 
+                             '65px'
                     }}
                   >
                     <div className={column.id === 'annotation' ? 'truncate' : ''} title={String(getCellValue(column, movelap))}>

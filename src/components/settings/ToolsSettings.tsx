@@ -420,6 +420,11 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
     setDraggedItem(null);
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDraggedItem(null);
+  };
+
   // Language-specific defaults handlers
   const saveLanguageDefaults = async () => {
     setShowPasswordDialog(true);
@@ -607,6 +612,11 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
   };
 
   const handleSportDragEnd = () => {
+    setDraggedSport(null);
+  };
+
+  const handleSportDrop = (e: React.DragEvent) => {
+    e.preventDefault();
     setDraggedSport(null);
   };
 
@@ -890,9 +900,10 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
             {getActiveItems().map((item) => (
               <div
                 key={item.id}
-                draggable
+                draggable={true}
                 onDragStart={() => handleDragStart(item.id)}
                 onDragOver={(e) => handleDragOver(e, item.id)}
+                onDrop={handleDrop}
                 onDragEnd={handleDragEnd}
                 className={`bg-white rounded-xl border-2 p-4 cursor-move transition ${
                   draggedItem === item.id 
@@ -924,7 +935,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   <div className="flex gap-2 flex-shrink-0">
                     <button
                       onClick={() => handleEdit(item)}
-                      disabled={currentUserId && item.userId && item.userId !== currentUserId}
+                      disabled={!!(currentUserId && item.userId && item.userId !== currentUserId)}
                       className={`p-2 rounded-lg transition ${
                         currentUserId && item.userId && item.userId !== currentUserId
                           ? 'text-gray-300 cursor-not-allowed'
@@ -936,7 +947,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                     </button>
                     <button
                       onClick={() => handleDelete(item.id)}
-                      disabled={currentUserId && item.userId && item.userId !== currentUserId}
+                      disabled={!!(currentUserId && item.userId && item.userId !== currentUserId)}
                       className={`p-2 rounded-lg transition ${
                         currentUserId && item.userId && item.userId !== currentUserId
                           ? 'text-gray-300 cursor-not-allowed'
@@ -1040,9 +1051,10 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
               {top5Sports.map((sport, index) => (
                 <div
                   key={sport.id}
-                  draggable
+                  draggable={true}
                   onDragStart={() => handleSportDragStart(sport.id)}
                   onDragOver={(e) => handleSportDragOver(e, sport.id)}
+                  onDrop={handleSportDrop}
                   onDragEnd={handleSportDragEnd}
                   className={`flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border-2 cursor-move transition ${
                     draggedSport === sport.id ? 'opacity-50 border-blue-500' : 'border-blue-200 hover:border-blue-300'
@@ -1095,9 +1107,10 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
               {otherSports.map((sport, index) => (
                 <div
                   key={sport.id}
-                  draggable
+                  draggable={true}
                   onDragStart={() => handleSportDragStart(sport.id)}
                   onDragOver={(e) => handleSportDragOver(e, sport.id)}
+                  onDrop={handleSportDrop}
                   onDragEnd={handleSportDragEnd}
                   className={`flex items-center gap-3 p-3 bg-gray-50 rounded-lg border cursor-move transition ${
                     draggedSport === sport.id ? 'opacity-50 border-gray-400' : 'border-gray-200 hover:border-gray-300'
@@ -2279,7 +2292,8 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                         reader.readAsDataURL(file);
                       }
                     }}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+                    style={{ position: 'relative', zIndex: 1 }}
                   />
                   {editingEquipment.picture && (
                     <img src={editingEquipment.picture} alt="Preview" className="w-16 h-16 object-cover rounded-lg border-2 border-gray-300" />

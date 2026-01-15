@@ -202,3 +202,16 @@ form select {
    ============================================== */
 /* Global print styles removed to avoid conflicts */
 
+/* Hide source code elements during printing */
+@media print {
+  pre,
+  code,
+  .hljs,
+  [class*="language-"],
+  .code-block,
+  .source-code {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+

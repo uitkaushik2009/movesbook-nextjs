@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, FileText, Flag } from 'lucide-react';
 // import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors, closestCenter } from '@dnd-kit/core';
 import { useColorSettings } from '@/hooks/useColorSettings';
 import { getContrastTextColor } from '@/utils/colorUtils';
+import { useSportIconType } from '@/hooks/useSportIconType';
 import DayRowTable from './DayRowTable';
 import WorkoutHierarchyView from './WorkoutHierarchyView';
 import WeeklyInfoModal from '../WeeklyInfoModal';
@@ -134,6 +135,8 @@ export default function DayTableView({
   columnSettings
 }: DayTableViewProps) {
   const { colors } = useColorSettings();
+  const defaultIconType = useSportIconType();
+  const [iconType, setIconType] = useState<'emoji' | 'icon'>(defaultIconType);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [isWeeklyInfoModalOpen, setIsWeeklyInfoModalOpen] = useState(false);
   const [weeklyNotes, setWeeklyNotes] = useState<Record<string, { periodId: string; notes: string }>>({});
@@ -168,6 +171,20 @@ export default function DayTableView({
   // Debug: Log expansion state (disabled for performance)
   // console.log('📅 DayTableView: expandedDays:', Array.from(expandedDaysSet));
   // console.log('🏋️ DayTableView: expandedWorkouts:', Array.from(expandedWorkoutsSet));
+  
+  // Load icon type from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('sportIconType');
+    if (saved === 'icon' || saved === 'emoji') {
+      setIconType(saved);
+    }
+  }, []);
+  
+  const toggleIconType = () => {
+    const newType = iconType === 'emoji' ? 'icon' : 'emoji';
+    localStorage.setItem('sportIconType', newType);
+    setIconType(newType);
+  };
   
   // Load periods
   useEffect(() => {
@@ -260,6 +277,7 @@ export default function DayTableView({
     nameCycle: 90,      // Period name
     weekNumber: 60,     // Week
     dayNumber: 50,      // Day
+    matchDone: 60,      // Match done checkbox (for sections B and C)
     dayname: 80,
     workouts: 80,
     icoSport: 100,      // "Ico Sport" column
@@ -270,15 +288,17 @@ export default function DayTableView({
   };
   
   // Calculate minimum table width dynamically based on column widths
-  // For 3 weeks plans (A, B, C): 7 sticky columns (no Dayname) + 4 sport sections (3 cols each) + 1 options column
-  // For other sections: 8 sticky columns + 4 sport sections (3 cols each) + 1 options column
+  // Section A: 6 sticky columns (no Dayname, no Match done)
+  // Section B, C: 7 sticky columns (no Dayname, has Match done)
+  // Section D: 7 sticky columns (has Dayname, no Match done)
   const TABLE_MIN_WIDTH = 
     COL_WIDTHS.noWorkouts + 
     COL_WIDTHS.colorCycle + 
     COL_WIDTHS.nameCycle + 
     COL_WIDTHS.weekNumber + 
     COL_WIDTHS.dayNumber + 
-    ((activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? 0 : COL_WIDTHS.dayname) + // No Dayname for 3 weeks plans
+    ((activeSection === 'B' || activeSection === 'C') ? COL_WIDTHS.matchDone : 0) + // Match done for sections B and C
+    (activeSection === 'D' ? COL_WIDTHS.dayname : 0) + // Dayname only for Section D
     COL_WIDTHS.workouts + 
     (COL_WIDTHS.icoSport + COL_WIDTHS.distTime + COL_WIDTHS.mainWork) * 4 + // 4 sport sections (3 cols each)
     COL_WIDTHS.options;
@@ -789,11 +809,31 @@ export default function DayTableView({
                 <button
                         key={week.id}
                         onClick={() => setCurrentWeekIndex(index)}
-                        className={`px-5 py-3 rounded-xl transition-all duration-200 font-bold text-sm shadow-md ${
+                        className="px-5 py-3 rounded-xl transition-all duration-200 font-bold text-sm shadow-md"
+                        style={
                           currentWeekIndex === index
-                            ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg scale-105'
-                            : 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 hover:from-blue-200 hover:to-blue-300 hover:scale-102'
-                        }`}
+                            ? { 
+                                backgroundColor: colors.weekHeader,
+                                color: colors.weekHeaderText,
+                                transform: 'scale(1.05)'
+                              }
+                            : { 
+                                backgroundColor: colors.dayAlternateRow,
+                                color: colors.dayAlternateRowText
+                              }
+                        }
+                        onMouseEnter={(e) => {
+                          if (currentWeekIndex !== index) {
+                            e.currentTarget.style.backgroundColor = colors.dayHeader;
+                            e.currentTarget.style.transform = 'scale(1.02)';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (currentWeekIndex !== index) {
+                            e.currentTarget.style.backgroundColor = colors.dayAlternateRow;
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }
+                        }}
                       >
                         Week {index + 1}
                 </button>
@@ -837,7 +877,13 @@ export default function DayTableView({
               {/* Edit Button Inside */}
               <button
                 onClick={() => setIsWeeklyInfoModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all shadow-md hover:shadow-lg flex-shrink-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all shadow-md hover:shadow-lg flex-shrink-0"
+                style={{ 
+                  backgroundColor: colors.buttonEdit,
+                  color: colors.buttonEditText
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonEditHover}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonEdit}
                 title="Edit Weekly Information"
               >
                 <FileText size={14} />
@@ -879,7 +925,13 @@ export default function DayTableView({
                     console.error('Error loading target weeks:', error);
                   }
                 }}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow-md hover:shadow-lg"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
+                  style={{ 
+                    backgroundColor: colors.buttonAdd,
+                    color: colors.buttonAddText
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonAddHover}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonAdd}
                   title="Copy this week to Yearly Plan"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -983,6 +1035,21 @@ export default function DayTableView({
                   {expandState === 0 ? 'Expand All' : expandState === 1 ? 'Expand (with moveframes)' : 'Collapse All'}
               </button>
             )}
+            
+            {/* Icon Type Toggle Button */}
+            <button
+              onClick={toggleIconType}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
+              style={{ 
+                backgroundColor: colors.buttonAdd || '#10b981',
+                color: colors.buttonAddText || '#ffffff'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonAddHover || '#059669'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonAdd || '#10b981'}
+              title={`Switch to ${iconType === 'emoji' ? 'image' : 'emoji'} icons`}
+            >
+              {iconType === 'emoji' ? '🎨 Images' : '😀 Emojis'}
+            </button>
           </div>
         </div>
 
@@ -1138,9 +1205,22 @@ export default function DayTableView({
           </div>
 
           {/* Show all weeks */}
+          {console.log('🔍 [DEBUG] weeksToDisplay count:', weeksToDisplay.length)}
+          {weeksToDisplay.length === 0 && (
+            <div className="text-center py-8 text-red-600 font-bold">
+              ⚠️ No weeks to display! weeksToDisplay is empty.
+            </div>
+          )}
           {weeksToDisplay.map((week, weekIdx) => {
             const weekDays = week?.days || [];
             const sortedWeekDays = [...weekDays].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            
+            console.log(`🔍 [DEBUG] Week ${weekIdx + 1}:`, {
+              weekId: week.id,
+              weekNumber: week.weekNumber,
+              daysCount: weekDays.length,
+              sortedDaysCount: sortedWeekDays.length
+            });
             
             return (
               <div key={week.id} className="mb-6">
@@ -1406,8 +1486,23 @@ export default function DayTableView({
                           <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                             Day
                           </th>
+                          {/* Match done column - For Section B and C */}
+                          {(activeSection === 'B' || activeSection === 'C') && (
+                            <th 
+                              className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6"
+                              style={{ 
+                                width: COL_WIDTHS.matchDone, 
+                                minWidth: COL_WIDTHS.matchDone,
+                                backgroundColor: colors.weekHeader,
+                                color: colors.weekHeaderText
+                              }} 
+                              rowSpan={2}
+                            >
+                              Match<br/>done
+                            </th>
+                          )}
                           <th 
-                            className={`border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6`}
+                            className={`border border-gray-400 px-2 py-2 text-xs font-bold ${(activeSection === 'B' || activeSection === 'C') ? 'sticky-header-7' : 'sticky-header-6'}`}
                             style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
                             rowSpan={2}
                           >
@@ -1450,26 +1545,33 @@ export default function DayTableView({
                         <tr style={{ backgroundColor: colors.weekHeader, color: colors.weekHeaderText }}>
                           {/* S1 sub-headers - Blue */}
                           <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
-                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Duration & Time</th>
                           <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
                           
                           {/* S2 sub-headers - Green */}
                           <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
-                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Duration & Time</th>
                           <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
                           
                           {/* S3 sub-headers - Orange */}
                           <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
-                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Duration & Time</th>
                           <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
                           
                           {/* S4 sub-headers - Pink */}
                           <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '107px', minWidth: '107px' }}>Sport</th>
-                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '80px', minWidth: '80px' }}>Dist & Time</th>
+                          <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '80px', minWidth: '80px' }}>Duration & Time</th>
                           <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black text-left" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
                           </tr>
                         </thead>
                         <tbody>
+                          {sortedWeekDays.length === 0 && (
+                            <tr>
+                              <td colSpan={15} className="text-center py-8 text-red-600 font-bold">
+                                ⚠️ No days in this week! sortedWeekDays is empty for week {week.weekNumber}
+                              </td>
+                            </tr>
+                          )}
                           {sortedWeekDays.map((day, dayIdx) => {
                             const isLastDayOfWeek = dayIdx === sortedWeekDays.length - 1;
                             
@@ -1671,14 +1773,29 @@ export default function DayTableView({
                       <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                         Day
                </th>
-              {/* Dayname column - Only for non-3-weeks sections */}
+              {/* Dayname column - Only for Section D */}
               {activeSection === 'D' && (
                 <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                  Dayname
-               </th>
+              </th>
+              )}
+              {/* Match done column - For Section B and C */}
+              {(activeSection === 'B' || activeSection === 'C') && (
+                <th 
+                  className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6"
+                  style={{ 
+                    width: COL_WIDTHS.matchDone, 
+                    minWidth: COL_WIDTHS.matchDone,
+                    backgroundColor: colors.weekHeader,
+                    color: colors.weekHeaderText
+                  }} 
+                  rowSpan={2}
+                >
+                  Match<br/>done
+                </th>
               )}
               <th 
-                className={`border border-gray-400 px-2 py-2 text-xs font-bold ${(activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? 'sticky-header-6' : 'sticky-header-7'}`}
+                className={`border border-gray-400 px-2 py-2 text-xs font-bold ${activeSection === 'A' ? 'sticky-header-6' : 'sticky-header-7'}`}
                  style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
                  rowSpan={2}
                >
@@ -1721,22 +1838,22 @@ export default function DayTableView({
             <tr style={{ backgroundColor: colors.weekHeader, color: colors.weekHeaderText }}>
               {/* S1 sub-headers - Blue */}
               <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Duration & Time</th>
               <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-blue-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
               
               {/* S2 sub-headers - Green */}
               <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Duration & Time</th>
               <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-green-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
               
               {/* S3 sub-headers - Orange */}
               <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Duration & Time</th>
               <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-orange-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
               
               {/* S4 sub-headers - Pink */}
               <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
-              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Dist & Time</th>
+              <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '100px', minWidth: '100px' }}>Duration & Time</th>
               <th className="border border-gray-400 px-1 py-1 text-xs font-bold bg-pink-200 text-black" style={{ width: '200px', minWidth: '200px' }}>Main work</th>
             </tr>
           </thead>

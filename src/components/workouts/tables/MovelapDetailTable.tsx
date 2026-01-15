@@ -301,12 +301,12 @@ function SortableMovelapRow({
            )}
            
            {/* Time */}
-           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`} style={{ width: '85px', minWidth: '85px' }}>
              {movelap.time || '—'}
            </td>
            
            {/* Pace */}
-           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`} style={{ width: '85px', minWidth: '85px' }}>
              {movelap.pace || '—'}
            </td>
          </>
@@ -1085,8 +1085,8 @@ export default function MovelapDetailTable({
                           {sport === 'ROWING' && (
                             <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Row/min</th>
                           )}
-                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Time</th>
-                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Pace</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" style={{ width: '85px', minWidth: '85px' }}>Time</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" style={{ width: '85px', minWidth: '85px' }}>Pace</th>
                         </>
                       )}
                       

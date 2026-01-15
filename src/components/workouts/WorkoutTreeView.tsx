@@ -50,6 +50,14 @@ export default function WorkoutTreeView({
   const [iconType, setIconType] = useState<'emoji' | 'icon'>(defaultIconType);
   const useImageIcons = isImageIcon(iconType);
   
+  // Helper to get contrast color for values (text should be visible against backgrounds)
+  const getValueTextColor = () => colors.workoutHeaderText || '#2386d1';
+  const getMainWorkColor = () => colors.moveframeHeaderText || '#f61909';
+  const getSecondaryWorkColor = () => colors.workout2HeaderText || '#9a3412';
+  const getToolsColor = () => colors.buttonAdd || '#10b981';
+  const getIndicatorActiveColor = () => colors.buttonAdd || '#10b981';
+  const getIndicatorInactiveColor = () => colors.alternateRowText || '#64748b';
+  
   // Load icon type from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem('sportIconType');
@@ -280,9 +288,12 @@ export default function WorkoutTreeView({
                                   <ChevronRight className="w-4 h-4" />
                                 )}
                               </button>
-                              <div className={`w-2 h-2 rounded-full ${
-                                workoutCount > 0 ? 'bg-green-500' : 'bg-gray-400'
-                              }`} />
+                              <div 
+                                className="w-2 h-2 rounded-full"
+                                style={{
+                                  backgroundColor: workoutCount > 0 ? getIndicatorActiveColor() : getIndicatorInactiveColor()
+                                }}
+                              />
                               <div>
                                 <div className="font-semibold">{dayName}</div>
                                 {dayDateStr && <div className="text-xs opacity-70">{dayDateStr}</div>}
@@ -427,13 +438,13 @@ export default function WorkoutTreeView({
                                                 }}
                                               >
                                                 {useImageIcons ? (
-                                                  <img src={sportIcon} alt={sport} className="w-4 h-4 object-cover rounded" />
+                                                  <img src={sportIcon} alt={sport} className="w-12 h-12 object-cover rounded" />
                                                 ) : (
                                                   <span className="text-base">{sportIcon}</span>
                                                 )}
                                                 <span className="text-xs">{sport}</span>
                                                 {data.value > 0 && (
-                                                  <span className="text-sm font-bold ml-1 text-blue-900">
+                                                  <span className="text-sm font-bold ml-1" style={{ color: getValueTextColor() }}>
                                                     {displayValue}
                                                   </span>
                                                 )}
@@ -453,7 +464,7 @@ export default function WorkoutTreeView({
                                             <div key={sport} className="flex flex-col gap-1">
                                               {work.main && (
                                                 <div className="flex items-start gap-2 bg-white bg-opacity-20 px-2 py-1 rounded">
-                                                  <Flag className="w-3 h-3 mt-0.5 flex-shrink-0 text-red-600" fill="currentColor" />
+                                                  <Flag className="w-3 h-3 mt-0.5 flex-shrink-0" fill="currentColor" style={{ color: getMainWorkColor() }} />
                                                   <div className="flex flex-col">
                                                     <span className="font-semibold text-[10px] opacity-80">{sport} - MAIN</span>
                                                     <span className="text-[10px] opacity-90 max-w-md line-clamp-2">
@@ -464,7 +475,7 @@ export default function WorkoutTreeView({
                                               )}
                                               {work.secondary && (
                                                 <div className="flex items-start gap-2 bg-white bg-opacity-20 px-2 py-1 rounded">
-                                                  <Flag className="w-3 h-3 mt-0.5 flex-shrink-0 text-blue-600" fill="currentColor" />
+                                                  <Flag className="w-3 h-3 mt-0.5 flex-shrink-0" fill="currentColor" style={{ color: getSecondaryWorkColor() }} />
                                                   <div className="flex flex-col">
                                                     <span className="font-semibold text-[10px] opacity-80">{sport} - SECONDARY</span>
                                                     <span className="text-[10px] opacity-90 max-w-md line-clamp-2">
@@ -518,14 +529,14 @@ export default function WorkoutTreeView({
                                                 <span className="text-xs opacity-70">{moveframe.sport}</span>
                                                 {moveframe.workType === 'MAIN' && (
                                                   <div className="flex items-center gap-1 ml-1">
-                                                    <Flag className="w-3 h-3 text-red-600 flex-shrink-0" fill="currentColor" />
-                                                    <span className="text-xs font-medium text-red-600">Main work</span>
+                                                    <Flag className="w-3 h-3 flex-shrink-0" fill="currentColor" style={{ color: getMainWorkColor() }} />
+                                                    <span className="text-xs font-medium" style={{ color: getMainWorkColor() }}>Main work</span>
                                                   </div>
                                                 )}
                                                 {moveframe.workType === 'SECONDARY' && (
                                                   <div className="flex items-center gap-1 ml-1">
-                                                    <Flag className="w-3 h-3 text-blue-600 flex-shrink-0" fill="currentColor" />
-                                                    <span className="text-xs font-medium text-blue-600">Secondary work</span>
+                                                    <Flag className="w-3 h-3 flex-shrink-0" fill="currentColor" style={{ color: getSecondaryWorkColor() }} />
+                                                    <span className="text-xs font-medium" style={{ color: getSecondaryWorkColor() }}>Secondary work</span>
                                                   </div>
                                                 )}
                                                 <span className="text-xs opacity-60 ml-1">
@@ -570,10 +581,10 @@ export default function WorkoutTreeView({
                                                         <span className="text-gray-600">🏃 {movelap.speed}</span>
                                                       )}
                                                       {movelap.weight && (
-                                                        <span className="text-blue-600 font-semibold">💪 {movelap.weight}</span>
+                                                        <span className="font-semibold" style={{ color: getSecondaryWorkColor() }}>💪 {movelap.weight}</span>
                                                       )}
                                                       {movelap.tools && (
-                                                        <span className="text-green-600 font-semibold">🔧 {movelap.tools}</span>
+                                                        <span className="font-semibold" style={{ color: getToolsColor() }}>🔧 {movelap.tools}</span>
                                                       )}
                                                     </div>
                                                   );

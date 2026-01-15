@@ -446,7 +446,7 @@ export default function SortableMoveframeRow({
                 <img 
                   src={sportIcon} 
                   alt={sportName} 
-                  className="w-5 h-5 object-cover rounded flex-shrink-0" 
+                  className="w-15 h-15 object-cover rounded flex-shrink-0" 
                 />
               ) : (
                 <span className="text-base">{sportIcon}</span>
@@ -529,7 +529,7 @@ export default function SortableMoveframeRow({
                 dangerouslySetInnerHTML={{ __html: manualContent }}
                 style={{
                   display: '-webkit-box',
-                  WebkitLineClamp: 4,
+                  WebkitLineClamp: 2,
                   WebkitBoxOrient: 'vertical',
                   overflow: 'hidden'
                 }}

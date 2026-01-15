@@ -265,9 +265,28 @@ export default function DayRowTable({
         </td>
       )}
 
+      {/* Match Done (Workout Completion Status) - For Section B and C */}
+      {(activeSection === 'B' || activeSection === 'C') && (
+        <td 
+          className="border border-gray-200 px-1 py-2 text-center sticky-col-6 w-[60px] min-w-[60px]"
+          style={{ 
+            backgroundColor: bgStyle,
+            color: rowTextColor
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={hasWorkouts}
+            readOnly
+            className="w-4 h-4"
+            title={hasWorkouts ? 'Workouts planned' : 'No workouts'}
+          />
+        </td>
+      )}
+
       {/* Workout Sessions - Show numbers with symbols for each workout + Day Description */}
       <td 
-        className={`border border-gray-200 px-1 py-2 text-center ${(activeSection === 'A' || activeSection === 'B' || activeSection === 'C') ? 'sticky-col-6' : 'sticky-col-7'}`}
+        className={`border border-gray-200 px-1 py-2 text-center ${activeSection === 'A' ? 'sticky-col-6' : 'sticky-col-7'}`}
         style={{ backgroundColor: bgStyle }}
         onClick={(e) => e.stopPropagation()} // Prevent row click when clicking on workout numbers
       >
@@ -314,7 +333,7 @@ export default function DayRowTable({
         {sportSummaries[0] ? (
           <div className="flex items-center justify-center gap-2">
             {useImageIcons ? (
-              <img src={sportSummaries[0].icon} alt={sportSummaries[0].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
+              <img src={sportSummaries[0].icon} alt={sportSummaries[0].sport} className="w-30 h-30 object-cover rounded flex-shrink-0" />
             ) : (
               <span className="text-2xl flex-shrink-0">{sportSummaries[0].icon}</span>
             )}
@@ -369,7 +388,7 @@ export default function DayRowTable({
         {sportSummaries[1] ? (
           <div className="flex items-center justify-center gap-2">
             {useImageIcons ? (
-              <img src={sportSummaries[1].icon} alt={sportSummaries[1].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
+              <img src={sportSummaries[1].icon} alt={sportSummaries[1].sport} className="w-30 h-30 object-cover rounded flex-shrink-0" />
             ) : (
               <span className="text-2xl flex-shrink-0">{sportSummaries[1].icon}</span>
             )}
@@ -424,7 +443,7 @@ export default function DayRowTable({
         {sportSummaries[2] ? (
           <div className="flex items-center justify-center gap-2">
             {useImageIcons ? (
-              <img src={sportSummaries[2].icon} alt={sportSummaries[2].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
+              <img src={sportSummaries[2].icon} alt={sportSummaries[2].sport} className="w-30 h-30 object-cover rounded flex-shrink-0" />
             ) : (
               <span className="text-2xl flex-shrink-0">{sportSummaries[2].icon}</span>
             )}
@@ -479,7 +498,7 @@ export default function DayRowTable({
         {sportSummaries[3] ? (
           <div className="flex items-center justify-center gap-2">
             {useImageIcons ? (
-              <img src={sportSummaries[3].icon} alt={sportSummaries[3].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
+              <img src={sportSummaries[3].icon} alt={sportSummaries[3].sport} className="w-30 h-30 object-cover rounded flex-shrink-0" />
             ) : (
               <span className="text-2xl flex-shrink-0">{sportSummaries[3].icon}</span>
             )}

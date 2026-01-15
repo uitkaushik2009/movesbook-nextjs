@@ -182,12 +182,23 @@ export default function DayInfoModal({
 
   const sports = calculateDaySports();
   
-  // Get all unique main sports from workouts (only if explicitly set)
-  const mainSports: string[] = Array.from(new Set(
-    (day.workouts || [])
-      .map((w: any) => w.mainSport)
-      .filter((ms: string | null | undefined) => ms && ms.trim() !== '')
-  )) as string[];
+  // Get all main sports from workouts with their workout numbers
+  const mainSportsWithWorkoutNumbers = (day.workouts || [])
+    .map((workout: any, index: number) => ({
+      sport: workout.mainSport,
+      workoutNumber: index + 1,
+      sessionNumber: workout.sessionNumber || index + 1
+    }))
+    .filter((item: any) => item.sport && item.sport.trim() !== '');
+  
+  // Format main sports as: "Sport (1), Sport (2)"
+  const mainSportsDisplay = mainSportsWithWorkoutNumbers
+    .map((item: any) => {
+      const sportOption = SPORT_OPTIONS.find(s => s.value === item.sport);
+      const sportName = sportOption?.label || item.sport;
+      return `${sportName} (${item.workoutNumber})`;
+    })
+    .join(', ');
   
   // Calculate day totals - include ALL sports in aggregation
   const dayTotals = {
@@ -284,19 +295,12 @@ export default function DayInfoModal({
                 <span className="text-sm text-gray-600 font-medium">Total Sessions:</span>
                 <span className="text-sm text-gray-900 font-semibold">{dayTotals.totalWorkouts}</span>
               </div>
-              {mainSports.length > 0 && (
+              {mainSportsWithWorkoutNumbers.length > 0 && (
                 <div className="flex items-start justify-between">
-                  <span className="text-sm text-gray-600 font-medium">Main Sport{mainSports.length > 1 ? 's' : ''}:</span>
-                  <div className="text-right">
-                    {mainSports.map((sportValue: string, idx: number) => {
-                      const sportOption = SPORT_OPTIONS.find(s => s.value === sportValue);
-                      return (
-                        <div key={idx} className="text-sm text-gray-900 font-semibold">
-                          {sportOption?.icon} {sportOption?.label || sportValue}
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <span className="text-sm text-gray-600 font-medium">Main Sport{mainSportsWithWorkoutNumbers.length > 1 ? 's' : ''} (Note):</span>
+                  <span className="text-sm text-gray-900 font-semibold text-right max-w-[60%]">
+                    {mainSportsDisplay}
+                  </span>
                 </div>
               )}
               <div className="flex items-start justify-between">

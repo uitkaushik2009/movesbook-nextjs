@@ -3192,6 +3192,22 @@ export default function AddEditMoveframeModal({
                         );
                       })()}
                   </div>
+
+                    {/* Mode Dropdown - Available for all rest types */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Mode:</label>
+                      <select
+                        value={pauseMode}
+                        onChange={(e) => setPauseMode(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                      >
+                        <option value="">Select mode...</option>
+                        <option value="stopped">From a standstill (default)</option>
+                        <option value="speed">Set speed</option>
+                        <option value="watts">Set Watts</option>
+                      </select>
+                    </div>
+
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Macro:</label>
                       <select

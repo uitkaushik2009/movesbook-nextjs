@@ -148,13 +148,6 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     setTreeExpandedWeeks(new Set());
   }, [activeSection, viewMode]);
   
-  // Reload data when subsection changes (for Section A only)
-  useEffect(() => {
-    if (activeSection === 'A') {
-      loadWorkoutData(activeSection, activeSubSection);
-    }
-  }, [activeSubSection]);
-  
   // ==================== USE CUSTOM HOOK FOR DATA MANAGEMENT ====================
   const {
     workoutPlan,
@@ -170,6 +163,57 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     feedbackMessage,
     showMessage
   } = useWorkoutData({ initialSection: activeSection });
+  
+  // Reload data when subsection changes (for Section A only)
+  useEffect(() => {
+    if (activeSection === 'A') {
+      loadWorkoutData(activeSection, activeSubSection);
+    }
+  }, [activeSection, activeSubSection, loadWorkoutData]);
+  
+  // Auto-initialize Section C when it's empty
+  useEffect(() => {
+    const initializeSectionC = async () => {
+      if (activeSection === 'C' && workoutPlan) {
+        // Check if Section C has no weeks or empty weeks
+        const hasNoWeeks = !workoutPlan.weeks || workoutPlan.weeks.length === 0;
+        const hasEmptyWeeks = workoutPlan.weeks && workoutPlan.weeks.every((week: any) => 
+          !week.days || week.days.length === 0
+        );
+        
+        if (hasNoWeeks || hasEmptyWeeks) {
+          console.log('🔄 Section C is empty, initializing with blank 52-week structure...');
+          try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+              console.error('❌ No auth token found');
+              return;
+            }
+            
+            const response = await fetch('/api/workouts/plan/create-completed', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (response.ok) {
+              console.log('✅ Section C initialized successfully');
+              // Reload the data to show the new blank structure
+              loadWorkoutData(activeSection);
+            } else {
+              console.error('❌ Failed to initialize Section C');
+            }
+          } catch (error) {
+            console.error('❌ Error initializing Section C:', error);
+          }
+        }
+      }
+    };
+    
+    initializeSectionC();
+  }, [activeSection, workoutPlan, loadWorkoutData]);
   
   // ==================== MODAL STATES (Using Custom Hook) ====================
   const { modals, modes, settings, setters, actions: modalActions } = useWorkoutModals();
