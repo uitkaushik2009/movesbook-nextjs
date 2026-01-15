@@ -9,6 +9,7 @@ import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 interface WorkoutTreeViewProps {
   workoutPlan: any;
   activeSection?: 'A' | 'B' | 'C' | 'D';
+  iconType?: 'emoji' | 'icon'; // Optional icon type override from parent
   expandedDays?: Set<string>;
   expandedWorkouts?: Set<string>;
   expandedWeeks?: Set<number>; // External week expansion control
@@ -24,6 +25,7 @@ interface WorkoutTreeViewProps {
 export default function WorkoutTreeView({
   workoutPlan,
   activeSection = 'A',
+  iconType: iconTypeProp,
   expandedDays: externalExpandedDays,
   expandedWorkouts: externalExpandedWorkouts,
   expandedWeeks: externalExpandedWeeks,
@@ -47,7 +49,8 @@ export default function WorkoutTreeView({
   const expandedWorkouts = externalExpandedWorkouts || localExpandedWorkouts;
   const { colors, getBorderStyle } = useColorSettings();
   const defaultIconType = useSportIconType();
-  const [iconType, setIconType] = useState<'emoji' | 'icon'>(defaultIconType);
+  const [localIconType, setLocalIconType] = useState<'emoji' | 'icon'>(defaultIconType);
+  const iconType = iconTypeProp || localIconType;
   const useImageIcons = isImageIcon(iconType);
   
   // Helper to get contrast color for values (text should be visible against backgrounds)
@@ -58,19 +61,15 @@ export default function WorkoutTreeView({
   const getIndicatorActiveColor = () => colors.buttonAdd || '#10b981';
   const getIndicatorInactiveColor = () => colors.alternateRowText || '#64748b';
   
-  // Load icon type from localStorage on mount
+  // Load icon type from localStorage on mount (only if no prop provided)
   useEffect(() => {
-    const saved = localStorage.getItem('sportIconType');
-    if (saved === 'icon' || saved === 'emoji') {
-      setIconType(saved);
+    if (!iconTypeProp) {
+      const saved = localStorage.getItem('sportIconType');
+      if (saved === 'icon' || saved === 'emoji') {
+        setLocalIconType(saved);
+      }
     }
-  }, []);
-  
-  const toggleIconType = () => {
-    const newType = iconType === 'emoji' ? 'icon' : 'emoji';
-    localStorage.setItem('sportIconType', newType);
-    setIconType(newType);
-  };
+  }, [iconTypeProp]);
 
   const toggleWeek = (weekNumber: number) => {
     // If parent provided a toggle callback, use it
@@ -226,16 +225,6 @@ export default function WorkoutTreeView({
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                       Save
                     </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleIconType();
-                    }}
-                    className="px-3 py-1.5 text-xs rounded-md transition-colors bg-white bg-opacity-20 hover:bg-opacity-30 border border-white border-opacity-30"
-                    title={`Switch to ${iconType === 'emoji' ? 'image' : 'emoji'} icons`}
-                  >
-                    {iconType === 'emoji' ? '🎨 Images' : '😀 Emojis'}
-                  </button>
                 </div>
               </div>
 

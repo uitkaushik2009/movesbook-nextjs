@@ -17,11 +17,13 @@ interface WorkoutSectionHeaderProps {
   totalWeeks?: number; // Total weeks in the plan
   workoutPlan?: any; // Workout plan data for color calculation
   excludeStretchingCheckbox?: React.ReactNode; // Checkbox for excluding stretching
+  iconType?: 'emoji' | 'icon'; // Current icon type
   
   // Actions
   onSectionChange: (section: SectionId) => void;
   onSubSectionChange?: (subSection: 'A' | 'B' | 'C') => void; // For Section A subsections
   onViewModeChange: (mode: ViewMode) => void;
+  onIconTypeToggle?: () => void; // Toggle between emoji and icon
   onImportClick: () => void;
   onAthleteSelect: () => void;
   onWeekFilterClear: () => void;
@@ -47,8 +49,10 @@ export default function WorkoutSectionHeader({
   totalWeeks = 0,
   workoutPlan,
   excludeStretchingCheckbox,
+  iconType = 'emoji',
   onSectionChange,
   onViewModeChange,
+  onIconTypeToggle,
   onImportClick,
   onAthleteSelect,
   onWeekFilterClear,
@@ -385,6 +389,17 @@ export default function WorkoutSectionHeader({
             {/* View Toggle - Only for non-B sections */}
             {activeSection !== 'B' && (
               <>
+                {/* Icon Type Toggle Button */}
+                {onIconTypeToggle && (
+                  <button
+                    onClick={onIconTypeToggle}
+                    className="px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors bg-green-500 text-white hover:bg-green-600"
+                    title={`Switch to ${iconType === 'emoji' ? 'image' : 'emoji'} icons`}
+                  >
+                    {iconType === 'emoji' ? '🎨 Images' : '😀 Emojis'}
+                  </button>
+                )}
+                
                 <button
                   onClick={() => onViewModeChange('tree')}
                   className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
@@ -471,6 +486,17 @@ export default function WorkoutSectionHeader({
             
             {/* Right - View Toggle Buttons */}
             <div className="flex items-center gap-2">
+              {/* Icon Type Toggle Button */}
+              {onIconTypeToggle && (
+                <button
+                  onClick={onIconTypeToggle}
+                  className="px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors bg-green-500 text-white hover:bg-green-600"
+                  title={`Switch to ${iconType === 'emoji' ? 'image' : 'emoji'} icons`}
+                >
+                  {iconType === 'emoji' ? '🎨 Images' : '😀 Emojis'}
+                </button>
+              )}
+              
               {/* View Toggle Buttons */}
             <button
               onClick={() => onViewModeChange('tree')}

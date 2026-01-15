@@ -104,6 +104,21 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [activeSubSection, setActiveSubSection] = useState<'A' | 'B' | 'C'>('A'); // For Section A subsections
   const [viewMode, setViewMode] = useState<ViewMode>('table'); // Default to table view
   const [selectedWeekForTable, setSelectedWeekForTable] = useState<number | null>(null);
+  const [iconType, setIconType] = useState<'emoji' | 'icon'>('emoji');
+  
+  // Load icon type from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('sportIconType');
+    if (saved === 'icon' || saved === 'emoji') {
+      setIconType(saved);
+    }
+  }, []);
+  
+  const toggleIconType = () => {
+    const newType = iconType === 'emoji' ? 'icon' : 'emoji';
+    localStorage.setItem('sportIconType', newType);
+    setIconType(newType);
+  };
   
   // Debug logging for Section B view mode
   useEffect(() => {
@@ -1457,6 +1472,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             currentPageStart={currentPageStart}
             totalWeeks={workoutPlan?.weeks?.length || 0}
             workoutPlan={workoutPlan}
+            iconType={iconType}
             onSectionChange={(section) => {
               setActiveSection(section);
               // Template plans (Section A) don't have calendar view since they don't have specific dates
@@ -1470,6 +1486,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             setSelectedWeekForTable(null);
           }
         }}
+        onIconTypeToggle={toggleIconType}
         onImportClick={() => {
           // For Section B (Yearly Plan), open Copy from Template modal
           // For Section C (Done), open Import from Yearly Plan modal
@@ -1849,6 +1866,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                         : workoutPlan
                     }
                     activeSection={activeSection}
+                    iconType={iconType}
                     expandedWeeks={treeExpandedWeeks}
                     expandedDays={expandedDays}
                     expandedWorkouts={expandedWorkouts}
@@ -1934,6 +1952,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                      : workoutPlan
                  }
                  activeSection={activeSection}
+                 iconType={iconType}
                  currentPageStart={currentPageStart}
                  setCurrentPageStart={setCurrentPageStart}
                  weeksPerPage={weeksPerPage}

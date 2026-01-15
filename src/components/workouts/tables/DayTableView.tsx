@@ -19,6 +19,7 @@ interface DayTableViewProps {
   workoutPlan: any;
   allWeeks?: any[]; // All weeks (unfiltered) for modal navigation
   activeSection?: 'A' | 'B' | 'C' | 'D'; // Active section for conditional display
+  iconType?: 'emoji' | 'icon'; // Icon type override from parent
   currentPageStart?: number; // Current page start for Section B navigation
   setCurrentPageStart?: (page: number) => void; // Setter for current page start
   weeksPerPage?: number; // Weeks per page for Section B navigation
@@ -87,6 +88,7 @@ export default function DayTableView({
   workoutPlan,
   allWeeks,
   activeSection = 'A',
+  iconType: iconTypeProp,
   currentPageStart = 1,
   setCurrentPageStart,
   weeksPerPage = 3,
@@ -136,7 +138,8 @@ export default function DayTableView({
 }: DayTableViewProps) {
   const { colors } = useColorSettings();
   const defaultIconType = useSportIconType();
-  const [iconType, setIconType] = useState<'emoji' | 'icon'>(defaultIconType);
+  const [localIconType, setLocalIconType] = useState<'emoji' | 'icon'>(defaultIconType);
+  const iconType = iconTypeProp || localIconType;
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [isWeeklyInfoModalOpen, setIsWeeklyInfoModalOpen] = useState(false);
   const [weeklyNotes, setWeeklyNotes] = useState<Record<string, { periodId: string; notes: string }>>({});
@@ -172,19 +175,15 @@ export default function DayTableView({
   // console.log('📅 DayTableView: expandedDays:', Array.from(expandedDaysSet));
   // console.log('🏋️ DayTableView: expandedWorkouts:', Array.from(expandedWorkoutsSet));
   
-  // Load icon type from localStorage on mount
+  // Load icon type from localStorage on mount (only if no prop provided)
   useEffect(() => {
-    const saved = localStorage.getItem('sportIconType');
-    if (saved === 'icon' || saved === 'emoji') {
-      setIconType(saved);
+    if (!iconTypeProp) {
+      const saved = localStorage.getItem('sportIconType');
+      if (saved === 'icon' || saved === 'emoji') {
+        setLocalIconType(saved);
+      }
     }
-  }, []);
-  
-  const toggleIconType = () => {
-    const newType = iconType === 'emoji' ? 'icon' : 'emoji';
-    localStorage.setItem('sportIconType', newType);
-    setIconType(newType);
-  };
+  }, [iconTypeProp]);
   
   // Load periods
   useEffect(() => {
@@ -1035,21 +1034,6 @@ export default function DayTableView({
                   {expandState === 0 ? 'Expand All' : expandState === 1 ? 'Expand (with moveframes)' : 'Collapse All'}
               </button>
             )}
-            
-            {/* Icon Type Toggle Button */}
-            <button
-              onClick={toggleIconType}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
-              style={{ 
-                backgroundColor: colors.buttonAdd || '#10b981',
-                color: colors.buttonAddText || '#ffffff'
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonAddHover || '#059669'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonAdd || '#10b981'}
-              title={`Switch to ${iconType === 'emoji' ? 'image' : 'emoji'} icons`}
-            >
-              {iconType === 'emoji' ? '🎨 Images' : '😀 Emojis'}
-            </button>
           </div>
         </div>
 
