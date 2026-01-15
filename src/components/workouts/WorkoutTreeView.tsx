@@ -514,7 +514,19 @@ export default function WorkoutTreeView({
                                                 ) : (
                                                   <span className="text-sm">{sportIcon}</span>
                                                 )}
-                                                <span className="text-xs font-medium">{moveframe.letter}</span>
+                                                <div className="relative inline-block">
+                                                  <span className="text-xs font-medium">{moveframe.letter}</span>
+                                                  {/* Red-Yellow circle indicator for moveframes with applied technique */}
+                                                  {moveframe.appliedTechnique && (
+                                                    <div 
+                                                      className="absolute -top-1 -right-1 w-2 h-2 rounded-full border border-white shadow-sm"
+                                                      style={{ 
+                                                        background: 'linear-gradient(135deg, #ef4444 50%, #eab308 50%)'
+                                                      }}
+                                                      title={`Technique: ${moveframe.appliedTechnique}`}
+                                                    />
+                                                  )}
+                                                </div>
                                                 <span className="text-xs opacity-70">{moveframe.sport}</span>
                                                 {moveframe.workType === 'MAIN' && (
                                                   <div className="flex items-center gap-1 ml-1">

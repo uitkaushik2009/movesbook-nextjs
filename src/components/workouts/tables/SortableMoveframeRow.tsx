@@ -418,10 +418,22 @@ export default function SortableMoveframeRow({
             }}
             title="Double-click to set work type (Main/Secondary) | Hover to see full details"
           >
-            <div 
-              className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs ${getWorkTypeStyle()}`}
-          >
-            {moveframe.letter || String.fromCharCode(65 + mfIndex)}
+            <div className="relative inline-block">
+              <div 
+                className={`inline-flex items-center justify-center w-7 h-7 rounded-full font-bold text-xs ${getWorkTypeStyle()}`}
+              >
+                {moveframe.letter || String.fromCharCode(65 + mfIndex)}
+              </div>
+              {/* Red-Yellow circle indicator for moveframes with applied technique */}
+              {moveframe.appliedTechnique && (
+                <div 
+                  className="absolute -top-1 -right-1 w-3 h-3 rounded-full border border-white shadow-sm"
+                  style={{ 
+                    background: 'linear-gradient(135deg, #ef4444 50%, #eab308 50%)'
+                  }}
+                  title={`Technique: ${moveframe.appliedTechnique}`}
+                />
+              )}
             </div>
           </td>
         );
