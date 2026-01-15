@@ -43,6 +43,7 @@ model User {
   workoutDays              WorkoutDay[]
   workoutPlans             WorkoutPlan[]
   sections                 WorkoutSection[]
+  bodyBuildingTechniques   BodyBuildingTechnique[]
   workoutTemplates         WorkoutTemplate[]
 
   @@map("users_new")
@@ -225,6 +226,7 @@ model Moveframe {
   favourite           Boolean?       @default(false)
   repetitions         Int?           // Number of series/repetitions for manual mode
   distance            Int?           // Distance value for manual mode
+  appliedTechnique    String?        // Body Building technique applied (for BODY_BUILDING sport only)
   section             WorkoutSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   workoutSession      WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
   movelaps            Movelap[]
@@ -247,6 +249,19 @@ model WorkoutSection {
 
   @@index([userId], map: "workout_sections_userId_fkey")
   @@map("workout_sections")
+}
+
+model BodyBuildingTechnique {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String
+  color       String
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "bodybuilding_techniques_userId_fkey")
+  @@map("bodybuilding_techniques")
 }
 
 model Movelap {
