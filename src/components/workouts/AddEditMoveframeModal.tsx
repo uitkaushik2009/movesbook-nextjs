@@ -6,6 +6,7 @@ import { SPORTS_LIST, MACRO_FINAL_OPTIONS, MUSCULAR_SECTORS, getPaceLabel, shoul
 import { useMoveframeForm } from '@/hooks/useMoveframeForm';
 import { getSportIcon } from '@/utils/sportIcons';
 import { useFavoriteSports } from '@/hooks/useFavoriteSports';
+import { useToolsData } from '@/hooks/useToolsData';
 import TimeInput from '@/components/common/TimeInput';
 import { useFreeMoveExercises } from '@/hooks/useFreeMoveExercises';
 import Image from 'next/image';
@@ -63,6 +64,9 @@ export default function AddEditMoveframeModal({
 
   // Get favorite sports
   const { favoriteSports, loading: loadingFavorites, reload: reloadFavorites } = useFavoriteSports();
+  
+  // Get body building techniques from settings
+  const { bodyBuildingTechniques } = useToolsData();
   
   // Get FREE_MOVES exercise history
   const { 
@@ -181,6 +185,7 @@ export default function AddEditMoveframeModal({
     pausePace,
     muscularSector,
     exercise,
+    appliedTechnique,
     annotationText,
     annotationBgColor,
     annotationTextColor,
@@ -227,6 +232,7 @@ export default function AddEditMoveframeModal({
     setPausePace,
     setMuscularSector,
     setExercise,
+    setAppliedTechnique,
     setAnnotationText,
     setAnnotationBgColor,
     setAnnotationTextColor,
@@ -1526,6 +1532,27 @@ export default function AddEditMoveframeModal({
                           📋 Manual entry (Sector + Exercise + Picture selection from archive coming soon)
                         </p>
                         {errors.exercise && <p className="mt-1 text-xs text-red-500">{errors.exercise}</p>}
+                      </div>
+                      
+                      <div className="mb-3">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Applied Technique:
+                        </label>
+                        <select
+                          value={appliedTechnique}
+                          onChange={(e) => setAppliedTechnique(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                        >
+                          <option value="">None</option>
+                          {bodyBuildingTechniques.map((technique) => (
+                            <option key={technique.id} value={technique.title}>
+                              {technique.title}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="mt-1 text-[10px] text-gray-500">
+                          Optional: Select a technique from Tools settings to apply to this moveframe
+                        </p>
                       </div>
                       
                       <div className="mb-3">

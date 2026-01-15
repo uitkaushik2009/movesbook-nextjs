@@ -66,6 +66,7 @@ export interface MoveframeFormData {
   // Body building specific fields
   muscularSector: string;
   exercise: string;
+  appliedTechnique: string; // Body Building technique from settings
   
   // Annotation fields
   annotationText: string;
@@ -155,6 +156,7 @@ export function useMoveframeForm({
   // Body building specific fields
   const [muscularSector, setMuscularSector] = useState('');
   const [exercise, setExercise] = useState('');
+  const [appliedTechnique, setAppliedTechnique] = useState('');
 
   // Annotation fields
   const [annotationText, setAnnotationText] = useState('');
@@ -218,6 +220,7 @@ export function useMoveframeForm({
     setPausePace('');
     setMuscularSector('');
     setExercise('');
+    setAppliedTechnique('');
     setAnnotationText('');
     setAnnotationBgColor('#5168c2');
     setAnnotationTextColor('#000000');
@@ -608,6 +611,7 @@ export function useMoveframeForm({
       pausePace: pausePace || null,
       muscularSector: effectiveSport === 'BODY_BUILDING' ? muscularSector : null,
       exercise: sportNeedsExerciseName(effectiveSport) ? exercise : null,
+      appliedTechnique: effectiveSport === 'BODY_BUILDING' ? appliedTechnique : null,
       sectionId: effectiveSectionId, // Workout section (for ALL sports)
       
       // Manual mode
@@ -887,6 +891,7 @@ export function useMoveframeForm({
       pausePace,
       muscularSector,
       exercise,
+      appliedTechnique,
       annotationText,
       annotationBgColor,
       annotationTextColor,
@@ -934,6 +939,7 @@ export function useMoveframeForm({
       setPausePace,
       setMuscularSector,
       setExercise,
+      setAppliedTechnique,
       setAnnotationText,
       setAnnotationBgColor,
       setAnnotationTextColor,
