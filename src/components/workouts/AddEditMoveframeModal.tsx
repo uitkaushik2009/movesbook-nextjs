@@ -2184,7 +2184,7 @@ export default function AddEditMoveframeModal({
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
                               >
                                 <option value="Set time">Set time</option>
-                                <option value="Restart time">Restart time</option>
+                                {repsType === 'Time' && <option value="Restart time">Restart time</option>}
                                 <option value="Restart pulse">Restart pulse</option>
                               </select>
                             </div>
@@ -2670,7 +2670,7 @@ export default function AddEditMoveframeModal({
                             <tr>
                               <th className="border-b border-gray-300"></th>
                               <th className="border border-gray-300 px-2 py-1.5 text-center bg-gray-100">
-                                <span className="font-semibold">{repsType === 'Time' ? 'Time' : 'Reps'}</span>
+                                <span className="font-semibold">{repsType === 'Time' ? 'Minutes' : 'Reps'}</span>
                               </th>
                               <th className="border border-gray-300 px-2 py-1.5 text-center bg-gray-100">
                                 <span className="font-semibold">Weights</span>
@@ -2693,31 +2693,87 @@ export default function AddEditMoveframeModal({
                                   {plan.index}
                                 </td>
                                 <td className="border border-gray-300 px-2 py-1.5">
-                                  <input
-                                    type="number"
-                                    value={plan.reps ?? ''}
-                                    onInput={(e) => {
-                                      // Use onInput instead of onChange for more immediate response
-                                      const value = (e.target as HTMLInputElement).value;
-                                      updateIndividualPlan(idx, 'reps', value);
-                                    }}
-                                    onChange={(e) => {
-                                      // Also handle onChange as fallback
-                                      const value = e.target.value;
-                                      updateIndividualPlan(idx, 'reps', value);
-                                    }}
-                                    onBlur={(e) => {
-                                      const value = parseInt(e.target.value);
-                                      if (e.target.value && (value < 1 || value > 999)) {
-                                        console.warn('Reps must be between 1 and 999');
-                                        updateIndividualPlan(idx, 'reps', '12');
-                                      }
-                                    }}
-                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
-                                    placeholder="12"
-                                    min="1"
-                                    max="999"
-                                  />
+                                  {repsType === 'Time' ? (
+                                    <input
+                                      type="text"
+                                      value={plan.reps ?? ''}
+                                      onChange={(e) => {
+                                        const input = e.target.value;
+                                        if (input === '') {
+                                          updateIndividualPlan(idx, 'reps', '');
+                                          return;
+                                        }
+                                        if (/^\d+$/.test(input)) {
+                                          const digits = input.replace(/\D/g, '');
+                                          const len = digits.length;
+                                          let decisec = '0';
+                                          let sec = '00';
+                                          let min = '00';
+                                          let hour = '0';
+                                          
+                                          if (len === 1) {
+                                            decisec = digits[0];
+                                          } else if (len === 2) {
+                                            sec = digits[0].padStart(2, '0');
+                                            decisec = digits[1];
+                                          } else if (len === 3) {
+                                            sec = digits.slice(0, 2);
+                                            decisec = digits[2];
+                                          } else if (len === 4) {
+                                            min = digits[0].padStart(2, '0');
+                                            sec = digits.slice(1, 3);
+                                            decisec = digits[3];
+                                          } else if (len === 5) {
+                                            min = digits.slice(0, 2);
+                                            sec = digits.slice(2, 4);
+                                            decisec = digits[4];
+                                          } else if (len === 6) {
+                                            hour = digits[0];
+                                            min = digits.slice(1, 3);
+                                            sec = digits.slice(3, 5);
+                                            decisec = digits[5];
+                                          } else {
+                                            hour = digits.slice(0, -5);
+                                            min = digits.slice(-5, -3);
+                                            sec = digits.slice(-3, -1);
+                                            decisec = digits.slice(-1);
+                                          }
+                                          
+                                          updateIndividualPlan(idx, 'reps', `${hour}h${min}'${sec}"${decisec}`);
+                                        } else {
+                                          updateIndividualPlan(idx, 'reps', input);
+                                        }
+                                      }}
+                                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
+                                      placeholder="1h23'45&quot;6"
+                                    />
+                                  ) : (
+                                    <input
+                                      type="number"
+                                      value={plan.reps ?? ''}
+                                      onInput={(e) => {
+                                        // Use onInput instead of onChange for more immediate response
+                                        const value = (e.target as HTMLInputElement).value;
+                                        updateIndividualPlan(idx, 'reps', value);
+                                      }}
+                                      onChange={(e) => {
+                                        // Also handle onChange as fallback
+                                        const value = e.target.value;
+                                        updateIndividualPlan(idx, 'reps', value);
+                                      }}
+                                      onBlur={(e) => {
+                                        const value = parseInt(e.target.value);
+                                        if (e.target.value && (value < 0 || value > 99)) {
+                                          console.warn('Reps must be between 0 and 99');
+                                          updateIndividualPlan(idx, 'reps', '12');
+                                        }
+                                      }}
+                                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
+                                      placeholder="12"
+                                      min="0"
+                                      max="99"
+                                    />
+                                  )}
                                 </td>
                                 <td className="border border-gray-300 px-2 py-1.5">
                                   <input
@@ -2751,15 +2807,189 @@ export default function AddEditMoveframeModal({
                                   />
                                 </td>
                                 <td className="border border-gray-300 px-2 py-1.5">
-                                  <select
-                                    value={plan.pause}
-                                    onChange={(e) => updateIndividualPlan(idx, 'pause', e.target.value)}
-                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
-                                  >
-                                    {(Array.isArray(sportConfig.pauses) ? sportConfig.pauses : (sportConfig.pauses as any)?.['Set time'] || []).map((p: string) => (
-                                      <option key={p} value={p}>{p}</option>
-                                    ))}
-                                  </select>
+                                  {(() => {
+                                    // For "Reps" mode with "Restart time" - hide/disable the field
+                                    if (repsType === 'Reps' && restType === 'Restart time') {
+                                      return (
+                                        <input
+                                          type="text"
+                                          value=""
+                                          disabled
+                                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs bg-gray-100 text-center"
+                                          placeholder="—"
+                                        />
+                                      );
+                                    }
+                                    
+                                    // For "Set time" - time input (both Reps and Minutes modes)
+                                    if (restType === 'Set time') {
+                                      return (
+                                        <input
+                                          type="text"
+                                          value={plan.pause ?? ''}
+                                          onChange={(e) => {
+                                            const input = e.target.value;
+                                            if (input === '') {
+                                              updateIndividualPlan(idx, 'pause', '');
+                                              return;
+                                            }
+                                            if (/^\d+$/.test(input)) {
+                                              const digits = input.replace(/\D/g, '');
+                                              const len = digits.length;
+                                              let decisec = '0';
+                                              let sec = '00';
+                                              let min = '00';
+                                              let hour = '0';
+                                              
+                                              if (len === 1) {
+                                                decisec = digits[0];
+                                              } else if (len === 2) {
+                                                sec = digits[0].padStart(2, '0');
+                                                decisec = digits[1];
+                                              } else if (len === 3) {
+                                                sec = digits.slice(0, 2);
+                                                decisec = digits[2];
+                                              } else if (len === 4) {
+                                                min = digits[0].padStart(2, '0');
+                                                sec = digits.slice(1, 3);
+                                                decisec = digits[3];
+                                              } else if (len === 5) {
+                                                min = digits.slice(0, 2);
+                                                sec = digits.slice(2, 4);
+                                                decisec = digits[4];
+                                              } else if (len === 6) {
+                                                hour = digits[0];
+                                                min = digits.slice(1, 3);
+                                                sec = digits.slice(3, 5);
+                                                decisec = digits[5];
+                                              } else {
+                                                hour = digits.slice(0, -5);
+                                                min = digits.slice(-5, -3);
+                                                sec = digits.slice(-3, -1);
+                                                decisec = digits.slice(-1);
+                                              }
+                                              
+                                              updateIndividualPlan(idx, 'pause', `${hour}h${min}'${sec}"${decisec}`);
+                                            } else {
+                                              updateIndividualPlan(idx, 'pause', input);
+                                            }
+                                          }}
+                                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
+                                          placeholder="1h23'45&quot;6"
+                                        />
+                                      );
+                                    }
+                                    
+                                    // For "Restart time" (Minutes mode only) - time input with validation
+                                    if (restType === 'Restart time' && repsType === 'Time') {
+                                      return (
+                                        <input
+                                          type="text"
+                                          value={plan.pause ?? ''}
+                                          onChange={(e) => {
+                                            const input = e.target.value;
+                                            if (input === '') {
+                                              updateIndividualPlan(idx, 'pause', '');
+                                              return;
+                                            }
+                                            if (/^\d+$/.test(input)) {
+                                              const digits = input.replace(/\D/g, '');
+                                              const len = digits.length;
+                                              let decisec = '0';
+                                              let sec = '00';
+                                              let min = '00';
+                                              let hour = '0';
+                                              
+                                              if (len === 1) {
+                                                decisec = digits[0];
+                                              } else if (len === 2) {
+                                                sec = digits[0].padStart(2, '0');
+                                                decisec = digits[1];
+                                              } else if (len === 3) {
+                                                sec = digits.slice(0, 2);
+                                                decisec = digits[2];
+                                              } else if (len === 4) {
+                                                min = digits[0].padStart(2, '0');
+                                                sec = digits.slice(1, 3);
+                                                decisec = digits[3];
+                                              } else if (len === 5) {
+                                                min = digits.slice(0, 2);
+                                                sec = digits.slice(2, 4);
+                                                decisec = digits[4];
+                                              } else if (len === 6) {
+                                                hour = digits[0];
+                                                min = digits.slice(1, 3);
+                                                sec = digits.slice(3, 5);
+                                                decisec = digits[5];
+                                              } else {
+                                                hour = digits.slice(0, -5);
+                                                min = digits.slice(-5, -3);
+                                                sec = digits.slice(-3, -1);
+                                                decisec = digits.slice(-1);
+                                              }
+                                              
+                                              const formattedTime = `${hour}h${min}'${sec}"${decisec}`;
+                                              updateIndividualPlan(idx, 'pause', formattedTime);
+                                            } else {
+                                              updateIndividualPlan(idx, 'pause', input);
+                                            }
+                                          }}
+                                          onBlur={(e) => {
+                                            // Validate that restart time > minutes value
+                                            const minutesValue = plan.reps ?? '';
+                                            const restartValue = e.target.value;
+                                            // Simple comparison - if both are formatted, compare them
+                                            if (minutesValue && restartValue && restartValue <= minutesValue) {
+                                              alert('⚠️ Restart time must be greater than Minutes value');
+                                              updateIndividualPlan(idx, 'pause', '');
+                                            }
+                                          }}
+                                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
+                                          placeholder="1h23'45&quot;6"
+                                        />
+                                      );
+                                    }
+                                    
+                                    // For "Restart pulse" - number input (0-200)
+                                    if (restType === 'Restart pulse') {
+                                      return (
+                                        <input
+                                          type="number"
+                                          value={plan.pause ?? ''}
+                                          onChange={(e) => {
+                                            const value = e.target.value;
+                                            if (value === '' || (parseInt(value) >= 0 && parseInt(value) <= 200)) {
+                                              updateIndividualPlan(idx, 'pause', value);
+                                            }
+                                          }}
+                                          onBlur={(e) => {
+                                            const value = parseInt(e.target.value);
+                                            if (e.target.value && (value < 0 || value > 200)) {
+                                              alert('⚠️ Pulse must be between 0 and 200 bpm');
+                                              updateIndividualPlan(idx, 'pause', '120');
+                                            }
+                                          }}
+                                          className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
+                                          placeholder="120"
+                                          min="0"
+                                          max="200"
+                                        />
+                                      );
+                                    }
+                                    
+                                    // Default - show select dropdown (fallback)
+                                    return (
+                                      <select
+                                        value={plan.pause}
+                                        onChange={(e) => updateIndividualPlan(idx, 'pause', e.target.value)}
+                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
+                                      >
+                                        {(Array.isArray(sportConfig.pauses) ? sportConfig.pauses : (sportConfig.pauses as any)?.['Set time'] || []).map((p: string) => (
+                                          <option key={p} value={p}>{p}</option>
+                                        ))}
+                                      </select>
+                                    );
+                                  })()}
                                 </td>
                                 <td className="border border-gray-300 px-1 py-1.5 text-center">
                                   {idx > 0 && idx < individualPlans.length - 1 && (
