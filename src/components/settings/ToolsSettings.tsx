@@ -7,6 +7,7 @@ import { useToolsData } from '@/hooks/useToolsData';
 import {
   Period,
   WorkoutSection,
+  BodyBuildingTechnique,
   Sport,
   Equipment,
   Exercise,
@@ -32,6 +33,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
   const {
     periods,
     sections,
+    bodyBuildingTechniques,
     sports,
     equipment,
     exercises,
@@ -42,6 +44,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
     lastSavedTime,
     setPeriods,
     setSections,
+    setBodyBuildingTechniques,
     setSports,
     setEquipment,
     setExercises,
@@ -174,7 +177,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
     }
     
     // Save to localStorage immediately (backup)
-    saveToLocalStorage(periods, sections, sports, equipment, exercises, devices);
+    saveToLocalStorage(periods, sections, bodyBuildingTechniques, sports, equipment, exercises, devices);
     
     // Debounce database save (wait 1 second after last change)
     const timeoutId = setTimeout(() => {
@@ -182,17 +185,22 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
     }, 1000);
     
     return () => clearTimeout(timeoutId);
-  }, [periods, sections, sports, equipment, exercises, devices]);
+  }, [periods, sections, bodyBuildingTechniques, sports, equipment, exercises, devices]);
 
   const getActiveItems = () => {
-    return activeTab === 'periods' ? periods : sections;
+    if (activeTab === 'periods') return periods;
+    if (activeTab === 'sections') return sections;
+    if (activeTab === 'bodyBuildingTechniques') return bodyBuildingTechniques;
+    return sections;
   };
 
-  const setActiveItems = (items: Period[] | WorkoutSection[]) => {
+  const setActiveItems = (items: Period[] | WorkoutSection[] | BodyBuildingTechnique[]) => {
     if (activeTab === 'periods') {
       setPeriods(items as Period[]);
-    } else {
+    } else if (activeTab === 'sections') {
       setSections(items as WorkoutSection[]);
+    } else if (activeTab === 'bodyBuildingTechniques') {
+      setBodyBuildingTechniques(items as BodyBuildingTechnique[]);
     }
   };
 
@@ -720,6 +728,16 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
           Workout Sections
         </button>
         <button
+          onClick={() => setActiveTab('bodyBuildingTechniques')}
+          className={`px-6 py-3 font-semibold transition ${
+            activeTab === 'bodyBuildingTechniques'
+              ? 'border-b-2 border-blue-600 text-blue-600'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Body Building Techniques
+        </button>
+        <button
           onClick={() => setActiveTab('sports')}
           className={`px-6 py-3 font-semibold transition ${
             activeTab === 'sports'
@@ -862,8 +880,8 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         </div>
       </div>
 
-      {/* Periods & Sections Tab Content */}
-      {(activeTab === 'periods' || activeTab === 'sections') && (
+      {/* Periods, Sections & Body Building Techniques Tab Content */}
+      {(activeTab === 'periods' || activeTab === 'sections' || activeTab === 'bodyBuildingTechniques') && (
         <div className="space-y-6">
           {/* Action Bar */}
           <div className="flex justify-between items-center">
@@ -1939,7 +1957,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold mb-6">
-              Add New {activeTab === 'periods' ? 'Period' : 'Section'}
+              Add New {activeTab === 'periods' ? 'Period' : activeTab === 'sections' ? 'Section' : 'Body Building Technique'}
             </h3>
             
             {/* Info Banner */}
@@ -2100,7 +2118,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold mb-6">
-              Edit {activeTab === 'periods' ? 'Period' : 'Section'}
+              Edit {activeTab === 'periods' ? 'Period' : activeTab === 'sections' ? 'Section' : 'Body Building Technique'}
             </h3>
             
             {/* Info Banner */}
