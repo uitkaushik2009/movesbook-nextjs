@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
       annotationBold,
       manualMode,
       manualPriority,
-      macroFinal
+      macroFinal,
+      appliedTechnique
     } = body;
 
     // Validation
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
           manualMode: manualMode || false,
           manualPriority: manualPriority || false,
           macroFinal: macroFinal || null,
+          appliedTechnique: appliedTechnique || null,
           // Annotation fields: only save if type is ANNOTATION
           annotationText: moveframeType === 'ANNOTATION' ? (annotationText || null) : null,
           annotationBgColor: moveframeType === 'ANNOTATION' ? (annotationBgColor || null) : null,
@@ -112,8 +114,16 @@ export async function POST(request: NextRequest) {
       // Create all movelaps (skip if empty array for ANNOTATION type)
       const createdMovelaps = movelaps && movelaps.length > 0 
         ? await Promise.all(
-            movelaps.map((movelap: any) =>
-              tx.movelap.create({
+            movelaps.map((movelap: any) => {
+              // If appliedTechnique exists, append it to the movelap notes
+              let movelapNotes = movelap.notes || '';
+              if (appliedTechnique) {
+                movelapNotes = movelapNotes 
+                  ? `${movelapNotes}\n\nTechnique: ${appliedTechnique}`
+                  : `Technique: ${appliedTechnique}`;
+              }
+              
+              return tx.movelap.create({
                 data: {
                   moveframeId: moveframe.id,
                   repetitionNumber: movelap.repetitionNumber,
@@ -135,13 +145,13 @@ export async function POST(request: NextRequest) {
                   macroFinal: movelap.macroFinal || null,
                   alarm: movelap.alarm || null,
                   sound: movelap.sound || null,
-                  notes: movelap.notes || null,
+                  notes: movelapNotes || null,
                   status: movelap.status || 'PENDING',
                   isSkipped: movelap.isSkipped || false,
                   isDisabled: movelap.isDisabled || false
                 }
-              })
-            )
+              });
+            })
           )
         : [];
 

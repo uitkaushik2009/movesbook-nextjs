@@ -93,7 +93,8 @@ export async function PATCH(
       manualPriority,    // Priority flag for manual mode display
       favourite,
       manualRepetitions, // For storing on Moveframe model (manual mode only)
-      manualDistance     // For storing on Moveframe model (manual mode only)
+      manualDistance,    // For storing on Moveframe model (manual mode only)
+      appliedTechnique   // Body Building technique
     } = body;
 
     console.log('📝 [API UPDATE] Updating moveframe:', params.id, {
@@ -156,6 +157,7 @@ export async function PATCH(
         favourite: favourite !== undefined ? favourite : undefined,
         repetitions: manualRepetitions !== undefined && manualRepetitions !== null && manualRepetitions !== '' ? parseInt(manualRepetitions) : (manualRepetitions === null || manualRepetitions === '' ? null : undefined),
         distance: manualDistance !== undefined && manualDistance !== null && manualDistance !== '' ? parseInt(manualDistance) : (manualDistance === null || manualDistance === '' ? null : undefined),
+        appliedTechnique: appliedTechnique !== undefined ? appliedTechnique : undefined,
         // Annotation fields: only save if type is ANNOTATION, otherwise clear them
         annotationText: type === 'ANNOTATION' ? (annotationText || null) : null,
         annotationBgColor: type === 'ANNOTATION' ? (annotationBgColor || null) : null,
@@ -169,6 +171,37 @@ export async function PATCH(
         section: true
       }
     });
+
+    // If appliedTechnique changed, update all movelap notes
+    if (appliedTechnique !== undefined && appliedTechnique !== existingMoveframe.appliedTechnique) {
+      const movelaps = await prisma.movelap.findMany({
+        where: { moveframeId: params.id }
+      });
+
+      for (const movelap of movelaps) {
+        let updatedNotes = movelap.notes || '';
+        
+        // Remove old technique if it exists
+        if (existingMoveframe.appliedTechnique) {
+          const oldTechniquePattern = new RegExp(`\\n?\\n?Technique: ${existingMoveframe.appliedTechnique}`, 'g');
+          updatedNotes = updatedNotes.replace(oldTechniquePattern, '').trim();
+        }
+        
+        // Add new technique if provided
+        if (appliedTechnique) {
+          updatedNotes = updatedNotes 
+            ? `${updatedNotes}\n\nTechnique: ${appliedTechnique}`
+            : `Technique: ${appliedTechnique}`;
+        }
+        
+        await prisma.movelap.update({
+          where: { id: movelap.id },
+          data: { notes: updatedNotes || null }
+        });
+      }
+      
+      console.log(`✅ Updated ${movelaps.length} movelap notes with technique: ${appliedTechnique || '(removed)'}`);
+    }
 
     // 🔍 DEBUG: Log what was saved
     if (manualMode || moveframe.manualMode) {
