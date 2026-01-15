@@ -4,7 +4,7 @@
  */
 
 export type IconType = 'emoji' | 'bw_icons';
-export type ToolsTab = 'periods' | 'sections' | 'sports' | 'equipment' | 'equipmentFactories' | 'muscles' | 'sportsEquipment' | 'exercises' | 'myLibrary' | 'devices' | 'bodyBuildingTechniques';
+export type ToolsTab = 'periods' | 'sections' | 'sports' | 'equipment' | 'equipmentFactories' | 'muscles' | 'sportsEquipment' | 'exercises' | 'myLibrary' | 'devices' | 'executionTechniques' | 'bodyBuildingTechniques';
 
 export interface Period {
   id: string;
@@ -24,14 +24,18 @@ export interface WorkoutSection {
   userId?: string; // Track ownership
 }
 
-export interface BodyBuildingTechnique {
+export interface ExecutionTechnique {
   id: string;
   title: string;
   description: string;
   color: string;
+  sports: string[]; // Array of sport names that can use this technique
   order: number;
   userId?: string; // Track ownership
 }
+
+// Backward compatibility alias
+export type BodyBuildingTechnique = ExecutionTechnique;
 
 export interface Sport {
   id: string;
@@ -110,15 +114,18 @@ export const DEFAULT_PERIODS: Period[] = [
 ];
 
 /**
- * Default body building techniques
+ * Default execution techniques (formerly body building techniques)
  */
-export const DEFAULT_BODYBUILDING_TECHNIQUES: BodyBuildingTechnique[] = [
-  { id: '1', title: 'Drop Set', description: 'Reduce weight and continue reps', color: '#f59e0b', order: 0 },
-  { id: '2', title: 'Super Set', description: 'Two exercises back-to-back', color: '#ef4444', order: 1 },
-  { id: '3', title: 'Rest-Pause', description: 'Short breaks within a set', color: '#8b5cf6', order: 2 },
-  { id: '4', title: 'Pyramid', description: 'Progressive weight increase/decrease', color: '#06b6d4', order: 3 },
-  { id: '5', title: 'Tempo', description: 'Controlled movement speed', color: '#10b981', order: 4 },
+export const DEFAULT_EXECUTION_TECHNIQUES: ExecutionTechnique[] = [
+  { id: '1', title: 'Drop Set', description: 'Reduce weight and continue reps', color: '#f59e0b', sports: ['BODY_BUILDING'], order: 0 },
+  { id: '2', title: 'Super Set', description: 'Two exercises back-to-back', color: '#ef4444', sports: ['BODY_BUILDING'], order: 1 },
+  { id: '3', title: 'Rest-Pause', description: 'Short breaks within a set', color: '#8b5cf6', sports: ['BODY_BUILDING'], order: 2 },
+  { id: '4', title: 'Pyramid', description: 'Progressive weight increase/decrease', color: '#06b6d4', sports: ['BODY_BUILDING'], order: 3 },
+  { id: '5', title: 'Tempo', description: 'Controlled movement speed', color: '#10b981', sports: ['BODY_BUILDING'], order: 4 },
 ];
+
+// Backward compatibility alias
+export const DEFAULT_BODYBUILDING_TECHNIQUES = DEFAULT_EXECUTION_TECHNIQUES;
 
 /**
  * Default workout sections
@@ -251,7 +258,8 @@ export const STORAGE_KEYS = {
   EQUIPMENT: 'equipment',
   EXERCISES: 'exercises',
   DEVICES: 'compatibleDevices',
-  BODYBUILDING_TECHNIQUES: 'bodyBuildingTechniques',
+  EXECUTION_TECHNIQUES: 'executionTechniques',
+  BODYBUILDING_TECHNIQUES: 'executionTechniques', // Backward compatibility alias
 } as const;
 
 /**

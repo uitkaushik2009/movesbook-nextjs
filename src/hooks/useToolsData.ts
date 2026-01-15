@@ -198,6 +198,7 @@ export function useToolsData(): UseToolsDataReturn {
             title: t.name,
             description: t.description || '',
             color: t.color,
+            sports: Array.isArray(t.sports) ? t.sports : [],
             order: 0,
             userId: t.userId // Track ownership
           }));
@@ -521,6 +522,7 @@ export function useToolsData(): UseToolsDataReturn {
             title: t.name,
             description: t.description || '',
             color: t.color,
+            sports: Array.isArray(t.sports) ? t.sports : [],
             order: 0,
             userId: t.userId
           }));

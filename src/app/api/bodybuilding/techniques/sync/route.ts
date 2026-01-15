@@ -39,12 +39,16 @@ export async function POST(request: NextRequest) {
     // Create new techniques
     const createdTechniques = [];
     for (const technique of techniques) {
+      // Convert sports array to comma-separated string
+      const sportsString = Array.isArray(technique.sports) ? technique.sports.join(',') : '';
+      
       const created = await prisma.bodyBuildingTechnique.create({
         data: {
           userId: decoded.userId,
           name: technique.title || technique.name,
           description: technique.description || '',
           color: technique.color,
+          sports: sportsString,
         },
       });
       createdTechniques.push(created);

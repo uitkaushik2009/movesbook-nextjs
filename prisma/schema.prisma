@@ -257,6 +257,7 @@ model BodyBuildingTechnique {
   name        String
   description String
   color       String
+  sports      String   @default("") // Comma-separated list of sports that can use this technique
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

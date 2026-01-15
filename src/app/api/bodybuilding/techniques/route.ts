@@ -29,7 +29,13 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ techniques });
+    // Convert sports string to array for each technique
+    const techniquesWithSportsArray = techniques.map(tech => ({
+      ...tech,
+      sports: tech.sports ? tech.sports.split(',').filter(s => s) : []
+    }));
+
+    return NextResponse.json({ techniques: techniquesWithSportsArray });
   } catch (error) {
     console.error('Error fetching body building techniques:', error);
     return NextResponse.json(
@@ -57,7 +63,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const { name, description, color } = await request.json();
+    const { name, description, color, sports } = await request.json();
 
     if (!name || !color) {
       return NextResponse.json(
@@ -66,12 +72,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Convert sports array to comma-separated string
+    const sportsString = Array.isArray(sports) ? sports.join(',') : '';
+
     const technique = await prisma.bodyBuildingTechnique.create({
       data: {
         userId: decoded.userId,
         name,
         description: description || '',
         color,
+        sports: sportsString,
       },
     });
 
@@ -103,7 +113,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const { id, name, description, color } = await request.json();
+    const { id, name, description, color, sports } = await request.json();
 
     if (!id || !name || !color) {
       return NextResponse.json(
@@ -124,12 +134,16 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Convert sports array to comma-separated string
+    const sportsString = Array.isArray(sports) ? sports.join(',') : '';
+
     const technique = await prisma.bodyBuildingTechnique.update({
       where: { id },
       data: {
         name,
         description: description || '',
         color,
+        sports: sportsString,
       },
     });
 

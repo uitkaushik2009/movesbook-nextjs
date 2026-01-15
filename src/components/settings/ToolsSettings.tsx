@@ -20,6 +20,7 @@ import {
   filterByCategory,
   reorderItems
 } from '@/constants/tools.constants';
+import { SPORTS_LIST, getSportDisplayName } from '@/constants/moveframe.constants';
 
 interface ToolsSettingsProps {
   isAdmin?: boolean;
@@ -735,7 +736,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >
-          Body Building Techniques
+          Execution Techniques
         </button>
         <button
           onClick={() => setActiveTab('sports')}
@@ -880,7 +881,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         </div>
       </div>
 
-      {/* Periods, Sections & Body Building Techniques Tab Content */}
+      {/* Periods, Sections & Execution Techniques Tab Content */}
       {(activeTab === 'periods' || activeTab === 'sections' || activeTab === 'bodyBuildingTechniques') && (
         <div className="space-y-6">
           {/* Action Bar */}
@@ -1957,7 +1958,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold mb-6">
-              Add New {activeTab === 'periods' ? 'Period' : activeTab === 'sections' ? 'Section' : 'Body Building Technique'}
+              Add New {activeTab === 'periods' ? 'Period' : activeTab === 'sections' ? 'Section' : 'Execution Technique'}
             </h3>
             
             {/* Info Banner */}
@@ -2118,7 +2119,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold mb-6">
-              Edit {activeTab === 'periods' ? 'Period' : activeTab === 'sections' ? 'Section' : 'Body Building Technique'}
+              Edit {activeTab === 'periods' ? 'Period' : activeTab === 'sections' ? 'Section' : 'Execution Technique'}
             </h3>
             
             {/* Info Banner */}
