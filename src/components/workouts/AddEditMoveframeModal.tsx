@@ -68,14 +68,6 @@ export default function AddEditMoveframeModal({
   // Get execution techniques from settings
   const { bodyBuildingTechniques } = useToolsData();
   
-  // Filter techniques based on current sport
-  const availableTechniques = React.useMemo(() => {
-    if (!sport) return [];
-    return bodyBuildingTechniques.filter(technique => 
-      technique.sports && technique.sports.includes(sport)
-    );
-  }, [bodyBuildingTechniques, sport]);
-  
   // Get FREE_MOVES exercise history
   const { 
     exercises: freeMoveExercises, 
@@ -249,6 +241,14 @@ export default function AddEditMoveframeModal({
     setBatterySequence,
     setManualContent
   } = setters;
+
+  // Filter techniques based on current sport (NOW sport is available from formData)
+  const availableTechniques = React.useMemo(() => {
+    if (!sport) return [];
+    return bodyBuildingTechniques.filter(technique => 
+      technique.sports && technique.sports.includes(sport)
+    );
+  }, [bodyBuildingTechniques, sport]);
 
   // Format validation helpers (NOW sport is available)
   // Fast input parser for Pace - handles quick numeric input
