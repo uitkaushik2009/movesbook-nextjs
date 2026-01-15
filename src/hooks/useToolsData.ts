@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Period,
   WorkoutSection,
+  BodyBuildingTechnique,
   Sport,
   Equipment,
   Exercise,
@@ -9,6 +10,7 @@ import {
   IconType,
   DEFAULT_PERIODS,
   DEFAULT_SECTIONS,
+  DEFAULT_BODYBUILDING_TECHNIQUES,
   DEFAULT_SPORTS,
   DEFAULT_EQUIPMENT,
   DEFAULT_EXERCISES,
@@ -21,6 +23,7 @@ interface UseToolsDataReturn {
   // State
   periods: Period[];
   sections: WorkoutSection[];
+  bodyBuildingTechniques: BodyBuildingTechnique[];
   sports: Sport[];
   equipment: Equipment[];
   exercises: Exercise[];
@@ -33,6 +36,7 @@ interface UseToolsDataReturn {
   // Actions
   setPeriods: React.Dispatch<React.SetStateAction<Period[]>>;
   setSections: React.Dispatch<React.SetStateAction<WorkoutSection[]>>;
+  setBodyBuildingTechniques: React.Dispatch<React.SetStateAction<BodyBuildingTechnique[]>>;
   setSports: React.Dispatch<React.SetStateAction<Sport[]>>;
   setEquipment: React.Dispatch<React.SetStateAction<Equipment[]>>;
   setExercises: React.Dispatch<React.SetStateAction<Exercise[]>>;
@@ -46,6 +50,7 @@ interface UseToolsDataReturn {
   saveToLocalStorage: (
     periods?: Period[],
     sections?: WorkoutSection[],
+    bodyBuildingTechniques?: BodyBuildingTechnique[],
     sports?: Sport[],
     equipment?: Equipment[],
     exercises?: Exercise[],
@@ -67,6 +72,7 @@ interface UseToolsDataReturn {
 export function useToolsData(): UseToolsDataReturn {
   const [periods, setPeriods] = useState<Period[]>([]);
   const [sections, setSections] = useState<WorkoutSection[]>([]);
+  const [bodyBuildingTechniques, setBodyBuildingTechniques] = useState<BodyBuildingTechnique[]>([]);
   const [sports, setSports] = useState<Sport[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [exercises, setExercises] = useState<Exercise[]>([]);
@@ -488,6 +494,7 @@ export function useToolsData(): UseToolsDataReturn {
     // State
     periods,
     sections,
+    bodyBuildingTechniques,
     sports,
     equipment,
     exercises,
@@ -500,6 +507,7 @@ export function useToolsData(): UseToolsDataReturn {
     // Actions
     setPeriods,
     setSections,
+    setBodyBuildingTechniques,
     setSports,
     setEquipment,
     setExercises,

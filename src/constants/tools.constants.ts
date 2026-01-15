@@ -4,7 +4,7 @@
  */
 
 export type IconType = 'emoji' | 'bw_icons';
-export type ToolsTab = 'periods' | 'sections' | 'sports' | 'equipment' | 'equipmentFactories' | 'muscles' | 'sportsEquipment' | 'exercises' | 'myLibrary' | 'devices';
+export type ToolsTab = 'periods' | 'sections' | 'sports' | 'equipment' | 'equipmentFactories' | 'muscles' | 'sportsEquipment' | 'exercises' | 'myLibrary' | 'devices' | 'bodyBuildingTechniques';
 
 export interface Period {
   id: string;
@@ -16,6 +16,15 @@ export interface Period {
 }
 
 export interface WorkoutSection {
+  id: string;
+  title: string;
+  description: string;
+  color: string;
+  order: number;
+  userId?: string; // Track ownership
+}
+
+export interface BodyBuildingTechnique {
   id: string;
   title: string;
   description: string;
@@ -98,6 +107,17 @@ export const DEFAULT_PERIODS: Period[] = [
   { id: '1', title: 'Preparation Phase', description: 'Building base fitness', color: '#3b82f6', order: 0 },
   { id: '2', title: 'Competition Phase', description: 'Peak performance period', color: '#ef4444', order: 1 },
   { id: '3', title: 'Recovery Phase', description: 'Active recovery and rest', color: '#10b981', order: 2 },
+];
+
+/**
+ * Default body building techniques
+ */
+export const DEFAULT_BODYBUILDING_TECHNIQUES: BodyBuildingTechnique[] = [
+  { id: '1', title: 'Drop Set', description: 'Reduce weight and continue reps', color: '#f59e0b', order: 0 },
+  { id: '2', title: 'Super Set', description: 'Two exercises back-to-back', color: '#ef4444', order: 1 },
+  { id: '3', title: 'Rest-Pause', description: 'Short breaks within a set', color: '#8b5cf6', order: 2 },
+  { id: '4', title: 'Pyramid', description: 'Progressive weight increase/decrease', color: '#06b6d4', order: 3 },
+  { id: '5', title: 'Tempo', description: 'Controlled movement speed', color: '#10b981', order: 4 },
 ];
 
 /**
@@ -231,6 +251,7 @@ export const STORAGE_KEYS = {
   EQUIPMENT: 'equipment',
   EXERCISES: 'exercises',
   DEVICES: 'compatibleDevices',
+  BODYBUILDING_TECHNIQUES: 'bodyBuildingTechniques',
 } as const;
 
 /**
