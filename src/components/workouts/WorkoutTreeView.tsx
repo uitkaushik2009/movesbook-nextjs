@@ -438,7 +438,7 @@ export default function WorkoutTreeView({
                                                 }}
                                               >
                                                 {useImageIcons ? (
-                                                  <img src={sportIcon} alt={sport} className="w-12 h-12 object-cover rounded" />
+                                                  <img src={sportIcon} alt={sport} className="w-4 h-4 object-cover rounded" />
                                                 ) : (
                                                   <span className="text-base">{sportIcon}</span>
                                                 )}

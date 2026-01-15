@@ -336,7 +336,7 @@ export default function DayRowTable({
         {sportSummaries[0] ? (
           <div className="flex items-center justify-center gap-2">
             {useImageIcons ? (
-              <img src={sportSummaries[0].icon} alt={sportSummaries[0].sport} className="object-cover rounded flex-shrink-0" style={{ width: '120px', height: '120px' }} />
+              <img src={sportSummaries[0].icon} alt={sportSummaries[0].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
             ) : (
               <span className="text-2xl flex-shrink-0">{sportSummaries[0].icon}</span>
             )}
@@ -391,7 +391,7 @@ export default function DayRowTable({
         {sportSummaries[1] ? (
           <div className="flex items-center justify-center gap-2">
             {useImageIcons ? (
-              <img src={sportSummaries[1].icon} alt={sportSummaries[1].sport} className="object-cover rounded flex-shrink-0" style={{ width: '120px', height: '120px' }} />
+              <img src={sportSummaries[1].icon} alt={sportSummaries[1].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
             ) : (
               <span className="text-2xl flex-shrink-0">{sportSummaries[1].icon}</span>
             )}
@@ -446,7 +446,7 @@ export default function DayRowTable({
         {sportSummaries[2] ? (
           <div className="flex items-center justify-center gap-2">
             {useImageIcons ? (
-              <img src={sportSummaries[2].icon} alt={sportSummaries[2].sport} className="object-cover rounded flex-shrink-0" style={{ width: '120px', height: '120px' }} />
+              <img src={sportSummaries[2].icon} alt={sportSummaries[2].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
             ) : (
               <span className="text-2xl flex-shrink-0">{sportSummaries[2].icon}</span>
             )}
@@ -501,7 +501,7 @@ export default function DayRowTable({
         {sportSummaries[3] ? (
           <div className="flex items-center justify-center gap-2">
             {useImageIcons ? (
-              <img src={sportSummaries[3].icon} alt={sportSummaries[3].sport} className="object-cover rounded flex-shrink-0" style={{ width: '120px', height: '120px' }} />
+              <img src={sportSummaries[3].icon} alt={sportSummaries[3].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
             ) : (
               <span className="text-2xl flex-shrink-0">{sportSummaries[3].icon}</span>
             )}
