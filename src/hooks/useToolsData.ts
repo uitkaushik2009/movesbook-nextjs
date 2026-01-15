@@ -184,6 +184,32 @@ export function useToolsData(): UseToolsDataReturn {
         loadSectionsFromLocalStorage();
       }
       
+      // Load body building techniques from Prisma BodyBuildingTechnique table
+      const techniquesResponse = await fetch('/api/bodybuilding/techniques', {
+        headers: getAuthHeaders()
+      });
+      
+      if (techniquesResponse.ok) {
+        const techniquesData = await techniquesResponse.json();
+        if (techniquesData.techniques && techniquesData.techniques.length > 0) {
+          // Convert Prisma BodyBuildingTechnique format to local format
+          const formattedTechniques = techniquesData.techniques.map((t: any) => ({
+            id: t.id,
+            title: t.name,
+            description: t.description || '',
+            color: t.color,
+            order: 0,
+            userId: t.userId // Track ownership
+          }));
+          setBodyBuildingTechniques(formattedTechniques);
+          console.log('✅ Loaded body building techniques from database:', formattedTechniques);
+        } else {
+          loadBodyBuildingTechniquesFromLocalStorage();
+        }
+      } else {
+        loadBodyBuildingTechniquesFromLocalStorage();
+      }
+      
       // Load other settings from UserSettings JSON
       const response = await fetch('/api/user/settings', {
         headers: getAuthHeaders()
@@ -235,6 +261,7 @@ export function useToolsData(): UseToolsDataReturn {
   const loadAllFromLocalStorage = () => {
     loadPeriodsFromLocalStorage();
     loadSectionsFromLocalStorage();
+    loadBodyBuildingTechniquesFromLocalStorage();
     loadSportsFromLocalStorage();
     loadEquipmentFromLocalStorage();
     loadExercisesFromLocalStorage();
@@ -272,6 +299,23 @@ export function useToolsData(): UseToolsDataReturn {
       }
     } else {
       setSections(DEFAULT_SECTIONS);
+    }
+  };
+  
+  /**
+   * Load body building techniques from localStorage
+   */
+  const loadBodyBuildingTechniquesFromLocalStorage = () => {
+    const saved = localStorage.getItem(STORAGE_KEYS.BODYBUILDING_TECHNIQUES);
+    if (saved) {
+      try {
+        setBodyBuildingTechniques(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load body building techniques');
+        setBodyBuildingTechniques(DEFAULT_BODYBUILDING_TECHNIQUES);
+      }
+    } else {
+      setBodyBuildingTechniques(DEFAULT_BODYBUILDING_TECHNIQUES);
     }
   };
   
@@ -349,6 +393,7 @@ export function useToolsData(): UseToolsDataReturn {
   const saveToLocalStorage = (
     periodsData?: Period[],
     sectionsData?: WorkoutSection[],
+    bodyBuildingTechniquesData?: BodyBuildingTechnique[],
     sportsData?: Sport[],
     equipmentData?: Equipment[],
     exercisesData?: Exercise[],
@@ -359,6 +404,9 @@ export function useToolsData(): UseToolsDataReturn {
     }
     if (sectionsData) {
       localStorage.setItem(STORAGE_KEYS.SECTIONS, JSON.stringify(sectionsData));
+    }
+    if (bodyBuildingTechniquesData) {
+      localStorage.setItem(STORAGE_KEYS.BODYBUILDING_TECHNIQUES, JSON.stringify(bodyBuildingTechniquesData));
     }
     if (sportsData) {
       localStorage.setItem(STORAGE_KEYS.SPORTS, JSON.stringify(sportsData));
@@ -450,6 +498,37 @@ export function useToolsData(): UseToolsDataReturn {
         }
       } else {
         console.error('❌ Failed to sync workout sections');
+      }
+
+      // Sync body building techniques to Prisma BodyBuildingTechnique table (bulk sync)
+      const techniquesResponse = await fetch('/api/bodybuilding/techniques/sync', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ techniques: bodyBuildingTechniques })
+      });
+
+      if (techniquesResponse.ok) {
+        const techniquesData = await techniquesResponse.json();
+        console.log('✅ Body building techniques synced successfully:', techniquesData);
+        
+        // Reload techniques from database to get updated IDs
+        if (techniquesData.techniques && techniquesData.techniques.length > 0) {
+          const formattedTechniques = techniquesData.techniques.map((t: any) => ({
+            id: t.id,
+            title: t.name,
+            description: t.description || '',
+            color: t.color,
+            order: 0,
+            userId: t.userId
+          }));
+          setBodyBuildingTechniques(formattedTechniques);
+          console.log('🔄 Body building techniques reloaded:', formattedTechniques);
+        }
+      } else {
+        console.error('❌ Failed to sync body building techniques');
       }
 
       // Save other tools settings to UserSettings JSON
