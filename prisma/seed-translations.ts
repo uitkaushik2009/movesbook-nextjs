@@ -2,6 +2,252 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+// Short text translations (<100 characters) - Workout Goals
+const shortTexts = [
+  // Workout Goals
+  {
+    key: 'goal_strength',
+    category: 'system',
+    values: {
+      en: 'Strength',
+      it: 'Forza',
+      es: 'Fuerza',
+      fr: 'Force',
+      de: 'Kraft',
+      pt: 'Força',
+    }
+  },
+  {
+    key: 'goal_explosive_strength',
+    category: 'system',
+    values: {
+      en: 'Explosive Strength',
+      it: 'Forza Esplosiva',
+      es: 'Fuerza Explosiva',
+      fr: 'Force Explosive',
+      de: 'Explosive Kraft',
+      pt: 'Força Explosiva',
+    }
+  },
+  {
+    key: 'goal_speed_strength',
+    category: 'system',
+    values: {
+      en: 'Speed Strength',
+      it: 'Forza Veloce',
+      es: 'Fuerza de Velocidad',
+      fr: 'Force de Vitesse',
+      de: 'Schnellkraft',
+      pt: 'Força de Velocidade',
+    }
+  },
+  {
+    key: 'goal_endurance_strength',
+    category: 'system',
+    values: {
+      en: 'Endurance Strength',
+      it: 'Forza Resistente',
+      es: 'Fuerza de Resistencia',
+      fr: 'Force d\'Endurance',
+      de: 'Kraftausdauer',
+      pt: 'Força de Resistência',
+    }
+  },
+  {
+    key: 'goal_aerobic_power',
+    category: 'system',
+    values: {
+      en: 'Aerobic Power',
+      it: 'Potenza Aerobica',
+      es: 'Potencia Aeróbica',
+      fr: 'Puissance Aérobie',
+      de: 'Aerobe Leistung',
+      pt: 'Potência Aeróbica',
+    }
+  },
+  {
+    key: 'goal_aerobic_capacity',
+    category: 'system',
+    values: {
+      en: 'Aerobic Capacity',
+      it: 'Capacità Aerobica',
+      es: 'Capacidad Aeróbica',
+      fr: 'Capacité Aérobie',
+      de: 'Aerobe Kapazität',
+      pt: 'Capacidade Aeróbica',
+    }
+  },
+  {
+    key: 'goal_alactic_power',
+    category: 'system',
+    values: {
+      en: 'Alactic Power',
+      it: 'Potenza Alattacida',
+      es: 'Potencia Aláctica',
+      fr: 'Puissance Alactique',
+      de: 'Alaktische Leistung',
+      pt: 'Potência Alática',
+    }
+  },
+  {
+    key: 'goal_alactic_capacity',
+    category: 'system',
+    values: {
+      en: 'Alactic Capacity',
+      it: 'Capacità Alattacida',
+      es: 'Capacidad Aláctica',
+      fr: 'Capacité Alactique',
+      de: 'Alaktische Kapazität',
+      pt: 'Capacidade Alática',
+    }
+  },
+  {
+    key: 'goal_lactic_capacity',
+    category: 'system',
+    values: {
+      en: 'Lactic Capacity',
+      it: 'Capacità Lattacida',
+      es: 'Capacidad Láctica',
+      fr: 'Capacité Lactique',
+      de: 'Laktische Kapazität',
+      pt: 'Capacidade Lática',
+    }
+  },
+  {
+    key: 'goal_speed_endurance',
+    category: 'system',
+    values: {
+      en: 'Speed Endurance',
+      it: 'Resistenza alla Velocità',
+      es: 'Resistencia de Velocidad',
+      fr: 'Endurance de Vitesse',
+      de: 'Schnelligkeitsausdauer',
+      pt: 'Resistência de Velocidade',
+    }
+  },
+  {
+    key: 'goal_speed',
+    category: 'system',
+    values: {
+      en: 'Speed',
+      it: 'Velocità',
+      es: 'Velocidad',
+      fr: 'Vitesse',
+      de: 'Geschwindigkeit',
+      pt: 'Velocidade',
+    }
+  },
+  {
+    key: 'goal_acceleration',
+    category: 'system',
+    values: {
+      en: 'Acceleration',
+      it: 'Accelerazione',
+      es: 'Aceleración',
+      fr: 'Accélération',
+      de: 'Beschleunigung',
+      pt: 'Aceleração',
+    }
+  },
+  {
+    key: 'goal_elasticity',
+    category: 'system',
+    values: {
+      en: 'Elasticity',
+      it: 'Elasticità',
+      es: 'Elasticidad',
+      fr: 'Élasticité',
+      de: 'Elastizität',
+      pt: 'Elasticidade',
+    }
+  },
+  {
+    key: 'goal_flexibility',
+    category: 'system',
+    values: {
+      en: 'Flexibility',
+      it: 'Flessibilità',
+      es: 'Flexibilidad',
+      fr: 'Flexibilité',
+      de: 'Flexibilität',
+      pt: 'Flexibilidade',
+    }
+  },
+  {
+    key: 'goal_muscle_mass',
+    category: 'system',
+    values: {
+      en: 'Muscle Mass',
+      it: 'Massa Muscolare',
+      es: 'Masa Muscular',
+      fr: 'Masse Musculaire',
+      de: 'Muskelmasse',
+      pt: 'Massa Muscular',
+    }
+  },
+  {
+    key: 'goal_muscle_definition',
+    category: 'system',
+    values: {
+      en: 'Muscle Definition',
+      it: 'Definizione Muscolare',
+      es: 'Definición Muscular',
+      fr: 'Définition Musculaire',
+      de: 'Muskeldefinition',
+      pt: 'Definição Muscular',
+    }
+  },
+  {
+    key: 'goal_muscle_density',
+    category: 'system',
+    values: {
+      en: 'Muscle Density',
+      it: 'Densità Muscolare',
+      es: 'Densidad Muscular',
+      fr: 'Densité Musculaire',
+      de: 'Muskeldichte',
+      pt: 'Densidade Muscular',
+    }
+  },
+  {
+    key: 'goal_motor_coordination',
+    category: 'system',
+    values: {
+      en: 'Motor Coordination',
+      it: 'Coordinazione Motoria',
+      es: 'Coordinación Motora',
+      fr: 'Coordination Motrice',
+      de: 'Motorische Koordination',
+      pt: 'Coordenação Motora',
+    }
+  },
+  {
+    key: 'goal_sport_related',
+    category: 'system',
+    values: {
+      en: 'Goal related to the current sport',
+      it: 'Obiettivo relativo allo sport attuale',
+      es: 'Objetivo relacionado con el deporte actual',
+      fr: 'Objectif lié au sport actuel',
+      de: 'Ziel im Zusammenhang mit der aktuellen Sportart',
+      pt: 'Meta relacionada ao esporte atual',
+    }
+  },
+  // Additional UI terms
+  {
+    key: 'main_workout_goal_label',
+    category: 'system',
+    values: {
+      en: 'Main Workout Goal',
+      it: 'Obiettivo Principale dell\'Allenamento',
+      es: 'Objetivo Principal del Entrenamiento',
+      fr: 'Objectif Principal de l\'Entraînement',
+      de: 'Haupttrainingsziel',
+      pt: 'Objetivo Principal do Treino',
+    }
+  },
+];
+
 // Long text translations (>100 characters)
 const longTexts = [
   {
@@ -147,6 +393,38 @@ async function main() {
   let insertedCount = 0;
   let skippedCount = 0;
 
+  // Seed short texts
+  for (const item of shortTexts) {
+    for (const [lang, value] of Object.entries(item.values)) {
+      try {
+        await prisma.translation.upsert({
+          where: {
+            key_language: {
+              key: item.key,
+              language: lang,
+            },
+          },
+          update: {
+            value,
+            category: item.category,
+          },
+          create: {
+            key: item.key,
+            language: lang,
+            value,
+            category: item.category,
+            isDeleted: false,
+          },
+        });
+        insertedCount++;
+      } catch (error) {
+        console.error(`Error inserting ${item.key} (${lang}):`, error);
+        skippedCount++;
+      }
+    }
+  }
+
+  // Seed long texts
   for (const item of longTexts) {
     for (const [lang, value] of Object.entries(item.values)) {
       try {

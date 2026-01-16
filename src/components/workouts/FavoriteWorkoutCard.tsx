@@ -1,26 +1,41 @@
 'use client';
 
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Eye, Copy, Trash2, Calendar, Save } from 'lucide-react';
+import { Star, Eye, Calendar, Edit2, Trash2, Dumbbell, Target, Zap, Tag } from 'lucide-react';
+import { SPORT_OPTIONS } from '@/constants/workout.constants';
+import { WORKOUT_GOALS } from '@/components/workouts/WorkoutInfoModal';
 
 interface FavoriteWorkoutCardProps {
   workout: any;
   onDelete: (id: string) => void;
   onOverview: (workout: any) => void;
   onUseInPlanner: (workout: any) => void;
+  onUpdate?: () => void;
 }
 
 export default function FavoriteWorkoutCard({ 
   workout, 
   onDelete, 
   onOverview, 
-  onUseInPlanner 
+  onUseInPlanner,
+  onUpdate
 }: FavoriteWorkoutCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Parse the workoutData JSON
-  const workoutData = workout.workoutData ? JSON.parse(workout.workoutData) : null;
+  // Parse the workoutData JSON with error handling
+  let workoutData = null;
+  try {
+    if (workout.workoutData) {
+      workoutData = typeof workout.workoutData === 'string' 
+        ? JSON.parse(workout.workoutData) 
+        : workout.workoutData;
+    }
+  } catch (error) {
+    console.error('Error parsing workoutData:', error);
+    workoutData = null;
+  }
+  
   const workoutInfo = workoutData?.workout || {};
   
   // Get moveframes count
@@ -28,31 +43,36 @@ export default function FavoriteWorkoutCard({
   
   // Get sports list
   const sportsList = workoutData?.sports?.map((s: any) => s.sport).join(', ') || workout.sports || '';
+  const sportsArray = sportsList.split(',').filter((s: string) => s.trim());
 
   // Editable fields state
   const [workoutName, setWorkoutName] = useState(workout.name || workoutInfo.name || '');
   const [workoutCode, setWorkoutCode] = useState(workoutInfo.code || '');
-  const [workoutNotes, setWorkoutNotes] = useState(workoutInfo.notes || '');
-  const [intensity, setIntensity] = useState('Medium');
-  const [tags, setTags] = useState('');
+  const [mainSport, setMainSport] = useState(workoutInfo.mainSport || '');
+  const [mainGoal, setMainGoal] = useState(workoutInfo.mainGoal || '');
+  const [intensity, setIntensity] = useState(workoutInfo.intensity || workout.intensity || 'Medium');
+  const [tags, setTags] = useState(workoutInfo.tags || workout.tags || '');
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please log in');
+        alert('Not authenticated');
         return;
       }
 
-      // Update the workoutData with edited values
+      // Update the workoutData JSON
       const updatedWorkoutData = {
         ...workoutData,
         workout: {
           ...workoutInfo,
           name: workoutName,
           code: workoutCode,
-          notes: workoutNotes
+          mainSport,
+          mainGoal,
+          intensity,
+          tags
         }
       };
 
@@ -72,6 +92,10 @@ export default function FavoriteWorkoutCard({
 
       if (response.ok) {
         alert('✅ Changes saved successfully!');
+        setShowEditModal(false);
+        if (onUpdate) {
+          onUpdate();
+        }
       } else {
         alert('Failed to save changes');
       }
@@ -83,311 +107,246 @@ export default function FavoriteWorkoutCard({
     }
   };
 
-  return (
-    <div className="bg-white rounded-xl shadow-md hover:shadow-lg border border-gray-200 hover:border-blue-400 transition-all duration-200 overflow-hidden">
-      {/* Compact Header - Always Visible */}
-      <div 
-        className="p-5 cursor-pointer hover:bg-gradient-to-r hover:from-blue-50 hover:to-transparent transition-all duration-200"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            {/* Workout Name */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-                <span className="text-white text-lg font-bold">💪</span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-xl text-gray-900 mb-1">
-                  {workoutName || 'Unnamed Workout'}
-                </h3>
-                {/* Workout Code */}
-                {workoutCode && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-500">Code:</span>
-                    <span className="text-sm font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{workoutCode}</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                {/* Stats Badge */}
-                <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{moveframesCount}</div>
-                    <div className="text-xs text-gray-500">Moveframes</div>
-                  </div>
-                  <div className="w-px h-8 bg-gray-300"></div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-900">{sportsList.split(',').length}</div>
-                    <div className="text-xs text-gray-500">Sports</div>
-                  </div>
-                </div>
-                {/* Expand/Collapse Icon */}
-                <div className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors">
-                  {isExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-gray-600" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-600" />
-                  )}
-                </div>
-              </div>
-            </div>
+  // Get main sport icon
+  const mainSportIcon = SPORT_OPTIONS.find(s => s.value === mainSport)?.icon || '💪';
+  
+  // Get main goal label
+  const mainGoalLabel = WORKOUT_GOALS.find(g => g.value === mainGoal)?.label || mainGoal;
 
-            {/* Workout Annotations - Compact Preview */}
-            {!isExpanded && workoutNotes && (
-              <div className="mt-3 ml-13 bg-amber-50 border-l-4 border-amber-400 rounded-r-lg p-3">
-                <div className="flex items-start gap-2">
-                  <span className="text-base">📝</span>
-                  <div className="flex-1">
-                    <div className="text-xs font-semibold text-amber-700 mb-1">Annotations</div>
-                    <div className="text-sm text-gray-700 line-clamp-1">
-                      {workoutNotes}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+  // Format intensity color
+  const getIntensityColor = (int: string) => {
+    switch(int?.toLowerCase()) {
+      case 'low': return 'bg-green-100 text-green-700';
+      case 'medium': return 'bg-yellow-100 text-yellow-700';
+      case 'high': return 'bg-orange-100 text-orange-700';
+      case 'very high': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
+
+  return (
+    <>
+      <div className="bg-white rounded-xl border-2 border-gray-200 p-6 hover:border-blue-300 hover:shadow-lg transition">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+            <h3 className="font-bold text-gray-900 line-clamp-1">{workoutName || 'Unnamed Workout'}</h3>
           </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowEditModal(true)}
+              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+              title="Edit workout"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                if (confirm('Delete this workout from favorites?')) {
+                  onDelete(workout.id);
+                }
+              }}
+              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+              title="Delete workout"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        
+        {workoutCode && (
+          <div className="mb-3 text-sm">
+            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded font-mono">
+              {workoutCode}
+            </span>
+          </div>
+        )}
+        
+        <div className="space-y-2 mb-4">
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Moveframes:</span>
+            <span className="font-semibold text-gray-900">{moveframesCount}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Sports:</span>
+            <span className="font-semibold text-gray-900">{sportsArray.length > 0 ? sportsArray.length : '-'}</span>
+          </div>
+          {mainSport && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Main Sport:</span>
+              <span className="font-semibold text-gray-900">{mainSportIcon} {SPORT_OPTIONS.find(s => s.value === mainSport)?.label || mainSport}</span>
+            </div>
+          )}
+          {mainGoal && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Goal:</span>
+              <span className="font-semibold text-gray-900 line-clamp-1">{mainGoalLabel}</span>
+            </div>
+          )}
+          <div className="flex justify-between text-sm items-center">
+            <span className="text-gray-500">Intensity:</span>
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getIntensityColor(intensity)}`}>
+              {intensity || 'Medium'}
+            </span>
+          </div>
+        </div>
+        
+        {tags && (
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-2">
+              {tags.split(',').map((tag: string, idx: number) => (
+                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded">
+                  {tag.trim()}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        
+        <div className="flex gap-2">
+          <button
+            onClick={() => onUseInPlanner(workout)}
+            className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition flex items-center justify-center gap-2"
+            title="Add to planner"
+          >
+            <Calendar className="w-4 h-4" />
+            Use in my planner
+          </button>
+          <button
+            onClick={() => onOverview(workout)}
+            className="px-4 py-2 border-2 border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-50 transition"
+            title="View overview"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* Expanded Content */}
-      {isExpanded && (
-        <div className="border-t-2 border-gray-200 p-6 bg-gradient-to-b from-gray-50 to-white">
-          {/* Editable Basic Info */}
-          <div className="bg-white border-2 border-blue-200 rounded-xl p-5 mb-5 shadow-sm">
-            <h4 className="text-base font-bold text-blue-900 mb-4 flex items-center gap-2">
-              <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">✏️</span>
-              Edit Basic Information
-            </h4>
-            <div className="space-y-3">
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b-2 border-gray-200 px-6 py-4">
+              <h2 className="text-2xl font-bold text-gray-900">Edit Workout</h2>
+            </div>
+            
+            <div className="p-6 space-y-5">
+              {/* Basic Info */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Workout Name</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Workout Name</label>
                 <input
                   type="text"
                   value={workoutName}
                   onChange={(e) => setWorkoutName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Enter workout name..."
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Workout Code</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Workout Code</label>
                 <input
                   type="text"
                   value={workoutCode}
                   onChange={(e) => setWorkoutCode(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="e.g., 0101-1 5 Jan"
                 />
               </div>
+
+              {/* Main Sport */}
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Workout Annotations</label>
-                <textarea
-                  value={workoutNotes}
-                  onChange={(e) => setWorkoutNotes(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                  placeholder="Add notes about this workout..."
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Dumbbell className="w-4 h-4" />
+                  Main Sport
+                </label>
+                <select 
+                  value={mainSport}
+                  onChange={(e) => setMainSport(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select main sport...</option>
+                  {SPORT_OPTIONS.map((sport) => (
+                    <option key={sport.value} value={sport.value}>
+                      {sport.icon} {sport.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Main Goal */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Target className="w-4 h-4" />
+                  Main Workout Goal
+                </label>
+                <select
+                  value={mainGoal}
+                  onChange={(e) => setMainGoal(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Select goal...</option>
+                  {WORKOUT_GOALS.map((goal) => (
+                    <option key={goal.value} value={goal.value}>
+                      {goal.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Intensity */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Zap className="w-4 h-4" />
+                  Intensity
+                </label>
+                <select
+                  value={intensity}
+                  onChange={(e) => setIntensity(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                  <option value="Very High">Very High</option>
+                </select>
+              </div>
+
+              {/* Tags */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                  <Tag className="w-4 h-4" />
+                  Tags (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="e.g., swimming, endurance, morning"
                 />
               </div>
             </div>
-          </div>
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onOverview(workout);
-              }}
-              className="px-5 py-3 bg-gray-800 text-white text-sm font-semibold rounded-xl hover:bg-gray-900 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-            >
-              <Eye className="w-4 h-4" />
-              Overview
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onUseInPlanner(workout);
-              }}
-              className="px-5 py-3 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-            >
-              <Calendar className="w-4 h-4" />
-              Use in my planner
-            </button>
-          </div>
-
-          {/* Main Sport (Note) */}
-          <div className="bg-gradient-to-br from-orange-50 to-orange-100 border-2 border-orange-300 rounded-xl p-5 mb-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center shadow-md">
-                <span className="text-white text-xl">⭐</span>
-              </div>
-              <h4 className="text-base font-bold text-orange-900">Main Sport (Note)</h4>
-            </div>
-            <select className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
-              <option value="">🏊 Swim</option>
-            </select>
-            <p className="text-xs text-orange-600 mt-2">
-              This is a note field that can be freely edited and does not affect workout structure.
-            </p>
-          </div>
-
-          {/* Sports from Moveframes */}
-          <div className="bg-gradient-to-br from-pink-50 to-pink-100 border-2 border-pink-300 rounded-xl p-5 mb-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 bg-pink-500 rounded-lg flex items-center justify-center shadow-md">
-                <span className="text-white text-xl">🏃</span>
-              </div>
-              <h4 className="text-base font-bold text-pink-900">Sports from Moveframes ({moveframesCount}/4)</h4>
-            </div>
-            <div className="space-y-2">
-              {sportsList.split(',').map((sport: string, idx: number) => (
-                <div key={idx} className="bg-white rounded p-2 text-sm text-gray-700 border border-pink-200">
-                  {sport.trim()}
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-pink-600 mt-2">
-              These sports are automatically loaded from moveframes (read-only). To change sports, edit/add moveframes.
-            </p>
-          </div>
-
-          {/* Workout Summary */}
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 rounded-xl p-5 mb-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center shadow-md">
-                <span className="text-white text-xl">📊</span>
-              </div>
-              <div>
-                <h4 className="text-base font-bold text-blue-900">Workout Summary</h4>
-                <p className="text-xs text-blue-700">(only as note of reference)</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-4 gap-3">
-              <div>
-                <div className="text-xs text-gray-600 mb-1">Week Number</div>
-                <input 
-                  type="text" 
-                  defaultValue={workoutInfo.weekNumber || 'Week 1'} 
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                />
-              </div>
-              <div>
-                <div className="text-xs text-gray-600 mb-1">Day of Week</div>
-                <input 
-                  type="text" 
-                  defaultValue={workoutInfo.dayOfWeek || 'Monday'} 
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                />
-              </div>
-              <div>
-                <div className="text-xs text-gray-600 mb-1">Period</div>
-                <input 
-                  type="text" 
-                  defaultValue={workoutInfo.period || 'Conditioning'} 
-                  className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                />
-              </div>
-              <div>
-                <div className="text-xs text-gray-600 mb-1">Section</div>
-                <div className="w-full px-2 py-1 text-sm border border-gray-300 rounded bg-white">
-                  <span className="inline-block w-4 h-4 rounded" style={{ backgroundColor: '#f59e0b' }}></span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Workout Statistics */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-300 rounded-xl p-5 mb-5 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center shadow-md">
-                <span className="text-white text-xl">📈</span>
-              </div>
-              <h4 className="text-base font-bold text-purple-900">Workout Statistics</h4>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="bg-white rounded-xl p-4 border-2 border-purple-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-3xl font-bold text-purple-900 mb-1">{moveframesCount}</div>
-                <div className="text-xs font-medium text-gray-600">Moveframes</div>
-              </div>
-              <div className="bg-white rounded-xl p-4 border-2 border-purple-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-3xl font-bold text-purple-900 mb-1">
-                  {workoutData?.moveframes?.reduce((sum: number, mf: any) => sum + (mf.movelaps?.length || 0), 0) || 0}
-                </div>
-                <div className="text-xs font-medium text-gray-600">Total Movelaps</div>
-              </div>
-              <div className="bg-white rounded-xl p-4 border-2 border-purple-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-3xl font-bold text-purple-900 mb-1">
-                  {Math.round((workout.totalDistance || 0) / 1000)}km
-                </div>
-                <div className="text-xs font-medium text-gray-600">Total Distance</div>
-              </div>
-              <div className="bg-white rounded-xl p-4 border-2 border-purple-200 shadow-sm hover:shadow-md transition-shadow">
-                <div className="text-3xl font-bold text-purple-900 mb-1">
-                  {Math.floor((workout.totalDuration || 0) / 60)}:{String((workout.totalDuration || 0) % 60).padStart(2, '0')}
-                </div>
-                <div className="text-xs font-medium text-gray-600">Total Duration</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Intensity and Tags */}
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Intensity</label>
-              <select 
-                value={intensity}
-                onChange={(e) => setIntensity(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+            {/* Footer */}
+            <div className="sticky bottom-0 bg-gray-50 border-t-2 border-gray-200 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="px-6 py-2 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition"
               >
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
-              </select>
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Tags (comma-separated)</label>
-              <input
-                type="text"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="e.g., Upper Body, Push, Strength"
-                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Save and Delete Buttons */}
-          <div className="grid grid-cols-3 gap-3">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSave();
-              }}
-              disabled={isSaving}
-              className="col-span-2 px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white text-sm font-semibold rounded-xl hover:from-green-700 hover:to-green-800 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center gap-2 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed disabled:transform-none"
-            >
-              <Save className="w-5 h-5" />
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                if (confirm('Remove this workout from favorites?')) {
-                  onDelete(workout.id);
-                }
-              }}
-              className="px-5 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white text-sm font-semibold rounded-xl hover:from-red-600 hover:to-red-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-            >
-              <Trash2 className="w-5 h-5" />
-              Delete
-            </button>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
-

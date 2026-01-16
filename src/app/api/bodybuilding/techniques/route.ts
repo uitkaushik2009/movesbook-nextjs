@@ -4,7 +4,7 @@ import { verifyToken } from '@/lib/auth';
 
 /**
  * GET /api/bodybuilding/techniques
- * Fetch all body building techniques for the current user
+ * Fetch execution techniques from Super Admin (ADMIN users) + current user's own techniques
  */
 export async function GET(request: NextRequest) {
   try {
@@ -20,14 +20,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const techniques = await prisma.bodyBuildingTechnique.findMany({
+    // Get current user info
+    const currentUser = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { id: true, userType: true, email: true }
+    });
+    console.log(`👤 Current user: ${currentUser?.email} (ID: ${decoded.userId}, Type: ${currentUser?.userType})`);
+    
+    // Get all ADMIN users (Super Admins)
+    const adminUsers = await prisma.user.findMany({
+      where: { userType: 'ADMIN' },
+      select: { id: true, email: true }
+    });
+    
+    const adminUserIds = adminUsers.map(admin => admin.id);
+    console.log(`🔍 Found ${adminUsers.length} ADMIN users:`, adminUsers.map(a => a.email));
+
+    // Fetch techniques from Super Admin (ADMIN users) AND current user
+    const techniques = await prisma.executionTechnique.findMany({
       where: {
-        userId: decoded.userId,
+        OR: [
+          { userId: { in: adminUserIds } }, // Super Admin techniques
+          { userId: decoded.userId },       // User's own techniques
+        ],
       },
       orderBy: {
         createdAt: 'asc',
       },
     });
+
+    console.log(`✅ Loaded ${techniques.length} execution techniques`);
 
     // Convert sports string to array for each technique
     const techniquesWithSportsArray = techniques.map(tech => ({
@@ -35,9 +57,17 @@ export async function GET(request: NextRequest) {
       sports: tech.sports ? tech.sports.split(',').filter(s => s) : []
     }));
 
+    // Separate Super Admin vs User techniques for logging
+    const superAdminTechniques = techniquesWithSportsArray.filter(t => adminUserIds.includes(t.userId));
+    const userTechniques = techniquesWithSportsArray.filter(t => t.userId === decoded.userId);
+    
+    console.log(`📋 Super Admin techniques: ${superAdminTechniques.length}`, superAdminTechniques.map(t => ({ name: t.name, sports: t.sports, userId: t.userId })));
+    console.log(`📋 User's own techniques: ${userTechniques.length}`, userTechniques.map(t => ({ name: t.name, sports: t.sports, userId: t.userId })));
+    console.log(`📋 All techniques:`, techniquesWithSportsArray.map(t => ({ name: t.name, sports: t.sports, userId: t.userId, isAdmin: adminUserIds.includes(t.userId) })));
+
     return NextResponse.json({ techniques: techniquesWithSportsArray });
   } catch (error) {
-    console.error('Error fetching body building techniques:', error);
+    console.error('Error fetching execution techniques:', error);
     return NextResponse.json(
       { error: 'Failed to fetch techniques', details: (error as Error).message },
       { status: 500 }
@@ -75,7 +105,7 @@ export async function POST(request: NextRequest) {
     // Convert sports array to comma-separated string
     const sportsString = Array.isArray(sports) ? sports.join(',') : '';
 
-    const technique = await prisma.bodyBuildingTechnique.create({
+    const technique = await prisma.executionTechnique.create({
       data: {
         userId: decoded.userId,
         name,
@@ -123,7 +153,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Verify ownership
-    const existingTechnique = await prisma.bodyBuildingTechnique.findUnique({
+    const existingTechnique = await prisma.executionTechnique.findUnique({
       where: { id },
     });
 
@@ -137,7 +167,7 @@ export async function PUT(request: NextRequest) {
     // Convert sports array to comma-separated string
     const sportsString = Array.isArray(sports) ? sports.join(',') : '';
 
-    const technique = await prisma.bodyBuildingTechnique.update({
+    const technique = await prisma.executionTechnique.update({
       where: { id },
       data: {
         name,
@@ -183,7 +213,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verify ownership
-    const existingTechnique = await prisma.bodyBuildingTechnique.findUnique({
+    const existingTechnique = await prisma.executionTechnique.findUnique({
       where: { id },
     });
 
@@ -194,7 +224,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await prisma.bodyBuildingTechnique.delete({
+    await prisma.executionTechnique.delete({
       where: { id },
     });
 

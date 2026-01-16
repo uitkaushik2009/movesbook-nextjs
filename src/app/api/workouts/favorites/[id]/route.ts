@@ -83,14 +83,29 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
     
+    // Validate workoutData JSON if provided
+    let validatedWorkoutData = favorite.workoutData;
+    if (workoutData) {
+      try {
+        // Test that the JSON string can be parsed and re-stringified
+        const parsed = JSON.parse(workoutData);
+        validatedWorkoutData = JSON.stringify(parsed);
+        console.log('✅ Validated workoutData JSON for favorite update:', favoriteId, '- Length:', validatedWorkoutData.length);
+      } catch (jsonError) {
+        console.error('❌ Invalid JSON in workoutData update:', jsonError);
+        console.error('   Favorite ID:', favoriteId);
+        return NextResponse.json({ 
+          error: 'Invalid workout data format. Please check for special characters in notes and descriptions.' 
+        }, { status: 400 });
+      }
+    }
+    
     // Update the favorite
     const updated = await prisma.favoriteWorkout.update({
       where: { id: favoriteId },
       data: {
         name: name || favorite.name,
-        workoutData: workoutData || favorite.workoutData,
-        // Note: intensity and tags would need additional fields in the schema
-        // For now, we'll just update name and workoutData
+        workoutData: validatedWorkoutData,
       }
     });
     

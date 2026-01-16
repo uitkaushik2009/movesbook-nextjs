@@ -1,4 +1,0 @@
-﻿
-> workout-management-system@1.0.0 build
-> next build
-

@@ -6,26 +6,31 @@ import { shouldShowDistance, getDistanceUnit, AEROBIC_SPORTS } from '@/constants
 import { useSportIconType } from '@/hooks/useSportIconType';
 import { isImageIcon } from '@/utils/sportIcons';
 
-interface WorkoutOverviewModalProps {
-  workout: any;
+interface DayOverviewModalProps {
+  day: any;
   onClose: () => void;
 }
 
-export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOverviewModalProps) {
+export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps) {
   const iconType = useSportIconType();
   const useImageIcons = isImageIcon(iconType);
   const [showMovelaps, setShowMovelaps] = React.useState(true);
   
-  // Parse the workoutData JSON
-  const workoutData = workout.workoutData ? JSON.parse(workout.workoutData) : null;
-  const workoutInfo = workoutData?.workout || {};
-  const moveframes = workoutData?.moveframes || [];
-  const sports = workoutData?.sports || [];
+  // Get all workouts from the day
+  const workouts = day.workouts || [];
+  
+  // Collect all moveframes from all workouts
+  const allMoveframes: any[] = [];
+  workouts.forEach((workout: any) => {
+    if (workout.moveframes) {
+      allMoveframes.push(...workout.moveframes);
+    }
+  });
 
   // Calculate totals by sport
   const sportTotals: Record<string, { moveframes: number; movelaps: number; distance: number; duration: number; series: number; repetitions: number }> = {};
   
-  moveframes.forEach((mf: any) => {
+  allMoveframes.forEach((mf: any) => {
     const sport = mf.sport || 'Unknown';
     if (!sportTotals[sport]) {
       sportTotals[sport] = { moveframes: 0, movelaps: 0, distance: 0, duration: 0, series: 0, repetitions: 0 };
@@ -77,24 +82,28 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
     window.print();
   };
 
+  // Format day name
+  const dayName = day.name || day.dayOfWeek || 'Day';
+  const weekNumber = day.weekNumber || '';
+
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
           <div>
             <h2 className="text-xl font-bold text-gray-900">
-              Workout Overview: {workout.name || workoutInfo.name || 'Unnamed Workout'}
+              Day Overview: {dayName}
             </h2>
-            {workoutInfo.code && (
-              <p className="text-sm text-gray-600">Code: {workoutInfo.code}</p>
+            {weekNumber && (
+              <p className="text-sm text-gray-600">Week {weekNumber} {day.dateLabel ? `- ${day.dateLabel}` : ''}</p>
             )}
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handlePrint}
               className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 text-sm font-semibold"
-              title="Print this workout"
+              title="Print this day"
             >
               <Printer className="w-4 h-4" />
               Print
@@ -110,8 +119,8 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          {/* Workout Annotations/Notes */}
-          {workoutInfo.notes && (
+          {/* Day Notes/Annotations */}
+          {day.notes && (
             <div className="mb-4 p-4 bg-amber-50 border-2 border-amber-300 rounded-lg">
               <div className="flex items-center gap-2 mb-3">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-700">
@@ -121,17 +130,24 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
                   <line x1="16" y1="17" x2="8" y2="17"></line>
                   <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
-                <h3 className="text-base font-bold text-amber-900">Workout Annotations</h3>
+                <h3 className="text-base font-bold text-amber-900">Day Annotations</h3>
               </div>
               <div 
                 className="text-sm text-gray-800 bg-white border border-amber-200 rounded-lg p-3 whitespace-pre-wrap"
               >
-                {workoutInfo.notes}
+                {day.notes}
               </div>
             </div>
           )}
 
-          {/* Workout Summary Table */}
+          {/* Workouts Count */}
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm font-semibold text-blue-900">
+              Total Workouts: {workouts.length}
+            </p>
+          </div>
+
+          {/* Day Summary Table */}
           <div className="mb-4 p-3 bg-white border-2 border-gray-300 rounded-lg">
             <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -140,7 +156,7 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
                 <rect x="14" y="14" width="7" height="7"></rect>
                 <rect x="3" y="14" width="7" height="7"></rect>
               </svg>
-              Workout Summary
+              Day Summary
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
@@ -211,13 +227,14 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
             </label>
           </div>
 
-          {/* Detailed Moveframes and Movelaps Table */}
+          {/* Detailed Workouts and Moveframes Table */}
           <div className="bg-white border-2 border-gray-300 rounded-lg p-3">
-            <h3 className="text-sm font-bold text-gray-900 mb-3">Workout Details</h3>
+            <h3 className="text-sm font-bold text-gray-900 mb-3">Day Details - All Workouts</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr className="bg-gray-200">
+                    <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold">W#</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold">MF</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold">Sport</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold">Name</th>
@@ -232,52 +249,61 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
                   </tr>
                 </thead>
                 <tbody>
-                  {moveframes.map((mf: any, mfIdx: number) => {
-                    const movelapCount = mf.movelaps?.length || 0;
+                  {workouts.map((workout: any, workoutIdx: number) => {
+                    const workoutMoveframes = workout.moveframes || [];
                     
-                    if (!showMovelaps) {
-                      return (
-                        <tr key={mf.id} className="hover:bg-blue-50">
+                    return workoutMoveframes.map((mf: any, mfIdx: number) => {
+                      const movelapCount = mf.movelaps?.length || 0;
+                      
+                      if (!showMovelaps) {
+                        return (
+                          <tr key={`${workout.id}-${mf.id}`} className="hover:bg-blue-50">
+                            <td className="border border-gray-300 px-2 py-1.5 font-bold text-purple-600">{workoutIdx + 1}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 font-bold">{String.fromCharCode(65 + mfIdx)}</td>
+                            <td className="border border-gray-300 px-2 py-1.5">{mf.sport?.replace(/_/g, ' ')}</td>
+                            <td className="border border-gray-300 px-2 py-1.5">{mf.name || '-'}</td>
+                          </tr>
+                        );
+                      }
+                      
+                      return mf.movelaps?.map((ml: any, mlIdx: number) => (
+                        <tr key={`${workout.id}-${mf.id}-${ml.id}`} className="hover:bg-blue-50">
+                          {mlIdx === 0 && (
+                            <>
+                              <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 font-bold text-purple-600 bg-purple-50">
+                                {workoutIdx + 1}
+                              </td>
+                              <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 font-bold bg-gray-50">
+                                {String.fromCharCode(65 + mfIdx)}
+                              </td>
+                              <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 bg-gray-50">
+                                {mf.sport?.replace(/_/g, ' ')}
+                              </td>
+                              <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 bg-gray-50">
+                                {mf.name || '-'}
+                              </td>
+                            </>
+                          )}
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">{mlIdx + 1}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">
+                            {shouldShowDistance(mf.sport) && ml.distance ? `${ml.distance}${getDistanceUnit(mf.sport)}` : '-'}
+                          </td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-center">
+                            {shouldShowDistance(mf.sport) 
+                              ? (ml.duration ? `${ml.duration}s` : '-')
+                              : (ml.reps ? `${ml.reps} series` : '-')}
+                          </td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-xs">{ml.notes || '-'}</td>
+                        </tr>
+                      )) || (
+                        <tr key={`${workout.id}-${mf.id}`} className="hover:bg-blue-50">
+                          <td className="border border-gray-300 px-2 py-1.5 font-bold text-purple-600">{workoutIdx + 1}</td>
                           <td className="border border-gray-300 px-2 py-1.5 font-bold">{String.fromCharCode(65 + mfIdx)}</td>
                           <td className="border border-gray-300 px-2 py-1.5">{mf.sport?.replace(/_/g, ' ')}</td>
-                          <td className="border border-gray-300 px-2 py-1.5">{mf.name || '-'}</td>
+                          <td className="border border-gray-300 px-2 py-1.5" colSpan={showMovelaps ? 5 : 1}>{mf.name || '-'}</td>
                         </tr>
                       );
-                    }
-                    
-                    return mf.movelaps?.map((ml: any, mlIdx: number) => (
-                      <tr key={`${mf.id}-${ml.id}`} className="hover:bg-blue-50">
-                        {mlIdx === 0 && (
-                          <>
-                            <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 font-bold bg-gray-50">
-                              {String.fromCharCode(65 + mfIdx)}
-                            </td>
-                            <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 bg-gray-50">
-                              {mf.sport?.replace(/_/g, ' ')}
-                            </td>
-                            <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 bg-gray-50">
-                              {mf.name || '-'}
-                            </td>
-                          </>
-                        )}
-                        <td className="border border-gray-300 px-2 py-1.5 text-center">{mlIdx + 1}</td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-center">
-                          {shouldShowDistance(mf.sport) && ml.distance ? `${ml.distance}${getDistanceUnit(mf.sport)}` : '-'}
-                        </td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-center">
-                          {shouldShowDistance(mf.sport) 
-                            ? (ml.duration ? `${ml.duration}s` : '-')
-                            : (ml.reps ? `${ml.reps} series` : '-')}
-                        </td>
-                        <td className="border border-gray-300 px-2 py-1.5 text-xs">{ml.notes || '-'}</td>
-                      </tr>
-                    )) || (
-                      <tr key={mf.id} className="hover:bg-blue-50">
-                        <td className="border border-gray-300 px-2 py-1.5 font-bold">{String.fromCharCode(65 + mfIdx)}</td>
-                        <td className="border border-gray-300 px-2 py-1.5">{mf.sport?.replace(/_/g, ' ')}</td>
-                        <td className="border border-gray-300 px-2 py-1.5" colSpan={5}>{mf.name || '-'}</td>
-                      </tr>
-                    );
+                    });
                   })}
                 </tbody>
               </table>
@@ -298,3 +324,4 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
     </div>
   );
 }
+

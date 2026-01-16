@@ -1,9 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { SPORT_OPTIONS, WORKOUT_SYMBOLS } from '@/constants/workout.constants';
 import { isSeriesBasedSport, shouldShowDistance, getDistanceUnit } from '@/constants/moveframe.constants';
+
+// Main Workout Goals options
+export const WORKOUT_GOALS = [
+  { value: 'STRENGTH', label: 'Strength' },
+  { value: 'EXPLOSIVE_STRENGTH', label: 'Explosive Strength' },
+  { value: 'SPEED_STRENGTH', label: 'Speed ​​Strength' },
+  { value: 'ENDURANCE_STRENGTH', label: 'Endurance Strength' },
+  { value: 'AEROBIC_POWER', label: 'Aerobic Power' },
+  { value: 'AEROBIC_CAPACITY', label: 'Aerobic Capacity' },
+  { value: 'ALACTIC_POWER', label: 'Alactic Power' },
+  { value: 'ALACTIC_CAPACITY', label: 'Alactic Capacity' },
+  { value: 'LACTIC_CAPACITY', label: 'Lactic Capacity' },
+  { value: 'SPEED_ENDURANCE', label: 'Speed ​​Endurance' },
+  { value: 'SPEED', label: 'Speed' },
+  { value: 'ACCELERATION', label: 'Acceleration' },
+  { value: 'ELASTICITY', label: 'Elasticity' },
+  { value: 'FLEXIBILITY', label: 'Flexibility' },
+  { value: 'MUSCLE_MASS', label: 'Muscle Mass' },
+  { value: 'MUSCLE_DEFINITION', label: 'Muscle Definition' },
+  { value: 'MUSCLE_DENSITY', label: 'Muscle Density' },
+  { value: 'MOTOR_COORDINATION', label: 'Motor Coordination' },
+  { value: 'SPORT_RELATED', label: 'Goal related to the current sport' },
+] as const;
 
 interface WorkoutInfoModalProps {
   isOpen: boolean;
@@ -11,6 +34,7 @@ interface WorkoutInfoModalProps {
   day: any;
   onClose: () => void;
   onEdit: () => void;
+  onUpdate?: () => void;
 }
 
 export default function WorkoutInfoModal({
@@ -18,16 +42,72 @@ export default function WorkoutInfoModal({
   workout,
   day,
   onClose,
-  onEdit
+  onEdit,
+  onUpdate
 }: WorkoutInfoModalProps) {
   if (!isOpen || !workout) return null;
 
   const [mainSport, setMainSport] = useState(workout.mainSport || '');
   const [isSavingMainSport, setIsSavingMainSport] = useState(false);
+  const [mainGoal, setMainGoal] = useState(workout.mainGoal || '');
+  const [isSavingMainGoal, setIsSavingMainGoal] = useState(false);
   const [workoutNotes, setWorkoutNotes] = useState(workout.notes || '');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [intensity, setIntensity] = useState(workout.intensity || 'Medium');
+  const [isSavingIntensity, setIsSavingIntensity] = useState(false);
+  const [tags, setTags] = useState(workout.tags || '');
+  const [isSavingTags, setIsSavingTags] = useState(false);
+  const [isSavedInFavorites, setIsSavedInFavorites] = useState<boolean | null>(null);
+  const [isCheckingFavorites, setIsCheckingFavorites] = useState(true);
+  const [isSavingFavorite, setIsSavingFavorite] = useState(false);
 
   const workoutSymbol = WORKOUT_SYMBOLS[workout.sessionNumber as 1 | 2 | 3] || { symbol: '○', label: 'Circle' };
+  
+  // Check if workout is saved in favorites
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      try {
+        setIsCheckingFavorites(true);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setIsSavedInFavorites(false);
+          setIsCheckingFavorites(false);
+          return;
+        }
+
+        const response = await fetch('/api/workouts/favorites', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const favorites = await response.json();
+          // Check if this workout ID exists in any favorite's workoutData
+          const isSaved = favorites.some((fav: any) => {
+            try {
+              const data = JSON.parse(fav.workoutData);
+              return data.workoutId === workout.id;
+            } catch {
+              return false;
+            }
+          });
+          setIsSavedInFavorites(isSaved);
+        } else {
+          setIsSavedInFavorites(false);
+        }
+      } catch (error) {
+        console.error('Error checking favorite status:', error);
+        setIsSavedInFavorites(false);
+      } finally {
+        setIsCheckingFavorites(false);
+      }
+    };
+
+    if (isOpen && workout?.id) {
+      checkFavoriteStatus();
+    }
+  }, [isOpen, workout?.id]);
   
   const handleMainSportChange = async (newMainSport: string) => {
     setMainSport(newMainSport);
@@ -56,6 +136,71 @@ export default function WorkoutInfoModal({
     }
   };
 
+  const handleSaveWorkoutSettings = async () => {
+    setIsSavingMainGoal(true);
+    setIsSavingIntensity(true);
+    setIsSavingTags(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in');
+        setIsSavingMainGoal(false);
+        setIsSavingIntensity(false);
+        setIsSavingTags(false);
+        return;
+      }
+
+      console.log('💾 Saving workout settings:', {
+        workoutId: workout.id,
+        mainGoal: mainGoal || null,
+        intensity: intensity || null,
+        tags: tags || null
+      });
+
+      const response = await fetch(`/api/workouts/sessions/${workout.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          mainGoal: mainGoal || null,
+          intensity: intensity || null,
+          tags: tags || null
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server error:', errorText);
+        throw new Error('Failed to update workout settings');
+      }
+      
+      // Success - update the workout object in parent component
+      workout.mainGoal = mainGoal;
+      workout.intensity = intensity;
+      workout.tags = tags;
+      
+      console.log('✅ Workout settings saved successfully');
+      
+      // Notify parent to refresh if needed
+      if (onUpdate) {
+        onUpdate();
+      }
+      
+      // Show success message
+      alert('Workout settings saved successfully! ✓');
+    } catch (error) {
+      console.error('Error updating workout settings:', error);
+      alert(`Failed to save workout settings: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsSavingMainGoal(false);
+      setIsSavingIntensity(false);
+      setIsSavingTags(false);
+    }
+  };
+
   const handleNotesChange = async (newNotes: string) => {
     setWorkoutNotes(newNotes);
     setIsSavingNotes(true);
@@ -80,6 +225,124 @@ export default function WorkoutInfoModal({
       console.error('Error updating workout notes:', error);
     } finally {
       setIsSavingNotes(false);
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    setIsSavingFavorite(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setIsSavingFavorite(false);
+        return;
+      }
+
+      // First, save any unsaved settings (mainGoal, intensity, tags)
+      console.log('💾 Auto-saving workout settings before toggling favorite...');
+      console.log('   Current values:', { mainGoal, intensity, tags });
+      console.log('   Workout values:', { 
+        mainGoal: workout.mainGoal, 
+        intensity: workout.intensity, 
+        tags: workout.tags 
+      });
+      
+      const saveResponse = await fetch(`/api/workouts/sessions/${workout.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          mainGoal: mainGoal || null,
+          intensity: intensity || null,
+          tags: tags || null
+        })
+      });
+
+      if (!saveResponse.ok) {
+        console.error('❌ Failed to auto-save settings before favorite toggle');
+        alert('Failed to save workout settings. Please try again.');
+        setIsSavingFavorite(false);
+        return;
+      }
+
+      // Update local workout object
+      workout.mainGoal = mainGoal;
+      workout.intensity = intensity;
+      workout.tags = tags;
+      console.log('✅ Settings auto-saved, workout object updated');
+      
+      // Small delay to ensure database write completes
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      if (isSavedInFavorites) {
+        // Remove from favorites - need to find and delete the favorite
+        const favoritesResponse = await fetch('/api/workouts/favorites', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (favoritesResponse.ok) {
+          const favorites = await favoritesResponse.json();
+          const favoriteToDelete = favorites.find((fav: any) => {
+            try {
+              const data = JSON.parse(fav.workoutData);
+              return data.workoutId === workout.id;
+            } catch {
+              return false;
+            }
+          });
+          
+          if (favoriteToDelete) {
+            const deleteResponse = await fetch(`/api/workouts/favorites/${favoriteToDelete.id}`, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (deleteResponse.ok) {
+              setIsSavedInFavorites(false);
+            }
+          }
+        }
+      } else {
+        // Add to favorites
+        const response = await fetch('/api/workouts/favorites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ workoutId: workout.id })
+        });
+
+        if (response.ok) {
+          setIsSavedInFavorites(true);
+          // Notify parent to refresh favorites list
+          if (onUpdate) {
+            onUpdate();
+          }
+        } else {
+          const error = await response.json();
+          if (error.alreadyExists) {
+            setIsSavedInFavorites(true);
+            // Notify parent to refresh favorites list
+            if (onUpdate) {
+              onUpdate();
+            }
+          } else {
+            throw new Error(error.error || 'Failed to save to favorites');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      alert('Failed to update favorite status. Please try again.');
+    } finally {
+      setIsSavingFavorite(false);
     }
   };
   
@@ -258,6 +521,58 @@ export default function WorkoutInfoModal({
           </button>
         </div>
 
+        {/* Favorite Workout Toggle */}
+        {!isCheckingFavorites && isSavedInFavorites !== null && (
+          <div className="mx-6 mt-4 p-4 rounded-lg border-2 bg-gradient-to-br from-yellow-50 to-orange-50 border-yellow-300">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
+                  <span>⭐</span>
+                  <span>Favourite Workout</span>
+                </h3>
+                <p className="text-xs text-gray-600">
+                  Save this workout to your favourites for quick access and reuse
+                </p>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleToggleFavorite}
+                  disabled={isSavingFavorite}
+                  className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isSavedInFavorites
+                      ? 'bg-gradient-to-r from-yellow-500 to-orange-500 focus:ring-yellow-500'
+                      : 'bg-gray-300 focus:ring-gray-400'
+                  }`}
+                  title={isSavedInFavorites ? 'Remove from favourites' : 'Add to favourites'}
+                >
+                  <span
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform ${
+                      isSavedInFavorites ? 'translate-x-7' : 'translate-x-1'
+                    }`}
+                  >
+                    {isSavingFavorite ? (
+                      <span className="flex items-center justify-center h-full text-xs">⏳</span>
+                    ) : isSavedInFavorites ? (
+                      <span className="flex items-center justify-center h-full text-xs">⭐</span>
+                    ) : (
+                      <span className="flex items-center justify-center h-full text-xs">☆</span>
+                    )}
+                  </span>
+                </button>
+                
+                <div className="text-right">
+                  <div className={`text-xs font-bold ${
+                    isSavedInFavorites ? 'text-orange-600' : 'text-gray-500'
+                  }`}>
+                    {isSavedInFavorites ? 'SAVED' : 'NOT SAVED'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Body */}
         <div className="p-6 space-y-6">
           {/* Basic Information */}
@@ -353,6 +668,85 @@ export default function WorkoutInfoModal({
                 ? 'This is a note field that can be freely edited and does not affect workout structure.'
                 : '💡 Tip: Setting the main sport helps organize and identify your workout type.'}
             </p>
+          </div>
+
+          {/* Main Workout Goal (Editable) */}
+          <div className={`p-4 rounded-lg border ${
+            mainGoal 
+              ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' 
+              : 'bg-gradient-to-br from-rose-50 to-pink-50 border-rose-300'
+          }`}>
+            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+              <span>{mainGoal ? '🎯' : '⚡'}</span>
+              <span>Main Workout Goal</span>
+              {!mainGoal && (
+                <span className="text-xs bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full font-semibold animate-pulse">
+                  Not Set
+                </span>
+              )}
+            </h3>
+            <select
+              value={mainGoal}
+              onChange={(e) => setMainGoal(e.target.value)}
+              className={`w-full px-3 py-2.5 pr-10 border rounded-lg focus:ring-2 text-sm transition-all ${
+                mainGoal 
+                  ? 'border-green-300 focus:ring-green-500 focus:border-green-500 bg-white'
+                  : 'border-rose-400 focus:ring-rose-500 focus:border-rose-500 bg-rose-50 font-medium'
+              }`}
+            >
+              <option value="">⚡ Select main workout goal...</option>
+              {WORKOUT_GOALS.map((goal) => (
+                <option key={goal.value} value={goal.value}>
+                  {goal.label}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500 mt-2">
+              {mainGoal 
+                ? 'This goal represents the primary training objective for this workout.'
+                : '💡 Tip: Setting the main workout goal helps track training focus and progression.'}
+            </p>
+          </div>
+
+          {/* Intensity and Tags Grid */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Intensity (Editable) */}
+            <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-200 rounded-lg p-4">
+              <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                <span>⚡</span>
+                <span>Intensity</span>
+              </h3>
+              <select
+                value={intensity}
+                onChange={(e) => setIntensity(e.target.value)}
+                className="w-full px-3 py-2.5 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white text-sm transition-all"
+              >
+                <option value="Low">🟢 Low</option>
+                <option value="Medium">🟡 Medium</option>
+                <option value="High">🔴 High</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-2">
+                Workout intensity level for tracking training load.
+              </p>
+            </div>
+
+            {/* Tags (Editable) */}
+            <div className="bg-gradient-to-br from-cyan-50 to-blue-50 border-2 border-cyan-200 rounded-lg p-4">
+              <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                <span>🏷️</span>
+                <span>Tags</span>
+              </h3>
+              <input
+                type="text"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="e.g., Upper Body, Push, Strength"
+                className="w-full px-3 py-2.5 border border-cyan-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 bg-white text-sm transition-all"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Comma-separated tags for categorizing workouts.
+              </p>
+            </div>
           </div>
 
           {/* Sports from Moveframes (Read-only) */}
@@ -534,6 +928,23 @@ export default function WorkoutInfoModal({
 
         {/* Footer */}
         <div className="flex gap-3 p-6 border-t bg-gradient-to-r from-gray-50 to-blue-50">
+          <button
+            onClick={handleSaveWorkoutSettings}
+            disabled={isSavingMainGoal || isSavingIntensity || isSavingTags}
+            className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all font-medium flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {(isSavingMainGoal || isSavingIntensity || isSavingTags) ? (
+              <>
+                <span className="animate-spin">⏳</span>
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <span>💾</span>
+                <span>Save Settings</span>
+              </>
+            )}
+          </button>
           <button
             onClick={onClose}
             className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-white hover:border-gray-400 transition-all font-medium shadow-sm"

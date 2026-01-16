@@ -28,6 +28,7 @@ interface WorkoutTableProps {
   onEdit: () => void;
   onDelete: () => void;
   onSaveFavorite?: () => void;
+  onShowOverview?: () => void;
   onShareWorkout?: (workout: any, day: any) => void;
   onExportPdfWorkout?: (workout: any, day: any) => void;
   onPrintWorkout?: (workout: any, day: any) => void;
@@ -68,6 +69,7 @@ export default function WorkoutTable({
   onEdit,
   onDelete,
   onSaveFavorite,
+  onShowOverview,
   onShareWorkout,
   onExportPdfWorkout,
   onPrintWorkout,
@@ -513,6 +515,16 @@ export default function WorkoutTable({
             <button 
               onClick={(e) => {
                 e.stopPropagation();
+                if (onShowOverview) onShowOverview();
+              }}
+              className="px-3 py-1 text-xs bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors font-medium whitespace-nowrap flex-shrink-0"
+              title="View Workout Overview"
+            >
+              Overview
+            </button>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
                 if (onEdit) onEdit();
               }}
               className="px-3 py-1 text-xs bg-white text-cyan-600 rounded hover:bg-cyan-50 transition-colors font-medium whitespace-nowrap flex-shrink-0"
@@ -719,7 +731,7 @@ export default function WorkoutTable({
                   const words = sportName.split(' ');
                   const isOneWord = words.length === 1;
                   const icon = sports[0].icon && (useImageIcons ? 
-                    <img src={sports[0].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '60px', height: '60px', filter: 'grayscale(100%)' }} /> : 
+                    <img src={sports[0].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '40px', height: '40px', filter: 'grayscale(100%)' }} /> : 
                     <span className="text-base flex-shrink-0">{sports[0].icon}</span>
                   );
                   
@@ -830,7 +842,7 @@ export default function WorkoutTable({
                   const words = sportName.split(' ');
                   const isOneWord = words.length === 1;
                   const icon = sports[1].icon && (useImageIcons ? 
-                    <img src={sports[1].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '60px', height: '60px', filter: 'grayscale(100%)' }} /> : 
+                    <img src={sports[1].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '40px', height: '40px', filter: 'grayscale(100%)' }} /> : 
                     <span className="text-base flex-shrink-0">{sports[1].icon}</span>
                   );
                   
@@ -937,7 +949,7 @@ export default function WorkoutTable({
                   const words = sportName.split(' ');
                   const isOneWord = words.length === 1;
                   const icon = sports[2].icon && (useImageIcons ? 
-                    <img src={sports[2].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '60px', height: '60px', filter: 'grayscale(100%)' }} /> : 
+                    <img src={sports[2].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '40px', height: '40px', filter: 'grayscale(100%)' }} /> : 
                     <span className="text-base flex-shrink-0">{sports[2].icon}</span>
                   );
                   
@@ -1044,7 +1056,7 @@ export default function WorkoutTable({
                   const words = sportName.split(' ');
                   const isOneWord = words.length === 1;
                   const icon = sports[3].icon && (useImageIcons ? 
-                    <img src={sports[3].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '60px', height: '60px', filter: 'grayscale(100%)' }} /> : 
+                    <img src={sports[3].icon} alt={sportName} className="object-cover rounded flex-shrink-0" style={{ width: '40px', height: '40px', filter: 'grayscale(100%)' }} /> : 
                     <span className="text-base flex-shrink-0">{sports[3].icon}</span>
                   );
                   

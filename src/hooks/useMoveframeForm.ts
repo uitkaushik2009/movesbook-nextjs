@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getSportConfig, sportNeedsExerciseName, DISTANCE_BASED_SPORTS, isSeriesBasedSport, isAerobicSport, getRepsLabel } from '@/constants/moveframe.constants';
+import { getSportConfig, sportNeedsExerciseName, DISTANCE_BASED_SPORTS, AEROBIC_SPORTS, isSeriesBasedSport, isAerobicSport, getRepsLabel } from '@/constants/moveframe.constants';
 
 export interface IndividualRepetitionPlan {
   index: number;
@@ -158,6 +158,9 @@ export function useMoveframeForm({
   const [exercise, setExercise] = useState('');
   const [appliedTechnique, setAppliedTechnique] = useState('');
 
+  // Aerobic sports specific fields
+  const [aerobicSeries, setAerobicSeries] = useState('1'); // Series/Batteries/Groups for aerobic sports (range 1-9, default 1)
+
   // Annotation fields
   const [annotationText, setAnnotationText] = useState('');
   const [annotationBgColor, setAnnotationBgColor] = useState('#5168c2');
@@ -221,6 +224,7 @@ export function useMoveframeForm({
     setMuscularSector('');
     setExercise('');
     setAppliedTechnique('');
+    setAerobicSeries('1');
     setAnnotationText('');
     setAnnotationBgColor('#5168c2');
     setAnnotationTextColor('#000000');
@@ -485,7 +489,15 @@ export function useMoveframeForm({
       }
       const macroFinalText = effectiveMacroFinal ? ` M${effectiveMacroFinal}` : '';
       
-      return `${dist}m${repsText}${styleText}${speedText}${pauseText}${macroFinalText}`;
+      let baseDescription = `${dist}m${repsText}${styleText}${speedText}${pauseText}${macroFinalText}`;
+      
+      // Wrap in series format if aerobicSeries > 1
+      const aerobicSeriesNum = parseInt(aerobicSeries) || 1;
+      if (aerobicSeriesNum > 1 && AEROBIC_SPORTS.includes(sport as any)) {
+        baseDescription = `${aerobicSeriesNum} x ( ${baseDescription} )`;
+      }
+      
+      return baseDescription;
     } else {
       // Non-distance sports (series-based) with exercise/drill names
       const exerciseText = exercise || 'Exercise';
@@ -509,8 +521,16 @@ export function useMoveframeForm({
       }
       const macroFinalText = effectiveMacroFinal ? ` M${effectiveMacroFinal}` : '';
       
+      let baseDescription = `${exerciseText}: ${setsCount} sets x ${repsPerSet} ${repsTypeText}${styleText}${speedText}${pauseText}${macroFinalText}`;
+      
+      // Wrap in series format if aerobicSeries > 1
+      const aerobicSeriesNum = parseInt(aerobicSeries) || 1;
+      if (aerobicSeriesNum > 1 && AEROBIC_SPORTS.includes(sport as any)) {
+        baseDescription = `${aerobicSeriesNum} x ( ${baseDescription} )`;
+      }
+      
       // Format: "Exercise name: 3 sets x 10 series Pause 30" M0'" (or time value if Time-based)
-      return `${exerciseText}: ${setsCount} sets x ${repsPerSet} ${repsTypeText}${styleText}${speedText}${pauseText}${macroFinalText}`;
+      return baseDescription;
     }
   };
 
@@ -611,7 +631,8 @@ export function useMoveframeForm({
       pausePace: pausePace || null,
       muscularSector: effectiveSport === 'BODY_BUILDING' ? muscularSector : null,
       exercise: sportNeedsExerciseName(effectiveSport) ? exercise : null,
-      appliedTechnique: effectiveSport === 'BODY_BUILDING' ? appliedTechnique : null,
+      appliedTechnique: appliedTechnique || null, // Save technique for ANY sport (not just BODY_BUILDING)
+      aerobicSeries: parseInt(aerobicSeries) || 1, // Series/Batteries/Groups for aerobic sports
       sectionId: effectiveSectionId, // Workout section (for ALL sports)
       
       // Manual mode
@@ -659,6 +680,9 @@ export function useMoveframeForm({
       setType(existingMoveframe.type || 'STANDARD');
       setSectionId(existingMoveframe.sectionId || ''); // Load workout section
       
+      // Load aerobic series (for aerobic sports)
+      setAerobicSeries(existingMoveframe.aerobicSeries?.toString() || '1');
+      
       // Load annotation fields (available for all types)
       setAnnotationText(existingMoveframe.annotationText || '');
       setAnnotationBgColor(existingMoveframe.annotationBgColor || '#5168c2');
@@ -680,7 +704,12 @@ export function useMoveframeForm({
           
           // Distance and repetitions
           setDistance(firstMovelap.distance?.toString() || '100');
-          setRepetitions(existingMoveframe.movelaps?.length?.toString() || '1');
+          
+          // Calculate base repetitions from total movelaps, considering aerobic series
+          const totalMovelaps = existingMoveframe.movelaps?.length || 1;
+          const loadedAerobicSeries = existingMoveframe.aerobicSeries || 1;
+          const baseReps = Math.ceil(totalMovelaps / loadedAerobicSeries);
+          setRepetitions(baseReps.toString());
           
           // Speed, style, and notes
           setSpeed(firstMovelap.speed || 'A2');
@@ -829,14 +858,16 @@ export function useMoveframeForm({
    */
   useEffect(() => {
     if (planningMode === 'individual' && canShowIndividualPlanning()) {
-      const repsCount = parseInt(repetitions) || 0;
+      const baseReps = parseInt(repetitions) || 0;
+      const seriesMultiplier = AEROBIC_SPORTS.includes(sport as any) ? (parseInt(aerobicSeries) || 1) : 1;
+      const repsCount = baseReps * seriesMultiplier;
       
       // Only initialize if plans array is empty or different size
       if (individualPlans.length !== repsCount) {
         initializeIndividualPlans(repsCount);
       }
     }
-  }, [planningMode, repetitions, sport]);
+  }, [planningMode, repetitions, aerobicSeries, sport]);
 
   /**
    * Clear pause field when rest type changes to avoid carrying over invalid formats
@@ -892,6 +923,7 @@ export function useMoveframeForm({
       muscularSector,
       exercise,
       appliedTechnique,
+      aerobicSeries,
       annotationText,
       annotationBgColor,
       annotationTextColor,
@@ -940,6 +972,7 @@ export function useMoveframeForm({
       setMuscularSector,
       setExercise,
       setAppliedTechnique,
+      setAerobicSeries,
       setAnnotationText,
       setAnnotationBgColor,
       setAnnotationTextColor,

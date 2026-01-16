@@ -43,7 +43,7 @@ model User {
   workoutDays              WorkoutDay[]
   workoutPlans             WorkoutPlan[]
   sections                 WorkoutSection[]
-  bodyBuildingTechniques   BodyBuildingTechnique[]
+  executionTechniques      ExecutionTechnique[]
   workoutTemplates         WorkoutTemplate[]
 
   @@map("users_new")
@@ -186,6 +186,9 @@ model WorkoutSession {
   createdAt         DateTime              @default(now())
   includeStretching Boolean               @default(true)
   mainSport         SportType?
+  mainGoal          String?
+  intensity         String?               @default("Medium")
+  tags              String?
   moveframes        Moveframe[]
   sports            WorkoutSessionSport[]
   workoutDay        WorkoutDay            @relation(fields: [workoutDayId], references: [id], onDelete: Cascade)
@@ -227,6 +230,7 @@ model Moveframe {
   repetitions         Int?           // Number of series/repetitions for manual mode
   distance            Int?           // Distance value for manual mode
   appliedTechnique    String?        // Body Building technique applied (for BODY_BUILDING sport only)
+  aerobicSeries       Int?           @default(1) // Series/Batteries/Groups for aerobic sports (range 1-9, default 1)
   section             WorkoutSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
   workoutSession      WorkoutSession @relation(fields: [workoutSessionId], references: [id], onDelete: Cascade)
   movelaps            Movelap[]
@@ -251,7 +255,7 @@ model WorkoutSection {
   @@map("workout_sections")
 }
 
-model BodyBuildingTechnique {
+model ExecutionTechnique {
   id          String   @id @default(cuid())
   userId      String
   name        String
@@ -693,10 +697,12 @@ enum MovelapStatus {
 enum SportType {
   SWIM
   BIKE
+  MTB
   SPINNING
   RUN
   BODY_BUILDING
   ROWING
+  CANOEING
   SKATE
   GYMNASTIC
   STRETCHING

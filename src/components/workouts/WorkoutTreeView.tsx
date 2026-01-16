@@ -427,9 +427,9 @@ export default function WorkoutTreeView({
                                                 }}
                                               >
                                                 {useImageIcons ? (
-                                                  <img src={sportIcon} alt={sport} className="w-4 h-4 object-cover rounded" />
+                                                  <img src={sportIcon} alt={sport} className="w-12 h-12 object-cover rounded" />
                                                 ) : (
-                                                  <span className="text-base">{sportIcon}</span>
+                                                  <span className="text-5xl">{sportIcon}</span>
                                                 )}
                                                 <span className="text-xs">{sport}</span>
                                                 {data.value > 0 && (
@@ -510,9 +510,9 @@ export default function WorkoutTreeView({
                                                   <ChevronRight className="w-3 h-3 flex-shrink-0" />
                                                 )}
                                                 {useImageIcons ? (
-                                                  <img src={sportIcon} alt={moveframe.sport} className="w-4 h-4 object-cover rounded" />
+                                                  <img src={sportIcon} alt={moveframe.sport} className="w-12 h-12 object-cover rounded" />
                                                 ) : (
-                                                  <span className="text-sm">{sportIcon}</span>
+                                                  <span className="text-4xl">{sportIcon}</span>
                                                 )}
                                                 <div className="relative inline-block">
                                                   <span className="text-xs font-medium">{moveframe.letter}</span>
@@ -554,6 +554,10 @@ export default function WorkoutTreeView({
                                               <div>
                                                 {moveframe.movelaps.map((movelap: any, lapIndex: number) => {
                                                   const isEvenLap = lapIndex % 2 === 0;
+                                                  // Check if sport is aerobic or not
+                                                  const AEROBIC_SPORTS = ['SWIM', 'BIKE', 'MTB', 'SPINNING', 'RUN', 'ROWING', 'CANOEING', 'KAYAKING', 'SKATE', 'SKI', 'SNOWBOARD', 'WALKING', 'HIKING'];
+                                                  const isAerobic = AEROBIC_SPORTS.includes(moveframe.sport);
+                                                  
                                                   return (
                                                     <div
                                                       key={movelap.id}
@@ -568,9 +572,21 @@ export default function WorkoutTreeView({
                                                       <span className="w-6 text-center font-medium text-gray-500">
                                                         #{lapIndex + 1}
                                                       </span>
-                                                      <span className="text-gray-700">
-                                                        {movelap.distance ? `${movelap.distance}m` : ''}
-                                                        {movelap.repetitions ? `${movelap.repetitions} reps` : ''}
+                                                      <span className="text-gray-700 font-medium">
+                                                        {isAerobic ? (
+                                                          <>
+                                                            {movelap.distance ? `${movelap.distance}m` : ''}
+                                                            {movelap.repetitions ? `${movelap.repetitions} reps` : ''}
+                                                          </>
+                                                        ) : (
+                                                          // For non-aerobic sports (body building, gymnastics, etc.), show exercise name
+                                                          <>
+                                                            {movelap.muscularSector && (
+                                                              <span className="text-purple-700">{movelap.muscularSector} - </span>
+                                                            )}
+                                                            {movelap.exercise || 'Exercise'}
+                                                          </>
+                                                        )}
                                                       </span>
                                                       {movelap.time && (
                                                         <span className="text-gray-600">⏱️ {movelap.time}</span>
@@ -581,8 +597,11 @@ export default function WorkoutTreeView({
                                                       {movelap.speed && (
                                                         <span className="text-gray-600">🏃 {movelap.speed}</span>
                                                       )}
+                                                      {!isAerobic && movelap.reps && (
+                                                        <span className="text-gray-700">📊 {movelap.reps} reps</span>
+                                                      )}
                                                       {movelap.weight && (
-                                                        <span className="font-semibold" style={{ color: getSecondaryWorkColor() }}>💪 {movelap.weight}</span>
+                                                        <span className="font-semibold" style={{ color: getSecondaryWorkColor() }}>💪 {movelap.weight}kg</span>
                                                       )}
                                                       {movelap.tools && (
                                                         <span className="font-semibold" style={{ color: getToolsColor() }}>🔧 {movelap.tools}</span>

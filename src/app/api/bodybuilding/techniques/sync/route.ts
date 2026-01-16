@@ -22,6 +22,9 @@ export async function POST(request: NextRequest) {
 
     const { techniques } = await request.json();
 
+    console.log(`💾 Syncing ${techniques?.length || 0} execution techniques for user:`, decoded.userId);
+    console.log(`📋 Techniques data:`, JSON.stringify(techniques, null, 2));
+
     if (!techniques || !Array.isArray(techniques)) {
       return NextResponse.json(
         { error: 'Techniques array is required' },
@@ -29,8 +32,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Only delete and recreate if there are techniques to save
+    // This prevents accidentally deleting everything with an empty array
+    if (techniques.length === 0) {
+      console.log('⚠️ Empty techniques array - not deleting existing techniques');
+      const existing = await prisma.executionTechnique.findMany({
+        where: { userId: decoded.userId }
+      });
+      return NextResponse.json({ techniques: existing });
+    }
+
     // Delete existing techniques for this user
-    await prisma.bodyBuildingTechnique.deleteMany({
+    await prisma.executionTechnique.deleteMany({
       where: {
         userId: decoded.userId,
       },
@@ -41,8 +54,9 @@ export async function POST(request: NextRequest) {
     for (const technique of techniques) {
       // Convert sports array to comma-separated string
       const sportsString = Array.isArray(technique.sports) ? technique.sports.join(',') : '';
+      console.log(`  📝 Saving technique: ${technique.title || technique.name} | Sports: ${sportsString}`);
       
-      const created = await prisma.bodyBuildingTechnique.create({
+      const created = await prisma.executionTechnique.create({
         data: {
           userId: decoded.userId,
           name: technique.title || technique.name,

@@ -43,6 +43,7 @@ interface DayTableViewProps {
   onShareDay?: (day: any) => void;
   onExportPdfDay?: (day: any) => void;
   onPrintDay?: (day: any) => void;
+  onShowDayOverview?: (day: any) => void;
   onEditWorkout?: (workout: any, day: any) => void;
   onEditMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onEditMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
@@ -56,6 +57,7 @@ interface DayTableViewProps {
   onShareWorkout?: (workout: any, day: any) => void;
   onExportPdfWorkout?: (workout: any, day: any) => void;
   onPrintWorkout?: (workout: any, day: any) => void;
+  onShowWorkoutOverview?: (workout: any, day: any) => void;
   onDeleteMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onDeleteMovelap?: (movelap: any, moveframe: any, workout: any, day: any) => void;
   onCopyWorkout?: (workout: any, day: any) => void;
@@ -112,6 +114,7 @@ export default function DayTableView({
   onShareDay,
   onExportPdfDay,
   onPrintDay,
+  onShowDayOverview,
   onEditWorkout,
   onEditMoveframe,
   onEditMovelap,
@@ -126,6 +129,7 @@ export default function DayTableView({
   onShareWorkout,
   onExportPdfWorkout,
   onPrintWorkout,
+  onShowWorkoutOverview,
   onDeleteMoveframe,
   onDeleteMovelap,
   onCopyWorkout,
@@ -1588,6 +1592,7 @@ export default function DayTableView({
                                   onEditDay={onEditDay}
                                   onAddWorkout={onAddWorkout}
                                   onShowDayInfo={handleShowDayInfo}
+                                  onShowDayOverview={onShowDayOverview}
                                   onCopyDay={onCopyDay}
                                   onMoveDay={onMoveDay}
                                   onPasteDay={onPasteDay}
@@ -1598,7 +1603,7 @@ export default function DayTableView({
                                 />
                                 {expandedDaysSet.has(day.id) && (
                                   <tr className="workout-expanded-row">
-                                    <td colSpan={activeSection === 'D' ? 21 : 20} className="p-0 bg-transparent">
+                                    <td colSpan={20} className="p-0 bg-transparent">
                                       <div className="workout-details-wrapper">
                                         <div className="workout-details-container">
                                           <div className="mb-2 text-sm font-semibold text-gray-700">
@@ -1628,6 +1633,7 @@ export default function DayTableView({
                                         onShareWorkout={onShareWorkout}
                                         onExportPdfWorkout={onExportPdfWorkout}
                                         onPrintWorkout={onPrintWorkout}
+                                        onShowWorkoutOverview={onShowWorkoutOverview}
                                         onDeleteMoveframe={onDeleteMoveframe}
                                         onDeleteMovelap={onDeleteMovelap}
                                         onCopyWorkout={onCopyWorkout}
@@ -1765,8 +1771,8 @@ export default function DayTableView({
                  Dayname
               </th>
               )}
-              {/* Match done column - For Section B and C */}
-              {(activeSection === 'B' || activeSection === 'C') && (
+              {/* Match done column - For Section C */}
+              {activeSection === 'C' && (
                 <th 
                   className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6"
                   style={{ 
@@ -1884,6 +1890,7 @@ export default function DayTableView({
                       onEditDay={onEditDay}
                       onAddWorkout={onAddWorkout}
                       onShowDayInfo={handleShowDayInfo}
+                      onShowDayOverview={onShowDayOverview}
                       onCopyDay={onCopyDay}
                       onMoveDay={onMoveDay}
                       onPasteDay={onPasteDay}
@@ -1934,6 +1941,7 @@ export default function DayTableView({
                               onShareWorkout={onShareWorkout}
                               onExportPdfWorkout={onExportPdfWorkout}
                               onPrintWorkout={onPrintWorkout}
+                              onShowWorkoutOverview={onShowWorkoutOverview}
                               onDeleteMoveframe={onDeleteMoveframe}
                               onDeleteMovelap={onDeleteMovelap}
                               onCopyWorkout={onCopyWorkout}

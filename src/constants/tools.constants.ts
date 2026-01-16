@@ -13,6 +13,7 @@ export interface Period {
   color: string;
   order: number;
   userId?: string; // Track ownership
+  isUserCreated?: boolean; // Distinguish user-created from admin defaults
 }
 
 export interface WorkoutSection {
@@ -22,6 +23,7 @@ export interface WorkoutSection {
   color: string;
   order: number;
   userId?: string; // Track ownership
+  isUserCreated?: boolean; // Distinguish user-created from admin defaults
 }
 
 export interface ExecutionTechnique {
@@ -32,6 +34,7 @@ export interface ExecutionTechnique {
   sports: string[]; // Array of sport names that can use this technique
   order: number;
   userId?: string; // Track ownership
+  isUserCreated?: boolean; // Distinguish user-created from admin defaults
 }
 
 // Backward compatibility alias
@@ -54,6 +57,7 @@ export interface Equipment {
   company?: string;
   description: string;
   inStock: boolean;
+  isUserCreated?: boolean; // Distinguish user-created from admin defaults
   // Athlete-specific fields
   startDate?: string;
   durationAlarm?: {
@@ -71,6 +75,7 @@ export interface Exercise {
   equipment: string[];
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
   muscleGroups: string[];
+  isUserCreated?: boolean; // Distinguish user-created from admin defaults
 }
 
 export interface Device {
@@ -84,6 +89,7 @@ export interface Device {
   isEnabled: boolean;
   syncProtocol: string;
   description: string;
+  isUserCreated?: boolean; // Distinguish user-created from admin defaults
 }
 
 /**

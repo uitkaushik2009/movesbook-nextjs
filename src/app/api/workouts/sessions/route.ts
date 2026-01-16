@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       workoutDayId,
+      dayId, // Alternative field name for workoutDayId
       sessionNumber,
       name,
       code,
@@ -28,23 +29,35 @@ export async function POST(request: NextRequest) {
       status,
       sports,
       symbol,
-      includeStretching
+      includeStretching,
+      mainSport,
+      mainGoal,
+      intensity,
+      tags,
+      moveframes
     } = body;
 
+    // Use dayId if workoutDayId is not provided
+    const actualDayId = workoutDayId || dayId;
+
     console.log('📝 Creating workout session with data:', { 
-      workoutDayId, 
+      actualDayId, 
       sessionNumber, 
       name, 
       code,
       sports,
       symbol,
-      includeStretching
+      includeStretching,
+      mainSport,
+      mainGoal,
+      moveframesProvided: !!moveframes
     });
 
     // Validate required fields
-    if (!workoutDayId || !sessionNumber) {
+    // Note: sessionNumber is optional when copying from favorites
+    if (!actualDayId) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required field: dayId or workoutDayId' },
         { status: 400 }
       );
     }
@@ -63,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     // Check existing workouts for this day
     const existingWorkouts = await prisma.workoutSession.findMany({
-      where: { workoutDayId },
+      where: { workoutDayId: actualDayId },
       select: { id: true }
     });
 
@@ -77,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     // Verify the workout day exists and belongs to user
     const workoutDay = await prisma.workoutDay.findUnique({
-      where: { id: workoutDayId },
+      where: { id: actualDayId },
       include: {
         workoutWeek: {
           include: {
@@ -102,11 +115,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine session number automatically if not provided
+    let finalSessionNumber = sessionNumber;
+    if (!finalSessionNumber) {
+      const existingSessions = await prisma.workoutSession.findMany({
+        where: { workoutDayId: actualDayId },
+        select: { sessionNumber: true },
+        orderBy: { sessionNumber: 'desc' }
+      });
+      finalSessionNumber = existingSessions.length > 0 ? existingSessions[0].sessionNumber + 1 : 1;
+    }
+
     // Check if session number already exists for this day
     const existingSession = await prisma.workoutSession.findFirst({
       where: {
-        workoutDayId,
-        sessionNumber
+        workoutDayId: actualDayId,
+        sessionNumber: finalSessionNumber
       }
     });
 
@@ -119,7 +143,7 @@ export async function POST(request: NextRequest) {
 
     // Check max 3 sessions per day
     const sessionsCount = await prisma.workoutSession.count({
-      where: { workoutDayId }
+      where: { workoutDayId: actualDayId }
     });
 
     if (sessionsCount >= 3) {
@@ -129,21 +153,83 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create workout session with sports (if any)
+    // Get or create a default section for moveframes
+    let defaultSection = await prisma.workoutSection.findFirst({
+      where: { userId: decoded.userId },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    // If no section exists, create a default one
+    if (!defaultSection) {
+      defaultSection = await prisma.workoutSection.create({
+        data: {
+          userId: decoded.userId,
+          name: 'Default',
+          code: 'DEF',
+          description: 'Default section',
+          color: '#3B82F6'
+        }
+      });
+    }
+
+    // Create workout session with sports (if any) and moveframes (if provided)
     const session = await prisma.workoutSession.create({
       data: {
-        workoutDayId,
-        sessionNumber,
-        name: name || `Workout ${sessionNumber}`,
+        workoutDayId: actualDayId,
+        sessionNumber: finalSessionNumber,
+        name: name || `Workout ${finalSessionNumber}`,
         code: code || '',
         time: time || '',
         location: location || '',
         notes: notes || (includeStretching ? `${symbol || ''} Includes stretching` : symbol || ''),
         status: status as any || 'PLANNED_FUTURE',
+        mainSport: mainSport || null,
+        mainGoal: mainGoal || null,
+        intensity: intensity || 'Medium',
+        tags: tags || null,
         ...(sportsList.length > 0 && {
           sports: {
             create: sportsList.map((sport: string) => ({
               sport: sport as any
+            }))
+          }
+        }),
+        ...(moveframes && Array.isArray(moveframes) && moveframes.length > 0 && {
+          moveframes: {
+            create: moveframes.map((mf: any) => ({
+              letter: mf.letter,
+              sport: mf.sport as any,
+              type: mf.type || 'STANDARD', // Default to STANDARD if not provided
+              quantity: mf.quantity,
+              quantityType: mf.quantityType as any,
+              repetitions: mf.repetitions,
+              rest: mf.rest,
+              intensity: mf.intensity,
+              speedType: mf.speedType as any,
+              description: mf.description || null,
+              notes: mf.notes || null,
+              appliedTechnique: mf.appliedTechnique || null,
+              aerobicSeries: mf.aerobicSeries || 1,
+              sectionId: mf.sectionId || defaultSection.id,
+              ...(mf.movelaps && Array.isArray(mf.movelaps) && mf.movelaps.length > 0 && {
+                movelaps: {
+                  create: mf.movelaps.map((ml: any) => ({
+                    repetitionNumber: ml.repetitionNumber,
+                    distance: ml.distance,
+                    time: ml.time,
+                    reps: ml.reps,
+                    muscularSector: ml.muscularSector || null,
+                    exercise: ml.exercise || null,
+                    speed: ml.speed,
+                    pace: ml.pace,
+                    pause: ml.pause,
+                    restType: ml.restType as any,
+                    rowPerMin: ml.rowPerMin || ml.rowsPerMinute, // Support both field names for compatibility
+                    status: ml.status || 'PENDING', // Default status
+                    notes: ml.notes || null
+                  }))
+                }
+              })
             }))
           }
         })

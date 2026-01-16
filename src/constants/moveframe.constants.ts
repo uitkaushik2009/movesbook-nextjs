@@ -92,6 +92,23 @@ export const SPORT_CONFIGS = {
     sounds: ['Beep', 'Bell', 'Chime', 'None']
   },
   
+  MTB: {
+    // Mountain Bike - same grid as BIKE
+    meters: ['200', '400', '500', '1000', '1500', '2000', '3000', '4000', '5000', '7000', '8000', '10000', 'input'],
+    speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
+    styles: ['Road', 'Track', 'Mountain', 'Indoor'],
+    pace100Meters: ['200', '400'],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0', '15"', '30"', '45"', "1'", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
   SPINNING: {
     meters: ['200', '400', '500', '1000', '1500', '2000', '3000', '4000', '5000', '7000', '8000', '10000', 'input'],
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
@@ -131,6 +148,23 @@ export const SPORT_CONFIGS = {
     speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
     rowPerMin: 'input', // Range 10-99
     // Pace\100 only for these specific meter values
+    pace100Meters: ['100', '200', '250', '300', '400'],
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['15"', '30"', '45"', "1'", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  CANOEING: {
+    // Same grid as ROWING
+    meters: ['100', '200', '250', '300', '400', '500', '750', '1000', '1250', '1500', '1750', '2000', '2500', '3000', '4000', '5000', '7000', '8000', '10000', '12000', '15000', 'input'],
+    speeds: ['A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2'],
+    rowPerMin: 'input', // Range 10-99
     pace100Meters: ['100', '200', '250', '300', '400'],
     restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
@@ -257,6 +291,60 @@ export const SPORT_CONFIGS = {
     restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
     pauses: {
       [REST_TYPES.SET_TIME]: ['0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  CALISTENIC: {
+    // Similar to Body Building
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive', 'Negative'],
+    styles: 'input', // Free text input (e.g., "Pull-ups", "Push-ups", "Dips")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0', '0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  SPARTAN: {
+    // Similar to Body Building
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive', 'Negative'],
+    styles: 'input', // Free text input (e.g., "Rope climb", "Wall jump", "Burpees")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0', '0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
+      [REST_TYPES.RESTART_TIME]: 'input',
+      [REST_TYPES.RESTART_PULSE]: 'input'
+    },
+    macroFinals: MACRO_FINAL_OPTIONS,
+    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
+    sounds: ['Beep', 'Bell', 'Chime', 'None']
+  },
+  
+  CROSSFIT: {
+    // Similar to Body Building
+    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive', 'Negative'],
+    styles: 'input', // Free text input (e.g., "WOD", "AMRAP", "EMOM")
+    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
+    repsRange: { min: 1, max: 99 },
+    timeRange: { min: '00\'01"', max: '09\'59"' },
+    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
+    pauses: {
+      [REST_TYPES.SET_TIME]: ['0', '0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"],
       [REST_TYPES.RESTART_TIME]: 'input',
       [REST_TYPES.RESTART_PULSE]: 'input'
     },
@@ -491,60 +579,6 @@ export const SPORT_CONFIGS = {
     sounds: ['Beep', 'Bell', 'Chime', 'None']
   },
   
-  CALISTENIC: {
-    // Bodyweight training - series/reps based
-    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive', 'Negative'],
-    styles: 'input', // Free text input (e.g., "Pull-ups", "Push-ups", "Dips")
-    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
-    repsRange: { min: 1, max: 99 },
-    timeRange: { min: '00\'01"', max: '09\'59"' },
-    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
-    pauses: {
-      [REST_TYPES.SET_TIME]: ['0"', '10"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
-      [REST_TYPES.RESTART_TIME]: 'input',
-      [REST_TYPES.RESTART_PULSE]: 'input'
-    },
-    macroFinals: MACRO_FINAL_OPTIONS,
-    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
-    sounds: ['Beep', 'Bell', 'Chime', 'None']
-  },
-  
-  CROSSFIT: {
-    // Mixed training - series/reps based
-    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive'],
-    styles: 'input', // Free text input (e.g., "WOD", "AMRAP", "EMOM")
-    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
-    repsRange: { min: 1, max: 99 },
-    timeRange: { min: '00\'01"', max: '09\'59"' },
-    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
-    pauses: {
-      [REST_TYPES.SET_TIME]: ['0"', '10"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
-      [REST_TYPES.RESTART_TIME]: 'input',
-      [REST_TYPES.RESTART_PULSE]: 'input'
-    },
-    macroFinals: MACRO_FINAL_OPTIONS,
-    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
-    sounds: ['Beep', 'Bell', 'Chime', 'None']
-  },
-  
-  SPARTAN: {
-    // Obstacle race training - series/reps based
-    speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive'],
-    styles: 'input', // Free text input (e.g., "Rope climb", "Wall jump", "Burpees")
-    repsTypes: [REPS_TYPES.REPS, REPS_TYPES.TIME],
-    repsRange: { min: 1, max: 99 },
-    timeRange: { min: '00\'01"', max: '09\'59"' },
-    restTypes: [REST_TYPES.SET_TIME, REST_TYPES.RESTART_TIME, REST_TYPES.RESTART_PULSE],
-    pauses: {
-      [REST_TYPES.SET_TIME]: ['0"', '10"', '15"', '20"', '30"', '45"', "1'", "1'30\"", "2'", "3'"],
-      [REST_TYPES.RESTART_TIME]: 'input',
-      [REST_TYPES.RESTART_PULSE]: 'input'
-    },
-    macroFinals: MACRO_FINAL_OPTIONS,
-    alarms: ['-1', '-2', '-3', '-4', '-5', '-6', '-7', '-8', '-9', '-10'],
-    sounds: ['Beep', 'Bell', 'Chime', 'None']
-  },
-  
   TRIATHLON: {
     // Multi-sport - can use distance for swim/bike/run portions, but reps for transitions
     speeds: ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast'],
@@ -584,15 +618,20 @@ export const SPORT_CONFIGS = {
 export const SPORTS_LIST = [
   'SWIM',
   'BIKE',
+  'MTB',
   'SPINNING',
   'RUN',
   'BODY_BUILDING',
   'ROWING',
+  'CANOEING',
   'SKATE',
   'GYMNASTIC',
   'STRETCHING',
   'PILATES',
   'YOGA',
+  'CALISTENIC',
+  'SPARTAN',
+  'CROSSFIT',
   'SKI',
   'SNOWBOARD',
   'TECHNICAL_MOVES',
@@ -619,6 +658,7 @@ export const SPORTS_LIST = [
 export const DISTANCE_BASED_SPORTS = [
   'SWIM',
   'BIKE',
+  'MTB',
   'SPINNING',
   'RUN',
   'ROWING',
@@ -638,6 +678,7 @@ export const DISTANCE_BASED_SPORTS = [
 export const AEROBIC_SPORTS = [
   'SWIM',
   'BIKE',
+  'MTB',
   'SPINNING',
   'RUN',
   'ROWING',
@@ -703,11 +744,11 @@ export const hasRepsTypeSelection = (sport: string): boolean => {
 // Helper function to get pace label based on sport and meters
 export const getPaceLabel = (sport: string, meters: string): string => {
   // Special handling for specific sports
-  if (sport === 'BIKE') {
+  if (sport === 'BIKE' || sport === 'MTB') {
     return 'Speed\\h'; // Speed km/h (decimal format: 00.0 to 99.9)
   }
   
-  if (sport === 'ROWING') {
+  if (sport === 'ROWING' || sport === 'CANOEING') {
     return 'Speed\\500m'; // Speed per 500m (time format: 0'00")
   }
   
@@ -744,6 +785,7 @@ export const shouldShowPaceField = (sport: string): boolean => {
 // Helper function to get display name for sports
 export const getSportDisplayName = (sport: string): string => {
   const displayNames: Record<string, string> = {
+    'MTB': 'Mountain Bike',
     'BODY_BUILDING': 'BODY BUILDING',
     'TECHNICAL_MOVES': 'TECHNICAL MOVES',
     'FREE_MOVES': 'FREE MOVES'
@@ -836,7 +878,7 @@ export function getPaceUnit(sport: string): string {
   if (sport === 'SWIM') {
     return 'min\\10m';
   }
-  if (sport === 'ROWING') {
+  if (sport === 'ROWING' || sport === 'CANOEING') {
     return 'min\\500m';
   }
   if (sport === 'RUN' || sport === 'SKATE' || sport === 'SKI' || sport === 'SNOWBOARD') {

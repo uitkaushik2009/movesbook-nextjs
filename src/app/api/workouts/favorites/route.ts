@@ -24,6 +24,25 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' }
     });
     
+    // Log workout data for debugging
+    console.log('📊 Loaded', favorites.length, 'favorites for user');
+    console.log('');
+    favorites.forEach((fav, idx) => {
+      try {
+        const parsed = JSON.parse(fav.workoutData);
+        console.log(`  ✅ Favorite ${idx + 1} "${fav.name}" (ID: ${fav.id.substring(0, 12)}...):`);
+        console.log(`     mainGoal: ${parsed?.workout?.mainGoal || 'null'}`);
+        console.log(`     intensity: ${parsed?.workout?.intensity || 'null'}`);
+        console.log(`     tags: ${parsed?.workout?.tags || 'null'}`);
+        console.log(`     mainSport: ${parsed?.workout?.mainSport || 'null'}`);
+        console.log(`     moveframes: ${parsed?.moveframes?.length || 0}`);
+        console.log('');
+      } catch (e) {
+        console.log(`  ❌ Favorite ${idx + 1} "${fav.name}": Error parsing - ${e}`);
+        console.log('');
+      }
+    });
+    
     return NextResponse.json(favorites, { status: 200 });
   } catch (error: any) {
     console.error('Error fetching favorite workouts:', error);
@@ -114,63 +133,87 @@ export async function POST(req: NextRequest) {
       });
     });
     
+    // Prepare workout data JSON
+    const workoutDataObj = {
+      workoutId: workout.id, // Store the original workout ID for duplicate checking
+      workout: {
+        name: workout.name,
+        code: workout.code,
+        sessionNumber: workout.sessionNumber,
+        time: workout.time,
+        weather: workout.weather,
+        location: workout.location,
+        surface: workout.surface,
+        notes: workout.notes,
+        status: workout.status,
+        mainSport: workout.mainSport,
+        mainGoal: workout.mainGoal,
+        intensity: workout.intensity,
+        tags: workout.tags
+      },
+      sports: workout.sports.map(s => ({ sport: s.sport })),
+      moveframes: workout.moveframes.map(mf => ({
+        letter: mf.letter,
+        sport: mf.sport,
+        type: mf.type,
+        description: mf.description,
+        notes: mf.notes,
+        macroFinal: mf.macroFinal,
+        alarm: mf.alarm,
+        movelaps: mf.movelaps.map(ml => ({
+          repetitionNumber: ml.repetitionNumber,
+          distance: ml.distance,
+          speed: ml.speed,
+          style: ml.style,
+          pace: ml.pace,
+          time: ml.time,
+          reps: ml.reps,
+          r1: ml.r1,
+          r2: ml.r2,
+          muscularSector: ml.muscularSector,
+          exercise: ml.exercise,
+          restType: ml.restType,
+          pause: ml.pause,
+          macroFinal: ml.macroFinal,
+          alarm: ml.alarm,
+          sound: ml.sound,
+          notes: ml.notes,
+          status: ml.status,
+          isSkipped: ml.isSkipped,
+          isDisabled: ml.isDisabled
+        }))
+      }))
+    };
+    
+    // Test that the JSON can be properly stringified and parsed
+    let workoutDataStr: string;
+    try {
+      workoutDataStr = JSON.stringify(workoutDataObj);
+      // Test that it can be parsed back
+      JSON.parse(workoutDataStr);
+    } catch (jsonError) {
+      console.error('❌ Failed to create valid JSON for workout data:', jsonError);
+      console.error('   Workout ID:', workout.id);
+      console.error('   Workout Name:', workout.name);
+      return NextResponse.json({ 
+        error: 'Workout data contains invalid characters that cannot be saved. Please check your notes and descriptions for special characters.' 
+      }, { status: 400 });
+    }
+    
     // Create favorite workout
     const favorite = await prisma.favoriteWorkout.create({
       data: {
         userId,
         name: workout.name,
         description: workout.notes || `Saved from ${new Date().toLocaleDateString()}`,
-        workoutData: JSON.stringify({
-          workoutId: workout.id, // Store the original workout ID for duplicate checking
-          workout: {
-            name: workout.name,
-            code: workout.code,
-            sessionNumber: workout.sessionNumber,
-            time: workout.time,
-            weather: workout.weather,
-            location: workout.location,
-            surface: workout.surface,
-            notes: workout.notes,
-            status: workout.status
-          },
-          sports: workout.sports.map(s => ({ sport: s.sport })),
-          moveframes: workout.moveframes.map(mf => ({
-            letter: mf.letter,
-            sport: mf.sport,
-            type: mf.type,
-            description: mf.description,
-            notes: mf.notes,
-            macroFinal: mf.macroFinal,
-            alarm: mf.alarm,
-            movelaps: mf.movelaps.map(ml => ({
-              repetitionNumber: ml.repetitionNumber,
-              distance: ml.distance,
-              speed: ml.speed,
-              style: ml.style,
-              pace: ml.pace,
-              time: ml.time,
-              reps: ml.reps,
-              r1: ml.r1,
-              r2: ml.r2,
-              muscularSector: ml.muscularSector,
-              exercise: ml.exercise,
-              restType: ml.restType,
-              pause: ml.pause,
-              macroFinal: ml.macroFinal,
-              alarm: ml.alarm,
-              sound: ml.sound,
-              notes: ml.notes,
-              status: ml.status,
-              isSkipped: ml.isSkipped,
-              isDisabled: ml.isDisabled
-            }))
-          }))
-        }),
+        workoutData: workoutDataStr,
         sports: Array.from(sportsSet).join(','),
         totalDistance,
         totalDuration: Math.round(totalDuration)
       }
     });
+    
+    console.log('✅ Successfully saved favorite workout:', favorite.id, '- JSON length:', workoutDataStr.length);
     
     return NextResponse.json({ 
       message: 'Workout saved to favorites successfully',

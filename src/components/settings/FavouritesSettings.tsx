@@ -213,19 +213,75 @@ export default function FavouritesSettings() {
       if (response.ok) {
         const favorites = await response.json(); // API returns array directly
         console.log('✅ Loaded favorite workouts:', favorites);
-        // Transform to match the Workout interface
-        const transformed = Array.isArray(favorites) ? favorites.map((fav: any) => ({
-          id: fav.id,
-          name: fav.name,
-          description: fav.description || '',
-          duration: Math.round((fav.totalDuration || 0) / 60), // Convert seconds to minutes
-          intensity: 'Medium' as const,
-          moveframesCount: 0, // Not stored in FavoriteWorkout
-          sport: fav.sports?.split(',')[0] || 'Unknown',
-          sportIcon: undefined,
-          lastUsed: new Date(fav.createdAt).toLocaleDateString(),
-          tags: fav.sports?.split(',') || []
-        })) : [];
+        
+        // Filter out corrupted favorites
+        const validFavorites: any[] = [];
+        const corruptedFavorites: any[] = [];
+        
+        if (Array.isArray(favorites)) {
+          favorites.forEach((fav: any) => {
+            try {
+              // Test if workoutData is valid JSON
+              if (fav.workoutData) {
+                JSON.parse(fav.workoutData);
+              }
+              validFavorites.push(fav);
+            } catch (error) {
+              console.error(`❌ CORRUPTED FAVORITE DETECTED:`, {
+                id: fav.id,
+                name: fav.name,
+                error: error instanceof Error ? error.message : String(error)
+              });
+              corruptedFavorites.push(fav);
+            }
+          });
+        }
+        
+        // Show warning if corrupted data found
+        if (corruptedFavorites.length > 0) {
+          console.warn(`⚠️ Found ${corruptedFavorites.length} corrupted favorites. IDs:`, corruptedFavorites.map(f => f.id));
+          alert(`Warning: ${corruptedFavorites.length} favorite workout(s) have corrupted data and will be hidden.\n\nCorrupted IDs: ${corruptedFavorites.map(f => f.id).join(', ')}\n\nYou may need to delete these from the database manually.`);
+        }
+        
+        // Transform valid favorites to match the Workout interface
+        const transformed = validFavorites.map((fav: any) => {
+          // Parse workoutData to get intensity and tags
+          let parsedData = null;
+          let workoutIntensity = 'Medium';
+          let workoutTags = [];
+          
+          try {
+            parsedData = fav.workoutData ? JSON.parse(fav.workoutData) : null;
+            workoutIntensity = parsedData?.workout?.intensity || 'Medium';
+            workoutTags = parsedData?.workout?.tags ? parsedData.workout.tags.split(',').map((t: string) => t.trim()) : [];
+          } catch (e) {
+            console.error('Error parsing workoutData:', e);
+          }
+          
+          return {
+            id: fav.id,
+            name: fav.name,
+            description: fav.description || '',
+            duration: Math.round((fav.totalDuration || 0) / 60), // Convert seconds to minutes
+            intensity: workoutIntensity as any,
+            moveframesCount: 0, // Not stored in FavoriteWorkout
+            sport: fav.sports?.split(',')[0] || 'Unknown',
+            sportIcon: undefined,
+            lastUsed: new Date(fav.createdAt).toLocaleDateString(),
+            tags: workoutTags.length > 0 ? workoutTags : (fav.sports?.split(',') || []),
+            workoutData: fav.workoutData, // Pass through the raw workoutData for FavoriteWorkoutCard
+            totalDistance: fav.totalDistance,
+            totalDuration: fav.totalDuration
+          };
+        });
+        
+        console.log('📦 Transformed favorites with intensity/tags:', transformed.map(w => ({
+          id: w.id,
+          name: w.name,
+          intensity: w.intensity,
+          tags: w.tags
+        })));
+        
         setWorkouts(transformed);
       } else {
         console.log('⚠️ No favorite workouts found');
@@ -591,6 +647,10 @@ export default function FavouritesSettings() {
           name: workoutData.workout.name,
           code: workoutData.workout.code,
           notes: workoutData.workout.notes,
+          mainSport: workoutData.workout.mainSport || null,
+          mainGoal: workoutData.workout.mainGoal || null,
+          intensity: workoutData.workout.intensity || 'Medium',
+          tags: workoutData.workout.tags || null,
           sports: workoutData.sports,
           moveframes: workoutData.moveframes
         })
@@ -885,15 +945,15 @@ export default function FavouritesSettings() {
 
       {/* Workouts Tab */}
       {activeTab === 'workouts' && (
-        <div className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {workouts
             .filter(workout => 
               (searchQuery === '' || workout.name.toLowerCase().includes(searchQuery.toLowerCase())) &&
-              (filterTag === 'all' || workout.tags.includes(filterTag))
+              (filterTag === 'all' || workout.tags?.includes(filterTag))
             )
             .sort((a, b) => {
               if (sortBy === 'name') return a.name.localeCompare(b.name);
-              if (sortBy === 'lastUsed') return new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime();
+              if (sortBy === 'lastUsed') return new Date(b.lastUsed || 0).getTime() - new Date(a.lastUsed || 0).getTime();
               return 0;
             })
             .map((workout) => (
@@ -903,6 +963,7 @@ export default function FavouritesSettings() {
                 onDelete={handleDeleteWorkout}
                 onOverview={handleOverviewWorkout}
                 onUseInPlanner={handleUseInPlanner}
+                onUpdate={loadFavoriteWorkouts}
               />
             ))}
         </div>
@@ -1248,7 +1309,7 @@ export default function FavouritesSettings() {
 
       {/* Weekly Plan Dialog */}
       {showPlanDialog && editingPlan && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold mb-6">
               {editingPlan.id ? 'Edit Weekly Plan' : 'Add Weekly Plan'}
@@ -1362,7 +1423,7 @@ export default function FavouritesSettings() {
 
       {/* Workout Dialog */}
       {showWorkoutDialog && editingWorkout && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold mb-6">
               {editingWorkout.id ? 'Edit Workout' : 'Add Workout'}
@@ -1486,7 +1547,7 @@ export default function FavouritesSettings() {
 
       {/* Moveframe Dialog */}
       {showMoveframeDialog && editingMoveframe && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h3 className="text-2xl font-bold mb-6">
               {editingMoveframe.id ? 'Edit Moveframe' : 'Add Moveframe'}
@@ -1621,7 +1682,7 @@ export default function FavouritesSettings() {
 
       {/* User Password Dialog */}
       {showPasswordDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full">
             <h3 className="text-xl font-semibold mb-4">🔐 Confirm Your Identity</h3>
             <p className="text-gray-600 mb-4">
@@ -1668,7 +1729,7 @@ export default function FavouritesSettings() {
 
       {/* Load Language Defaults Dialog */}
       {showLoadDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]">
           <div className="bg-white rounded-2xl p-8 max-w-md w-full">
             <h3 className="text-xl font-semibold mb-4">📥 Load Language Defaults</h3>
             <p className="text-gray-600 mb-4">

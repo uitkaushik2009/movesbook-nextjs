@@ -198,12 +198,18 @@ export function useToolsData(): UseToolsDataReturn {
             title: t.name,
             description: t.description || '',
             color: t.color,
-            sports: Array.isArray(t.sports) ? t.sports : [],
+            sports: t.sports || [], // API already returns array, no need to check
             order: 0,
             userId: t.userId // Track ownership
           }));
           setBodyBuildingTechniques(formattedTechniques);
           console.log('✅ Loaded body building techniques from database:', formattedTechniques);
+          console.log('🔍 Techniques details:', formattedTechniques.map((t: BodyBuildingTechnique) => ({ 
+            title: t.title, 
+            sports: t.sports, 
+            userId: t.userId,
+            description: t.description 
+          })));
         } else {
           loadBodyBuildingTechniquesFromLocalStorage();
         }
@@ -502,13 +508,19 @@ export function useToolsData(): UseToolsDataReturn {
       }
 
       // Sync body building techniques to Prisma BodyBuildingTechnique table (bulk sync)
+      // Automatically set sports to ['BODY_BUILDING'] for all techniques
+      const techniquesWithSport = bodyBuildingTechniques.map(t => ({
+        ...t,
+        sports: ['BODY_BUILDING']
+      }));
+      
       const techniquesResponse = await fetch('/api/bodybuilding/techniques/sync', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ techniques: bodyBuildingTechniques })
+        body: JSON.stringify({ techniques: techniquesWithSport })
       });
 
       if (techniquesResponse.ok) {

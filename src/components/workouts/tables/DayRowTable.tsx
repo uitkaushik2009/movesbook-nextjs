@@ -29,6 +29,7 @@ interface DayRowTableProps {
   onEditDay?: (day: any) => void;
   onAddWorkout?: (day: any) => void;
   onShowDayInfo?: (day: any) => void;
+  onShowDayOverview?: (day: any) => void;
   onCopyDay?: (day: any) => void;
   onMoveDay?: (day: any) => void;
   onPasteDay?: (day: any) => void;
@@ -54,6 +55,7 @@ export default function DayRowTable({
   onEditDay,
   onAddWorkout,
   onShowDayInfo,
+  onShowDayOverview,
   onCopyDay,
   onMoveDay,
   onPasteDay,
@@ -558,6 +560,18 @@ export default function DayRowTable({
         onClick={(e) => e.stopPropagation()} // Prevent row click when clicking on buttons
       >
         <div className="flex gap-1 justify-center items-center relative" ref={dropdownRef}>
+          {/* Overview Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowDayOverview?.(dayWithWeek);
+            }}
+            className="px-2 py-1 text-[11px] bg-indigo-500 text-white rounded hover:bg-indigo-600 transition-colors font-medium"
+            title="View Day Overview"
+          >
+            Overview
+          </button>
+          
           {/* Day Info Button */}
           <button
             onClick={(e) => {

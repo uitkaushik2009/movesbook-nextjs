@@ -37,6 +37,7 @@ interface WorkoutHierarchyViewProps {
   onCopyMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onMoveMoveframe?: (moveframe: any, workout: any, day: any) => void;
   onOpenColumnSettings?: (tableType: 'day' | 'workout' | 'moveframe' | 'movelap') => void;
+  onShowWorkoutOverview?: (workout: any, day: any) => void;
   reloadWorkouts?: () => Promise<void>;
   columnSettings?: any;
 }
@@ -73,6 +74,7 @@ export default function WorkoutHierarchyView({
   onCopyMoveframe,
   onMoveMoveframe,
   onOpenColumnSettings,
+  onShowWorkoutOverview,
   reloadWorkouts,
   columnSettings
 }: WorkoutHierarchyViewProps) {
@@ -134,6 +136,7 @@ export default function WorkoutHierarchyView({
               onShareWorkout={(workout, day) => onShareWorkout?.(workout, day)}
               onExportPdfWorkout={(workout, day) => onExportPdfWorkout?.(workout, day)}
               onPrintWorkout={(workout, day) => onPrintWorkout?.(workout, day)}
+              onShowOverview={() => onShowWorkoutOverview?.(workout, day)}
               onAddMoveframe={() => onAddMoveframe?.(workout, day)}
               onAddMoveframeAfter={(moveframe, index) => onAddMoveframeAfter?.(moveframe, index, workout, day)}
               onEditMoveframe={(moveframe) => onEditMoveframe?.(moveframe, workout, day)}

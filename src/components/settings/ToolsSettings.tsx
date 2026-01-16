@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, GripVertical, ArrowUpAZ, ArrowDownZA, Save, X, Download, Globe, Image as ImageIcon, Smile, Grid3x3, List, ArrowUpDown } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToolsData } from '@/hooks/useToolsData';
@@ -67,6 +67,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
   const [activeInputLanguage, setActiveInputLanguage] = useState('en');
   const [draggedItem, setDraggedItem] = useState<string | null>(null);
   const [draggedSport, setDraggedSport] = useState<string | null>(null);
+  const [dragOverSport, setDragOverSport] = useState<string | null>(null);
   const [showEquipmentDialog, setShowEquipmentDialog] = useState(false);
   const [showExerciseDialog, setShowExerciseDialog] = useState(false);
   const [showDeviceDialog, setShowDeviceDialog] = useState(false);
@@ -206,22 +207,38 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
   };
 
   const handleAdd = () => {
-    // Validate that at least one language has a title
-    const hasAtLeastOneTitle = Object.values(newItemTranslations).some(trans => trans.title.trim());
-    
-    if (!hasAtLeastOneTitle) {
-      alert('Please enter a title in at least one language');
-      return;
-    }
-
-    // Validate character limits for all languages
-    for (const [lang, trans] of Object.entries(newItemTranslations)) {
-      if (trans.title && trans.title.length > 30) {
-        alert(`Title in ${lang.toUpperCase()} must be 30 characters or less`);
+    if (isAdmin) {
+      // Admin: Validate that at least one language has a title
+      const hasAtLeastOneTitle = Object.values(newItemTranslations).some(trans => trans.title.trim());
+      
+      if (!hasAtLeastOneTitle) {
+        alert('Please enter a title in at least one language');
         return;
       }
-      if (trans.description && trans.description.length > 255) {
-        alert(`Description in ${lang.toUpperCase()} must be 255 characters or less`);
+
+      // Validate character limits for all languages
+      for (const [lang, trans] of Object.entries(newItemTranslations)) {
+        if (trans.title && trans.title.length > 30) {
+          alert(`Title in ${lang.toUpperCase()} must be 30 characters or less`);
+          return;
+        }
+        if (trans.description && trans.description.length > 255) {
+          alert(`Description in ${lang.toUpperCase()} must be 255 characters or less`);
+          return;
+        }
+      }
+    } else {
+      // Non-Admin: Only validate current language
+      if (!newItem.title || !newItem.title.trim()) {
+        alert('Please enter a title');
+        return;
+      }
+      if (newItem.title.length > 30) {
+        alert('Title must be 30 characters or less');
+        return;
+      }
+      if (newItem.description && newItem.description.length > 255) {
+        alert('Description must be 255 characters or less');
         return;
       }
     }
@@ -230,41 +247,68 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
     const newId = Date.now().toString();
     
     // Use current language translation for the main entry (database)
-    const currentLangData = newItemTranslations[currentLanguage] || newItemTranslations['en'] || { title: '', description: '' };
+    const currentLangData = isAdmin 
+      ? (newItemTranslations[currentLanguage] || newItemTranslations['en'] || { title: '', description: '' })
+      : { title: newItem.title, description: newItem.description };
     
     const newEntry = {
       id: newId,
-      title: currentLangData.title || Object.values(newItemTranslations).find(t => t.title)?.title || '',
+      title: isAdmin 
+        ? (currentLangData.title || Object.values(newItemTranslations).find(t => t.title)?.title || '')
+        : newItem.title,
       description: currentLangData.description || '',
       color: newItem.color,
       order: items.length,
+      isUserCreated: !isAdmin, // Tag user-created items
       ...(activeTab === 'sections' && { code: newItem.code || '' }), // Add code field for sections
       ...(activeTab === 'bodyBuildingTechniques' && { sports: newItem.sports || [] }) // Add sports field for execution techniques
     };
 
-    // Save translations to localStorage for each language
+    // Save translations to localStorage
     const itemType = activeTab === 'periods' ? 'periods' : 'sections';
-    SUPPORTED_LANGUAGES.forEach(lang => {
-      const langData = newItemTranslations[lang.code];
-      if (langData && (langData.title || langData.description)) {
-        // Load existing language library
-        const storageKey = `tools_${itemType}_${lang.code}`;
-        const existingDataStr = localStorage.getItem(storageKey);
-        const existingData = existingDataStr ? JSON.parse(existingDataStr) : [];
-        
-        // Add new item with translations
-        const langEntry = {
-          id: newId,
-          title: langData.title || '',
-          description: langData.description || '',
-          color: newItem.color,
-          order: items.length,
-        };
-        
-        existingData.push(langEntry);
-        localStorage.setItem(storageKey, JSON.stringify(existingData));
-      }
-    });
+    
+    if (isAdmin) {
+      // Admin: Save for all languages
+      SUPPORTED_LANGUAGES.forEach(lang => {
+        const langData = newItemTranslations[lang.code];
+        if (langData && (langData.title || langData.description)) {
+          // Load existing language library
+          const storageKey = `tools_${itemType}_${lang.code}`;
+          const existingDataStr = localStorage.getItem(storageKey);
+          const existingData = existingDataStr ? JSON.parse(existingDataStr) : [];
+          
+          // Add new item with translations
+          const langEntry = {
+            id: newId,
+            title: langData.title || '',
+            description: langData.description || '',
+            color: newItem.color,
+            order: items.length,
+            isUserCreated: false,
+          };
+          
+          existingData.push(langEntry);
+          localStorage.setItem(storageKey, JSON.stringify(existingData));
+        }
+      });
+    } else {
+      // Non-Admin: Only save for current language
+      const storageKey = `tools_${itemType}_${selectedLanguage}`;
+      const existingDataStr = localStorage.getItem(storageKey);
+      const existingData = existingDataStr ? JSON.parse(existingDataStr) : [];
+      
+      const langEntry = {
+        id: newId,
+        title: newItem.title,
+        description: newItem.description,
+        color: newItem.color,
+        order: items.length,
+        isUserCreated: true,
+      };
+      
+      existingData.push(langEntry);
+      localStorage.setItem(storageKey, JSON.stringify(existingData));
+    }
 
     setActiveItems([...items, newEntry]);
     setNewItem({ title: '', code: '', description: '', color: '#3b82f6', sports: [] as string[] });
@@ -320,66 +364,134 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
   const handleSaveEdit = () => {
     if (!editingItem) return;
 
-    // Validate all language translations
-    for (const [lang, trans] of Object.entries(editItemTranslations)) {
-      if (trans.title && trans.title.length > 30) {
-        alert(`Title in ${lang.toUpperCase()} must be 30 characters or less`);
+    if (isAdmin) {
+      // Admin: Validate that at least English OR Italian is filled (MANDATORY)
+      const hasEnglish = editItemTranslations['en']?.title && editItemTranslations['en'].title.trim() !== '';
+      const hasItalian = editItemTranslations['it']?.title && editItemTranslations['it'].title.trim() !== '';
+      
+      if (!hasEnglish && !hasItalian) {
+        alert('❌ MANDATORY: At least English or Italian translation is required!\n\nPlease fill in the title for:\n• English (EN) OR\n• Italian (IT)\n\nOne of these two languages must be filled.');
         return;
       }
-      if (trans.description && trans.description.length > 255) {
-        alert(`Description in ${lang.toUpperCase()} must be 255 characters or less`);
+
+      // Validate all language translations
+      for (const [lang, trans] of Object.entries(editItemTranslations)) {
+        if (trans.title && trans.title.length > 30) {
+          alert(`Title in ${lang.toUpperCase()} must be 30 characters or less`);
+          return;
+        }
+        if (trans.description && trans.description.length > 255) {
+          alert(`Description in ${lang.toUpperCase()} must be 255 characters or less`);
+          return;
+        }
+      }
+
+      // Update the editingItem with the current language's values (use English as default)
+      const currentLangData = editItemTranslations[currentLanguage] || editItemTranslations['en'] || Object.values(editItemTranslations)[0];
+      if (currentLangData) {
+        editingItem.title = currentLangData.title || editingItem.title;
+        editingItem.description = currentLangData.description || editingItem.description;
+      }
+    } else {
+      // Non-Admin: Validate current language only
+      if (!editingItem.title || !editingItem.title.trim()) {
+        alert('Please enter a title');
+        return;
+      }
+      if (editingItem.title.length > 30) {
+        alert('Title must be 30 characters or less');
+        return;
+      }
+      if (editingItem.description && editingItem.description.length > 255) {
+        alert('Description must be 255 characters or less');
         return;
       }
     }
 
-    // Update the editingItem with the current language's values (use English as default)
-    const currentLangData = editItemTranslations[currentLanguage] || editItemTranslations['en'] || Object.values(editItemTranslations)[0];
-    if (currentLangData) {
-      editingItem.title = currentLangData.title || editingItem.title;
-      editingItem.description = currentLangData.description || editingItem.description;
-    }
+    console.log('💾 Saving edited item:', {
+      id: editingItem.id,
+      title: editingItem.title,
+      description: editingItem.description,
+      currentLanguage,
+      translationsKeys: Object.keys(editItemTranslations)
+    });
 
-    // Update in current state
+    // Update in current state - Force new array reference for React to detect changes
     const items = getActiveItems();
-    const updated = items.map(item => 
-      item.id === editingItem.id ? editingItem : item
+    const updated = [...items].map(item => 
+      item.id === editingItem.id ? { ...editingItem } : item
     );
     setActiveItems(updated);
     
-    // Save to all language libraries
+    console.log('✅ State updated with:', updated);
+    
+    // Save to language libraries
     const itemType = activeTab === 'periods' ? 'periods' : 'sections';
-    SUPPORTED_LANGUAGES.forEach(lang => {
-      const langData = editItemTranslations[lang.code];
-      if (langData && (langData.title || langData.description)) {
-        const storageKey = `tools_${itemType}_${lang.code}`;
-        const existingDataStr = localStorage.getItem(storageKey);
-        const existingData = existingDataStr ? JSON.parse(existingDataStr) : [];
-        
-        // Find and update the item
-        const itemIndex = existingData.findIndex((i: any) => i.id === editingItem.id);
-        if (itemIndex >= 0) {
-          existingData[itemIndex] = {
-            ...existingData[itemIndex],
-            title: langData.title || '',
-            description: langData.description || '',
-            color: editingItem.color,
-            ...(activeTab === 'sections' && { code: (editingItem as any).code || '' })
-          };
-        } else {
-          // Add if doesn't exist
-          existingData.push({
-            id: editingItem.id,
-            title: langData.title || '',
-            description: langData.description || '',
-            color: editingItem.color,
-            order: existingData.length,
+    
+    if (isAdmin) {
+      // Admin: Save to all language libraries
+      SUPPORTED_LANGUAGES.forEach(lang => {
+        const langData = editItemTranslations[lang.code];
+        if (langData && (langData.title || langData.description)) {
+          const storageKey = `tools_${itemType}_${lang.code}`;
+          const existingDataStr = localStorage.getItem(storageKey);
+          const existingData = existingDataStr ? JSON.parse(existingDataStr) : [];
+          
+          // Find and update the item
+          const itemIndex = existingData.findIndex((i: any) => i.id === editingItem.id);
+          if (itemIndex >= 0) {
+            existingData[itemIndex] = {
+              ...existingData[itemIndex],
+              title: langData.title || '',
+              description: langData.description || '',
+              color: editingItem.color,
+              ...(activeTab === 'sections' && { code: (editingItem as any).code || '' })
+            };
+          } else {
+            // Add if doesn't exist
+            existingData.push({
+              id: editingItem.id,
+              title: langData.title || '',
+              description: langData.description || '',
+              color: editingItem.color,
+              order: existingData.length,
             ...(activeTab === 'sections' && { code: (editingItem as any).code || '' })
           });
         }
         
         localStorage.setItem(storageKey, JSON.stringify(existingData));
+        }
+      });
+    } else {
+      // Non-Admin: Only save to current language
+      const storageKey = `tools_${itemType}_${selectedLanguage}`;
+      const existingDataStr = localStorage.getItem(storageKey);
+      const existingData = existingDataStr ? JSON.parse(existingDataStr) : [];
+      
+      const itemIndex = existingData.findIndex((i: any) => i.id === editingItem.id);
+      if (itemIndex >= 0) {
+        existingData[itemIndex] = {
+          ...existingData[itemIndex],
+          title: editingItem.title,
+          description: editingItem.description,
+          color: editingItem.color,
+          ...(activeTab === 'sections' && { code: (editingItem as any).code || '' })
+        };
+      } else {
+        // Add if doesn't exist
+        existingData.push({
+          id: editingItem.id,
+          title: editingItem.title,
+          description: editingItem.description,
+          color: editingItem.color,
+          order: existingData.length,
+          isUserCreated: true,
+          ...(activeTab === 'sections' && { code: (editingItem as any).code || '' })
+        });
       }
-    });
+      
+      localStorage.setItem(storageKey, JSON.stringify(existingData));
+    }
     
     setEditingItem(null);
     setEditItemTranslations({});
@@ -551,6 +663,139 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
     }
   };
 
+  // Auto-load language terms when language is selected
+  const loadLanguageTerms = async (languageCode: string) => {
+    try {
+      console.log('🌍 Loading terms for language:', languageCode);
+      const response = await fetch(`/api/admin/tools-defaults/load?language=${languageCode}`);
+      const data = await response.json();
+
+      if (response.ok && data.toolsData) {
+        // Load and force re-render with new array references
+        if (data.toolsData.periods) {
+          setPeriods([...data.toolsData.periods]);
+        }
+        if (data.toolsData.sections) {
+          setSections([...data.toolsData.sections]);
+        }
+        if (data.toolsData.sports) {
+          setSports([...data.toolsData.sports]);
+        }
+        if (data.toolsData.equipment) {
+          setEquipment([...data.toolsData.equipment]);
+        }
+        if (data.toolsData.exercises) {
+          setExercises([...data.toolsData.exercises]);
+        }
+        if (data.toolsData.devices) {
+          setDevices([...data.toolsData.devices]);
+        }
+        console.log('✅ Terms loaded for', languageCode);
+      } else {
+        console.log('ℹ️ No data found for', languageCode);
+      }
+    } catch (error) {
+      console.error('Error loading language terms:', error);
+    }
+  };
+
+  // Handle Load Admin Defaults (for non-admin users)
+  const handleLoadAdminDefaults = async () => {
+    const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || selectedLanguage;
+    
+    const confirmed = window.confirm(
+      `⚠️ Warning\n\n` +
+      `Loading the Admin settings will load the settings made by Movesbook in ${languageName}.\n\n` +
+      `They will substitute all the previous Default settings loaded by you but will not affect the items inserted by you manually.\n\n` +
+      `Do you want to continue?`
+    );
+    
+    if (!confirmed) return;
+    
+    try {
+      console.log('📥 Loading Admin defaults for language:', selectedLanguage);
+      const response = await fetch(`/api/admin/tools-defaults/load?language=${selectedLanguage}`);
+      const data = await response.json();
+
+      if (response.ok && data.toolsData) {
+        // Get current user-created items (items with isUserCreated flag)
+        const userPeriods = periods.filter((p: any) => p.isUserCreated);
+        const userSections = sections.filter((s: any) => s.isUserCreated);
+        const userEquipment = equipment.filter((e: any) => e.isUserCreated);
+        const userExercises = exercises.filter((ex: any) => ex.isUserCreated);
+        const userDevices = devices.filter((d: any) => d.isUserCreated);
+        
+        // Load admin defaults and merge with user-created items
+        if (data.toolsData.periods) {
+          setPeriods([...data.toolsData.periods, ...userPeriods]);
+        }
+        if (data.toolsData.sections) {
+          setSections([...data.toolsData.sections, ...userSections]);
+        }
+        if (data.toolsData.sports) {
+          setSports([...data.toolsData.sports]); // Sports are read-only for users
+        }
+        if (data.toolsData.equipment) {
+          setEquipment([...data.toolsData.equipment, ...userEquipment]);
+        }
+        if (data.toolsData.exercises) {
+          setExercises([...data.toolsData.exercises, ...userExercises]);
+        }
+        if (data.toolsData.devices) {
+          setDevices([...data.toolsData.devices, ...userDevices]);
+        }
+        
+        alert(`✅ Success!\n\nAdmin defaults for ${languageName} have been loaded.\n\nYour manually created items have been preserved.`);
+        console.log('✅ Admin defaults loaded, user items preserved');
+      } else {
+        alert(`❌ No admin defaults found for ${languageName}`);
+      }
+    } catch (error) {
+      console.error('Error loading admin defaults:', error);
+      alert('❌ Error loading admin defaults. Please try again.');
+    }
+  };
+
+  // Get display title with fallback to English or Italian (in RED if not in selected language)
+  const getDisplayTitle = (item: any): { text: string; isRed: boolean } => {
+    // Try selected language first
+    if (item.title && item.title.trim() !== '') {
+      return { text: item.title, isRed: false };
+    }
+    
+    // Fallback to English
+    const storageKeyEn = activeTab === 'periods' ? 'tools_periods_en' : activeTab === 'sections' ? 'tools_sections_en' : null;
+    if (storageKeyEn) {
+      const enData = localStorage.getItem(storageKeyEn);
+      if (enData) {
+        try {
+          const parsed = JSON.parse(enData);
+          const enItem = parsed.find((i: any) => i.id === item.id);
+          if (enItem && enItem.title && enItem.title.trim() !== '') {
+            return { text: enItem.title, isRed: true };
+          }
+        } catch (e) {}
+      }
+    }
+    
+    // Fallback to Italian
+    const storageKeyIt = activeTab === 'periods' ? 'tools_periods_it' : activeTab === 'sections' ? 'tools_sections_it' : null;
+    if (storageKeyIt) {
+      const itData = localStorage.getItem(storageKeyIt);
+      if (itData) {
+        try {
+          const parsed = JSON.parse(itData);
+          const itItem = parsed.find((i: any) => i.id === item.id);
+          if (itItem && itItem.title && itItem.title.trim() !== '') {
+            return { text: itItem.title, isRed: true };
+          }
+        } catch (e) {}
+      }
+    }
+    
+    return { text: item.title || 'Untitled', isRed: false };
+  };
+
   const handleLoadConfirm = async () => {
     try {
       // Load from the selected language
@@ -560,27 +805,49 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
       if (response.ok && data.toolsData) {
         const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name;
         
+        console.log('📥 Loading data for language:', selectedLanguage);
+        console.log('📦 Loaded periods:', data.toolsData.periods);
+        
         // Replace current data with loaded language data
+        // Force React to re-render by creating new arrays
         if (data.toolsData.periods) {
-          setPeriods(data.toolsData.periods);
+          const loadedPeriods = [...data.toolsData.periods];
+          console.log('✅ Setting periods:', loadedPeriods);
+          setPeriods(loadedPeriods);
+          
+          // Also save to localStorage for this language to ensure persistence
+          const storageKey = `tools_periods_${selectedLanguage}`;
+          localStorage.setItem(storageKey, JSON.stringify(loadedPeriods));
         }
         if (data.toolsData.sections) {
-          setSections(data.toolsData.sections);
+          const loadedSections = [...data.toolsData.sections];
+          console.log('✅ Setting sections:', loadedSections);
+          setSections(loadedSections);
+          
+          const storageKey = `tools_sections_${selectedLanguage}`;
+          localStorage.setItem(storageKey, JSON.stringify(loadedSections));
         }
         if (data.toolsData.sports) {
-          setSports(data.toolsData.sports);
+          const loadedSports = [...data.toolsData.sports];
+          console.log('✅ Setting sports:', loadedSports);
+          setSports(loadedSports);
         }
         if (data.toolsData.equipment) {
-          setEquipment(data.toolsData.equipment);
+          setEquipment([...data.toolsData.equipment]);
         }
         if (data.toolsData.exercises) {
-          setExercises(data.toolsData.exercises);
+          setExercises([...data.toolsData.exercises]);
         }
         if (data.toolsData.devices) {
-          setDevices(data.toolsData.devices);
+          setDevices([...data.toolsData.devices]);
         }
         
-        alert(`✅ ${languageName} default settings loaded successfully!\n\n📋 All settings loaded (ALL TABS):\n• Periods, Sections, Sports\n• Equipment, Exercises, Library, Devices\n\n📝 Next Steps:\n1. Navigate to ANY tab and edit/translate items\n2. Select target language from dropdown (e.g., Russian)\n3. Click "Save to [Language]" to save ALL tabs\n\n💡 Example: Load Spanish → Edit Sports/Periods → Select Russian → Save to RU`);
+        // Force a re-render by toggling a state
+        setTimeout(() => {
+          console.log('🔄 Data loaded and state updated');
+        }, 100);
+        
+        alert(`✅ ${languageName} default settings loaded successfully!\n\n📋 All settings loaded (ALL TABS):\n• Periods (${data.toolsData.periods?.length || 0} items)\n• Sections (${data.toolsData.sections?.length || 0} items)\n• Sports\n• Equipment, Exercises, Library, Devices\n\n📝 Next Steps:\n1. Navigate to ANY tab and edit/translate items\n2. Select target language from dropdown (e.g., Russian)\n3. Click "Save to [Language]" to save ALL tabs\n\n💡 Example: Load Spanish → Edit Sports/Periods → Select Russian → Save to RU`);
         setShowLoadDialog(false);
       } else {
         const languageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name;
@@ -595,43 +862,70 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
 
   // Sports-specific handlers
   const handleSportDragStart = (id: string) => {
+    console.log('🎯 Drag start:', id);
     setDraggedSport(id);
   };
 
   const handleSportDragOver = (e: React.DragEvent, id: string) => {
     e.preventDefault();
-    if (!draggedSport || draggedSport === id) return;
+    e.stopPropagation();
+    setDragOverSport(id);
+  };
 
-    const draggedIndex = sports.findIndex(sport => sport.id === draggedSport);
-    const targetIndex = sports.findIndex(sport => sport.id === id);
+  const handleSportDragEnd = () => {
+    console.log('✅ Sport drag ended');
+    setDraggedSport(null);
+    setDragOverSport(null);
+  };
 
-    if (draggedIndex === -1 || targetIndex === -1) return;
+  // Use DEFAULT_SPORTS as fallback if sports array is empty
+  const activeSports = (sports && sports.length > 0) ? sports : DEFAULT_SPORTS;
 
-    const newSports = [...sports];
+  const handleSportDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedSport || draggedSport === targetId) {
+      setDraggedSport(null);
+      setDragOverSport(null);
+      return;
+    }
+
+    console.log('📦 Dropping sport:', draggedSport, 'onto:', targetId);
+
+    // IMPORTANT: Work with the actual sports state, not activeSports
+    // If sports is empty, we need to first initialize it with DEFAULT_SPORTS
+    const sportsToUse = (sports && sports.length > 0) ? sports : DEFAULT_SPORTS;
+    console.log('🔍 Using sports array:', sportsToUse.length, 'sports');
+    
+    const draggedIndex = sportsToUse.findIndex(sport => sport.id === draggedSport);
+    const targetIndex = sportsToUse.findIndex(sport => sport.id === targetId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      console.error('❌ Sport not found in array. Dragged:', draggedSport, 'Target:', targetId);
+      console.error('Available sport IDs:', sportsToUse.map(s => s.id));
+      setDraggedSport(null);
+      setDragOverSport(null);
+      return;
+    }
+
+    const newSports = [...sportsToUse];
     const [removed] = newSports.splice(draggedIndex, 1);
     newSports.splice(targetIndex, 0, removed);
 
-    // Update top5 status based on new positions
+    // Update top5 status and order based on new positions
     const updated = newSports.map((sport, index) => ({
       ...sport,
       order: index,
       isTop5: index < 5
     }));
 
+    console.log('💾 Updating sports order:', updated.map(s => s.name));
+    console.log('✅ Setting sports state - this should trigger auto-save');
     setSports(updated);
-  };
-
-  const handleSportDragEnd = () => {
     setDraggedSport(null);
+    setDragOverSport(null);
   };
-
-  const handleSportDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDraggedSport(null);
-  };
-
-  // Use DEFAULT_SPORTS as fallback if sports array is empty
-  const activeSports = (sports && sports.length > 0) ? sports : DEFAULT_SPORTS;
   const top5Sports = activeSports.filter(s => s.isTop5).sort((a, b) => a.order - b.order);
   const otherSports = activeSports.filter(s => !s.isTop5).sort((a, b) => a.order - b.order);
 
@@ -739,16 +1033,19 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         >
           Execution Techniques
         </button>
-        <button
-          onClick={() => setActiveTab('sports')}
-          className={`px-6 py-3 font-semibold transition ${
-            activeTab === 'sports'
-              ? 'border-b-2 border-blue-600 text-blue-600'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Main Sports
-        </button>
+        {/* Main Sports tab - only for Admin */}
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('sports')}
+            className={`px-6 py-3 font-semibold transition ${
+              activeTab === 'sports'
+                ? 'border-b-2 border-blue-600 text-blue-600'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Main Sports
+          </button>
+        )}
         <button
           onClick={() => setActiveTab('equipment')}
           className={`px-6 py-3 font-semibold transition ${
@@ -828,56 +1125,72 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4">
           <h4 className="font-semibold text-indigo-900 mb-2 flex items-center gap-2">
             <Globe className="w-5 h-5" />
-            Multi-Language Settings Workflow (All Tabs)
+            {isAdmin ? 'Multi-Language Settings Workflow (Admin)' : 'Personal Settings Workflow'}
           </h4>
-          <ol className="text-sm text-indigo-800 space-y-1 ml-6 list-decimal">
-            <li><strong>Load:</strong> Select a language (e.g., Spanish) and click "Load" to load ALL settings</li>
-            <li><strong>Edit:</strong> Translate or modify items in ANY tab (Periods, Sections, Sports, Equipment, etc.)</li>
-            <li><strong>Save:</strong> Select the target language (e.g., Russian) from the dropdown</li>
-            <li><strong>Complete:</strong> Click "Save as DEFAULT" to save ALL tabs to that language</li>
-          </ol>
-          <p className="text-xs text-indigo-600 mt-2 italic">
-            <strong>💡 Example:</strong> Load Spanish → Edit Sports/Periods/Equipment → Select "Russian" → Save to RU (All tabs saved!)
-          </p>
+          {isAdmin ? (
+            <>
+              <ol className="text-sm text-indigo-800 space-y-1 ml-6 list-decimal">
+                <li><strong>Select Language:</strong> Choose a language from the dropdown - terms load automatically</li>
+                <li><strong>Add/Edit:</strong> When adding or editing items, fill translations in ALL languages you want</li>
+                <li><strong>Required:</strong> ⚠️ At least <span className="font-bold text-red-600">English OR Italian</span> must be filled (mandatory)</li>
+                <li><strong>Missing Translations:</strong> Items without translation in selected language appear in <span className="font-bold text-red-600">RED</span> (English/Italian fallback)</li>
+              </ol>
+              <p className="text-xs text-indigo-600 mt-2 italic">
+                <strong>💡 Example:</strong> Add "Special Period" with EN/FR/IT → Select RU → Item appears in RED (needs Russian translation)
+              </p>
+            </>
+          ) : (
+            <>
+              <ol className="text-sm text-indigo-800 space-y-1 ml-6 list-decimal">
+                <li><strong>Select Language:</strong> Choose your language - terms load automatically</li>
+                <li><strong>Load Defaults:</strong> Click "Load Admin Defaults" to get Movesbook's settings in your language</li>
+                <li><strong>Add/Edit:</strong> Create or edit items in your language - they're automatically saved</li>
+                <li><strong>Your Items:</strong> Items you create manually are preserved when loading admin defaults</li>
+              </ol>
+              <p className="text-xs text-indigo-600 mt-2 italic">
+                <strong>💡 Tip:</strong> All settings are automatically available in your workout panels - no save button needed!
+              </p>
+            </>
+          )}
           <p className="text-xs text-purple-600 mt-2 font-semibold">
-            ✅ This applies to ALL settings: Periods, Sections, Sports, Equipment, Exercises, Library, Devices
+            ✅ This applies to: Periods, Sections, {isAdmin ? 'Sports, ' : ''}Equipment, Exercises, Library, Devices
           </p>
         </div>
 
-        {/* Language Defaults Controls */}
-        <div className="flex items-center justify-between p-4 bg-white border-2 border-gray-300 rounded-lg shadow-sm">
-          <div className="flex items-center gap-4">
-            <Globe className="w-5 h-5 text-gray-500" />
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-500 mb-1">Selected Language:</span>
-              <select
-                value={selectedLanguage}
-                onChange={(e) => setSelectedLanguage(e.target.value)}
-                className="px-3 py-2 text-sm font-medium border-2 border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-              >
-                {SUPPORTED_LANGUAGES.map(lang => (
-                  <option key={lang.code} value={lang.code}>{lang.name} ({lang.code.toUpperCase()})</option>
-                ))}
-              </select>
-            </div>
+        {/* Language Selector */}
+        <div className="flex items-center gap-4 p-4 bg-white border-2 border-indigo-300 rounded-lg shadow-sm">
+          <Globe className="w-5 h-5 text-indigo-500" />
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-500 mb-1">Display Language:</span>
+            <select
+              value={selectedLanguage}
+              onChange={(e) => {
+                setSelectedLanguage(e.target.value);
+                // Auto-load terms for selected language
+                loadLanguageTerms(e.target.value);
+              }}
+              className="px-3 py-2 text-sm font-medium border-2 border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+            >
+              {SUPPORTED_LANGUAGES.map(lang => (
+                <option key={lang.code} value={lang.code}>{lang.name} ({lang.code.toUpperCase()})</option>
+              ))}
+            </select>
           </div>
-          <div className="flex items-center gap-3">
+          
+          {/* For non-admin: Show Load Admin Defaults button */}
+          {!isAdmin && (
             <button
-              onClick={loadLanguageDefaults}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition shadow-md font-medium"
-              title={`Load ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name} defaults to screen`}
+              onClick={handleLoadAdminDefaults}
+              className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-md font-medium"
+              title="Load Movesbook default settings in your language"
             >
               <Download className="w-4 h-4" />
-              Load from {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.code.toUpperCase()}
+              Load Admin Defaults
             </button>
-            <button
-              onClick={saveLanguageDefaults}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-bold shadow-md"
-              title={`Save current screen as DEFAULT for ${SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name}`}
-            >
-              <Save className="w-4 h-4" />
-              Save to {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.code.toUpperCase()}
-            </button>
+          )}
+          
+          <div className="text-xs text-gray-600 flex-1">
+            <span className="font-semibold">ℹ️ Note:</span> Terms without translation will appear in <span className="text-red-600 font-bold">RED</span> (English or Italian fallback)
           </div>
         </div>
       </div>
@@ -942,7 +1255,9 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                         className="w-4 h-4 rounded-full flex-shrink-0"
                         style={{ backgroundColor: item.color }}
                       />
-                      <h3 className="font-semibold text-gray-900 truncate">{item.title}</h3>
+                      <h3 className={`font-semibold truncate ${getDisplayTitle(item).isRed ? 'text-red-600' : 'text-gray-900'}`}>
+                        {getDisplayTitle(item).text}
+                      </h3>
                       {currentUserId && item.userId && item.userId !== currentUserId && (
                         <span className="text-xs px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full flex-shrink-0">
                           Read-only
@@ -991,8 +1306,8 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
         </div>
       )}
 
-      {/* Main Sports Tab */}
-      {activeTab === 'sports' && (
+      {/* Main Sports Tab - Only for Admin */}
+      {activeTab === 'sports' && isAdmin && (
         <div className="space-y-6">
           {/* Info Banner */}
           <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border border-blue-200 p-6">
@@ -1074,10 +1389,10 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   draggable={true}
                   onDragStart={() => handleSportDragStart(sport.id)}
                   onDragOver={(e) => handleSportDragOver(e, sport.id)}
-                  onDrop={handleSportDrop}
+                  onDrop={(e) => handleSportDrop(e, sport.id)}
                   onDragEnd={handleSportDragEnd}
                   className={`flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl border-2 cursor-move transition ${
-                    draggedSport === sport.id ? 'opacity-50 border-blue-500' : 'border-blue-200 hover:border-blue-300'
+                    draggedSport === sport.id ? 'opacity-50 border-blue-500' : dragOverSport === sport.id ? 'border-blue-400' : 'border-blue-200 hover:border-blue-300'
                   }`}
                 >
                   <GripVertical className="w-5 h-5 text-gray-400 flex-shrink-0" />
@@ -1130,10 +1445,10 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   draggable={true}
                   onDragStart={() => handleSportDragStart(sport.id)}
                   onDragOver={(e) => handleSportDragOver(e, sport.id)}
-                  onDrop={handleSportDrop}
+                  onDrop={(e) => handleSportDrop(e, sport.id)}
                   onDragEnd={handleSportDragEnd}
                   className={`flex items-center gap-3 p-3 bg-gray-50 rounded-lg border cursor-move transition ${
-                    draggedSport === sport.id ? 'opacity-50 border-gray-400' : 'border-gray-200 hover:border-gray-300'
+                    draggedSport === sport.id ? 'opacity-50 border-gray-400' : dragOverSport === sport.id ? 'border-gray-400' : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   <GripVertical className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -2020,127 +2335,124 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   />
                 </div>
               </div>
-              
-              {/* Sports Multi-Selector (only for Execution Techniques) */}
-              {activeTab === 'bodyBuildingTechniques' && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Sports <span className="text-gray-500">(select which sports can use this technique)</span>
-                  </label>
-                  <div className="border border-gray-300 rounded-lg p-3 max-h-64 overflow-y-auto">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {SPORTS_LIST.map((sport) => {
-                        const isSelected = newItem.sports?.includes(sport) || false;
-                        return (
-                          <label
-                            key={sport}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                              isSelected
-                                ? 'bg-blue-100 border-2 border-blue-500'
-                                : 'bg-gray-50 border-2 border-gray-200 hover:border-gray-300'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const currentSports = newItem.sports || [];
-                                const updatedSports = e.target.checked
-                                  ? [...currentSports, sport]
-                                  : currentSports.filter((s: string) => s !== sport);
-                                setNewItem({ ...newItem, sports: updatedSports });
-                              }}
-                              className="w-4 h-4"
-                            />
-                            <span className="text-sm font-medium">{getSportDisplayName(sport)}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Select at least one sport. This technique will only appear in the moveframe modal for the selected sports.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Per-Language Fields */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-semibold text-gray-800 border-b pb-2">Translations</h4>
-              
-              {SUPPORTED_LANGUAGES.map((lang) => (
-                <div key={lang.code} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-md font-bold text-sm">
-                      {lang.code.toUpperCase()}
-                    </span>
-                    <span className="text-sm font-medium text-gray-700">{lang.name}</span>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">
-                        Title <span className="text-gray-400">(max 30 chars)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={newItemTranslations[lang.code]?.title || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.slice(0, 30);
-                          setNewItemTranslations({
-                            ...newItemTranslations,
-                            [lang.code]: {
-                              title: value,
-                              description: newItemTranslations[lang.code]?.description || ''
-                            }
-                          });
-                        }}
-                        placeholder={`Enter ${lang.name} title...`}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        maxLength={30}
-                      />
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {(newItemTranslations[lang.code]?.title || '').length}/30
-                      </div>
+            {isAdmin ? (
+              // Admin: Show all languages
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-800 border-b pb-2">Translations</h4>
+                
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <div key={lang.code} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-md font-bold text-sm">
+                        {lang.code.toUpperCase()}
+                      </span>
+                      <span className="text-sm font-medium text-gray-700">{lang.name}</span>
                     </div>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">
+                          Title <span className="text-gray-400">(max 30 chars)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={newItemTranslations[lang.code]?.title || ''}
+                          onChange={(e) => {
+                            const value = e.target.value.slice(0, 30);
+                            setNewItemTranslations({
+                              ...newItemTranslations,
+                              [lang.code]: {
+                                title: value,
+                                description: newItemTranslations[lang.code]?.description || ''
+                              }
+                            });
+                          }}
+                          placeholder={`Enter ${lang.name} title...`}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          maxLength={30}
+                        />
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {(newItemTranslations[lang.code]?.title || '').length}/30
+                        </div>
+                      </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">
-                        Description <span className="text-gray-400">(max 255 chars)</span>
-                      </label>
-                      <textarea
-                        value={newItemTranslations[lang.code]?.description || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.slice(0, 255);
-                          setNewItemTranslations({
-                            ...newItemTranslations,
-                            [lang.code]: {
-                              title: newItemTranslations[lang.code]?.title || '',
-                              description: value
-                            }
-                          });
-                        }}
-                        placeholder={`Enter ${lang.name} description...`}
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        maxLength={255}
-                      />
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {(newItemTranslations[lang.code]?.description || '').length}/255
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">
+                          Description <span className="text-gray-400">(max 255 chars)</span>
+                        </label>
+                        <textarea
+                          value={newItemTranslations[lang.code]?.description || ''}
+                          onChange={(e) => {
+                            const value = e.target.value.slice(0, 255);
+                            setNewItemTranslations({
+                              ...newItemTranslations,
+                              [lang.code]: {
+                                title: newItemTranslations[lang.code]?.title || '',
+                                description: value
+                              }
+                            });
+                          }}
+                          placeholder={`Enter ${lang.name} description...`}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          maxLength={255}
+                        />
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {(newItemTranslations[lang.code]?.description || '').length}/255
+                        </div>
                       </div>
                     </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // Non-Admin: Only show current language fields
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Title <span className="text-gray-500">(max 30 chars)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newItem.title}
+                    onChange={(e) => setNewItem({ ...newItem, title: e.target.value.slice(0, 30) })}
+                    placeholder="Enter title..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={30}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {newItem.title.length}/30
                   </div>
                 </div>
-              ))}
-            </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Description <span className="text-gray-500">(max 255 chars)</span>
+                  </label>
+                  <textarea
+                    value={newItem.description}
+                    onChange={(e) => setNewItem({ ...newItem, description: e.target.value.slice(0, 255) })}
+                    placeholder="Enter description..."
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={255}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {newItem.description.length}/255
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3 mt-8">
               <button
                 onClick={handleAdd}
                 className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold"
               >
-                💾 Save to All Languages
+                {isAdmin ? '💾 Save to All Languages' : '💾 Save'}
               </button>
               <button
                 onClick={() => {
@@ -2166,15 +2478,17 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
               Edit {activeTab === 'periods' ? 'Period' : activeTab === 'sections' ? 'Section' : 'Execution Technique'}
             </h3>
             
-            {/* Info Banner */}
-            <div className="mb-6 p-3 bg-blue-50 border-2 border-blue-300 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Globe className="w-5 h-5 text-blue-700" />
-                <span className="text-sm font-semibold text-blue-900">
-                  Edit in all languages simultaneously - changes save to all language libraries at once!
-                </span>
+            {/* Info Banner - Only for Admin */}
+            {isAdmin && (
+              <div className="mb-6 p-3 bg-blue-50 border-2 border-blue-300 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-blue-700" />
+                  <span className="text-sm font-semibold text-blue-900">
+                    Edit in all languages simultaneously - changes save to all language libraries at once!
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Global Fields (Code & Color) */}
             <div className="space-y-4 mb-6">
@@ -2224,120 +2538,117 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   />
                 </div>
               </div>
-              
-              {/* Sports Multi-Selector (only for Execution Techniques) */}
-              {activeTab === 'bodyBuildingTechniques' && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Sports <span className="text-gray-500">(select which sports can use this technique)</span>
-                  </label>
-                  <div className="border border-gray-300 rounded-lg p-3 max-h-64 overflow-y-auto">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {SPORTS_LIST.map((sport) => {
-                        const isSelected = (editingItem as any).sports?.includes(sport) || false;
-                        return (
-                          <label
-                            key={sport}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                              isSelected
-                                ? 'bg-blue-100 border-2 border-blue-500'
-                                : 'bg-gray-50 border-2 border-gray-200 hover:border-gray-300'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={(e) => {
-                                const currentSports = (editingItem as any).sports || [];
-                                const updatedSports = e.target.checked
-                                  ? [...currentSports, sport]
-                                  : currentSports.filter((s: string) => s !== sport);
-                                setEditingItem({ ...editingItem, sports: updatedSports } as any);
-                              }}
-                              className="w-4 h-4"
-                            />
-                            <span className="text-sm font-medium">{getSportDisplayName(sport)}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Select at least one sport. This technique will only appear in the moveframe modal for the selected sports.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Per-Language Fields */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-semibold text-gray-800 border-b pb-2">Translations</h4>
-              
-              {SUPPORTED_LANGUAGES.map((lang) => (
-                <div key={lang.code} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-md font-bold text-sm">
-                      {lang.code.toUpperCase()}
-                    </span>
-                    <span className="text-sm font-medium text-gray-700">{lang.name}</span>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">
-                        Title <span className="text-gray-400">(max 30 chars)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={editItemTranslations[lang.code]?.title || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.slice(0, 30);
-                          setEditItemTranslations({
-                            ...editItemTranslations,
-                            [lang.code]: {
-                              title: value,
-                              description: editItemTranslations[lang.code]?.description || ''
-                            }
-                          });
-                        }}
-                        placeholder={`Enter ${lang.name} title...`}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        maxLength={30}
-                      />
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {(editItemTranslations[lang.code]?.title || '').length}/30
-                      </div>
+            {isAdmin ? (
+              // Admin: Show all languages
+              <div className="space-y-6">
+                <h4 className="text-lg font-semibold text-gray-800 border-b pb-2">Translations</h4>
+                
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <div key={lang.code} className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="px-3 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-md font-bold text-sm">
+                        {lang.code.toUpperCase()}
+                      </span>
+                      <span className="text-sm font-medium text-gray-700">{lang.name}</span>
                     </div>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">
+                          Title <span className="text-gray-400">(max 30 chars)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={editItemTranslations[lang.code]?.title || ''}
+                          onChange={(e) => {
+                            const value = e.target.value.slice(0, 30);
+                            setEditItemTranslations({
+                              ...editItemTranslations,
+                              [lang.code]: {
+                                title: value,
+                                description: editItemTranslations[lang.code]?.description || ''
+                              }
+                            });
+                          }}
+                          placeholder={`Enter ${lang.name} title...`}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          maxLength={30}
+                        />
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {(editItemTranslations[lang.code]?.title || '').length}/30
+                        </div>
+                      </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">
-                        Description <span className="text-gray-400">(max 255 chars)</span>
-                      </label>
-                      <textarea
-                        value={editItemTranslations[lang.code]?.description || ''}
-                        onChange={(e) => {
-                          const value = e.target.value.slice(0, 255);
-                          setEditItemTranslations({
-                            ...editItemTranslations,
-                            [lang.code]: {
-                              title: editItemTranslations[lang.code]?.title || '',
-                              description: value
-                            }
-                          });
-                        }}
-                        placeholder={`Enter ${lang.name} description...`}
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                        maxLength={255}
-                      />
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        {(editItemTranslations[lang.code]?.description || '').length}/255
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">
+                          Description <span className="text-gray-400">(max 255 chars)</span>
+                        </label>
+                        <textarea
+                          value={editItemTranslations[lang.code]?.description || ''}
+                          onChange={(e) => {
+                            const value = e.target.value.slice(0, 255);
+                            setEditItemTranslations({
+                              ...editItemTranslations,
+                              [lang.code]: {
+                                title: editItemTranslations[lang.code]?.title || '',
+                                description: value
+                              }
+                            });
+                          }}
+                          placeholder={`Enter ${lang.name} description...`}
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          maxLength={255}
+                        />
+                        <div className="text-xs text-gray-400 mt-0.5">
+                          {(editItemTranslations[lang.code]?.description || '').length}/255
+                        </div>
                       </div>
                     </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              // Non-Admin: Only show current language fields
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Title <span className="text-gray-500">(max 30 chars)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={editingItem.title}
+                    onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value.slice(0, 30) })}
+                    placeholder="Enter title..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={30}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {editingItem.title.length}/30
                   </div>
                 </div>
-              ))}
-            </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Description <span className="text-gray-500">(max 255 chars)</span>
+                  </label>
+                  <textarea
+                    value={editingItem.description}
+                    onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value.slice(0, 255) })}
+                    placeholder="Enter description..."
+                    rows={3}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    maxLength={255}
+                  />
+                  <div className="text-xs text-gray-500 mt-1">
+                    {editingItem.description.length}/255
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3 mt-8">
               <button
@@ -2345,7 +2656,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                 className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-semibold flex items-center justify-center gap-2"
               >
                 <Save className="w-4 h-4" />
-                💾 Save to All Languages
+                {isAdmin ? '💾 Save to All Languages' : '💾 Save'}
               </button>
               <button
                 onClick={() => setEditingItem(null)}
@@ -2618,7 +2929,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   if (editingEquipment.id) {
                     setEquipment(equipment.map(e => e.id === editingEquipment.id ? editingEquipment : e));
                   } else {
-                    setEquipment([...equipment, { ...editingEquipment, id: Date.now().toString() }]);
+                    setEquipment([...equipment, { ...editingEquipment, id: Date.now().toString(), isUserCreated: !isAdmin }]);
                   }
                   setShowEquipmentDialog(false);
                   setEditingEquipment(null);
@@ -2735,7 +3046,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   if (editingExercise.id) {
                     setExercises(exercises.map(e => e.id === editingExercise.id ? editingExercise : e));
                   } else {
-                    setExercises([...exercises, { ...editingExercise, id: Date.now().toString() }]);
+                    setExercises([...exercises, { ...editingExercise, id: Date.now().toString(), isUserCreated: !isAdmin }]);
                   }
                   setShowExerciseDialog(false);
                   setEditingExercise(null);
@@ -2918,7 +3229,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
                   if (editingDevice.id) {
                     setDevices(devices.map(d => d.id === editingDevice.id ? editingDevice : d));
                   } else {
-                    setDevices([...devices, { ...editingDevice, id: Date.now().toString() }]);
+                    setDevices([...devices, { ...editingDevice, id: Date.now().toString(), isUserCreated: !isAdmin }]);
                   }
                   setShowDeviceDialog(false);
                   setEditingDevice(null);

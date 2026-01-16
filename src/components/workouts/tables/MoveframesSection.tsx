@@ -51,7 +51,7 @@ export default function MoveframesSection({
   columnSettings
 }: MoveframesSectionProps) {
   const [isExpanded, setIsExpanded] = React.useState(true);
-  const [expandedMoveframe, setExpandedMoveframe] = React.useState<string | null>(null);
+  const [expandedMoveframes, setExpandedMoveframes] = React.useState<Set<string>>(new Set());
   const [showInfoPanel, setShowInfoPanel] = useState(false);
   const [selectedMoveframe, setSelectedMoveframe] = useState<any>(null);
   const [showWorkTypeModal, setShowWorkTypeModal] = useState(false);
@@ -68,7 +68,7 @@ export default function MoveframesSection({
   // Auto-expand moveframe when expandedMoveframeId is set
   React.useEffect(() => {
     if (expandedMoveframeId) {
-      setExpandedMoveframe(expandedMoveframeId);
+      setExpandedMoveframes(prev => new Set([...Array.from(prev), expandedMoveframeId]));
     }
   }, [expandedMoveframeId]);
 
@@ -180,7 +180,7 @@ export default function MoveframesSection({
       sport: <th key="sport" className="border border-gray-200 px-1 py-1 text-left text-sm font-bold" style={{ width: '48px' }}>Sport</th>,
       description: <th key="description" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '623px' }}>Description</th>,
       duration: <th key="duration" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '42px' }}>Dur</th>,
-      rip: <th key="rip" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '28px' }}>Rip</th>,
+      rip: <th key="rip" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '45px' }}>Rip\sets</th>,
       macro: <th key="macro" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '32px' }}>Macro</th>,
       alarm: <th key="alarm" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '42px' }}>Alarm</th>,
       annotation: <th key="annotation" className="border border-gray-200 px-1 py-1 text-center text-sm font-bold" style={{ width: '50px' }}>Note</th>,
@@ -384,7 +384,7 @@ export default function MoveframesSection({
                 <tbody>
                   {orderedMoveframes.map((moveframe: any, mfIndex: number) => {
                     // Expand movelaps if: explicitly expanded OR autoExpandAll is true
-                    const isMovelapsExpanded = autoExpandAll || expandedMoveframe === moveframe.id;
+                    const isMovelapsExpanded = autoExpandAll || expandedMoveframes.has(moveframe.id);
                     
                     return (
                       <SortableMoveframeRow
@@ -395,8 +395,18 @@ export default function MoveframesSection({
                         isMovelapsExpanded={isMovelapsExpanded}
                         isChecked={checkedMoveframes.has(moveframe.id)}
                         onToggleCheck={() => toggleMoveframeCheck(moveframe.id)}
-                        onToggleExpand={() => setExpandedMoveframe(isMovelapsExpanded ? null : moveframe.id)}
-                        onNavigateToMoveframe={(moveframeId) => setExpandedMoveframe(moveframeId)}
+                        onToggleExpand={() => {
+                          setExpandedMoveframes(prev => {
+                            const newSet = new Set(prev);
+                            if (newSet.has(moveframe.id)) {
+                              newSet.delete(moveframe.id);
+                            } else {
+                              newSet.add(moveframe.id);
+                            }
+                            return newSet;
+                          });
+                        }}
+                        onNavigateToMoveframe={(moveframeId) => setExpandedMoveframes(prev => new Set([...Array.from(prev), moveframeId]))}
                         onEditMoveframe={onEditMoveframe}
                         onDeleteMoveframe={onDeleteMoveframe}
                         onEditMovelap={onEditMovelap}

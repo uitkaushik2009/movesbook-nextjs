@@ -54,7 +54,9 @@ export async function POST(request: NextRequest) {
       manualMode,
       manualPriority,    // Priority flag for manual mode display
       manualRepetitions, // For storing on Moveframe model (manual mode only)
-      manualDistance     // For storing on Moveframe model (manual mode only)
+      manualDistance,    // For storing on Moveframe model (manual mode only)
+      appliedTechnique,  // Execution technique for Body Building
+      aerobicSeries      // Series/Batteries/Groups for aerobic sports
     } = body;
 
     // 🔍 DEBUG: Log manual mode fields
@@ -90,6 +92,7 @@ export async function POST(request: NextRequest) {
     console.log('Validated - sport:', sport);
     console.log('Validated - type:', type);
     console.log('Validated - manualMode:', manualMode);
+    console.log('Validated - appliedTechnique:', appliedTechnique);
     console.log('Validated - movelaps count:', movelaps?.length || 0);
 
     // Ensure we have a valid sectionId - create default section if needed
@@ -144,6 +147,8 @@ export async function POST(request: NextRequest) {
       manualPriority: manualPriority || false,
       repetitions: manualRepetitions !== undefined && manualRepetitions !== null && manualRepetitions !== '' ? parseInt(manualRepetitions) : null,
       distance: manualDistance !== undefined && manualDistance !== null && manualDistance !== '' ? parseInt(manualDistance) : null,
+      appliedTechnique: appliedTechnique || null, // Execution technique for Body Building
+      aerobicSeries: aerobicSeries !== undefined && aerobicSeries !== null && aerobicSeries !== '' ? parseInt(aerobicSeries) : null, // Series/Batteries/Groups for aerobic sports
       annotationText: annotationText || null,
       annotationBgColor: annotationBgColor || null,
       annotationTextColor: annotationTextColor || null,
@@ -157,31 +162,42 @@ export async function POST(request: NextRequest) {
       console.log('   distance (from manualDistance):', moveframeData.distance);
     }
     
-    const movelapsData = movelaps && movelaps.length > 0 ? movelaps.map((lap: any, index: number) => ({
-      repetitionNumber: index + 1,
-      distance: lap.distance ? parseInt(lap.distance) : null,
-      speed: lap.speed || null,
-      style: lap.style || null,
-      pace: lap.pace || null,
-      time: lap.time || null,
-      reps: lap.reps ? parseInt(lap.reps) : null,
-      weight: lap.weight || null,
-      tools: lap.tools || null,
-      r1: lap.r1 || null,
-      r2: lap.r2 || null,
-      muscularSector: lap.muscularSector || null,
-      exercise: lap.exercise || null,
-      // Convert display value to enum value
-      restType: convertRestTypeToEnum(lap.restType),
-      pause: lap.pause || null,
-      macroFinal: lap.macroFinal || null,
-      alarm: lap.alarm ? parseInt(lap.alarm) : null,
-      sound: lap.sound || null,
-      notes: lap.notes || null,
-      status: (lap.status || 'PENDING') as any,
-      isSkipped: lap.isSkipped || false,
-      isDisabled: lap.isDisabled || false
-    })) : [];
+    const movelapsData = movelaps && movelaps.length > 0 ? movelaps.map((lap: any, index: number) => {
+      // If appliedTechnique exists, append it to the movelap notes
+      let movelapNotes = lap.notes || '';
+      if (appliedTechnique) {
+        console.log(`✅ Adding technique "${appliedTechnique}" to movelap ${index + 1} notes`);
+        movelapNotes = movelapNotes 
+          ? `${movelapNotes}\n\nTechnique: ${appliedTechnique}`
+          : `Technique: ${appliedTechnique}`;
+      }
+      
+      return {
+        repetitionNumber: index + 1,
+        distance: lap.distance ? parseInt(lap.distance) : null,
+        speed: lap.speed || null,
+        style: lap.style || null,
+        pace: lap.pace || null,
+        time: lap.time || null,
+        reps: lap.reps ? parseInt(lap.reps) : null,
+        weight: lap.weight || null,
+        tools: lap.tools || null,
+        r1: lap.r1 || null,
+        r2: lap.r2 || null,
+        muscularSector: lap.muscularSector || null,
+        exercise: lap.exercise || null,
+        // Convert display value to enum value
+        restType: convertRestTypeToEnum(lap.restType),
+        pause: lap.pause || null,
+        macroFinal: lap.macroFinal || null,
+        alarm: lap.alarm ? parseInt(lap.alarm) : null,
+        sound: lap.sound || null,
+        notes: movelapNotes || null,
+        status: (lap.status || 'PENDING') as any,
+        isSkipped: lap.isSkipped || false,
+        isDisabled: lap.isDisabled || false
+      };
+    }) : [];
     
     console.log('Moveframe data:', JSON.stringify(moveframeData, null, 2));
     console.log('Movelaps data:', JSON.stringify(movelapsData, null, 2));

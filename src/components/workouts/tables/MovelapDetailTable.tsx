@@ -149,12 +149,13 @@ function SortableMovelapRow({
   // Sport-specific rendering logic
   const sport = moveframe.sport || 'SWIM';
   const isSwim = sport === 'SWIM';
-  const isBike = sport === 'BIKE';
+  const isBike = sport === 'BIKE' || sport === 'MTB';
   const isRun = sport === 'RUN' || sport === 'HIKING' || sport === 'WALKING';
+  const isRowing = sport === 'ROWING' || sport === 'CANOEING';
   const isBodyBuilding = sport === 'BODY_BUILDING';
   
   // Distance-based sports (no tools)
-  const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'];
+  const distanceBasedSports = ['SWIM', 'BIKE', 'MTB', 'RUN', 'ROWING', 'CANOEING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'];
   const isDistanceBased = distanceBasedSports.includes(sport);
   
   // Debug logging
@@ -293,8 +294,8 @@ function SortableMovelapRow({
              {movelap.speed || '—'}
            </td>
            
-           {/* Row/min - Only for ROWING */}
-           {sport === 'ROWING' && (
+           {/* Row/min - Only for ROWING and CANOEING */}
+           {(moveframe.sport === 'ROWING' || moveframe.sport === 'CANOEING') && (
              <td className={`border border-gray-300 px-1 py-1 text-center text-xs font-semibold ${movelap.isNewlyAdded ? 'text-red-600' : 'text-purple-700'}`}>
                {movelap.rowPerMin || '—'}
              </td>
@@ -486,6 +487,7 @@ export default function MovelapDetailTable({
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [currentMovelapIndex, setCurrentMovelapIndex] = useState(0); // Current movelap being viewed
   const [showManualContentPopup, setShowManualContentPopup] = useState(false); // Popup for manual content
+  const [popupContentType, setPopupContentType] = useState<'summary' | 'detail'>('detail'); // Track which section is being viewed
   
   // Navigation for movelaps within the same moveframe
   const hasPreviousMovelap = currentMovelapIndex > 0;
@@ -740,7 +742,7 @@ export default function MovelapDetailTable({
 
     return (
       <>
-      <div className="bg-gray-50 p-2 pr-0">
+      <div className="p-2 pr-0">
         {/* Note Box, Save Button, and Add Movelap Button for Manual Mode - Above Table */}
         <div className="mb-3 flex items-center gap-4">
           {/* Movelap Navigation */}
@@ -808,49 +810,72 @@ export default function MovelapDetailTable({
           </div>
         </div>
 
-        {/* Simplified Manual Mode Table - Single Row with 3 Columns */}
+        {/* Manual Mode Table - Two separate editable sections */}
         <table className="w-full border-collapse text-xs table-fixed">
           <thead className="bg-gradient-to-r from-purple-200 to-pink-200">
             <tr>
               <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '85px' }}>Sport</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold">Detail of workout</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '150px', minWidth: '150px' }}>Options</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '40%' }}>Summary</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '40%' }}>Detail of workout</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '120px', minWidth: '120px' }}>Options</th>
             </tr>
           </thead>
           <tbody>
             <tr className="hover:bg-blue-50">
               {/* Sport */}
-              <td className="border border-gray-300 px-1 py-1 text-center text-xs font-semibold">
-                <div className="flex items-center justify-center">
-                  <span className="px-3 py-2 bg-purple-100 border-2 border-purple-300 rounded-lg font-bold text-purple-800">
-                    {moveframe.sport?.replace(/_/g, ' ') || '—'}
-                  </span>
-                </div>
+              <td className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold bg-white align-middle">
+                <span className="font-bold text-purple-800">
+                  {moveframe.sport?.replace(/_/g, ' ') || '—'}
+                </span>
               </td>
-              {/* Detail of workout (Manual Content) */}
+              
+              {/* Summary (Notes from movelap) */}
               <td 
-                className="border border-gray-300 px-1 py-1 text-xs cursor-pointer hover:bg-blue-50"
-                onClick={() => setShowManualContentPopup(true)}
-                title="Click to view full text"
+                className="border border-gray-300 px-2 py-2 text-xs cursor-pointer hover:bg-gray-50 bg-white align-top"
+                onDoubleClick={() => {
+                  setPopupContentType('summary');
+                  setShowManualContentPopup(true);
+                }}
+                title="Double-click to view full text"
               >
                 <div 
-                  className="p-2 bg-gradient-to-br from-white to-gray-50 rounded border border-gray-300 max-h-96 overflow-y-auto text-left"
+                  className="max-h-48 overflow-y-auto text-left"
                   style={{
-                    lineHeight: '1.8',
+                    lineHeight: '1.6',
                     fontFamily: 'system-ui, -apple-system, sans-serif',
-                    fontSize: '13px'
+                    fontSize: '12px'
+                  }}
+                >
+                  {stripHtmlTags(moveframe.movelaps?.[0]?.notes || 'No summary')}
+                </div>
+              </td>
+              
+              {/* Detail of workout (Manual Content from moveframe.notes) */}
+              <td 
+                className="border border-gray-300 px-2 py-2 text-xs cursor-pointer hover:bg-gray-50 bg-white align-top"
+                onDoubleClick={() => {
+                  setPopupContentType('detail');
+                  setShowManualContentPopup(true);
+                }}
+                title="Double-click to view full text"
+              >
+                <div 
+                  className="max-h-48 overflow-y-auto text-left"
+                  style={{
+                    lineHeight: '1.6',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    fontSize: '12px'
                   }}
                   dangerouslySetInnerHTML={{ __html: manualContent }}
                 />
               </td>
-              {/* Options - Simplified for manual mode */}
-              <td className="border border-gray-300 px-1 py-1 text-center" style={{ width: '150px', minWidth: '150px' }}>
-                <div className="flex items-center justify-center">
+              
+              {/* Options */}
+              <td className="border border-gray-300 px-2 py-2 text-center bg-white align-middle" style={{ width: '120px', minWidth: '120px' }}>
+                <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      // In manual mode, we need to create a temporary movelap object for editing
-                      // Use the first movelap if it exists, otherwise create a default one
                       const movelapToEdit = moveframe.movelaps && moveframe.movelaps.length > 0 
                         ? moveframe.movelaps[0]
                         : {
@@ -858,7 +883,6 @@ export default function MovelapDetailTable({
                             moveframeId: moveframe.id,
                             sequenceNumber: 1,
                             repetitionNumber: 1,
-                            // Add other default movelap fields as needed
                           };
                       
                       if (onEditMovelap) {
@@ -880,7 +904,7 @@ export default function MovelapDetailTable({
                     className="px-2 py-1 text-[10px] bg-purple-500 text-white rounded hover:bg-purple-600"
                     title="Add movelap"
                   >
-                    Add movelap
+                    Options
                   </button>
                 </div>
               </td>
@@ -901,8 +925,10 @@ export default function MovelapDetailTable({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 rounded-t-xl flex items-center justify-between">
-              <h3 className="text-xl font-bold">Detail of workout - Extended Text</h3>
+            <div className={`${popupContentType === 'summary' ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' : 'bg-gradient-to-r from-indigo-600 to-purple-600'} text-white p-4 rounded-t-xl flex items-center justify-between`}>
+              <h3 className="text-xl font-bold">
+                {popupContentType === 'summary' ? 'Summary - Extended Text' : 'Detail of workout - Extended Text'}
+              </h3>
               <button
                 onClick={() => setShowManualContentPopup(false)}
                 className="text-white hover:bg-white/20 rounded-lg p-2 transition-colors"
@@ -915,15 +941,29 @@ export default function MovelapDetailTable({
             </div>
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
-              <div
-                className="prose prose-lg max-w-none text-gray-800"
-                style={{
-                  lineHeight: '1.8',
-                  fontFamily: 'system-ui, -apple-system, sans-serif',
-                  fontSize: '16px'
-                }}
-                dangerouslySetInnerHTML={{ __html: manualContent }}
-              />
+              {popupContentType === 'summary' ? (
+                <div
+                  className="prose prose-lg max-w-none text-gray-800"
+                  style={{
+                    lineHeight: '1.8',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    fontSize: '16px',
+                    whiteSpace: 'pre-wrap'
+                  }}
+                >
+                  {stripHtmlTags(moveframe.movelaps?.[0]?.notes || 'No summary available')}
+                </div>
+              ) : (
+                <div
+                  className="prose prose-lg max-w-none text-gray-800"
+                  style={{
+                    lineHeight: '1.8',
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                    fontSize: '16px'
+                  }}
+                  dangerouslySetInnerHTML={{ __html: manualContent }}
+                />
+              )}
             </div>
           </div>
         </div>,
@@ -942,9 +982,9 @@ export default function MovelapDetailTable({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={movelaps.map((ml: any) => ml.id)} strategy={verticalListSortingStrategy}>
-        <div className="bg-gray-50 p-2 pr-0">
+        <div className="p-2 pr-0">
           {/* Top Controls - Note and Add Movelap Button */}
-          <div className="mb-3 flex items-center gap-4">
+          <div className="mb-3 flex items-center gap-4" style={{ backgroundColor: 'rgb(250, 255, 214)', padding: '8px', marginLeft: '-8px', marginRight: '8px', marginTop: '-8px' }}>
             {/* Movelap Navigation */}
             {movelaps.length > 0 && (
               <div className="flex items-center gap-2">
@@ -1010,17 +1050,18 @@ export default function MovelapDetailTable({
             </div>
           </div>
 
-          <table className="w-full border-collapse text-xs table-fixed">
+          <table className="w-full border-collapse text-xs table-fixed bg-white">
             {/* Render sport-specific column headers */}
             {(() => {
               const sport = moveframe.sport || 'SWIM';
               const isSwim = sport === 'SWIM';
-              const isBike = sport === 'BIKE';
+              const isBike = sport === 'BIKE' || sport === 'MTB';
               const isRun = sport === 'RUN' || sport === 'HIKING' || sport === 'WALKING';
+              const isRowing = sport === 'ROWING' || sport === 'CANOEING';
               const isBodyBuilding = sport === 'BODY_BUILDING';
               
               // Distance-based sports (no tools) - MUST match the array at top of component!
-              const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'];
+              const distanceBasedSports = ['SWIM', 'BIKE', 'MTB', 'RUN', 'ROWING', 'CANOEING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'];
               const isDistanceBased = distanceBasedSports.includes(sport);
               
               // Other sports have tools (Gymnastic, Stretching, Pilates, Yoga, Technical moves, Free moves, etc.)
@@ -1029,19 +1070,53 @@ export default function MovelapDetailTable({
               return (
                 <>
                   <colgroup>
-                    <col style={{ width: '30px' }} />
-                    <col style={{ width: '30px' }} />
-                    <col style={{ width: '30px' }} />
-                    <col style={{ width: '120px' }} />
-                    <col style={{ width: '80px' }} />
-                    {isBodyBuilding && <><col style={{ width: '100px' }} /><col style={{ width: '120px' }} /><col style={{ width: '50px' }} /><col style={{ width: '60px' }} /><col style={{ width: '50px' }} /><col style={{ width: '80px' }} /></>}
-                    {hasTools && <><col style={{ width: '50px' }} /><col style={{ width: '120px' }} /></>}
-                    {isDistanceBased && <><col style={{ width: '60px' }} />{(isSwim || isRun) && <col style={{ width: '100px' }} />}{isBike && <><col style={{ width: '50px' }} /><col style={{ width: '50px' }} /></>}<col style={{ width: '50px' }} /><col style={{ width: '60px' }} /><col style={{ width: '60px' }} /></>}
-                    <col style={{ width: '45px' }} />
-                    <col style={{ width: '40px' }} />
-                    <col style={{ width: '60px' }} />
-                    <col style={{ width: '300px' }} />
-                    <col style={{ width: '120px' }} />
+                    {/* Fixed base columns */}
+                    <col style={{ width: '30px' }} />  {/* Move */}
+                    <col style={{ width: '30px' }} />  {/* MF */}
+                    <col style={{ width: '30px' }} />  {/* # */}
+                    <col style={{ width: '120px' }} /> {/* Workout section */}
+                    <col style={{ width: '80px' }} />  {/* Sport */}
+                    
+                    {/* Sport-specific columns */}
+                    {isBodyBuilding && (
+                      <>
+                        <col style={{ width: '100px' }} /> {/* Musc.Sector */}
+                        <col style={{ width: '120px' }} /> {/* Exercise */}
+                        <col style={{ width: '50px' }} />  {/* Reps */}
+                        <col style={{ width: '60px' }} />  {/* Weight */}
+                        <col style={{ width: '50px' }} />  {/* Tempo */}
+                        <col style={{ width: '80px' }} />  {/* Rest Type */}
+                      </>
+                    )}
+                    {hasTools && (
+                      <>
+                        <col style={{ width: '50px' }} />  {/* Reps */}
+                        <col style={{ width: '120px' }} /> {/* Tools */}
+                      </>
+                    )}
+                    {isDistanceBased && (
+                      <>
+                        <col style={{ width: '60px' }} />  {/* Dist/Dur */}
+                        {(isSwim || isRun) && <col style={{ width: '100px' }} />} {/* Style */}
+                        {isBike && (
+                          <>
+                            <col style={{ width: '50px' }} />  {/* R1 */}
+                            <col style={{ width: '50px' }} />  {/* R2 */}
+                          </>
+                        )}
+                        <col style={{ width: '50px' }} />  {/* Speed */}
+                        {isRowing && <col style={{ width: '60px' }} />} {/* Row/min */}
+                        <col style={{ width: '60px' }} />  {/* Time */}
+                        <col style={{ width: '60px' }} />  {/* Pace */}
+                      </>
+                    )}
+                    
+                    {/* Fixed trailing columns */}
+                    <col style={{ width: '45px' }} />  {/* Pause */}
+                    <col style={{ width: '40px' }} />  {/* Macro */}
+                    <col style={{ width: '60px' }} />  {/* Alarm&Snd */}
+                    <col style={{ width: '300px' }} /> {/* Notes */}
+                    <col style={{ width: '120px' }} /> {/* Options */}
                   </colgroup>
                   <thead className="bg-gray-200">
                     <tr>
@@ -1082,7 +1157,7 @@ export default function MovelapDetailTable({
                             </>
                           )}
                           <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Speed</th>
-                          {sport === 'ROWING' && (
+                          {isRowing && (
                             <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Row/min</th>
                           )}
                           <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" style={{ width: '85px', minWidth: '85px' }}>Time</th>
@@ -1103,23 +1178,71 @@ export default function MovelapDetailTable({
             })()}
             
             <tbody>
-              {movelaps.map((movelap: any, index: number) => (
-                <SortableMovelapRow
-                  key={movelap.id}
-                  movelap={movelap}
-                  index={index}
-                  sequenceNumber={movelapSequences.get(movelap.id) || index + 1}
-                  moveframeLetter={moveframeLetter}
-                  sectionColor={sectionColor}
-                  sectionName={sectionName}
-                  moveframe={moveframe}
-                  onEditMovelap={onEditMovelap}
-                  onDeleteMovelap={onDeleteMovelap}
-                  onCopyMovelap={handleCopyMovelap}
-                  onPasteMovelap={handlePasteMovelap}
-                  onAddMovelapAfter={onAddMovelapAfter}
-                />
-              ))}
+              {movelaps.map((movelap: any, index: number) => {
+                // Calculate group headers for aerobic sports
+                const aerobicSeriesNum = parseInt(moveframe.aerobicSeries || '1');
+                const repsPerGroup = Math.ceil(movelaps.length / aerobicSeriesNum);
+                const currentGroup = Math.floor(index / repsPerGroup) + 1;
+                const isFirstInGroup = index % repsPerGroup === 0;
+                const AEROBIC_SPORTS = ['SWIM', 'BIKE', 'MTB', 'SPINNING', 'RUN', 'ROWING', 'CANOEING', 'KAYAKING', 'SKATE', 'SKI', 'SNOWBOARD', 'WALKING', 'HIKING'];
+                const sport = moveframe.sport || 'SWIM';
+                
+                // Calculate column count based on sport type
+                const isSwim = sport === 'SWIM';
+                const isBike = sport === 'BIKE' || sport === 'MTB';
+                const isRun = sport === 'RUN' || sport === 'HIKING' || sport === 'WALKING';
+                const isRowing = sport === 'ROWING' || sport === 'CANOEING';
+                const isBodyBuilding = sport === 'BODY_BUILDING';
+                const distanceBasedSports = ['SWIM', 'BIKE', 'MTB', 'RUN', 'ROWING', 'CANOEING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'];
+                const isDistanceBased = distanceBasedSports.includes(sport);
+                const hasTools = !isBodyBuilding && !isDistanceBased;
+                
+                // Base columns: Move(1) + MF(1) + #(1) + Workout section(1) + Sport(1) = 5
+                let totalColumns = 5;
+                
+                if (isBodyBuilding) {
+                  totalColumns += 6; // Musc.Sector + Exercise + Reps + Weight + Tempo + Rest Type
+                } else if (hasTools) {
+                  totalColumns += 2; // Reps + Tools
+                } else if (isDistanceBased) {
+                  totalColumns += 1; // Dist/Dur
+                  if (isSwim || isRun) totalColumns += 1; // Style
+                  if (isBike) totalColumns += 2; // R1 + R2
+                  totalColumns += 1; // Speed
+                  if (isRowing) totalColumns += 1; // Row/min
+                  totalColumns += 2; // Time + Pace
+                }
+                
+                // Trailing columns: Pause(1) + Macro(1) + Alarm&Snd(1) + Notes(1) + Options(1) = 5
+                totalColumns += 5;
+                
+                return (
+                  <React.Fragment key={movelap.id}>
+                    {/* Group Header */}
+                    {AEROBIC_SPORTS.includes(sport) && aerobicSeriesNum > 1 && isFirstInGroup && (
+                      <tr>
+                        <td colSpan={totalColumns} className="border border-gray-400 bg-rose-100 px-3 py-2 text-sm font-bold text-rose-900 text-center">
+                          Group {currentGroup}
+                        </td>
+                      </tr>
+                    )}
+                    <SortableMovelapRow
+                      movelap={movelap}
+                      index={index}
+                      sequenceNumber={movelapSequences.get(movelap.id) || index + 1}
+                      moveframeLetter={moveframeLetter}
+                      sectionColor={sectionColor}
+                      sectionName={sectionName}
+                      moveframe={moveframe}
+                      onEditMovelap={onEditMovelap}
+                      onDeleteMovelap={onDeleteMovelap}
+                      onCopyMovelap={handleCopyMovelap}
+                      onPasteMovelap={handlePasteMovelap}
+                      onAddMovelapAfter={onAddMovelapAfter}
+                    />
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

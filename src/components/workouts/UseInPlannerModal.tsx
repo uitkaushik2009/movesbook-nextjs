@@ -10,104 +10,120 @@ interface UseInPlannerModalProps {
 }
 
 export default function UseInPlannerModal({ workout, onClose, onConfirm }: UseInPlannerModalProps) {
-  const [periods, setPeriods] = useState<any[]>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('');
+  const [plan, setPlan] = useState<any>(null);
   const [weeks, setWeeks] = useState<any[]>([]);
   const [selectedWeek, setSelectedWeek] = useState<string>('');
   const [days, setDays] = useState<any[]>([]);
   const [selectedDay, setSelectedDay] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
-  // Load periods on mount
+  // Load yearly plan on mount
   useEffect(() => {
-    loadPeriods();
+    loadYearlyPlan();
   }, []);
 
-  // Load weeks when period is selected
+  // Update days when week is selected
   useEffect(() => {
-    if (selectedPeriod) {
-      loadWeeks(selectedPeriod);
+    if (selectedWeek && weeks.length > 0) {
+      const week = weeks.find(w => w.id === selectedWeek);
+      if (week && week.days) {
+        const sortedDays = [...week.days].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+        setDays(sortedDays);
+        if (sortedDays.length > 0) {
+          setSelectedDay(sortedDays[0].id);
+        }
+      }
     }
-  }, [selectedPeriod]);
+  }, [selectedWeek, weeks]);
 
-  // Load days when week is selected
-  useEffect(() => {
-    if (selectedWeek) {
-      loadDays(selectedWeek);
-    }
-  }, [selectedWeek]);
-
-  const loadPeriods = async () => {
+  const loadYearlyPlan = async () => {
     try {
+      setLoading(true);
+      setError('');
+      
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please log in');
+        setError('Please log in');
+        setLoading(false);
         return;
       }
 
-      const response = await fetch('/api/workouts/periods', {
+      // Try to load the YEARLY_PLAN first
+      const timestamp = Date.now();
+      let response = await fetch(`/api/workouts/plan?type=YEARLY_PLAN&_t=${timestamp}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setPeriods(data);
-        if (data.length > 0) {
-          setSelectedPeriod(data[0].id);
+      // If YEARLY_PLAN fails or returns empty, try TEMPLATE_WEEKS (Section A) as fallback
+      if (!response.ok) {
+        console.log('⚠️ YEARLY_PLAN not available, trying TEMPLATE_WEEKS as fallback...');
+        response = await fetch(`/api/workouts/plan?type=CURRENT_WEEKS&section=A&_t=${timestamp}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to load planner');
         }
       }
-    } catch (error) {
-      console.error('Error loading periods:', error);
+
+      const data = await response.json();
+      console.log('📅 RAW API RESPONSE:', data);
+      console.log('   Response keys:', Object.keys(data || {}));
+      
+      // The API returns { plan: {...} }
+      const planData = data.plan;
+      
+      console.log('📅 Loaded yearly plan:');
+      console.log('   Plan ID:', planData?.id);
+      console.log('   Plan type:', planData?.type);
+      console.log('   Plan storageZone:', planData?.storageZone);
+      console.log('   Total weeks:', planData?.weeks?.length);
+      
+      if (!planData) {
+        setError('No yearly plan found. Please create one first.');
+        setLoading(false);
+        return;
+      }
+
+      if (!planData.weeks || planData.weeks.length === 0) {
+        setError(`Yearly plan exists but has no weeks. Plan ID: ${planData.id}, Type: ${planData.type}`);
+        setLoading(false);
+        return;
+      }
+
+      setPlan(planData);
+      const weeksArray = Array.isArray(planData.weeks) ? planData.weeks : [];
+      
+      console.log('   ✅ Weeks loaded:', weeksArray.length, 'weeks');
+      console.log('   First week:', {
+        id: weeksArray[0]?.id,
+        weekNumber: weeksArray[0]?.weekNumber,
+        daysCount: weeksArray[0]?.days?.length || 0
+      });
+      
+      setWeeks(weeksArray);
+
+      // Select the first week by default
+      if (weeksArray.length > 0) {
+        setSelectedWeek(weeksArray[0].id);
+      } else {
+        setError('Yearly plan has no weeks. Please recreate your yearly plan.');
+      }
+    } catch (error: any) {
+      console.error('Error loading yearly plan:', error);
+      setError(error.message || 'Failed to load yearly plan');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const loadWeeks = async (periodId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch(`/api/workouts/weeks?periodId=${periodId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setWeeks(data);
-        if (data.length > 0) {
-          setSelectedWeek(data[0].id);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading weeks:', error);
-    }
-  };
-
-  const loadDays = async (weekId: string) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-
-      const response = await fetch(`/api/workouts/days?weekId=${weekId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setDays(data);
-        if (data.length > 0) {
-          setSelectedDay(data[0].id);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading days:', error);
     }
   };
 
@@ -121,11 +137,31 @@ export default function UseInPlannerModal({ workout, onClose, onConfirm }: UseIn
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
         <div className="bg-white rounded-2xl p-8 max-w-2xl w-full">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading planner...</p>
+            <p className="text-gray-600">Loading yearly planner...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
+        <div className="bg-white rounded-2xl p-8 max-w-2xl w-full">
+          <div className="text-center">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Planner</h3>
+            <p className="text-gray-600 mb-4">{error}</p>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
@@ -133,7 +169,7 @@ export default function UseInPlannerModal({ workout, onClose, onConfirm }: UseIn
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] p-4">
       <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-blue-50">
@@ -156,43 +192,43 @@ export default function UseInPlannerModal({ workout, onClose, onConfirm }: UseIn
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Period Selection */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              1. Select Period
-            </label>
-            <select
-              value={selectedPeriod}
-              onChange={(e) => setSelectedPeriod(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-            >
-              {periods.map((period) => (
-                <option key={period.id} value={period.id}>
-                  {period.title} - {period.description}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Plan Info */}
+          {plan && (
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-4">
+              <h3 className="font-semibold text-indigo-900 mb-1">📅 Yearly Planner</h3>
+              <p className="text-sm text-indigo-700">
+                Total: {weeks.length} weeks • {plan.totalDays || 0} days
+              </p>
+            </div>
+          )}
 
           {/* Week Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              2. Select Week
+              1. Select Week
             </label>
             <select
               value={selectedWeek}
               onChange={(e) => setSelectedWeek(e.target.value)}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-              disabled={!selectedPeriod || weeks.length === 0}
+              disabled={weeks.length === 0}
             >
               {weeks.length === 0 ? (
                 <option>No weeks available</option>
               ) : (
-                weeks.map((week) => (
-                  <option key={week.id} value={week.id}>
-                    Week {week.weekNumber}
-                  </option>
-                ))
+                weeks.map((week) => {
+                  const firstDay = week.days?.[0];
+                  const lastDay = week.days?.[week.days.length - 1];
+                  const dateRange = firstDay && lastDay 
+                    ? `${new Date(firstDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(lastDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                    : '';
+                  
+                  return (
+                    <option key={week.id} value={week.id}>
+                      Week {week.weekNumber} {dateRange ? `(${dateRange})` : ''}
+                    </option>
+                  );
+                })
               )}
             </select>
           </div>
@@ -200,7 +236,7 @@ export default function UseInPlannerModal({ workout, onClose, onConfirm }: UseIn
           {/* Day Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              3. Select Day
+              2. Select Day
             </label>
             <select
               value={selectedDay}
@@ -211,11 +247,19 @@ export default function UseInPlannerModal({ workout, onClose, onConfirm }: UseIn
               {days.length === 0 ? (
                 <option>No days available</option>
               ) : (
-                days.map((day) => (
-                  <option key={day.id} value={day.id}>
-                    {day.dayName || `Day ${day.dayNumber}`} - {new Date(day.date).toLocaleDateString()}
-                  </option>
-                ))
+                days.map((day) => {
+                  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                  const dayName = dayNames[day.dayOfWeek] || `Day ${day.dayOfWeek + 1}`;
+                  const date = new Date(day.date);
+                  const workoutsCount = day.workouts?.length || 0;
+                  
+                  return (
+                    <option key={day.id} value={day.id}>
+                      {dayName}, {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} 
+                      {workoutsCount > 0 ? ` (${workoutsCount} workout${workoutsCount !== 1 ? 's' : ''})` : ' (empty)'}
+                    </option>
+                  );
+                })
               )}
             </select>
           </div>

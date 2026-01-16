@@ -109,6 +109,7 @@ export interface Moveframe extends BaseEntity {
   notes?: string | null;
   macroFinal?: string | null;
   alarm?: number | null;
+  appliedTechnique?: string | null; // Body Building execution technique
   annotationBgColor?: string | null;
   annotationText?: string | null;
   annotationTextColor?: string | null;

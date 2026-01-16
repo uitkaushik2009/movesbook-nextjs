@@ -117,10 +117,13 @@ export default function SortableMoveframeRow({
     0
   );
   
-  // Debug: Log movelaps count to verify updates
+  // Debug: Log movelaps count and appliedTechnique to verify updates
   React.useEffect(() => {
     console.log(`🔢 Moveframe ${moveframe.letter} - Rip count: ${movelapsCount}, Movelaps:`, moveframe.movelaps);
-  }, [moveframe.movelaps, movelapsCount, moveframe.letter]);
+    if (moveframe.appliedTechnique) {
+      console.log(`🎯 Moveframe ${moveframe.letter} has technique: "${moveframe.appliedTechnique}"`);
+    }
+  }, [moveframe.movelaps, movelapsCount, moveframe.letter, moveframe.appliedTechnique]);
   const sectionColor = moveframe.section?.color || '#5b8def';
   const sectionName = moveframe.section?.name || 'Default';
   const sportIcon = getSportIcon(moveframe.sport || 'SWIM', iconType);
@@ -894,7 +897,7 @@ export default function SortableMoveframeRow({
       {/* Movelaps Detail Table - Level 3: Indented from moveframe table */}
       {isMovelapsExpanded && (
         <tr>
-          <td colSpan={visibleColumns.length} className="border border-gray-200 p-0 bg-gray-50">
+          <td colSpan={visibleColumns.length} className="border border-gray-200 p-0" style={{ backgroundColor: 'rgb(250, 255, 214)' }}>
             <div className="pl-8" style={{ maxWidth: '1400px' }}>
               <MovelapDetailTable 
                 moveframe={moveframe}

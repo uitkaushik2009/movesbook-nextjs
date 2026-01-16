@@ -40,6 +40,9 @@ export async function PATCH(
       status,
       sports,
       mainSport,
+      mainGoal,
+      intensity,
+      tags,
       includeStretching
     } = body;
 
@@ -80,6 +83,9 @@ export async function PATCH(
         feelingStatus: feelingStatus || undefined,
         status: status as any || undefined,
         mainSport: mainSport !== undefined ? (mainSport || null) : undefined,
+        mainGoal: mainGoal !== undefined ? (mainGoal || null) : undefined,
+        intensity: intensity !== undefined ? (intensity || null) : undefined,
+        tags: tags !== undefined ? (tags || null) : undefined,
         includeStretching: includeStretching !== undefined ? includeStretching : undefined
       },
       include: {

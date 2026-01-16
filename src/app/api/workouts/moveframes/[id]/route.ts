@@ -94,7 +94,8 @@ export async function PATCH(
       favourite,
       manualRepetitions, // For storing on Moveframe model (manual mode only)
       manualDistance,    // For storing on Moveframe model (manual mode only)
-      appliedTechnique   // Body Building technique
+      appliedTechnique,  // Body Building technique
+      aerobicSeries      // Series/Batteries/Groups for aerobic sports
     } = body;
 
     console.log('📝 [API UPDATE] Updating moveframe:', params.id, {
@@ -158,6 +159,7 @@ export async function PATCH(
         repetitions: manualRepetitions !== undefined && manualRepetitions !== null && manualRepetitions !== '' ? parseInt(manualRepetitions) : (manualRepetitions === null || manualRepetitions === '' ? null : undefined),
         distance: manualDistance !== undefined && manualDistance !== null && manualDistance !== '' ? parseInt(manualDistance) : (manualDistance === null || manualDistance === '' ? null : undefined),
         appliedTechnique: appliedTechnique !== undefined ? appliedTechnique : undefined,
+        aerobicSeries: aerobicSeries !== undefined && aerobicSeries !== null && aerobicSeries !== '' ? parseInt(aerobicSeries) : (aerobicSeries === null || aerobicSeries === '' ? null : undefined),
         // Annotation fields: only save if type is ANNOTATION, otherwise clear them
         annotationText: type === 'ANNOTATION' ? (annotationText || null) : null,
         annotationBgColor: type === 'ANNOTATION' ? (annotationBgColor || null) : null,

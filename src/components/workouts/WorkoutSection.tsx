@@ -80,6 +80,8 @@ import ShareDayModal from '@/components/workouts/modals/ShareDayModal';
 import WeekTotalsModal from '@/components/workouts/modals/WeekTotalsModal';
 import WeeklyInfoModal from '@/components/workouts/WeeklyInfoModal';
 import CopyWeekModal from '@/components/workouts/modals/CopyWeekModal';
+import DayOverviewModal from '@/components/workouts/DayOverviewModal';
+import WorkoutOverviewModal from '@/components/workouts/WorkoutOverviewModal';
 import ExportSharePrint from '@/components/workouts/ExportSharePrint';
 import { useColumnSettings } from '@/hooks/useColumnSettings';
 import DragDropConfirmModal, { DragAction, DropPosition } from '@/components/workouts/modals/DragDropConfirmModal';
@@ -471,6 +473,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [currentWeek, setCurrentWeek] = useState<any>(null);
   const [autoPrintWeek, setAutoPrintWeek] = useState(false);
   const [targetWeeks, setTargetWeeks] = useState<any[]>([]);
+  const [showDayOverviewModal, setShowDayOverviewModal] = useState(false);
+  const [dayForOverview, setDayForOverview] = useState<any>(null);
+  const [showWorkoutOverviewModal, setShowWorkoutOverviewModal] = useState(false);
+  const [workoutForOverview, setWorkoutForOverview] = useState<any>(null);
+  const [dayForWorkoutOverview, setDayForWorkoutOverview] = useState<any>(null);
   // Use moveframeModalMode from the hook instead of local state
   const moveframeModalMode = modes.moveframeModalMode;
   const setMoveframeModalMode = setters.setMoveframeModalMode;
@@ -582,9 +589,15 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       return movelaps;
     }
     
-    const repsCount = parseInt(moveframeData.repetitions) || 1;
+    const baseReps = parseInt(moveframeData.repetitions) || 1;
+    const AEROBIC_SPORTS = ['SWIM', 'BIKE', 'MTB', 'SPINNING', 'RUN', 'ROWING', 'CANOEING', 'KAYAKING', 'SKATE', 'SKI', 'SNOWBOARD', 'WALKING', 'HIKING'];
+    const seriesMultiplier = AEROBIC_SPORTS.includes(moveframeData.sport) ? (parseInt(moveframeData.aerobicSeries) || 1) : 1;
+    const repsCount = baseReps * seriesMultiplier;
     
     console.log('🔧 [generateMovelaps] Starting generation:', {
+      baseReps,
+      aerobicSeries: moveframeData.aerobicSeries,
+      seriesMultiplier,
       repsCount,
       planningMode: moveframeData.planningMode,
       hasIndividualPlans: moveframeData.planningMode === 'individual',
@@ -1940,10 +1953,10 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        }
                      : activeSection === 'B' && workoutPlan
                      ? (() => {
-                        const filteredWeeks = workoutPlan.weeks?.filter((week: any) => {
-                          const weekNum = week.weekNumber;
-                          return weekNum >= currentPageStart && weekNum < currentPageStart + weeksPerPage;
-                        }) || [];
+                         const filteredWeeks = workoutPlan.weeks?.filter((week: any) => {
+                           const weekNum = week.weekNumber;
+                           return weekNum >= currentPageStart && weekNum < currentPageStart + weeksPerPage;
+                         }) || [];
                          return {
                            ...workoutPlan,
                            weeks: filteredWeeks
@@ -2027,6 +2040,10 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    setDayToPrint(day);
                    setAutoPrintDay(false);
                    setShowDayPrintModal(true);
+                 }}
+                 onShowDayOverview={(day) => {
+                   setDayForOverview(day);
+                   setShowDayOverviewModal(true);
                  }}
                 onEditWorkout={(workout, day) => {
                   setEditingWorkout(workout);
@@ -2238,6 +2255,28 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   setAutoPrintWorkout(false);
                   setShowWorkoutPrintModal(true);
                 }}
+                onShowWorkoutOverview={(workout, day) => {
+                  // Transform the workout into the format expected by WorkoutOverviewModal
+                  // The modal expects workoutData as a JSON string with workout, moveframes, and sports
+                  const transformedWorkout = {
+                    ...workout,
+                    workoutData: JSON.stringify({
+                      workout: {
+                        id: workout.id,
+                        name: workout.name,
+                        code: workout.code,
+                        notes: workout.notes,
+                        description: workout.description
+                      },
+                      moveframes: workout.moveframes || [],
+                      sports: Array.from(new Set((workout.moveframes || []).map((mf: any) => mf.sport).filter(Boolean)))
+                    })
+                  };
+                  
+                  setWorkoutForOverview(transformedWorkout);
+                  setDayForWorkoutOverview(day);
+                  setShowWorkoutOverviewModal(true);
+                }}
                  onCopyMoveframe={(moveframe, workout, day) => {
                    setCopiedMoveframe(moveframe);
                    setActiveWorkout(workout);
@@ -2436,7 +2475,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                
                if (moveframeModalMode === 'edit' && editingMoveframe) {
                 // UPDATE existing moveframe
-               console.log('🔄 [UPDATE] Updating moveframe with manualPriority:', moveframeData.manualPriority);
+              console.log('🔄 [UPDATE] Updating moveframe with manualPriority:', moveframeData.manualPriority);
                 await moveframeHandlers.updateMoveframe(editingMoveframe.id, {
                    sport: moveframeData.sport,
                    type: moveframeData.type,
@@ -2447,6 +2486,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   sectionId: moveframeData.sectionId,
                   manualMode: moveframeData.manualMode || false,
                  manualPriority: moveframeData.manualPriority || false,
+                  appliedTechnique: moveframeData.appliedTechnique,
+                  aerobicSeries: moveframeData.aerobicSeries,
                   // Annotation fields
                   annotationText: moveframeData.annotationText,
                   annotationBgColor: moveframeData.annotationBgColor,
@@ -2457,8 +2498,11 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                  // ALWAYS regenerate movelaps for non-ANNOTATION types when editing
                  // This ensures Rip\Sets column and all movelap data stays in sync
                  if (moveframeData.type !== 'ANNOTATION') {
-                   const newRepsCount = parseInt(moveframeData.repetitions) || 1;
-                   console.log(`🔄 Editing moveframe - regenerating ${newRepsCount} movelaps to ensure data sync...`);
+                   const baseReps = parseInt(moveframeData.repetitions) || 1;
+                   const AEROBIC_SPORTS = ['SWIM', 'BIKE', 'MTB', 'SPINNING', 'RUN', 'ROWING', 'CANOEING', 'KAYAKING', 'SKATE', 'SKI', 'SNOWBOARD', 'WALKING', 'HIKING'];
+                   const seriesMultiplier = AEROBIC_SPORTS.includes(moveframeData.sport) ? (parseInt(moveframeData.aerobicSeries) || 1) : 1;
+                   const newRepsCount = baseReps * seriesMultiplier;
+                   console.log(`🔄 Editing moveframe - regenerating ${newRepsCount} movelaps (${baseReps} reps × ${seriesMultiplier} series) to ensure data sync...`);
                    
                    const token = localStorage.getItem('token');
                    
@@ -2551,6 +2595,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   // Manual mode fields for Moveframe model
                   manualRepetitions: moveframeData.manualRepetitions,
                   manualDistance: moveframeData.manualDistance,
+                  // Aerobic series field
+                  appliedTechnique: moveframeData.appliedTechnique,
+                  aerobicSeries: moveframeData.aerobicSeries,
                   // Annotation fields
                   annotationText: moveframeData.annotationText,
                   annotationBgColor: moveframeData.annotationBgColor,
@@ -3653,6 +3700,29 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             setDayToShare(null);
           }}
           day={dayToShare}
+        />
+      )}
+
+      {/* Day Overview Modal */}
+      {showDayOverviewModal && dayForOverview && (
+        <DayOverviewModal
+          onClose={() => {
+            setShowDayOverviewModal(false);
+            setDayForOverview(null);
+          }}
+          day={dayForOverview}
+        />
+      )}
+
+      {/* Workout Overview Modal */}
+      {showWorkoutOverviewModal && workoutForOverview && (
+        <WorkoutOverviewModal
+          onClose={() => {
+            setShowWorkoutOverviewModal(false);
+            setWorkoutForOverview(null);
+            setDayForWorkoutOverview(null);
+          }}
+          workout={workoutForOverview}
         />
       )}
 
