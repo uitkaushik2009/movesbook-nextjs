@@ -942,6 +942,29 @@ export default function DayTableView({
               </button>
               )}
               
+              {/* Set Periods Button - Only show in Section A */}
+              {activeSection === 'A' && (
+              <button
+                onClick={() => {
+                  // Initialize week range to all displayed weeks in Section A
+                  const allWeekNumbers = sortedWeeks.map((w: any) => w.weekNumber);
+                  const minWeek = Math.min(...allWeekNumbers);
+                  const maxWeek = Math.max(...allWeekNumbers);
+                  setWeekRangeStart(minWeek);
+                  setWeekRangeEnd(maxWeek);
+                  setSelectedPeriodForRange(null);
+                  setShowPeriodSelector(true);
+                }}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
+                title="Set periods for multiple weeks"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Set periods of more weeks
+              </button>
+              )}
+              
               {/* Overview Button - For Section A/C */}
               {activeSection !== 'B' && (
               <button
@@ -1082,7 +1105,29 @@ export default function DayTableView({
                   {expandState === 0 ? 'Expand all the Weeks displayed' : expandState === 1 ? 'Expand all (with moveframes)' : 'Collapse all the weeks displayed'}
                 </button>
 
-                 {/* Overview of the weeks displayed Button */}
+                 {/* Overview Button - Single Week */}
+                 <button
+                   onClick={() => {
+                     console.log('📊 Overview button clicked for first displayed week');
+                     const firstWeek = sortedWeeks[0];
+                     if (firstWeek) {
+                       console.log('📊 Showing overview for week:', firstWeek.weekNumber);
+                       setCurrentWeekForModal(firstWeek);
+                       setAutoPrintWeek(false);
+                       setShowAllWeeksInModal(false);
+                       setShowWeekTotalsModal(true);
+                     } else {
+                       console.error('❌ No weeks available');
+                     }
+                   }}
+                   className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all shadow-md"
+                   title="View overview of the first displayed week"
+                 >
+                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                   Overview
+                 </button>
+
+                 {/* Overview of the weeks displayed Button - Multiple Weeks */}
                  <button
                    onClick={() => {
                      console.log('📊 Overview of the weeks displayed clicked');
@@ -1094,7 +1139,7 @@ export default function DayTableView({
                      setShowWeekTotalsModal(true);
                    }}
                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all shadow-md"
-                   title="View overview of all weeks in yearly plan"
+                   title="View overview of all displayed weeks in yearly plan"
                  >
                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                    Overview of the weeks displayed

@@ -19,63 +19,68 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
   // Get all workouts from the day
   const workouts = day.workouts || [];
   
-  // Collect all moveframes from all workouts
-  const allMoveframes: any[] = [];
-  workouts.forEach((workout: any) => {
-    if (workout.moveframes) {
-      allMoveframes.push(...workout.moveframes);
-    }
-  });
-
-  // Calculate totals by sport
-  const sportTotals: Record<string, { moveframes: number; movelaps: number; distance: number; duration: number; series: number; repetitions: number }> = {};
+  // Calculate totals by sport - tracking which workouts contain each sport
+  const sportTotals: Record<string, { workouts: number; moveframes: number; movelaps: number; distance: number; duration: number; series: number; repetitions: number; workoutIds: Set<string> }> = {};
   
-  allMoveframes.forEach((mf: any) => {
-    const sport = mf.sport || 'Unknown';
-    if (!sportTotals[sport]) {
-      sportTotals[sport] = { moveframes: 0, movelaps: 0, distance: 0, duration: 0, series: 0, repetitions: 0 };
-    }
-    sportTotals[sport].moveframes++;
-    sportTotals[sport].movelaps += mf.movelaps?.length || 0;
+  workouts.forEach((workout: any) => {
+    const workoutId = workout.id || Math.random().toString();
+    (workout.moveframes || []).forEach((mf: any) => {
+      const sport = mf.sport || 'Unknown';
+      if (!sportTotals[sport]) {
+        sportTotals[sport] = { workouts: 0, moveframes: 0, movelaps: 0, distance: 0, duration: 0, series: 0, repetitions: 0, workoutIds: new Set() };
+      }
+      
+      // Track unique workouts for this sport
+      sportTotals[sport].workoutIds.add(workoutId);
+      
+      sportTotals[sport].moveframes++;
+      sportTotals[sport].movelaps += mf.movelaps?.length || 0;
     
-    // Check if this is a series-based sport (BODY_BUILDING, etc.)
-    const isSeriesSport = !shouldShowDistance(sport);
-    
-    if (isSeriesSport) {
-      // For series-based sports
-      if (mf.manualMode) {
-        // For manual input: use the repetitions field from moveframe
-        const totalSeries = mf.repetitions || 0;
-        sportTotals[sport].series += totalSeries;
-        sportTotals[sport].repetitions += totalSeries;
+      // Check if this is a series-based sport (BODY_BUILDING, etc.)
+      const isSeriesSport = !shouldShowDistance(sport);
+      
+      if (isSeriesSport) {
+        // For series-based sports
+        if (mf.manualMode) {
+          // For manual input: use the repetitions field from moveframe
+          const totalSeries = mf.repetitions || 0;
+          sportTotals[sport].series += totalSeries;
+          sportTotals[sport].repetitions += totalSeries;
+        } else {
+          // For standard mode: count movelaps as series
+          sportTotals[sport].series += mf.movelaps?.length || 0;
+          // Sum actual reps from all movelaps
+          mf.movelaps?.forEach((ml: any) => {
+            sportTotals[sport].repetitions += parseInt(ml.reps) || 0;
+          });
+        }
       } else {
-        // For standard mode: count movelaps as series
-        sportTotals[sport].series += mf.movelaps?.length || 0;
-        // Sum actual reps from all movelaps
+        // For distance-based sports
+        const aerobicSeriesMultiplier = AEROBIC_SPORTS.includes(sport as any) ? (mf.aerobicSeries || 1) : 1;
         mf.movelaps?.forEach((ml: any) => {
-          sportTotals[sport].repetitions += parseInt(ml.reps) || 0;
+          sportTotals[sport].distance += (parseInt(ml.distance) || 0) * aerobicSeriesMultiplier;
+          const durationValue = parseInt(ml.duration) || 0;
+          sportTotals[sport].duration += durationValue * aerobicSeriesMultiplier;
         });
       }
-    } else {
-      // For distance-based sports
-      const aerobicSeriesMultiplier = AEROBIC_SPORTS.includes(sport as any) ? (mf.aerobicSeries || 1) : 1;
-      mf.movelaps?.forEach((ml: any) => {
-        sportTotals[sport].distance += (parseInt(ml.distance) || 0) * aerobicSeriesMultiplier;
-        const durationValue = parseInt(ml.duration) || 0;
-        sportTotals[sport].duration += durationValue * aerobicSeriesMultiplier;
-      });
-    }
+    });
+  });
+  
+  // Update workout counts based on unique workout IDs
+  Object.keys(sportTotals).forEach(sport => {
+    sportTotals[sport].workouts = sportTotals[sport].workoutIds.size;
   });
   
   // Calculate grand totals
-  const grandTotals = Object.values(sportTotals).reduce((acc, sport) => ({
-    moveframes: acc.moveframes + sport.moveframes,
-    movelaps: acc.movelaps + sport.movelaps,
-    distance: acc.distance + sport.distance,
-    duration: acc.duration + sport.duration,
-    series: acc.series + sport.series,
-    repetitions: acc.repetitions + sport.repetitions
-  }), { moveframes: 0, movelaps: 0, distance: 0, duration: 0, series: 0, repetitions: 0 });
+  const grandTotals = {
+    workouts: workouts.length, // Total unique workouts in the day
+    moveframes: Object.values(sportTotals).reduce((sum, sport) => sum + sport.moveframes, 0),
+    movelaps: Object.values(sportTotals).reduce((sum, sport) => sum + sport.movelaps, 0),
+    distance: Object.values(sportTotals).reduce((sum, sport) => sum + sport.distance, 0),
+    duration: Object.values(sportTotals).reduce((sum, sport) => sum + sport.duration, 0),
+    series: Object.values(sportTotals).reduce((sum, sport) => sum + sport.series, 0),
+    repetitions: Object.values(sportTotals).reduce((sum, sport) => sum + sport.repetitions, 0)
+  };
   
   // Print handler
   const handlePrint = () => {
@@ -163,6 +168,7 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold">Sport</th>
+                    <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">WO</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Moveframes</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Movelaps</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Distance</th>
@@ -175,6 +181,7 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                     return (
                       <tr key={sport} className="hover:bg-blue-50">
                         <td className="border border-gray-300 px-2 py-1.5 font-medium">{sport.replace(/_/g, ' ')}</td>
+                        <td className="border border-gray-300 px-2 py-1.5 text-center">{totals.workouts}</td>
                         <td className="border border-gray-300 px-2 py-1.5 text-center">{totals.moveframes}</td>
                         <td className="border border-gray-300 px-2 py-1.5 text-center">{totals.movelaps}</td>
                         <td className="border border-gray-300 px-2 py-1.5 text-center">
@@ -194,6 +201,7 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                   })}
                   <tr className="bg-blue-100 font-bold">
                     <td className="border border-gray-300 px-2 py-1.5">TOTAL</td>
+                    <td className="border border-gray-300 px-2 py-1.5 text-center">{grandTotals.workouts}</td>
                     <td className="border border-gray-300 px-2 py-1.5 text-center">{grandTotals.moveframes}</td>
                     <td className="border border-gray-300 px-2 py-1.5 text-center">{grandTotals.movelaps}</td>
                     <td className="border border-gray-300 px-2 py-1.5 text-center">

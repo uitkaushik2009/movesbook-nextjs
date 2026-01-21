@@ -284,12 +284,12 @@ export default function AddEditMoveframeModal({
       
       // If user already typed a decimal point, handle normally
       if (value.includes('.')) {
-        const numValue = value.replace(/[^\d.]/g, '');
-        const speed = parseFloat(numValue);
+      const numValue = value.replace(/[^\d.]/g, '');
+      const speed = parseFloat(numValue);
         if (isNaN(speed)) return '';
-        
+      
         // Validate range: 0.0 to 99.9
-        if (speed < 0) return '0.0';
+      if (speed < 0) return '0.0';
         if (speed > 99.9) return '99.9';
         
         return speed.toFixed(1);
@@ -890,7 +890,7 @@ export default function AddEditMoveframeModal({
     if (type === 'STANDARD' && activeTab === 'manual' && !manualMode) {
       // Enable manual mode when switching TO manual tab (only if not already enabled)
       console.log('🔄 [MODAL] Switching to manual tab, enabling manual mode');
-      setManualMode(true);
+        setManualMode(true);
       // Only set manualPriority to true for NEW manual moveframes (not when editing existing ones)
       if (mode === 'add') {
         setManualPriority(true);
@@ -1681,10 +1681,10 @@ export default function AddEditMoveframeModal({
                           <>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Reps (per series):</label>
                             <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                value={reps}
-                                onChange={(e) => setReps(e.target.value)}
+                            <input
+                              type="number"
+                              value={reps}
+                              onChange={(e) => setReps(e.target.value)}
                                 onBlur={(e) => {
                                   const value = parseInt(e.target.value);
                                   if (e.target.value && value < 0) {
@@ -1698,8 +1698,8 @@ export default function AddEditMoveframeModal({
                                 min="0"
                                 max="99"
                                 className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                                placeholder="20"
-                              />
+                              placeholder="20"
+                            />
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1880,21 +1880,21 @@ export default function AddEditMoveframeModal({
                             <div className="mt-4 pt-3 border-t border-gray-300">
                               <label className="block text-xs font-semibold text-gray-700 mb-2">Planning mode:</label>
                               <div className="space-y-2">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                  <input
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
                                     type="checkbox"
-                                    checked={planningMode === 'individual'}
+                                  checked={planningMode === 'individual'}
                                     onChange={(e) => setPlanningMode(e.target.checked ? 'individual' : 'all')}
                                     className="w-4 h-4 text-cyan-600 rounded"
-                                  />
-                                  <span className="text-sm text-gray-700">
+                                />
+                                <span className="text-sm text-gray-700">
                                     Plan one by one (until to 12 series)
-                                  </span>
-                                </label>
-                              </div>
-                            </div>
-                          )}
-                        </>
+                                </span>
+                              </label>
+                          </div>
+                        </div>
+                      )}
+                    </>
                       );
                     }
                     
@@ -1977,25 +1977,25 @@ export default function AddEditMoveframeModal({
                                         Reps (per series): <span className="text-red-500">*</span>
                                       </label>
                                       <div className="flex items-center gap-2">
-                                        <input
-                                          type="number"
-                                          value={reps}
-                                          onChange={(e) => setReps(e.target.value)}
-                                          onBlur={(e) => {
-                                            const value = parseInt(e.target.value);
+                                      <input
+                                        type="number"
+                                        value={reps}
+                                        onChange={(e) => setReps(e.target.value)}
+                                        onBlur={(e) => {
+                                          const value = parseInt(e.target.value);
                                             if (e.target.value && value < 0) {
                                               alert('⚠️ Reps value too low!\n\nMinimum allowed: 0\nPlease enter a value within the valid range (0-99).');
                                               setReps('0');
-                                            } else if (value > 99) {
+                                          } else if (value > 99) {
                                               alert('⚠️ Reps value too high!\n\nMaximum allowed: 99\nPlease enter a value within the valid range (0-99).');
-                                              setReps('99');
-                                            }
-                                          }}
+                                            setReps('99');
+                                          }
+                                        }}
                                           min="0"
-                                          max="99"
+                                        max="99"
                                           className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                          placeholder="12"
-                                        />
+                                        placeholder="12"
+                                      />
                                         <button
                                           type="button"
                                           onClick={() => {
@@ -2020,59 +2020,59 @@ export default function AddEditMoveframeModal({
                                         Minutes (per series): <span className="text-red-500">*</span>
                                       </label>
                                       <div className="flex items-center gap-2">
-                                        <input
-                                          type="text"
-                                          value={time}
-                                          onChange={(e) => {
-                                            const input = e.target.value;
-                                            if (input === '') {
-                                              setTime('');
-                                              return;
-                                            }
-                                            if (/^\d+$/.test(input)) {
-                                              const digits = input.replace(/\D/g, '');
-                                              const len = digits.length;
-                                              let decisec = '0';
-                                              let sec = '00';
-                                              let min = '00';
-                                              let hour = '0';
-                                              
-                                              if (len === 1) {
-                                                decisec = digits[0];
-                                              } else if (len === 2) {
-                                                sec = digits[0].padStart(2, '0');
-                                                decisec = digits[1];
-                                              } else if (len === 3) {
-                                                sec = digits.slice(0, 2);
-                                                decisec = digits[2];
-                                              } else if (len === 4) {
-                                                min = digits[0].padStart(2, '0');
-                                                sec = digits.slice(1, 3);
-                                                decisec = digits[3];
-                                              } else if (len === 5) {
-                                                min = digits.slice(0, 2);
-                                                sec = digits.slice(2, 4);
-                                                decisec = digits[4];
-                                              } else if (len === 6) {
-                                                hour = digits[0];
-                                                min = digits.slice(1, 3);
-                                                sec = digits.slice(3, 5);
-                                                decisec = digits[5];
-                                              } else {
-                                                hour = digits.slice(0, -5);
-                                                min = digits.slice(-5, -3);
-                                                sec = digits.slice(-3, -1);
-                                                decisec = digits.slice(-1);
-                                              }
-                                              
-                                              setTime(`${hour}h${min}'${sec}"${decisec}`);
+                                      <input
+                                        type="text"
+                                        value={time}
+                                        onChange={(e) => {
+                                          const input = e.target.value;
+                                          if (input === '') {
+                                            setTime('');
+                                            return;
+                                          }
+                                          if (/^\d+$/.test(input)) {
+                                            const digits = input.replace(/\D/g, '');
+                                            const len = digits.length;
+                                            let decisec = '0';
+                                            let sec = '00';
+                                            let min = '00';
+                                            let hour = '0';
+                                            
+                                            if (len === 1) {
+                                              decisec = digits[0];
+                                            } else if (len === 2) {
+                                              sec = digits[0].padStart(2, '0');
+                                              decisec = digits[1];
+                                            } else if (len === 3) {
+                                              sec = digits.slice(0, 2);
+                                              decisec = digits[2];
+                                            } else if (len === 4) {
+                                              min = digits[0].padStart(2, '0');
+                                              sec = digits.slice(1, 3);
+                                              decisec = digits[3];
+                                            } else if (len === 5) {
+                                              min = digits.slice(0, 2);
+                                              sec = digits.slice(2, 4);
+                                              decisec = digits[4];
+                                            } else if (len === 6) {
+                                              hour = digits[0];
+                                              min = digits.slice(1, 3);
+                                              sec = digits.slice(3, 5);
+                                              decisec = digits[5];
                                             } else {
-                                              setTime(input);
+                                              hour = digits.slice(0, -5);
+                                              min = digits.slice(-5, -3);
+                                              sec = digits.slice(-3, -1);
+                                              decisec = digits.slice(-1);
                                             }
-                                          }}
+                                            
+                                            setTime(`${hour}h${min}'${sec}"${decisec}`);
+                                          } else {
+                                            setTime(input);
+                                          }
+                                        }}
                                           className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                          placeholder="1h23'45&quot;6"
-                                        />
+                                        placeholder="1h23'45&quot;6"
+                                      />
                                         <button
                                           type="button"
                                           onClick={() => {
@@ -2105,14 +2105,14 @@ export default function AddEditMoveframeModal({
                                     <label className="flex items-center gap-2 cursor-pointer">
                                       <input
                                         type="checkbox"
-                                        checked={planningMode === 'individual'}
+                                          checked={planningMode === 'individual'}
                                         onChange={(e) => setPlanningMode(e.target.checked ? 'individual' : 'all')}
                                         className="w-4 h-4 text-cyan-600 rounded"
-                                      />
-                                      <span className="text-sm text-gray-700">
+                                        />
+                                        <span className="text-sm text-gray-700">
                                         Plan one by one (until to 12 {['SWIM', 'BIKE', 'MTB', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'repetitions' : 'series'})
-                                      </span>
-                                    </label>
+                                        </span>
+                                      </label>
                                   </div>
                                 </div>
                               )}
@@ -2305,41 +2305,41 @@ export default function AddEditMoveframeModal({
                         const isWorkEnabled = enabledWorkSports.includes(sport);
                         
                         return (
-                          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                            <h4 className="text-xs font-semibold text-blue-700 mb-2">⚙️ WORK SETTINGS</h4>
-                            <div className="space-y-2">
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Strokes:</label>
-                                <input
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <h4 className="text-xs font-semibold text-blue-700 mb-2">⚙️ WORK SETTINGS</h4>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Strokes:</label>
+                              <input
                                   type="number"
                                   min="0"
                                   step="1"
-                                  value={strokes}
-                                  onChange={(e) => setStrokes(e.target.value)}
+                                value={strokes}
+                                onChange={(e) => setStrokes(e.target.value)}
                                   disabled={!isWorkEnabled}
                                   className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 ${
                                     isWorkEnabled ? 'bg-white' : 'bg-gray-200 cursor-not-allowed'
                                   }`}
-                                  placeholder="Enter strokes value..."
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Watts:</label>
-                                <input
+                                placeholder="Enter strokes value..."
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Watts:</label>
+                              <input
                                   type="number"
                                   min="0"
                                   step="1"
-                                  value={watts}
-                                  onChange={(e) => setWatts(e.target.value)}
+                                value={watts}
+                                onChange={(e) => setWatts(e.target.value)}
                                   disabled={!isWorkEnabled}
                                   className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 ${
                                     isWorkEnabled ? 'bg-white' : 'bg-gray-200 cursor-not-allowed'
                                   }`}
-                                  placeholder="Enter watts value..."
-                                />
-                              </div>
+                                placeholder="Enter watts value..."
+                              />
                             </div>
                           </div>
+                        </div>
                         );
                       })()}
 
@@ -2351,14 +2351,14 @@ export default function AddEditMoveframeModal({
                             <label className="flex items-center gap-2 cursor-pointer">
                               <input
                                 type="checkbox"
-                                checked={planningMode === 'individual'}
+                                  checked={planningMode === 'individual'}
                                 onChange={(e) => setPlanningMode(e.target.checked ? 'individual' : 'all')}
                                 className="w-4 h-4 text-cyan-600 rounded"
-                              />
-                              <span className="text-sm text-gray-700">
+                                />
+                                <span className="text-sm text-gray-700">
                                 Plan one by one (until to 12 {['SWIM', 'BIKE', 'MTB', 'RUN', 'BODY_BUILDING', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'].includes(sport) ? 'repetitions' : 'series'})
-                              </span>
-                            </label>
+                                </span>
+                              </label>
                           </div>
                         </div>
                       )}
@@ -2499,13 +2499,13 @@ export default function AddEditMoveframeModal({
                                   placeholder="Enter heart rate..."
                                 />
                               ) : (
-                                <input
-                                  type="text"
-                                  value={pauseMin}
-                                  onChange={(e) => setPauseMin(e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                                  placeholder="Enter pause minimum..."
-                                />
+                              <input
+                                type="text"
+                                value={pauseMin}
+                                onChange={(e) => setPauseMin(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                                placeholder="Enter pause minimum..."
+                              />
                               )}
                             </div>
                             <div>
@@ -2519,7 +2519,7 @@ export default function AddEditMoveframeModal({
                                 <option value="stopped">Stopped</option>
                                 <option value="speed">Speed</option>
                                 {['SWIM', 'BIKE', 'MTB', 'ROWING'].includes(sport) && (
-                                  <option value="watts">Watts</option>
+                                <option value="watts">Watts</option>
                                 )}
                               </select>
                             </div>
@@ -2533,9 +2533,9 @@ export default function AddEditMoveframeModal({
                                   className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 bg-gray-100 cursor-not-allowed"
                                 />
                               ) : pauseMode === 'speed' ? (
-                                <input
-                                  type="text"
-                                  value={pausePace}
+                              <input
+                                type="text"
+                                value={pausePace}
                                   onChange={(e) => {
                                     // Format: 00.0 for all sports
                                     const value = e.target.value.replace(/[^\d.]/g, '');
@@ -2569,7 +2569,7 @@ export default function AddEditMoveframeModal({
                                     const value = e.target.value.replace(/\D/g, '').slice(0, 3);
                                     setPausePace(value);
                                   }}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
                                   placeholder="Enter watts (000)..."
                                 />
                               ) : (
@@ -2579,7 +2579,7 @@ export default function AddEditMoveframeModal({
                                   disabled
                                   className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 bg-gray-100 cursor-not-allowed"
                                   placeholder="Select mode first..."
-                                />
+                              />
                               )}
                             </div>
                           </div>
@@ -2893,11 +2893,11 @@ export default function AddEditMoveframeModal({
                                     </tr>
                                   )}
                                   <tr className="hover:bg-blue-50">
-                                    <td className="border border-gray-300 px-2 py-2 text-center font-bold bg-gray-50">
-                                      {plan.index}
-                                    </td>
-                                    {/* WORK section columns */}
-                                    <td className="border border-gray-300 px-2 py-1.5">
+                                <td className="border border-gray-300 px-2 py-2 text-center font-bold bg-gray-50">
+                                  {plan.index}
+                                </td>
+                                {/* WORK section columns */}
+                                <td className="border border-gray-300 px-2 py-1.5">
                                   <select
                                     value={plan.speed}
                                     onChange={(e) => updateIndividualPlan(idx, 'speed', e.target.value)}
@@ -2978,7 +2978,7 @@ export default function AddEditMoveframeModal({
                                     <option value="stopped">Stopped</option>
                                     <option value="speed">Speed</option>
                                     {['SWIM', 'BIKE', 'MTB', 'ROWING'].includes(sport) && (
-                                      <option value="watts">Watts</option>
+                                    <option value="watts">Watts</option>
                                     )}
                                   </select>
                                 </td>
@@ -3049,7 +3049,7 @@ export default function AddEditMoveframeModal({
                                     </button>
                                   )}
                                 </td>
-                                  </tr>
+                              </tr>
                                 </React.Fragment>
                               );
                             })}
@@ -3133,10 +3133,10 @@ export default function AddEditMoveframeModal({
                                     </tr>
                                   )}
                                   <tr className="hover:bg-blue-50">
-                                    <td className="border border-gray-300 px-2 py-2 text-center font-bold bg-gray-50">
-                                      {plan.index}
-                                    </td>
-                                    <td className="border border-gray-300 px-2 py-1.5">
+                                <td className="border border-gray-300 px-2 py-2 text-center font-bold bg-gray-50">
+                                  {plan.index}
+                                </td>
+                                <td className="border border-gray-300 px-2 py-1.5">
                                       {repsType === 'Time' ? (
                                         <input
                                           type="text"
@@ -3192,31 +3192,31 @@ export default function AddEditMoveframeModal({
                                       placeholder="1h23'45&quot;6"
                                     />
                                   ) : (
-                                    <input
-                                      type="number"
-                                      value={plan.reps ?? ''}
-                                      onInput={(e) => {
-                                        // Use onInput instead of onChange for more immediate response
-                                        const value = (e.target as HTMLInputElement).value;
-                                        updateIndividualPlan(idx, 'reps', value);
-                                      }}
-                                      onChange={(e) => {
-                                        // Also handle onChange as fallback
-                                        const value = e.target.value;
-                                        updateIndividualPlan(idx, 'reps', value);
-                                      }}
-                                      onBlur={(e) => {
-                                        const value = parseInt(e.target.value);
+                                  <input
+                                    type="number"
+                                    value={plan.reps ?? ''}
+                                    onInput={(e) => {
+                                      // Use onInput instead of onChange for more immediate response
+                                      const value = (e.target as HTMLInputElement).value;
+                                      updateIndividualPlan(idx, 'reps', value);
+                                    }}
+                                    onChange={(e) => {
+                                      // Also handle onChange as fallback
+                                      const value = e.target.value;
+                                      updateIndividualPlan(idx, 'reps', value);
+                                    }}
+                                    onBlur={(e) => {
+                                      const value = parseInt(e.target.value);
                                         if (e.target.value && (value < 0 || value > 99)) {
                                           console.warn('Reps must be between 0 and 99');
-                                          updateIndividualPlan(idx, 'reps', '12');
-                                        }
-                                      }}
-                                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
-                                      placeholder="12"
+                                        updateIndividualPlan(idx, 'reps', '12');
+                                      }
+                                    }}
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
+                                    placeholder="12"
                                       min="0"
                                       max="99"
-                                    />
+                                  />
                                   )}
                                 </td>
                                 <td className="border border-gray-300 px-2 py-1.5">
@@ -3423,15 +3423,15 @@ export default function AddEditMoveframeModal({
                                     
                                     // Default - show select dropdown (fallback)
                                     return (
-                                      <select
-                                        value={plan.pause}
-                                        onChange={(e) => updateIndividualPlan(idx, 'pause', e.target.value)}
-                                        className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
-                                      >
-                                        {(Array.isArray(sportConfig.pauses) ? sportConfig.pauses : (sportConfig.pauses as any)?.['Set time'] || []).map((p: string) => (
-                                          <option key={p} value={p}>{p}</option>
-                                        ))}
-                                      </select>
+                                  <select
+                                    value={plan.pause}
+                                    onChange={(e) => updateIndividualPlan(idx, 'pause', e.target.value)}
+                                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500"
+                                  >
+                                    {(Array.isArray(sportConfig.pauses) ? sportConfig.pauses : (sportConfig.pauses as any)?.['Set time'] || []).map((p: string) => (
+                                      <option key={p} value={p}>{p}</option>
+                                    ))}
+                                  </select>
                                     );
                                   })()}
                                 </td>
@@ -3448,7 +3448,7 @@ export default function AddEditMoveframeModal({
                                     </button>
                                   )}
                                 </td>
-                                  </tr>
+                              </tr>
                                 </React.Fragment>
                               );
                             })}
@@ -3538,14 +3538,14 @@ export default function AddEditMoveframeModal({
                                       </tr>
                                     )}
                                     <tr className="hover:bg-blue-50">
-                                      <td className="border border-gray-300 px-2 py-2 text-center font-bold bg-gray-50">
-                                        {plan.index}
-                                      </td>
-                                      <td className="border border-gray-300 px-2 py-1.5">
-                                        <input
-                                          type="number"
-                                          value={plan.reps || ''}
-                                          onChange={(e) => updateIndividualPlan(idx, 'reps', e.target.value)}
+                                  <td className="border border-gray-300 px-2 py-2 text-center font-bold bg-gray-50">
+                                    {plan.index}
+                                  </td>
+                                  <td className="border border-gray-300 px-2 py-1.5">
+                                    <input
+                                      type="number"
+                                      value={plan.reps || ''}
+                                      onChange={(e) => updateIndividualPlan(idx, 'reps', e.target.value)}
                                       className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-cyan-500 text-center"
                                       placeholder="12"
                                       min="1"
@@ -3584,7 +3584,7 @@ export default function AddEditMoveframeModal({
                                       </button>
                                     )}
                                   </td>
-                                    </tr>
+                                </tr>
                                   </React.Fragment>
                                 );
                               })}
@@ -3985,20 +3985,20 @@ export default function AddEditMoveframeModal({
                     </div>
 
                     {!['BIKE', 'MTB'].includes(sport) && (
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">Macro:</label>
-                        <select
-                          value={macroFinal}
-                          onChange={(e) => setMacroFinal(e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
-                        >
-                          {sportConfig.macroFinals.map((m) => (
-                            <option key={m} value={m}>
-                              {m}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Macro:</label>
+                      <select
+                        value={macroFinal}
+                        onChange={(e) => setMacroFinal(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                      >
+                        {sportConfig.macroFinals.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     )}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-1">Alarm:</label>

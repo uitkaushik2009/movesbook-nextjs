@@ -331,6 +331,7 @@ export default function DayInfoModal({
                 placeholder="Add notes or annotations for this day..."
                 rows={4}
                 className="w-full px-3 py-2.5 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm transition-all bg-white resize-none"
+                style={{ unicodeBidi: 'normal' }}
               />
               {isSavingNotes && (
                 <span className="absolute right-3 bottom-3 text-xs text-gray-500 bg-white px-2 py-1 rounded shadow-sm">
