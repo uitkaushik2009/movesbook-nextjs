@@ -805,7 +805,7 @@ export default function DayTableView({
           <div className="flex items-stretch">
             {/* LEFT: Week Number Button - Only for Section A */}
             {activeSection === 'A' && (
-              <div className="flex items-center gap-2 px-4 py-3 bg-white border-r-2 border-gray-200">
+              <div className="flex flex-col gap-2 px-4 py-3 bg-white border-r-2 border-gray-200">
                 {workoutPlan?.weeks && (
             <div className="flex items-center gap-2">
                     {workoutPlan.weeks.map((week: any, index: number) => (
@@ -843,6 +843,27 @@ export default function DayTableView({
                     ))}
                   </div>
                 )}
+                
+                {/* Set Periods Button - Under Week Buttons */}
+                <button
+                  onClick={() => {
+                    // Initialize week range to all displayed weeks in Section A
+                    const allWeekNumbers = sortedWeeks.map((w: any) => w.weekNumber);
+                    const minWeek = Math.min(...allWeekNumbers);
+                    const maxWeek = Math.max(...allWeekNumbers);
+                    setWeekRangeStart(minWeek);
+                    setWeekRangeEnd(maxWeek);
+                    setSelectedPeriodForRange(null);
+                    setShowPeriodSelector(true);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 text-xs font-semibold bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all shadow-md"
+                  title="Set periods for multiple weeks"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Set periods of more weeks
+                </button>
             </div>
               )}
 
@@ -939,29 +960,6 @@ export default function DayTableView({
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                 Copy
-              </button>
-              )}
-              
-              {/* Set Periods Button - Only show in Section A */}
-              {activeSection === 'A' && (
-              <button
-                onClick={() => {
-                  // Initialize week range to all displayed weeks in Section A
-                  const allWeekNumbers = sortedWeeks.map((w: any) => w.weekNumber);
-                  const minWeek = Math.min(...allWeekNumbers);
-                  const maxWeek = Math.max(...allWeekNumbers);
-                  setWeekRangeStart(minWeek);
-                  setWeekRangeEnd(maxWeek);
-                  setSelectedPeriodForRange(null);
-                  setShowPeriodSelector(true);
-                }}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
-                title="Set periods for multiple weeks"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Set periods of more weeks
               </button>
               )}
               
@@ -1105,29 +1103,7 @@ export default function DayTableView({
                   {expandState === 0 ? 'Expand all the Weeks displayed' : expandState === 1 ? 'Expand all (with moveframes)' : 'Collapse all the weeks displayed'}
                 </button>
 
-                 {/* Overview Button - Single Week */}
-                 <button
-                   onClick={() => {
-                     console.log('📊 Overview button clicked for first displayed week');
-                     const firstWeek = sortedWeeks[0];
-                     if (firstWeek) {
-                       console.log('📊 Showing overview for week:', firstWeek.weekNumber);
-                       setCurrentWeekForModal(firstWeek);
-                       setAutoPrintWeek(false);
-                       setShowAllWeeksInModal(false);
-                       setShowWeekTotalsModal(true);
-                     } else {
-                       console.error('❌ No weeks available');
-                     }
-                   }}
-                   className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-all shadow-md"
-                   title="View overview of the first displayed week"
-                 >
-                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                   Overview
-                 </button>
-
-                 {/* Overview of the weeks displayed Button - Multiple Weeks */}
+                 {/* Overview of the weeks displayed Button */}
                  <button
                    onClick={() => {
                      console.log('📊 Overview of the weeks displayed clicked');

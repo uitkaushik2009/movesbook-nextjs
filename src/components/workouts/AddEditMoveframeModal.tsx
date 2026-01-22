@@ -813,7 +813,8 @@ export default function AddEditMoveframeModal({
   const bodyRef = React.useRef<HTMLDivElement>(null);
   
   // For manual mode moveframes, force manual tab and disable other tabs
-  const isEditingManualMoveframe = mode === 'edit' && manualMode;
+  // Only restrict tabs if editing an EXISTING manual moveframe (not when creating new one)
+  const isEditingManualMoveframe = mode === 'edit' && existingMoveframe?.manualMode;
   
   // Auto-switch to manual tab when editing a manual moveframe
   React.useEffect(() => {
@@ -823,10 +824,20 @@ export default function AddEditMoveframeModal({
   }, [isOpen, isEditingManualMoveframe, activeTab]);
 
   const handleTabChange = (tab: 'edit' | 'manual' | 'favorites') => {
-    // Prevent tab change if editing manual moveframe
-    if (isEditingManualMoveframe && tab !== 'manual') {
+    // Prevent tab change if editing an EXISTING manual moveframe (edit mode with manualMode from DB)
+    // But allow tab switching when CREATING a new moveframe (add mode)
+    if (mode === 'edit' && existingMoveframe?.manualMode && tab !== 'manual') {
+      // This is editing an existing manual moveframe - restrict to manual tab only
       return;
     }
+    
+    // When switching away from manual tab in ADD mode, disable manual mode
+    if (mode === 'add' && activeTab === 'manual' && tab !== 'manual' && manualMode) {
+      console.log('🔄 [MODAL] Switching away from manual tab in add mode, disabling manual mode');
+      setManualMode(false);
+      setManualPriority(false);
+    }
+    
     setActiveTab(tab);
     // Immediately scroll to top when changing tabs
     if (bodyRef.current) {
