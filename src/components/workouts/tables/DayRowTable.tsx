@@ -334,9 +334,9 @@ export default function DayRowTable({
       </td>
 
       {/* S1 - Sport 1 - Blue */}
-      <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-blue-100 text-black">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-left bg-blue-100 text-black">
         {sportSummaries[0] ? (
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-start gap-2">
             {useImageIcons ? (
               <img src={sportSummaries[0].icon} alt={sportSummaries[0].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
             ) : (
@@ -389,9 +389,9 @@ export default function DayRowTable({
       </td>
 
       {/* S2 - Sport 2 - Green */}
-      <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-green-100 text-black">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-left bg-green-100 text-black">
         {sportSummaries[1] ? (
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-start gap-2">
             {useImageIcons ? (
               <img src={sportSummaries[1].icon} alt={sportSummaries[1].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
             ) : (
@@ -444,9 +444,9 @@ export default function DayRowTable({
       </td>
 
       {/* S3 - Sport 3 - Orange */}
-      <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-orange-100 text-black">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-left bg-orange-100 text-black">
         {sportSummaries[2] ? (
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-start gap-2">
             {useImageIcons ? (
               <img src={sportSummaries[2].icon} alt={sportSummaries[2].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
             ) : (
@@ -499,9 +499,9 @@ export default function DayRowTable({
       </td>
 
       {/* S4 - Sport 4 - Pink */}
-      <td className="border border-gray-200 px-1 py-1 text-xs text-center bg-pink-100 text-black">
+      <td className="border border-gray-200 px-1 py-1 text-xs text-left bg-pink-100 text-black">
         {sportSummaries[3] ? (
-          <div className="flex items-center justify-center gap-2">
+          <div className="flex items-center justify-start gap-2">
             {useImageIcons ? (
               <img src={sportSummaries[3].icon} alt={sportSummaries[3].sport} className="w-10 h-10 object-cover rounded flex-shrink-0" />
             ) : (
@@ -578,7 +578,7 @@ export default function DayRowTable({
               e.stopPropagation();
               onShowDayInfo?.(dayWithWeek);
             }}
-            className="px-2 py-1 text-[11px] bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors font-medium"
+            className="px-3 py-1.5 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors font-medium whitespace-nowrap"
             title="View Day Information"
           >
             Day Info

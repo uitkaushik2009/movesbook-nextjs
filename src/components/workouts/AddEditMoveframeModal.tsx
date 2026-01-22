@@ -1349,8 +1349,9 @@ export default function AddEditMoveframeModal({
           )}
 
           {/* Workout Section Selection - Only for STANDARD and BATTERY modes */}
+          {/* 2026-01-22 15:30 UTC - Reduced width to 50% and centered */}
           {(type === 'STANDARD' || type === 'BATTERY') && (
-          <div className="mb-3">
+          <div className="mb-3 w-1/2 mx-auto">
               {mode === 'edit' && (
                 <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
                   <p className="text-xs text-blue-700">

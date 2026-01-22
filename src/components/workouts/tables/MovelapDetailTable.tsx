@@ -26,7 +26,8 @@ interface MovelapDetailTableProps {
 }
 
 // Editable Notes Field Component - 2026-01-22 12:00 UTC
-function EditableNotesField({ movelap, stripHtmlTags }: { movelap: any; stripHtmlTags: (html: string) => string }) {
+// 2026-01-22 15:35 UTC - Added onRefresh callback to trigger parent refresh after save
+function EditableNotesField({ movelap, stripHtmlTags, onRefresh }: { movelap: any; stripHtmlTags: (html: string) => string; onRefresh?: () => void }) {
   const [notesValue, setNotesValue] = React.useState('');
   const [isSaving, setIsSaving] = React.useState(false);
   
@@ -77,6 +78,10 @@ function EditableNotesField({ movelap, stripHtmlTags }: { movelap: any; stripHtm
       if (response.ok) {
         // Update the movelap object
         movelap.notes = finalNotes;
+        // Trigger parent refresh if callback provided
+        if (onRefresh) {
+          onRefresh();
+        }
       } else {
         console.error('Failed to save notes');
       }
@@ -107,6 +112,7 @@ function EditableNotesField({ movelap, stripHtmlTags }: { movelap: any; stripHtm
 }
 
 // Sortable Row Component
+// 2026-01-22 15:35 UTC - Added onRefresh callback
 function SortableMovelapRow({ 
   movelap, 
   index, 
@@ -120,7 +126,8 @@ function SortableMovelapRow({
   onCopyMovelap,
   onPasteMovelap,
   onAddMovelapAfter,
-  pauseAmongCircuits
+  pauseAmongCircuits,
+  onRefresh
 }: {
   movelap: any;
   index: number;
@@ -135,6 +142,7 @@ function SortableMovelapRow({
   onPasteMovelap: (index: number) => void;
   onAddMovelapAfter?: (movelap: any, index: number) => void;
   pauseAmongCircuits?: string;
+  onRefresh?: () => void;
 }) {
   // Options dropdown state
   const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
@@ -414,8 +422,28 @@ function SortableMovelapRow({
        </td>
        
        {/* Macro Final - 2026-01-22 11:30 UTC - Show pause among circuits for circuit movelaps */}
+       {/* 2026-01-22 15:35 UTC - Calculate pause for each movelap individually */}
        <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
-         {movelap.circuitLetter ? (pauseAmongCircuits || '—') : (movelap.macroFinal || '—')}
+         {movelap.circuitLetter ? (() => {
+           // Extract pause value from moveframe notes for this specific movelap
+           if (moveframe.notes && typeof moveframe.notes === 'string') {
+             const circuitDataMatch = moveframe.notes.match(/\[CIRCUIT_DATA\](.*?)\[\/CIRCUIT_DATA\]/);
+             if (circuitDataMatch) {
+               try {
+                 const circuitData = JSON.parse(circuitDataMatch[1]);
+                 if (circuitData.config && circuitData.config.pauses) {
+                   const pauseSeconds = circuitData.config.pauses.circuits;
+                   const minutes = Math.floor(pauseSeconds / 60);
+                   const seconds = pauseSeconds % 60;
+                   return `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+                 }
+               } catch (e) {
+                 console.error('Failed to parse circuit data:', e);
+               }
+             }
+           }
+           return '—';
+         })() : (movelap.macroFinal || '—')}
        </td>
        
        {/* Alarm & Sound */}
@@ -430,9 +458,11 @@ function SortableMovelapRow({
       <td className="border border-gray-300 px-2 py-1 text-left text-xs" style={{ width: '300px', maxWidth: '300px', minWidth: '300px' }}>
         {/* 2026-01-22 11:45 UTC - Made notes field editable */}
         {/* 2026-01-22 12:00 UTC - Fixed to use controlled component with local state */}
+        {/* 2026-01-22 15:35 UTC - Added onRefresh callback */}
         <EditableNotesField
           movelap={movelap}
           stripHtmlTags={stripHtmlTags}
+          onRefresh={onRefresh}
         />
       </td>
       
@@ -1378,13 +1408,11 @@ export default function MovelapDetailTable({
                 return (
                   <React.Fragment key={movelap.id}>
                     {/* Circuit Header - 2026-01-22 10:30 UTC */}
+                    {/* 2026-01-22 15:25 UTC - Removed "Group" text, keeping only Circuit letter */}
                     {isCircuitBased && isFirstInCircuit && (
                       <tr>
                         <td colSpan={totalColumns} className="border border-gray-400 bg-rose-100 px-3 py-2 text-sm font-bold text-rose-900">
-                          <div className="flex justify-between items-center">
-                            <span>Circuit {circuitLetter}</span>
-                            <span className="text-rose-700">Group {circuitIndex}</span>
-                          </div>
+                          Circuit {circuitLetter}
                         </td>
                       </tr>
                     )}
@@ -1411,6 +1439,7 @@ export default function MovelapDetailTable({
                       onPasteMovelap={handlePasteMovelap}
                       onAddMovelapAfter={onAddMovelapAfter}
                       pauseAmongCircuits={pauseAmongCircuits}
+                      onRefresh={onRefresh}
                     />
                   </React.Fragment>
                 );

@@ -146,6 +146,8 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
   // UI State - 2026-01-21 19:30 UTC
   // 2026-01-21 20:15 UTC - Added phase management (config -> table)
   const [currentPhase, setCurrentPhase] = useState<'config' | 'table'>('config');
+  // 2026-01-22 15:15 UTC - Track if circuits have been initialized to prevent re-generation
+  const [circuitsInitialized, setCircuitsInitialized] = useState(false);
   const [showSectorSelector, setShowSectorSelector] = useState(false);
   const [selectedCircuitForSector, setSelectedCircuitForSector] = useState<string | null>(null);
   // 2026-01-22 13:10 UTC - Track specific station for sector selection
@@ -154,14 +156,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
   // 2026-01-21 20:30 UTC - Added exercise menu state
   // 2026-01-22 12:30 UTC - Added x, y position for fixed positioning
   const [showExerciseMenu, setShowExerciseMenu] = useState<{circuit: string, series: number, station: number, x: number, y: number} | null>(null);
-  
-  // 2026-01-22 13:50 UTC - Debug useEffect to track menu state
-  useEffect(() => {
-    console.log('showExerciseMenu changed:', showExerciseMenu);
-    if (showExerciseMenu) {
-      console.log('Menu should render at position:', { x: showExerciseMenu.x, y: showExerciseMenu.y });
-    }
-  }, [showExerciseMenu]);
   
   // 2026-01-21 22:00 UTC - Added preferences modal state
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
@@ -199,12 +193,13 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
   // INITIALIZATION - 2026-01-21 19:35 UTC
   // Generate initial circuit structure when settings change
   // 2026-01-21 20:15 UTC - Only generate when in table phase
+  // 2026-01-22 15:15 UTC - Fixed: Only generate circuits once when entering table phase
   // ============================================================================
+  
   useEffect(() => {
-    // 2026-01-21 20:15 UTC - Only generate circuits in table phase
-    // 2026-01-22 10:15 UTC - Include pause settings in generated circuits
-    // 2026-01-22 12:15 UTC - Fixed: Create independent stations for each series
+    // Only generate circuits ONCE when first entering table phase
     if (currentPhase !== 'table') return;
+    if (circuitsInitialized) return; // Don't regenerate if already initialized
     
     const newCircuits: Circuit[] = [];
     
@@ -235,7 +230,8 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
     }
     
     setCircuits(newCircuits);
-  }, [currentPhase, numCircuits, stationsPerCircuit, seriesCount, seriesMode, pauseStations]);
+    setCircuitsInitialized(true); // Mark as initialized
+  }, [currentPhase, numCircuits, stationsPerCircuit, seriesCount, seriesMode, pauseStations, circuitsInitialized]);
   
   // ============================================================================
   // HANDLERS - 2026-01-21 19:40 UTC
@@ -473,7 +469,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
   const handleLoadAutoExercise = (circuitLetter: string, stationNumber: number) => {
     // 2026-01-21 19:50 UTC - Auto-load exercise based on sector
     // TODO: Implement auto-load logic with preferences
-    console.log('Auto-load exercise for', circuitLetter, stationNumber);
   };
   
   const handleCreateCircuit = () => {
@@ -536,8 +531,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
     const description = generatePreview();
     const movelaps = generateMovelaps();
     
-    console.log('✅ Generated movelaps:', movelaps);
-    
     onSave({
       circuits,
       description, // Preview to be used as moveframe description
@@ -563,7 +556,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
     // 2026-01-21 22:00 UTC - Save exercise selection preferences
     setExercisePreferences(prefs);
     // TODO: Use these preferences for auto-loading exercises
-    console.log('Exercise preferences saved:', prefs);
   };
   
   // ============================================================================
@@ -574,18 +566,26 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
     // 2026-01-21 22:10 UTC - Add 1-3 circuits at the end
     // 2026-01-22 10:15 UTC - Include pause value in new circuits
     // 2026-01-22 12:15 UTC - Updated to create series-specific stations
+    // 2026-01-22 15:10 UTC - Fixed: Use existing circuit structure instead of initial state values
     const newCircuits = [...circuits];
+    
+    // Get structure from the last existing circuit if available
+    const lastCircuit = circuits.length > 0 ? circuits[circuits.length - 1] : null;
+    const seriesNum = lastCircuit ? lastCircuit.series : (seriesMode === 'count' ? seriesCount : 1);
+    const stationsCount = lastCircuit && lastCircuit.stationsBySeries[0] 
+      ? lastCircuit.stationsBySeries[0].length 
+      : stationsPerCircuit;
+    
     for (let i = 0; i < count; i++) {
       const circuitIndex = circuits.length + i;
       if (circuitIndex >= CIRCUIT_LETTERS.length) break;
       
-      const seriesNum = seriesMode === 'count' ? seriesCount : 1;
       const stationsBySeries: Station[][] = [];
       
       // Create independent stations for each series
       for (let s = 0; s < seriesNum; s++) {
         const stationsForThisSeries: Station[] = [];
-        for (let j = 0; j < stationsPerCircuit; j++) {
+        for (let j = 0; j < stationsCount; j++) {
           stationsForThisSeries.push({
             stationNumber: j + 1,
             sector: '',
@@ -767,19 +767,15 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
     // 2026-01-21 22:10 UTC - Reload exercises according to preferences
     // 2026-01-22 13:20 UTC - Implemented auto-reload for all stations with sectors
     // 2026-01-22 14:50 UTC - Updated to ensure no duplicate exercises in same station position across series
-    // 2026-01-22 14:55 UTC - Added debugging and fixed logic
-    console.log('🔄 Reload exercises clicked');
     
     setCircuits(prevCircuits => {
       const newCircuits = JSON.parse(JSON.stringify(prevCircuits));
-      console.log('Current circuits:', newCircuits);
       
       let exercisesLoaded = 0;
       
       newCircuits.forEach((circuit: any) => {
         // For each station position, track used exercises across all series
         const maxStations = Math.max(...circuit.stationsBySeries.map((ss: any[]) => ss.length));
-        console.log(`Circuit ${circuit.letter}: ${maxStations} stations, ${circuit.stationsBySeries.length} series`);
         
         for (let stationPos = 0; stationPos < maxStations; stationPos++) {
           const usedExercisesForThisPosition = new Set<string>();
@@ -787,11 +783,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
           // Iterate through all series for this station position
           circuit.stationsBySeries.forEach((seriesStations: any[], seriesIdx: number) => {
             const station = seriesStations[stationPos];
-            console.log(`  Circuit ${circuit.letter}, Series ${seriesIdx + 1}, Station ${stationPos + 1}:`, {
-              hasSector: !!station?.sector,
-              sector: station?.sector,
-              currentExercise: station?.exercise
-            });
             
             if (station && station.sector) {
               // Get random exercise, excluding already used ones for this station position
@@ -799,7 +790,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
               
               // Try to get a unique exercise for this position
               const availableExercises = getExercisesBySector(station.sector);
-              console.log(`    Available exercises for ${station.sector}:`, availableExercises.length);
               
               const unusedExercises = availableExercises.filter(
                 ex => !usedExercisesForThisPosition.has(ex.name)
@@ -813,7 +803,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
               }
               
               if (randomExercise) {
-                console.log(`    ✅ Loading exercise: ${randomExercise.name}`);
                 station.exercise = randomExercise.name;
                 usedExercisesForThisPosition.add(randomExercise.name);
                 exercisesLoaded++;
@@ -821,17 +810,12 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
                 if (!station.reps) {
                   station.reps = '10';
                 }
-              } else {
-                console.log(`    ❌ No exercise found for sector: ${station.sector}`);
               }
-            } else {
-              console.log(`    ⚠️ Station has no sector assigned`);
             }
           });
         }
       });
       
-      console.log(`✅ Reload complete: ${exercisesLoaded} exercises loaded`);
       return newCircuits;
     });
     setActionLog(prev => [...prev, `Exercises reloaded: ${circuits.reduce((sum, c) => sum + c.stationsBySeries.reduce((s, ss) => s + ss.length, 0), 0)} stations processed`]);
@@ -1410,9 +1394,11 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
   // Phase 2: Circuit Table View (after clicking Create circuit)
   return (
     <>
-    <div className="space-y-2">
-      {/* Configuration Section - 2026-01-21 19:30 UTC */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="space-y-2">
+        {/* Configuration Section - 2026-01-21 19:30 UTC */}
+        {/* 2026-01-22 15:20 UTC - Reduced width to 50% and centered */}
+        {/* 2026-01-22 15:30 UTC - Increased width to 75% */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-3/4 mx-auto">
         <h3 className="text-lg font-bold text-blue-900 mb-4">Circuit Configuration</h3>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1526,8 +1512,10 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
         </div>
       </div>
       
-      {/* Pause Settings Section - 2026-01-21 19:32 UTC */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        {/* Pause Settings Section - 2026-01-21 19:32 UTC */}
+        {/* 2026-01-22 15:20 UTC - Reduced width to 50% and centered */}
+        {/* 2026-01-22 15:30 UTC - Increased width to 75% */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 w-3/4 mx-auto">
         <h3 className="text-lg font-bold text-amber-900 mb-4">Pause Settings</h3>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1599,10 +1587,12 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
         </div>
       </div>
       
-      {/* Circuit Grid Section - 2026-01-21 19:35 UTC */}
-      {/* 2026-01-22 12:20 UTC - Removed overflow to allow dropdown to show properly */}
-      {/* 2026-01-22 14:50 UTC - Reduced table width to 4/5 (80%) */}
-      <div className="bg-white border border-gray-300 rounded-lg w-4/5 mx-auto">
+        {/* Circuit Grid Section - 2026-01-21 19:35 UTC */}
+        {/* 2026-01-22 12:20 UTC - Removed overflow to allow dropdown to show properly */}
+        {/* 2026-01-22 14:50 UTC - Reduced table width to 4/5 (80%) */}
+        {/* 2026-01-22 15:20 UTC - Reduced width to 50% */}
+        {/* 2026-01-22 15:30 UTC - Increased width to 75% */}
+        <div className="bg-white border border-gray-300 rounded-lg w-3/4 mx-auto">
         <div className="bg-gray-100 px-4 py-3 border-b border-gray-300">
           <h3 className="text-lg font-bold text-gray-900">Circuit Grid</h3>
         </div>
@@ -2004,7 +1994,7 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
                 .find(c => c.letter === selectedCircuitForSector)
                 ?.stationsBySeries.map((seriesStations, seriesIdx) => (
                   <div key={`series-${seriesIdx}`} className="border border-gray-300 rounded-lg p-4 bg-gray-50">
-                    <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3 mb-3">
                       <h5 className="text-sm font-semibold text-gray-800">
                         Series {seriesIdx + 1}
                       </h5>
@@ -2337,7 +2327,8 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
       )}
       
       {/* Circuit Action Buttons - 2026-01-21 22:10 UTC */}
-      <div className="flex items-center gap-3 mt-6 border-t pt-6">
+      {/* 2026-01-22 15:20 UTC - Center-aligned buttons */}
+      <div className="flex items-center justify-center gap-3 mt-6 border-t pt-6">
         <button
           onClick={() => setShowAddCircuitModal(true)}
           className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm font-medium"
@@ -2401,7 +2392,8 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
       </div>
       
        {/* Preview Section - 2026-01-21 22:10 UTC - 2026-01-22 14:35 UTC - Compacted */}
-       <div className="p-3 bg-gray-50 border border-gray-300 rounded">
+       {/* 2026-01-22 15:20 UTC - Reduced width to 50% and centered */}
+       <div className="p-3 bg-gray-50 border border-gray-300 rounded w-1/2 mx-auto">
          <div className="text-sm font-semibold text-gray-700 mb-2">PREVIEW:</div>
          <div className="text-sm text-gray-800">
            {generatePreview()}
@@ -2416,9 +2408,13 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
        </div>
        
        {/* Action Buttons - 2026-01-22 14:35 UTC - Right-aligned buttons, Back returns to config */}
+       {/* 2026-01-22 15:15 UTC - Reset circuitsInitialized when going back to config */}
        <div className="flex items-center justify-end gap-3 pt-3 border-t">
            <button
-             onClick={() => setCurrentPhase('config')}
+             onClick={() => {
+               setCurrentPhase('config');
+               setCircuitsInitialized(false); // Reset so circuits can be regenerated if config changes
+             }}
              className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium"
            >
              Back
@@ -2455,7 +2451,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
         <div 
           className="fixed inset-0 z-[99998]"
           onClick={(e) => {
-            console.log('Backdrop clicked, closing menu');
             setShowExerciseMenu(null);
           }}
           onMouseDown={(e) => {
@@ -2475,12 +2470,10 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
             pointerEvents: 'auto'
           }}
           onClick={(e) => {
-            console.log('Dropdown container clicked');
             e.stopPropagation();
           }}
           onMouseDown={(e) => {
             // Stop mousedown from reaching document to prevent handleClickOutside from interfering
-            console.log('Dropdown mousedown');
             e.stopPropagation();
           }}
         >
@@ -2488,7 +2481,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Remove station clicked');
             const circuit = circuits.find(c => c.letter === showExerciseMenu.circuit);
             if (circuit) {
               handleRemoveStation(showExerciseMenu.circuit, showExerciseMenu.station, showExerciseMenu.series);
@@ -2503,7 +2495,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Select exercise + rip clicked');
             const circuitIdx = circuits.findIndex(c => c.letter === showExerciseMenu.circuit);
             const seriesIdx = showExerciseMenu.series - 1;
             const circuit = circuits[circuitIdx];
@@ -2528,7 +2519,6 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('Load a new station clicked');
             const circuitIdx = circuits.findIndex(c => c.letter === showExerciseMenu.circuit);
             const seriesIdx = showExerciseMenu.series - 1;
             const circuit = circuits[circuitIdx];
@@ -2539,12 +2529,10 @@ export default function CircuitPlanner({ sport, onSave, onCancel }: CircuitPlann
               const station = circuit.stationsBySeries[seriesIdx][stationIdx];
               const currentSector = station?.sector;
               const currentExercise = station?.exercise;
-              console.log('Current sector:', currentSector, 'Current exercise:', currentExercise);
               
               if (currentSector) {
                 // 2026-01-22 14:50 UTC - Exclude current exercise to get a different one
                 const randomExercise = getRandomExercise(currentSector, currentExercise);
-                console.log('Random exercise:', randomExercise);
                 
                 if (randomExercise) {
                   setCircuits(prevCircuits => {
