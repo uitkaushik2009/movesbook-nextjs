@@ -25,6 +25,83 @@ interface MovelapDetailTableProps {
   onNavigateMoveframe?: (moveframeId: string) => void; // Navigate to another moveframe
 }
 
+// Editable Notes Field Component - 2026-01-22 12:00 UTC
+function EditableNotesField({ movelap, stripHtmlTags }: { movelap: any; stripHtmlTags: (html: string) => string }) {
+  const [notesValue, setNotesValue] = React.useState('');
+  const [isSaving, setIsSaving] = React.useState(false);
+  
+  // Initialize and update notes value when movelap changes
+  React.useEffect(() => {
+    let cleanNotes = movelap.notes || '';
+    if (typeof cleanNotes === 'string') {
+      cleanNotes = cleanNotes.replace(/\[CIRCUIT_META\].*?\[\/CIRCUIT_META\]/g, '').trim();
+    }
+    setNotesValue(stripHtmlTags(cleanNotes));
+  }, [movelap.notes, movelap.id, stripHtmlTags]);
+  
+  const handleSave = async () => {
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setIsSaving(false);
+      return;
+    }
+    
+    // Preserve CIRCUIT_META if it exists
+    let finalNotes = notesValue;
+    if (movelap.notes && typeof movelap.notes === 'string') {
+      const metaMatch = movelap.notes.match(/\[CIRCUIT_META\].*?\[\/CIRCUIT_META\]/);
+      if (metaMatch) {
+        finalNotes = notesValue + '\n' + metaMatch[0];
+      }
+    }
+    
+    try {
+      const response = await fetch(`/api/workouts/movelaps/${movelap.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          notes: finalNotes
+        })
+      });
+      
+      if (response.ok) {
+        // Update the movelap object
+        movelap.notes = finalNotes;
+      } else {
+        console.error('Failed to save notes');
+      }
+    } catch (error) {
+      console.error('Error saving notes:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  return (
+    <input
+      type="text"
+      value={notesValue}
+      onChange={(e) => setNotesValue(e.target.value)}
+      onBlur={handleSave}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.currentTarget.blur();
+        }
+      }}
+      disabled={isSaving}
+      className="w-full px-1 py-0.5 text-xs border border-gray-200 rounded focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
+      placeholder="Add notes..."
+      title="Edit notes (press Enter to save)"
+    />
+  );
+}
+
 // Sortable Row Component
 function SortableMovelapRow({ 
   movelap, 
@@ -38,7 +115,8 @@ function SortableMovelapRow({
   onDeleteMovelap,
   onCopyMovelap,
   onPasteMovelap,
-  onAddMovelapAfter
+  onAddMovelapAfter,
+  pauseAmongCircuits
 }: {
   movelap: any;
   index: number;
@@ -52,6 +130,7 @@ function SortableMovelapRow({
   onCopyMovelap: (movelap: any) => void;
   onPasteMovelap: (index: number) => void;
   onAddMovelapAfter?: (movelap: any, index: number) => void;
+  pauseAmongCircuits?: string;
 }) {
   // Options dropdown state
   const [showOptionsDropdown, setShowOptionsDropdown] = useState(false);
@@ -187,16 +266,20 @@ function SortableMovelapRow({
         </button>
       </td>
       
-      {/* MF (Moveframe Letter) Column */}
+      {/* MF (Moveframe Letter) / Circuit Letter Column - 2026-01-22 10:30 UTC */}
+      {/* 2026-01-22 11:30 UTC - Updated to show circuit letter (A, B, C) for circuits */}
       <td className="border border-gray-300 px-1 py-1 text-center font-bold text-xs">
-        {moveframeLetter}
+        {movelap.circuitLetter ? movelap.circuitLetter : moveframeLetter}
       </td>
       
-      {/* # (Repetition Number) Column - Persistent sequence number */}
+      {/* # (Repetition Number) / Circuit Info Column - 2026-01-22 10:30 UTC */}
+      {/* 2026-01-22 11:30 UTC - Updated to show format like "B23" (circuit + series + station) */}
       <td className={`border border-gray-300 px-1 py-1 text-center font-bold text-xs ${
         movelap.isNewlyAdded ? 'text-red-600' : ''
       }`}>
-        {sequenceNumber}
+        {movelap.circuitLetter 
+          ? `${movelap.circuitLetter}${movelap.localSeriesNumber || movelap.seriesNumber}${movelap.stationNumber}` 
+          : sequenceNumber}
       </td>
       
       {/* Workout Section Column - Combined color and name */}
@@ -265,15 +348,19 @@ function SortableMovelapRow({
        {/* SWIM, BIKE, RUN, ROWING, SKATE, SKI, SNOWBOARD - Distance-based sports */}
        {isDistanceBased && (
          <>
-           {/* Distance/Duration - Show distance if set, otherwise show time (for time-based workouts) */}
+           {/* Distance/Duration - 2026-01-22 11:30 UTC - Show sector for circuits, distance/time for regular */}
            <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
-             {movelap.distance ? movelap.distance : (movelap.time || '—')}
+             {movelap.circuitLetter 
+               ? (movelap.sector || '—')
+               : (movelap.distance ? movelap.distance : (movelap.time || '—'))}
            </td>
            
-           {/* Style - Only for SWIM and RUN */}
+           {/* Exercise (formerly Style) - 2026-01-22 11:30 UTC - Show exercise for circuits, style for regular */}
            {(isSwim || isRun) && (
              <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
-               {movelap.style || '—'}
+               {movelap.circuitLetter 
+                 ? (movelap.exercise || '—')
+                 : (movelap.style || '—')}
              </td>
            )}
            
@@ -320,9 +407,9 @@ function SortableMovelapRow({
          {movelap.pause || '—'}
        </td>
        
-       {/* Macro Final */}
+       {/* Macro Final - 2026-01-22 11:30 UTC - Show pause among circuits for circuit movelaps */}
        <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
-         {movelap.macroFinal || '—'}
+         {movelap.circuitLetter ? (pauseAmongCircuits || '—') : (movelap.macroFinal || '—')}
        </td>
        
        {/* Alarm & Sound */}
@@ -335,19 +422,12 @@ function SortableMovelapRow({
       
       {/* Notes - Display with increased width for better readability */}
       <td className="border border-gray-300 px-2 py-1 text-left text-xs" style={{ width: '300px', maxWidth: '300px', minWidth: '300px' }}>
-        <div 
-          className="overflow-hidden text-ellipsis whitespace-nowrap" 
-          title={stripHtmlTags(movelap.notes || '—')}
-          style={{ maxWidth: '300px' }}
-        >
-          {movelap.notes 
-            ? (() => {
-                const stripped = stripHtmlTags(movelap.notes);
-                return stripped.length > 40 ? stripped.substring(0, 40) + '...' : stripped;
-              })()
-            : '—'
-          }
-        </div>
+        {/* 2026-01-22 11:45 UTC - Made notes field editable */}
+        {/* 2026-01-22 12:00 UTC - Fixed to use controlled component with local state */}
+        <EditableNotesField
+          movelap={movelap}
+          stripHtmlTags={stripHtmlTags}
+        />
       </td>
       
       {/* Options Column - Simplified to Edit + Options dropdown */}
@@ -488,6 +568,31 @@ export default function MovelapDetailTable({
   const [currentMovelapIndex, setCurrentMovelapIndex] = useState(0); // Current movelap being viewed
   const [showManualContentPopup, setShowManualContentPopup] = useState(false); // Popup for manual content
   const [popupContentType, setPopupContentType] = useState<'summary' | 'detail'>('detail'); // Track which section is being viewed
+  
+  // 2026-01-22 10:50 UTC - Extract circuit data from moveframe notes if present
+  // 2026-01-22 11:30 UTC - Also extract pause among circuits value
+  let circuitBasedMoveframe = false;
+  let pauseAmongCircuits = '—';
+  if (moveframe.notes && typeof moveframe.notes === 'string') {
+    const circuitDataMatch = moveframe.notes.match(/\[CIRCUIT_DATA\](.*?)\[\/CIRCUIT_DATA\]/);
+    if (circuitDataMatch) {
+      try {
+        const circuitData = JSON.parse(circuitDataMatch[1]);
+        circuitBasedMoveframe = circuitData.isCircuitBased || false;
+        moveframe.isCircuitBased = circuitBasedMoveframe;
+        
+        // Extract pause among circuits (pauseCircuits in seconds)
+        if (circuitData.config && circuitData.config.pauses && circuitData.config.pauses.circuits) {
+          const pauseSeconds = circuitData.config.pauses.circuits;
+          const minutes = Math.floor(pauseSeconds / 60);
+          const seconds = pauseSeconds % 60;
+          pauseAmongCircuits = `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+        }
+      } catch (e) {
+        console.error('Failed to parse circuit data:', e);
+      }
+    }
+  }
   
   // Navigation for movelaps within the same moveframe
   const hasPreviousMovelap = currentMovelapIndex > 0;
@@ -1070,53 +1175,48 @@ export default function MovelapDetailTable({
               return (
                 <>
                   <colgroup>
-                    {/* Fixed base columns */}
-                    <col style={{ width: '30px' }} />  {/* Move */}
-                    <col style={{ width: '30px' }} />  {/* MF */}
-                    <col style={{ width: '30px' }} />  {/* # */}
-                    <col style={{ width: '120px' }} /> {/* Workout section */}
-                    <col style={{ width: '80px' }} />  {/* Sport */}
-                    
-                    {/* Sport-specific columns */}
+                    <col style={{ width: '30px' }} />
+                    <col style={{ width: '30px' }} />
+                    <col style={{ width: '30px' }} />
+                    <col style={{ width: '120px' }} />
+                    <col style={{ width: '80px' }} />
                     {isBodyBuilding && (
                       <>
-                        <col style={{ width: '100px' }} /> {/* Musc.Sector */}
-                        <col style={{ width: '120px' }} /> {/* Exercise */}
-                        <col style={{ width: '50px' }} />  {/* Reps */}
-                        <col style={{ width: '60px' }} />  {/* Weight */}
-                        <col style={{ width: '50px' }} />  {/* Tempo */}
-                        <col style={{ width: '80px' }} />  {/* Rest Type */}
+                        <col style={{ width: '100px' }} />
+                        <col style={{ width: '120px' }} />
+                        <col style={{ width: '50px' }} />
+                        <col style={{ width: '60px' }} />
+                        <col style={{ width: '50px' }} />
+                        <col style={{ width: '80px' }} />
                       </>
                     )}
                     {hasTools && (
                       <>
-                        <col style={{ width: '50px' }} />  {/* Reps */}
-                        <col style={{ width: '120px' }} /> {/* Tools */}
+                        <col style={{ width: '50px' }} />
+                        <col style={{ width: '120px' }} />
                       </>
                     )}
                     {isDistanceBased && (
                       <>
-                        <col style={{ width: '60px' }} />  {/* Dist/Dur */}
-                        {(isSwim || isRun) && <col style={{ width: '100px' }} />} {/* Style */}
+                        <col style={{ width: '60px' }} />
+                        {(isSwim || isRun) && <col style={{ width: '100px' }} />}
                         {isBike && (
                           <>
-                            <col style={{ width: '50px' }} />  {/* R1 */}
-                            <col style={{ width: '50px' }} />  {/* R2 */}
+                            <col style={{ width: '50px' }} />
+                            <col style={{ width: '50px' }} />
                           </>
                         )}
-                        <col style={{ width: '50px' }} />  {/* Speed */}
-                        {isRowing && <col style={{ width: '60px' }} />} {/* Row/min */}
-                        <col style={{ width: '60px' }} />  {/* Time */}
-                        <col style={{ width: '60px' }} />  {/* Pace */}
+                        <col style={{ width: '50px' }} />
+                        {isRowing && <col style={{ width: '60px' }} />}
+                        <col style={{ width: '60px' }} />
+                        <col style={{ width: '60px' }} />
                       </>
                     )}
-                    
-                    {/* Fixed trailing columns */}
-                    <col style={{ width: '45px' }} />  {/* Pause */}
-                    <col style={{ width: '40px' }} />  {/* Macro */}
-                    <col style={{ width: '60px' }} />  {/* Alarm&Snd */}
-                    <col style={{ width: '300px' }} /> {/* Notes */}
-                    <col style={{ width: '120px' }} /> {/* Options */}
+                    <col style={{ width: '45px' }} />
+                    <col style={{ width: '40px' }} />
+                    <col style={{ width: '60px' }} />
+                    <col style={{ width: '300px' }} />
+                    <col style={{ width: '120px' }} />
                   </colgroup>
                   <thead className="bg-gray-200">
                     <tr>
@@ -1148,7 +1248,7 @@ export default function MovelapDetailTable({
                         <>
                           <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Dist/Dur</th>
                           {(isSwim || isRun) && (
-                            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Style</th>
+                            <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Exercise</th>
                           )}
                           {isBike && (
                             <>
@@ -1179,6 +1279,24 @@ export default function MovelapDetailTable({
             
             <tbody>
               {movelaps.map((movelap: any, index: number) => {
+                // 2026-01-22 10:50 UTC - Extract circuit metadata from notes if present
+                let circuitMetadata: any = null;
+                if (movelap.notes && typeof movelap.notes === 'string') {
+                  const metaMatch = movelap.notes.match(/\[CIRCUIT_META\](.*?)\[\/CIRCUIT_META\]/);
+                  if (metaMatch) {
+                    try {
+                      circuitMetadata = JSON.parse(metaMatch[1]);
+                      // Attach to movelap for easy access
+                      movelap.circuitLetter = circuitMetadata.circuitLetter;
+                      movelap.circuitIndex = circuitMetadata.circuitIndex;
+                      movelap.seriesNumber = circuitMetadata.seriesNumber;
+                      movelap.localSeriesNumber = circuitMetadata.localSeriesNumber;
+                      movelap.stationNumber = circuitMetadata.stationNumber;
+                    } catch (e) {
+                      console.error('Failed to parse circuit metadata:', e);
+                    }
+                  }
+                }
                 // Calculate group headers for aerobic sports
                 const aerobicSeriesNum = parseInt(moveframe.aerobicSeries || '1');
                 const repsPerGroup = Math.ceil(movelaps.length / aerobicSeriesNum);
@@ -1216,10 +1334,28 @@ export default function MovelapDetailTable({
                 // Trailing columns: Pause(1) + Macro(1) + Alarm&Snd(1) + Notes(1) + Options(1) = 5
                 totalColumns += 5;
                 
+                // 2026-01-22 10:30 UTC - Circuit header logic
+                const isCircuitBased = moveframe.isCircuitBased || movelap.circuitLetter;
+                const isFirstInCircuit = isCircuitBased && (index === 0 || movelaps[index - 1]?.circuitLetter !== movelap.circuitLetter);
+                const circuitLetter = movelap.circuitLetter || '';
+                const circuitIndex = movelap.circuitIndex || 1;
+                
                 return (
                   <React.Fragment key={movelap.id}>
-                    {/* Group Header */}
-                    {AEROBIC_SPORTS.includes(sport) && aerobicSeriesNum > 1 && isFirstInGroup && (
+                    {/* Circuit Header - 2026-01-22 10:30 UTC */}
+                    {isCircuitBased && isFirstInCircuit && (
+                      <tr>
+                        <td colSpan={totalColumns} className="border border-gray-400 bg-rose-100 px-3 py-2 text-sm font-bold text-rose-900">
+                          <div className="flex justify-between items-center">
+                            <span>Circuit {circuitLetter}</span>
+                            <span className="text-rose-700">Group {circuitIndex}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    
+                    {/* Group Header (for aerobic sports without circuits) */}
+                    {!isCircuitBased && AEROBIC_SPORTS.includes(sport) && aerobicSeriesNum > 1 && isFirstInGroup && (
                       <tr>
                         <td colSpan={totalColumns} className="border border-gray-400 bg-rose-100 px-3 py-2 text-sm font-bold text-rose-900 text-center">
                           Group {currentGroup}
@@ -1239,6 +1375,7 @@ export default function MovelapDetailTable({
                       onCopyMovelap={handleCopyMovelap}
                       onPasteMovelap={handlePasteMovelap}
                       onAddMovelapAfter={onAddMovelapAfter}
+                      pauseAmongCircuits={pauseAmongCircuits}
                     />
                   </React.Fragment>
                 );

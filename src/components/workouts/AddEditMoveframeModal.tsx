@@ -10,7 +10,10 @@ import { useToolsData } from '@/hooks/useToolsData';
 import TimeInput from '@/components/common/TimeInput';
 import { useFreeMoveExercises } from '@/hooks/useFreeMoveExercises';
 import Image from 'next/image';
-import BatteryCircuitPlanner from './BatteryCircuitPlanner';
+// 2026-01-21 20:00 UTC - Old import (kept for reference)
+// import BatteryCircuitPlanner from './BatteryCircuitPlanner';
+// 2026-01-21 20:00 UTC - New Circuit Planner component
+import CircuitPlanner from './CircuitPlanner';
 
 interface AddEditMoveframeModalProps {
   isOpen: boolean;
@@ -4072,16 +4075,29 @@ export default function AddEditMoveframeModal({
           )}
 
           {/* Battery Mode - Circuit Planner */}
+          {/* 2026-01-21 20:00 UTC - Replaced old BatteryCircuitPlanner with new CircuitPlanner */}
           {type === 'BATTERY' && (
-            <BatteryCircuitPlanner
-              sectionId={sectionId}
+            <CircuitPlanner
               sport={sport}
-              workout={workout}
-              day={day}
-              onCreateCircuit={(circuitData) => {
-                // Handle circuit creation
-                console.log('Circuit data:', circuitData);
-                onSave(circuitData);
+              onSave={(circuitData) => {
+                // 2026-01-21 20:00 UTC - Handle circuit creation
+                // 2026-01-22 10:20 UTC - Include description in moveframe data
+                // 2026-01-22 10:30 UTC - Include movelaps in moveframe data
+                console.log('✅ Circuit data generated:', circuitData);
+                
+                // Build complete moveframe data with circuit description and movelaps
+                const moveframeData = buildMoveframeData();
+                const finalData = {
+                  ...moveframeData,
+                  description: circuitData.description || '', // Use circuit preview as description
+                  circuitConfig: circuitData.config,
+                  circuits: circuitData.circuits,
+                  movelaps: circuitData.movelaps || [], // Include generated movelaps
+                  isCircuitBased: true // Flag to indicate this is a circuit-based moveframe
+                };
+                
+                console.log('✅ Moveframe data with circuit movelaps:', finalData);
+                onSave(finalData);
               }}
               onCancel={onClose}
             />

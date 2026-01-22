@@ -557,6 +557,12 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       return movelaps;
     }
     
+    // 2026-01-22 10:35 UTC - For circuit-based moveframes (BATTERY type), use pre-generated movelaps
+    if (moveframeData.type === 'BATTERY' && moveframeData.movelaps && moveframeData.movelaps.length > 0) {
+      console.log('✅ [generateMovelaps] Using pre-generated circuit movelaps:', moveframeData.movelaps.length);
+      return moveframeData.movelaps;
+    }
+    
     // For manual mode, create a single movelap with distance for statistics
     if (moveframeData.manualMode) {
       const distanceValue = parseInt(moveframeData.distance) || 0;
@@ -2476,11 +2482,23 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                if (moveframeModalMode === 'edit' && editingMoveframe) {
                 // UPDATE existing moveframe
               console.log('🔄 [UPDATE] Updating moveframe with manualPriority:', moveframeData.manualPriority);
+                // 2026-01-22 10:45 UTC - Prepare notes field with circuit config if applicable
+                let updateNotes = moveframeData.notes || '';
+                if (moveframeData.isCircuitBased && moveframeData.circuitConfig) {
+                  const circuitMeta = {
+                    isCircuitBased: true,
+                    config: moveframeData.circuitConfig,
+                    circuits: moveframeData.circuits
+                  };
+                  const metaString = `\n\n[CIRCUIT_DATA]${JSON.stringify(circuitMeta)}[/CIRCUIT_DATA]`;
+                  updateNotes = updateNotes + metaString;
+                }
+                
                 await moveframeHandlers.updateMoveframe(editingMoveframe.id, {
                    sport: moveframeData.sport,
                    type: moveframeData.type,
                    description: moveframeData.description,
-                   notes: moveframeData.notes,
+                   notes: updateNotes,
                    macroFinal: moveframeData.macroFinal,
                   alarm: moveframeData.alarm,
                   sectionId: moveframeData.sectionId,
@@ -2495,9 +2513,10 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   annotationBold: moveframeData.annotationBold
                 }, deps);
                 
-                 // ALWAYS regenerate movelaps for non-ANNOTATION types when editing
-                 // This ensures Rip\Sets column and all movelap data stays in sync
-                 if (moveframeData.type !== 'ANNOTATION') {
+                // ALWAYS regenerate movelaps for non-ANNOTATION types when editing
+                // This ensures Rip\Sets column and all movelap data stays in sync
+                // 2026-01-22 10:35 UTC - Skip regeneration for circuit-based moveframes (BATTERY type)
+                if (moveframeData.type !== 'ANNOTATION' && moveframeData.type !== 'BATTERY') {
                    const baseReps = parseInt(moveframeData.repetitions) || 1;
                    const AEROBIC_SPORTS = ['SWIM', 'BIKE', 'MTB', 'SPINNING', 'RUN', 'ROWING', 'CANOEING', 'KAYAKING', 'SKATE', 'SKI', 'SNOWBOARD', 'WALKING', 'HIKING'];
                    const seriesMultiplier = AEROBIC_SPORTS.includes(moveframeData.sport) ? (parseInt(moveframeData.aerobicSeries) || 1) : 1;
@@ -2580,15 +2599,35 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                     });
                   });
                
+                // 2026-01-22 10:45 UTC - Prepare notes field with circuit config if applicable
+                // 2026-01-22 11:00 UTC - Fixed: Embed circuit config in notes field properly
+                let finalNotes = moveframeData.notes || '';
+                if (moveframeData.isCircuitBased && moveframeData.circuitConfig) {
+                  const circuitMeta = {
+                    isCircuitBased: true,
+                    config: moveframeData.circuitConfig,
+                    circuits: moveframeData.circuits
+                  };
+                  const metaString = `\n\n[CIRCUIT_DATA]${JSON.stringify(circuitMeta)}[/CIRCUIT_DATA]`;
+                  finalNotes = finalNotes + metaString;
+                  
+                  console.log('✅ Circuit config embedded in notes:', {
+                    hasCircuitData: true,
+                    notesLength: finalNotes.length,
+                    circuitConfig: moveframeData.circuitConfig
+                  });
+                }
+                
+                // 2026-01-22 11:00 UTC - Build request body with only valid Prisma schema fields
                 const requestBody = {
                    workoutSessionId: activeWorkout.id,
                   sport: moveframeData.sport,
                   type: moveframeData.type || 'STANDARD',
                    description: moveframeData.description,
-                   notes: moveframeData.notes,
+                   notes: finalNotes,  // Contains embedded circuit data if applicable
                    macroFinal: moveframeData.macroFinal,
                    alarm: moveframeData.alarm,
-                   movelaps,
+                   movelaps,  // Movelaps already generated by CircuitPlanner
                   sectionId: moveframeData.sectionId || 'default',
                   manualMode: moveframeData.manualMode || false,
                  manualPriority: moveframeData.manualPriority || false,
@@ -2604,6 +2643,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   annotationTextColor: moveframeData.annotationTextColor,
                   annotationBold: moveframeData.annotationBold
                 };
+                
+                // 2026-01-22 11:00 UTC - IMPORTANT: Don't include circuit-specific fields in request
+                // They are already embedded in the notes field above
                
                 console.log('📤 Creating moveframe with request body:', {
                   ...requestBody,

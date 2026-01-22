@@ -172,8 +172,31 @@ export async function POST(request: NextRequest) {
           : `Technique: ${appliedTechnique}`;
       }
       
+      // 2026-01-22 10:45 UTC - Preserve circuit-specific metadata in notes
+      if (lap.circuitLetter) {
+        const circuitMeta = {
+          circuitLetter: lap.circuitLetter,
+          circuitIndex: lap.circuitIndex,
+          seriesNumber: lap.seriesNumber,
+          localSeriesNumber: lap.localSeriesNumber,
+          stationNumber: lap.stationNumber,
+          sector: lap.sector
+        };
+        const metaString = `\n[CIRCUIT_META]${JSON.stringify(circuitMeta)}[/CIRCUIT_META]`;
+        movelapNotes = movelapNotes + metaString;
+      }
+      
+      // 2026-01-22 11:10 UTC - Convert pause to string if it's a number (for circuit movelaps)
+      let pauseValue = lap.pause || null;
+      if (typeof pauseValue === 'number') {
+        // Convert seconds to time string format (e.g., 10 -> "0'10"", 90 -> "1'30"")
+        const minutes = Math.floor(pauseValue / 60);
+        const seconds = pauseValue % 60;
+        pauseValue = `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+      }
+      
       return {
-        repetitionNumber: index + 1,
+        repetitionNumber: lap.repetitionNumber || (index + 1),
         distance: lap.distance ? parseInt(lap.distance) : null,
         speed: lap.speed || null,
         style: lap.style || null,
@@ -188,7 +211,7 @@ export async function POST(request: NextRequest) {
         exercise: lap.exercise || null,
         // Convert display value to enum value
         restType: convertRestTypeToEnum(lap.restType),
-        pause: lap.pause || null,
+        pause: pauseValue,
         macroFinal: lap.macroFinal || null,
         alarm: lap.alarm ? parseInt(lap.alarm) : null,
         sound: lap.sound || null,

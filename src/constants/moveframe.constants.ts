@@ -647,9 +647,6 @@ export const SPORTS_LIST = [
   'HIKING',
   'WALKING',
   'DANCING',
-  'CALISTENIC',
-  'CROSSFIT',
-  'SPARTAN',
   'TRIATHLON',
   'TRACK_FIELD'
 ] as const;
