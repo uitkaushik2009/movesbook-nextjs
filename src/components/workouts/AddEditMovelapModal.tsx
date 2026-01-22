@@ -3,6 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy } from 'lucide-react';
 
+// 2026-01-22 14:45 UTC - Helper to strip circuit metadata tags from content
+const stripCircuitTags = (content: string | null | undefined): string => {
+  if (!content) return '';
+  return content
+    .replace(/\[CIRCUIT_DATA\][\s\S]*?\[\/CIRCUIT_DATA\]/g, '')
+    .replace(/\[CIRCUIT_META\][\s\S]*?\[\/CIRCUIT_META\]/g, '')
+    .trim();
+};
+
 interface AddEditMovelapModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -407,7 +416,7 @@ export default function AddEditMovelapModal({
               {mode === 'add' ? 'Add Movelap' : 'Edit Movelap'}
             </h2>
             <p className="text-xs text-blue-100 mt-1">
-              Moveframe: {moveframe.description || 'No description'}
+              Moveframe: {stripCircuitTags(moveframe.description) || 'No description'}
             </p>
           </div>
           <button

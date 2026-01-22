@@ -198,8 +198,8 @@ export async function POST(request: NextRequest) {
       return {
         repetitionNumber: lap.repetitionNumber || (index + 1),
         distance: lap.distance ? parseInt(lap.distance) : null,
-        speed: lap.speed || null,
-        style: lap.style || null,
+        speed: lap.reps || lap.speed || null, // 2026-01-22 14:20 UTC - Use reps for circuits, speed for regular
+        style: lap.sector || lap.style || null, // 2026-01-22 14:20 UTC - Use sector for circuits, style for regular
         pace: lap.pace || null,
         time: lap.time || null,
         reps: lap.reps ? parseInt(lap.reps) : null,

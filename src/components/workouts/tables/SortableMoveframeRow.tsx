@@ -9,6 +9,15 @@ import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 import { useSportIconType } from '@/hooks/useSportIconType';
 import { getSportDisplayName, DISTANCE_BASED_SPORTS } from '@/constants/moveframe.constants';
 
+// 2026-01-22 14:45 UTC - Helper to strip circuit metadata tags from content
+const stripCircuitTags = (content: string | null | undefined): string => {
+  if (!content) return '';
+  return content
+    .replace(/\[CIRCUIT_DATA\][\s\S]*?\[\/CIRCUIT_DATA\]/g, '')
+    .replace(/\[CIRCUIT_META\][\s\S]*?\[\/CIRCUIT_META\]/g, '')
+    .trim();
+};
+
 interface SortableMoveframeRowProps {
   moveframe: any;
   mfIndex: number;
@@ -486,11 +495,13 @@ export default function SortableMoveframeRow({
         // For manual mode with priority, use notes field first (it contains the full rich text content)
         // Description field might be truncated for database constraints
         // If manual mode WITHOUT priority, show blank (user wants to hide content)
-        const manualContent = (isManualMode && hasManualPriority)
+        // 2026-01-22 14:45 UTC - Strip circuit tags from all content
+        const rawContent = (isManualMode && hasManualPriority)
           ? (moveframe.notes || moveframe.description || '') 
           : isManualMode && !hasManualPriority
           ? '' // Blank for manual mode without priority
           : moveframe.description;
+        const manualContent = stripCircuitTags(rawContent);
         
         // Debug logging for manual mode
         if (isManualMode) {

@@ -11,6 +11,15 @@ import { SPORTS } from '@/config/workout.constants';
 import { moveframeApi } from '@/utils/api.utils';
 import type { Moveframe, Workout, WorkoutDay } from '@/types/workout.types';
 
+// 2026-01-22 14:45 UTC - Helper to strip circuit metadata tags from content
+const stripCircuitTags = (content: string | null | undefined): string => {
+  if (!content) return '';
+  return content
+    .replace(/\[CIRCUIT_DATA\][\s\S]*?\[\/CIRCUIT_DATA\]/g, '')
+    .replace(/\[CIRCUIT_META\][\s\S]*?\[\/CIRCUIT_META\]/g, '')
+    .trim();
+};
+
 interface EditMoveframeModalProps {
   moveframe: Moveframe;
   workout: Workout;
@@ -31,7 +40,8 @@ export default function EditMoveframeModal({
   onSuccess
 }: EditMoveframeModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editorContent, setEditorContent] = useState(moveframe.notes || moveframe.description || '');
+  // 2026-01-22 14:45 UTC - Strip circuit tags from initial content
+  const [editorContent, setEditorContent] = useState(stripCircuitTags(moveframe.notes || moveframe.description || ''));
   const [distance, setDistance] = useState('0');
   
   const isManualMode = moveframe.manualMode === true;
@@ -283,7 +293,7 @@ export default function EditMoveframeModal({
                 </label>
                 <textarea
                   name="description"
-                  defaultValue={moveframe.description || ''}
+                  defaultValue={stripCircuitTags(moveframe.description) || ''}
                   placeholder="e.g., 100 FR x 10 A2 R20"
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"

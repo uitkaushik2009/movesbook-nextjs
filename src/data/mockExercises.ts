@@ -199,10 +199,19 @@ export function getExercisesBySector(sector: string): MockExercise[] {
 
 /**
  * Get a random exercise from a specific sector
+ * 2026-01-22 14:50 UTC - Added excludeExercise parameter to avoid duplicates
  */
-export function getRandomExercise(sector: string): MockExercise | null {
-  const exercises = getExercisesBySector(sector);
+export function getRandomExercise(sector: string, excludeExercise?: string): MockExercise | null {
+  let exercises = getExercisesBySector(sector);
   if (exercises.length === 0) return null;
+  
+  // Exclude the current exercise if provided
+  if (excludeExercise) {
+    exercises = exercises.filter(ex => ex.name !== excludeExercise);
+    // If no other exercises available after filtering, return null
+    if (exercises.length === 0) return null;
+  }
+  
   return exercises[Math.floor(Math.random() * exercises.length)];
 }
 

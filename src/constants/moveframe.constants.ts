@@ -23,7 +23,8 @@ export const MUSCULAR_SECTORS = [
   'Front thighs',
   'Hind thighs',
   'Calves',
-  'Tibials'
+  'Tibials',
+  'Glutes' // 2026-01-22 14:30 UTC - Added Glutes muscular sector
 ];
 
 // Rest type options

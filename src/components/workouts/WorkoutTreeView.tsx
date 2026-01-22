@@ -6,6 +6,15 @@ import { useColorSettings } from '@/hooks/useColorSettings';
 import { useSportIconType } from '@/hooks/useSportIconType';
 import { getSportIcon, isImageIcon } from '@/utils/sportIcons';
 
+// 2026-01-22 14:45 UTC - Helper to strip circuit metadata tags from content
+const stripCircuitTags = (content: string | null | undefined): string => {
+  if (!content) return '';
+  return content
+    .replace(/\[CIRCUIT_DATA\][\s\S]*?\[\/CIRCUIT_DATA\]/g, '')
+    .replace(/\[CIRCUIT_META\][\s\S]*?\[\/CIRCUIT_META\]/g, '')
+    .trim();
+};
+
 interface WorkoutTreeViewProps {
   workoutPlan: any;
   activeSection?: 'A' | 'B' | 'C' | 'D';
@@ -545,7 +554,7 @@ export default function WorkoutTreeView({
                                                 </span>
                                               </div>
                                               <div className="text-xs opacity-70 max-w-md truncate">
-                                                {moveframe.description || 'No description'}
+                                                {stripCircuitTags(moveframe.description) || 'No description'}
                                               </div>
                                             </button>
 

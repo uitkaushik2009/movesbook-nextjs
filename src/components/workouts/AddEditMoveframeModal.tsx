@@ -41,6 +41,9 @@ export default function AddEditMoveframeModal({
   // Get sport icon type from localStorage
   const [iconType, setIconType] = React.useState<'emoji' | 'icon'>('emoji');
   
+  // 2026-01-22 14:30 UTC - Battery submenu selection
+  const [batterySubmenu, setBatterySubmenu] = React.useState<'circuits' | 'fast' | 'ai'>('circuits');
+  
   // Debug: Log mode changes only
   React.useEffect(() => {
     if (isOpen) {
@@ -979,8 +982,8 @@ export default function AddEditMoveframeModal({
           </div>
         )}
 
-        {/* Body */}
-        <div ref={bodyRef} className="overflow-y-auto p-4 pb-64" style={{ height: type === 'STANDARD' ? 'calc(80vh - 140px)' : 'calc(80vh - 100px)' }}>
+        {/* Body - 2026-01-22 14:40 UTC - Reduced padding for Battery mode */}
+        <div ref={bodyRef} className={`overflow-y-auto ${type === 'BATTERY' ? 'p-2 pb-2' : 'p-4 pb-64'}`} style={{ height: type === 'STANDARD' ? 'calc(80vh - 140px)' : 'calc(80vh - 100px)' }}>
           {/* Edit Moveframe Tab */}
           {(type !== 'STANDARD' || activeTab === 'edit') && (
             <div key="edit-tab">
@@ -1277,7 +1280,7 @@ export default function AddEditMoveframeModal({
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 } ${mode === 'edit' ? 'cursor-not-allowed opacity-50 pointer-events-none' : ''}`}
               >
-                Mixd tests\Circuits
+                🔋 Battery
               </button>
               <button
                 type="button"
@@ -1300,6 +1303,50 @@ export default function AddEditMoveframeModal({
               </button>
             </div>
           </div>
+
+          {/* Battery Submenu Selection - 2026-01-22 14:30 UTC */}
+          {type === 'BATTERY' && (
+            <div className="mb-3">
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                Battery Mode
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBatterySubmenu('circuits')}
+                  className={`px-3 py-2 text-sm font-medium rounded border-2 transition-colors ${
+                    batterySubmenu === 'circuits'
+                      ? 'bg-blue-50 border-blue-500 text-blue-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Circuits planner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBatterySubmenu('fast')}
+                  className={`px-3 py-2 text-sm font-medium rounded border-2 transition-colors ${
+                    batterySubmenu === 'fast'
+                      ? 'bg-blue-50 border-blue-500 text-blue-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Fast planner of Moveframes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBatterySubmenu('ai')}
+                  className={`px-3 py-2 text-sm font-medium rounded border-2 transition-colors ${
+                    batterySubmenu === 'ai'
+                      ? 'bg-blue-50 border-blue-500 text-blue-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  Plan of Moveframes with AI
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Workout Section Selection - Only for STANDARD and BATTERY modes */}
           {(type === 'STANDARD' || type === 'BATTERY') && (
@@ -4076,7 +4123,8 @@ export default function AddEditMoveframeModal({
 
           {/* Battery Mode - Circuit Planner */}
           {/* 2026-01-21 20:00 UTC - Replaced old BatteryCircuitPlanner with new CircuitPlanner */}
-          {type === 'BATTERY' && (
+          {/* 2026-01-22 14:30 UTC - Show based on batterySubmenu selection */}
+          {type === 'BATTERY' && batterySubmenu === 'circuits' && (
             <CircuitPlanner
               sport={sport}
               onSave={(circuitData) => {
@@ -4098,9 +4146,29 @@ export default function AddEditMoveframeModal({
                 
                 console.log('✅ Moveframe data with circuit movelaps:', finalData);
                 onSave(finalData);
+                // 2026-01-22 14:40 UTC - Close modal after saving circuit
+                onClose();
               }}
               onCancel={onClose}
             />
+          )}
+
+          {/* Battery Mode - Fast Planner */}
+          {/* 2026-01-22 14:30 UTC - Placeholder for Fast planner */}
+          {type === 'BATTERY' && batterySubmenu === 'fast' && (
+            <div className="p-8 text-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
+              <h3 className="text-lg font-bold text-gray-700 mb-2">Fast Planner of Moveframes</h3>
+              <p className="text-gray-600">Coming soon...</p>
+            </div>
+          )}
+
+          {/* Battery Mode - AI Planner */}
+          {/* 2026-01-22 14:30 UTC - Placeholder for AI planner */}
+          {type === 'BATTERY' && batterySubmenu === 'ai' && (
+            <div className="p-8 text-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
+              <h3 className="text-lg font-bold text-gray-700 mb-2">Plan of Moveframes with AI</h3>
+              <p className="text-gray-600">Coming soon...</p>
+            </div>
           )}
 
           {/* Preview */}
@@ -4424,23 +4492,25 @@ export default function AddEditMoveframeModal({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="border-t bg-gray-50 px-6 py-4 flex items-center justify-between flex-shrink-0">
-          <button
-            onClick={handleClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
-            disabled={isSaving}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 rounded hover:bg-cyan-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {isSaving ? 'Saving...' : mode === 'add' ? 'Add Moveframe' : 'Save Changes'}
-          </button>
-        </div>
+        {/* Footer - 2026-01-22 14:30 UTC - Hide for Battery mode */}
+        {type !== 'BATTERY' && (
+          <div className="border-t bg-gray-50 px-6 py-4 flex items-center justify-between flex-shrink-0">
+            <button
+              onClick={handleClose}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+              disabled={isSaving}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-4 py-2 text-sm font-medium text-white bg-cyan-600 rounded hover:bg-cyan-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {isSaving ? 'Saving...' : mode === 'add' ? 'Add Moveframe' : 'Save Changes'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

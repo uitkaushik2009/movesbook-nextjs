@@ -31,10 +31,14 @@ function EditableNotesField({ movelap, stripHtmlTags }: { movelap: any; stripHtm
   const [isSaving, setIsSaving] = React.useState(false);
   
   // Initialize and update notes value when movelap changes
+  // 2026-01-22 14:15 UTC - Strip both CIRCUIT_META and CIRCUIT_DATA tags
   React.useEffect(() => {
     let cleanNotes = movelap.notes || '';
     if (typeof cleanNotes === 'string') {
-      cleanNotes = cleanNotes.replace(/\[CIRCUIT_META\].*?\[\/CIRCUIT_META\]/g, '').trim();
+      // Remove circuit metadata tags
+      cleanNotes = cleanNotes.replace(/\[CIRCUIT_META\].*?\[\/CIRCUIT_META\]/g, '');
+      cleanNotes = cleanNotes.replace(/\[CIRCUIT_DATA\].*?\[\/CIRCUIT_DATA\]/g, '');
+      cleanNotes = cleanNotes.trim();
     }
     setNotesValue(stripHtmlTags(cleanNotes));
   }, [movelap.notes, movelap.id, stripHtmlTags]);
@@ -349,9 +353,10 @@ function SortableMovelapRow({
        {isDistanceBased && (
          <>
            {/* Distance/Duration - 2026-01-22 11:30 UTC - Show sector for circuits, distance/time for regular */}
+           {/* 2026-01-22 14:20 UTC - Use style field for sector (stored in DB) */}
            <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
              {movelap.circuitLetter 
-               ? (movelap.sector || '—')
+               ? (movelap.style || movelap.sector || '—')
                : (movelap.distance ? movelap.distance : (movelap.time || '—'))}
            </td>
            
@@ -376,10 +381,11 @@ function SortableMovelapRow({
              </>
            )}
            
-           {/* Speed - For SWIM, BIKE, RUN */}
-           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
-             {movelap.speed || '—'}
-           </td>
+          {/* Speed/Reps - For SWIM, BIKE, RUN - 2026-01-22 14:10 UTC - Show reps for circuits, speed for regular */}
+          {/* 2026-01-22 14:20 UTC - For circuits, speed field stores reps value */}
+          <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+            {movelap.speed || '—'}
+          </td>
            
            {/* Row/min - Only for ROWING and CANOEING */}
            {(moveframe.sport === 'ROWING' || moveframe.sport === 'CANOEING') && (
@@ -563,7 +569,16 @@ export default function MovelapDetailTable({
   const sectionColor = moveframe.section?.color || '#5b8def';
   const sectionName = moveframe.section?.name || 'Default';
   const [copiedMovelap, setCopiedMovelap] = useState<any>(null);
-  const [noteValue, setNoteValue] = useState(stripHtmlTags(moveframe.notes || ''));
+  // 2026-01-22 14:15 UTC - Strip circuit tags from initial notes value
+  const [noteValue, setNoteValue] = useState(() => {
+    let cleanNotes = moveframe.notes || '';
+    if (typeof cleanNotes === 'string') {
+      cleanNotes = cleanNotes.replace(/\[CIRCUIT_DATA\].*?\[\/CIRCUIT_DATA\]/g, '');
+      cleanNotes = cleanNotes.replace(/\[CIRCUIT_META\].*?\[\/CIRCUIT_META\]/g, '');
+      cleanNotes = cleanNotes.trim();
+    }
+    return stripHtmlTags(cleanNotes);
+  });
   const [isSavingNote, setIsSavingNote] = useState(false);
   const [currentMovelapIndex, setCurrentMovelapIndex] = useState(0); // Current movelap being viewed
   const [showManualContentPopup, setShowManualContentPopup] = useState(false); // Popup for manual content
@@ -601,9 +616,17 @@ export default function MovelapDetailTable({
   // Check if this moveframe is manual mode
   const isManualMode = moveframe.manualMode === true;
   
-  // Update noteValue when moveframe.notes changes (strip HTML)
+  // Update noteValue when moveframe.notes changes (strip HTML and circuit tags)
+  // 2026-01-22 14:15 UTC - Strip CIRCUIT_DATA and CIRCUIT_META tags
   React.useEffect(() => {
-    setNoteValue(stripHtmlTags(moveframe.notes || ''));
+    let cleanNotes = moveframe.notes || '';
+    if (typeof cleanNotes === 'string') {
+      // Remove circuit data and metadata tags
+      cleanNotes = cleanNotes.replace(/\[CIRCUIT_DATA\].*?\[\/CIRCUIT_DATA\]/g, '');
+      cleanNotes = cleanNotes.replace(/\[CIRCUIT_META\].*?\[\/CIRCUIT_META\]/g, '');
+      cleanNotes = cleanNotes.trim();
+    }
+    setNoteValue(stripHtmlTags(cleanNotes));
   }, [moveframe.notes]);
   
   // Debug logging
@@ -836,6 +859,7 @@ export default function MovelapDetailTable({
   // Manual Mode Layout - Simplified
   if (isManualMode) {
     // Parse manual content from notes - it might be JSON or HTML
+    // 2026-01-22 14:15 UTC - Strip circuit tags from manual content
     let manualContent = '';
     try {
       const parsed = JSON.parse(moveframe.notes || '{}');
@@ -843,6 +867,13 @@ export default function MovelapDetailTable({
     } catch {
       // Not JSON, use as-is
       manualContent = moveframe.notes || 'No content';
+    }
+    
+    // Strip circuit tags if present
+    if (typeof manualContent === 'string') {
+      manualContent = manualContent.replace(/\[CIRCUIT_DATA\].*?\[\/CIRCUIT_DATA\]/g, '');
+      manualContent = manualContent.replace(/\[CIRCUIT_META\].*?\[\/CIRCUIT_META\]/g, '');
+      manualContent = manualContent.trim();
     }
 
     return (
@@ -1246,7 +1277,9 @@ export default function MovelapDetailTable({
                       
                       {isDistanceBased && (
                         <>
-                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Dist/Dur</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">
+                            {moveframe.isCircuitBased ? 'Musc.Sector' : 'Dist/Dur'}
+                          </th>
                           {(isSwim || isRun) && (
                             <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Exercise</th>
                           )}
@@ -1256,7 +1289,9 @@ export default function MovelapDetailTable({
                               <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">R2</th>
                             </>
                           )}
-                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Speed</th>
+                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">
+                            {moveframe.isCircuitBased ? 'Reps' : 'Speed'}
+                          </th>
                           {isRowing && (
                             <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Row/min</th>
                           )}
