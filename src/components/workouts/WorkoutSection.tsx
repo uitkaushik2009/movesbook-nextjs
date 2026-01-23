@@ -2504,6 +2504,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   sectionId: moveframeData.sectionId,
                   manualMode: moveframeData.manualMode || false,
                  manualPriority: moveframeData.manualPriority || false,
+                  manualInputType: moveframeData.manualInputType || 'meters',
+                  manualRepetitions: moveframeData.manualRepetitions,
+                  manualDistance: moveframeData.manualDistance,
                   appliedTechnique: moveframeData.appliedTechnique,
                   aerobicSeries: moveframeData.aerobicSeries,
                   // Annotation fields
@@ -2631,6 +2634,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   sectionId: moveframeData.sectionId || 'default',
                   manualMode: moveframeData.manualMode || false,
                  manualPriority: moveframeData.manualPriority || false,
+                  manualInputType: moveframeData.manualInputType || 'meters',
                   // Manual mode fields for Moveframe model
                   manualRepetitions: moveframeData.manualRepetitions,
                   manualDistance: moveframeData.manualDistance,
@@ -2647,6 +2651,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 // 2026-01-22 11:00 UTC - IMPORTANT: Don't include circuit-specific fields in request
                 // They are already embedded in the notes field above
                
+                console.log('🚨🚨🚨 [CREATE] CRITICAL DEBUG - manualInputType:');
+                console.log('  From moveframeData:', moveframeData.manualInputType);
+                console.log('  Type:', typeof moveframeData.manualInputType);
+                console.log('  Is undefined?:', moveframeData.manualInputType === undefined);
+                console.log('  Is null?:', moveframeData.manualInputType === null);
+                console.log('  In requestBody:', requestBody.manualInputType);
+                console.log('  Full moveframeData:', moveframeData);
+                
                 console.log('📤 Creating moveframe with request body:', {
                   ...requestBody,
                   manualMode: moveframeData.manualMode,

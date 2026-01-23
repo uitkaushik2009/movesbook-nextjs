@@ -139,6 +139,11 @@ export default function AddEditMoveframeModal({
   useEffect(() => {
     console.log('🔄 [MODAL] manualPriority state changed to:', formData.manualPriority);
   }, [formData.manualPriority]);
+  
+  // Debug: Track manualInputType state changes
+  useEffect(() => {
+    console.log('🔄 [MODAL] manualInputType state changed to:', formData.manualInputType);
+  }, [formData.manualInputType]);
 
   // Copy down function: copies current row data to all rows below
   const copyDownRow = (fromIdx: number) => {
@@ -170,6 +175,7 @@ export default function AddEditMoveframeModal({
     type,
     manualMode,
     manualPriority,
+    manualInputType, // For aerobic sports: 'meters' or 'time'
     sectionId, // Workout section for ALL sports
     planningMode, // Planning mode: 'all' or 'individual'
     individualPlans, // Individual repetition plans
@@ -218,6 +224,7 @@ export default function AddEditMoveframeModal({
     setType,
     setManualMode,
     setManualPriority,
+    setManualInputType, // Manual input type setter
     setSectionId, // Workout section setter for ALL sports
     setPlanningMode, // Planning mode setter
     setIndividualPlans, // Individual plans setter
@@ -571,80 +578,67 @@ export default function AddEditMoveframeModal({
   const formatTime = (value: string): string => {
     if (!value) return '';
     
-    // Parse flexible input: "5.30", "5:30", "5'30", "530", "1:23:45", etc.
+    // If already formatted correctly, return as-is
+    if (/^\d+h\d{2}'\d{2}"\d$/.test(value)) return value;
     
-    // Check if user typed with separators
-    if (/[.:'"h]/.test(value)) {
-      // Extract hours, minutes, seconds from separated input (ignore deciseconds)
-      const parts = value.match(/(\d+)?[h:]?(\d+)?[.:']?(\d+)?/);
-      if (parts) {
-        // If only 2 parts (e.g., "5:30"), assume minutes:seconds
-        const hasHours = value.includes('h') || value.split(/[.:]/).length > 2;
-        
-        let hours = '0';
-        let minutes = '0';
-        let seconds = '0';
-        
-        if (hasHours) {
-          hours = (parts[1] || '0');
-          minutes = (parts[2] || '0').padStart(2, '0').slice(0, 2);
-          seconds = (parts[3] || '0').padStart(2, '0').slice(0, 2);
-    } else {
-          // Assume format is MM:SS or MM.SS
-          minutes = (parts[1] || '0').padStart(2, '0').slice(0, 2);
-          seconds = (parts[2] || '0').padStart(2, '0').slice(0, 2);
-        }
-        
-        const h = parseInt(hours);
-        const m = parseInt(minutes);
-        const s = parseInt(seconds);
-        
-        // Validate range
-        if (h > 9) return value;
-        if (h === 9) return "9h00'00\"";
-        if (m > 59 || s > 59) return value;
-        
-        return `${hours}h${minutes}'${seconds}"`;
-      }
-    }
-    
-    // Fallback: pure digit input (no deciseconds shown)
-    // Format based on number of digits:
-    // 1-2 digits: 1 → 0h00'01", 12 → 0h00'12" (seconds)
-    // 3-4 digits: 123 → 0h01'23", 1234 → 0h12'34" (minutes:seconds)
-    // 5+ digits: 12345 → 1h23'45", 123456 → 12h34'56" (hours:minutes:seconds)
-    
+    // Extract only digits from the input
     const digits = value.replace(/\D/g, '');
     if (!digits) return '';
     
+    // Format based on number of digits (WITH deciseconds):
+    // 1 digit: 5 → 0h00'00"5
+    // 2 digits: 12 → 0h00'12"0
+    // 3 digits: 125 → 0h01'25"0
+    // 4 digits: 1234 → 0h12'34"0
+    // 5 digits: 12345 → 1h23'45"0
+    // 6 digits: 123456 → 1h23'45"6
+    // 7+ digits: 1234567 → 12h34'56"7
+    
     const len = digits.length;
-    let hours, minutes, seconds;
+    let hours, minutes, seconds, deciseconds;
     
     if (len === 1) {
-      // 1 → 0h00'01"
+      // 1 digit: 5 → 0h00'00"5
       hours = '0';
       minutes = '00';
-      seconds = '0' + digits[0];
+      seconds = '00';
+      deciseconds = digits;
     } else if (len === 2) {
-      // 12 → 0h00'12"
+      // 2 digits: 12 → 0h00'12"0
       hours = '0';
       minutes = '00';
       seconds = digits;
+      deciseconds = '0';
     } else if (len === 3) {
-      // 123 → 0h01'23"
+      // 3 digits: 125 → 0h01'25"0
       hours = '0';
-      minutes = '0' + digits[0];
+      minutes = digits[0].padStart(2, '0');
       seconds = digits.slice(1, 3);
+      deciseconds = '0';
     } else if (len === 4) {
-      // 1234 → 0h12'34"
+      // 4 digits: 1234 → 0h12'34"0
       hours = '0';
       minutes = digits.slice(0, 2);
       seconds = digits.slice(2, 4);
-    } else {
-      // 5+ digits: 12345 → 1h23'45", 123456 → 1h23'45" (ignore extra digits)
+      deciseconds = '0';
+    } else if (len === 5) {
+      // 5 digits: 12345 → 1h23'45"0
       hours = digits[0];
       minutes = digits.slice(1, 3);
       seconds = digits.slice(3, 5);
+      deciseconds = '0';
+    } else if (len === 6) {
+      // 6 digits: 123456 → 1h23'45"6
+      hours = digits[0];
+      minutes = digits.slice(1, 3);
+      seconds = digits.slice(3, 5);
+      deciseconds = digits[5];
+    } else {
+      // 7+ digits: 1234567 → 12h34'56"7
+      hours = digits.slice(0, -5);
+      minutes = digits.slice(-5, -3);
+      seconds = digits.slice(-3, -1);
+      deciseconds = digits.slice(-1);
     }
     
     const h = parseInt(hours);
@@ -652,11 +646,9 @@ export default function AddEditMoveframeModal({
     const s = parseInt(seconds);
     
     // Validate range
-    if (h > 9) return value;
-    if (h === 9) return "9h00'00\"";
     if (m > 59 || s > 59) return value;
     
-    return `${hours}h${minutes}'${seconds}"`;
+    return `${hours}h${minutes}'${seconds}"${deciseconds}`;
   };
   
   // R1 and R2 options for BIKE
@@ -792,8 +784,22 @@ export default function AddEditMoveframeModal({
         individualPlansLength: moveframeData.individualPlans?.length,
         repetitions: moveframeData.repetitions,
         sport: moveframeData.sport,
-        manualMode: moveframeData.manualMode
+        manualMode: moveframeData.manualMode,
+        manualInputType: moveframeData.manualInputType,
+        manualRepetitions: moveframeData.manualRepetitions,
+        manualDistance: moveframeData.manualDistance
       });
+      
+      // CRITICAL DEBUG - Check manualInputType before sending
+      console.log('🚨🚨🚨 [MODAL] CRITICAL - manualInputType check:');
+      console.log('  Current form state manualInputType:', manualInputType);
+      console.log('  In buildMoveframeData result:', moveframeData.manualInputType);
+      console.log('  Are they equal?:', manualInputType === moveframeData.manualInputType);
+      console.log('  Type of form state:', typeof manualInputType);
+      console.log('  Type of data:', typeof moveframeData.manualInputType);
+      console.log('  Is data.manualInputType undefined?:', moveframeData.manualInputType === undefined);
+      
+      console.log('💾 [SAVE] Moveframe data being saved:', moveframeData);
       console.log('🔹 [MODAL] Calling onSave prop...');
       await onSave(moveframeData);
       console.log('✅ [MODAL] Save successful, closing modal');
@@ -4052,7 +4058,8 @@ export default function AddEditMoveframeModal({
                       <select
                         value={macroFinal}
                         onChange={(e) => setMacroFinal(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                        disabled={manualMode}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 ${manualMode ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''}`}
                       >
                         {sportConfig.macroFinals.map((m) => (
                           <option key={m} value={m}>
@@ -4067,7 +4074,8 @@ export default function AddEditMoveframeModal({
                       <select
                         value={alarm}
                         onChange={(e) => setAlarm(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                        disabled={manualMode}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 ${manualMode ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''}`}
                       >
                         {sportConfig.alarms.map((a) => (
                           <option key={a} value={a}>
@@ -4103,7 +4111,8 @@ export default function AddEditMoveframeModal({
                       <select
                         value={macroFinal}
                         onChange={(e) => setMacroFinal(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500"
+                        disabled={manualMode}
+                        className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 ${manualMode ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : ''}`}
                       >
                         {MACRO_FINAL_OPTIONS.map((m) => (
                           <option key={m} value={m}>
@@ -4252,25 +4261,91 @@ export default function AddEditMoveframeModal({
                 </div>
               )}
 
-              {/* Distance Meters field for statistics (for aerobic sports) OR Total series (for non-aerobic sports) */}
+              {/* Distance Meters/Time field for statistics (for aerobic sports) OR Total series (for non-aerobic sports) */}
               <div className="bg-gray-50 p-3 rounded-lg border border-gray-300">
                 {DISTANCE_BASED_SPORTS.includes(sport as any) ? (
                   <>
-                    <label className="block text-xs font-semibold text-gray-700 mb-2">
-                      Distance (Meters) - For Statistics:
-                    </label>
-                    <input
-                      type="number"
-                      value={distance}
-                      onChange={(e) => setDistance(e.target.value)}
-                      min="0"
-                      step="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
-                      placeholder="Enter distance in meters (e.g., 1000)"
-                    />
-                    <p className="mt-1 text-[10px] text-gray-600">
-                      💡 This value is used for workout statistics and totals calculation.
-                    </p>
+                    {/* Toggle for Meters or Time */}
+                    <div className="mb-3">
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        Input Type - For Statistics:
+                      </label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="radio"
+                            name="manualInputType"
+                            value="meters"
+                            checked={manualInputType === 'meters'}
+                            onChange={(e) => {
+                              console.log('📻 [RADIO] User selected METERS');
+                              setManualInputType(e.target.value as 'meters' | 'time');
+                              setDistance(''); // Clear distance when switching to meters
+                              console.log('🗑️ [RADIO] Cleared distance field for meters input');
+                            }}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700">Meters</span>
+                        </label>
+                        <label className="flex items-center cursor-pointer">
+                          <input
+                            type="radio"
+                            name="manualInputType"
+                            value="time"
+                            checked={manualInputType === 'time'}
+                            onChange={(e) => {
+                              console.log('📻 [RADIO] User selected TIME');
+                              setManualInputType(e.target.value as 'meters' | 'time');
+                              setDistance(''); // Clear distance when switching to time
+                              console.log('🗑️ [RADIO] Cleared distance field for time input');
+                            }}
+                            className="mr-2"
+                          />
+                          <span className="text-sm text-gray-700">Time</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Input field - Meters or Time */}
+                    {manualInputType === 'meters' ? (
+                      <>
+                        <label className="block text-xs font-semibold text-gray-700 mb-2">
+                          Distance (Meters):
+                        </label>
+                        <input
+                          type="number"
+                          value={distance}
+                          onChange={(e) => setDistance(e.target.value)}
+                          min="0"
+                          step="1"
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
+                          placeholder="Enter distance in meters (e.g., 1000)"
+                        />
+                        <p className="mt-1 text-[10px] text-gray-600">
+                          💡 This value is used for workout statistics and totals calculation.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <label className="block text-xs font-semibold text-gray-700 mb-2">
+                          Time (Format: 123456 = 1h23'45"6):
+                        </label>
+                        <input
+                          type="text"
+                          value={distance}
+                          onChange={(e) => setDistance(e.target.value)}
+                          onBlur={(e) => {
+                            const formatted = formatTime(e.target.value);
+                            setDistance(formatted);
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
+                          placeholder="Type: 123456"
+                        />
+                        <p className="mt-1 text-[10px] text-gray-600">
+                          💡 Type 123456 → formats to 1h23'45"6. Used for workout statistics.
+                        </p>
+                      </>
+                    )}
                   </>
                 ) : (
                   <>
@@ -4292,6 +4367,33 @@ export default function AddEditMoveframeModal({
                   </>
                 )}
               </div>
+
+              {/* Manual Mode Preview - Show Duration/Rip\Sets */}
+              {manualMode && (
+                <div className="bg-blue-50 border border-blue-300 p-3 rounded-lg">
+                  <h4 className="text-xs font-bold text-blue-900 mb-2">MANUAL INPUT VALUES:</h4>
+                  <div className="space-y-1">
+                    {DISTANCE_BASED_SPORTS.includes(sport as any) || ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SPINNING', 'SKI', 'HIKING', 'WALKING', 'MTB'].includes(sport) ? (
+                      <div className="text-sm text-blue-800 font-medium">
+                        • Duration: <span className="font-semibold">
+                          {manualInputType === 'meters' 
+                            ? `${distance || '0'} meters` 
+                            : `${distance || '—'}`}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-blue-800 font-medium">
+                        • Rip\Sets: <span className="font-semibold">{repetitions || '0'} series</span>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-blue-600 mt-1">
+                      💡 {DISTANCE_BASED_SPORTS.includes(sport as any) || ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SPINNING', 'SKI', 'HIKING', 'WALKING', 'MTB'].includes(sport) 
+                        ? (manualInputType === 'meters' ? 'Duration displays the distance value for aerobic sports' : 'Duration displays the time value for aerobic sports')
+                        : 'Rip\\Sets displays the total series for non-aerobic sports'}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <>
                   <div className="flex items-center justify-end">

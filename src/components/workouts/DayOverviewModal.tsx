@@ -172,7 +172,7 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                     <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Moveframes</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Movelaps</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Distance</th>
-                    <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Duration</th>
+                    <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Series</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -190,11 +190,9 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                             : '-'}
                         </td>
                         <td className="border border-gray-300 px-2 py-1.5 text-center">
-                          {isSeriesSport 
-                            ? (totals.repetitions > 0 ? `${totals.repetitions} series` : '-')
-                            : (totals.duration > 0 
-                                ? `${Math.floor(totals.duration / 60)}:${String(totals.duration % 60).padStart(2, '0')}` 
-                                : '-')}
+                          {totals.series > 0 || totals.repetitions > 0
+                            ? `${totals.series || totals.repetitions} series`
+                            : '-'}
                         </td>
                       </tr>
                     );
@@ -208,13 +206,9 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                       {grandTotals.distance > 0 ? `${grandTotals.distance}m` : '-'}
                     </td>
                     <td className="border border-gray-300 px-2 py-1.5 text-center">
-                      {grandTotals.repetitions > 0 && grandTotals.duration > 0
-                        ? `${grandTotals.repetitions} series/${Math.floor(grandTotals.duration / 60)}:${String(grandTotals.duration % 60).padStart(2, '0')}`
-                        : grandTotals.repetitions > 0
-                          ? `${grandTotals.repetitions} series`
-                          : grandTotals.duration > 0 
-                            ? `${Math.floor(grandTotals.duration / 60)}:${String(grandTotals.duration % 60).padStart(2, '0')}` 
-                            : '-'}
+                      {grandTotals.series > 0 || grandTotals.repetitions > 0
+                        ? `${grandTotals.series || grandTotals.repetitions} series`
+                        : '-'}
                     </td>
                   </tr>
                 </tbody>
@@ -250,7 +244,7 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                       <>
                         <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">#</th>
                         <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Distance</th>
-                        <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Duration</th>
+                        <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Series</th>
                         <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold">Notes</th>
                       </>
                     )}
@@ -299,7 +293,7 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                           <td className="border border-gray-300 px-2 py-1.5 text-center">
                             {shouldShowDistance(mf.sport) 
                               ? (ml.duration ? `${ml.duration}s` : '-')
-                              : (ml.reps ? `${ml.reps} series` : '-')}
+                              : '1 series'}
                           </td>
                           <td className="border border-gray-300 px-2 py-1.5 text-xs">{ml.notes || '-'}</td>
                         </tr>

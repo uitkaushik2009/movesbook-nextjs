@@ -595,17 +595,61 @@ export default function SortableMoveframeRow({
         if (moveframe.type === 'ANNOTATION') {
           durationDisplay = '—';
         } else if (isManualModeDuration && isAerobicSportDuration) {
-          // For manual mode with aerobic sports, get distance from movelap
+          // For manual mode with aerobic sports, check input type (meters or time)
+          const manualInputType = moveframe.manualInputType || 'meters';
           const firstMovelap = moveframe.movelaps?.[0];
-          if (firstMovelap && firstMovelap.distance) {
-            durationDisplay = `${firstMovelap.distance}m`;
+          
+          console.log('📊 [TABLE] Manual mode display - Moveframe:', moveframe.letter);
+          console.log('  Sport:', moveframe.sport);
+          console.log('  Manual Input Type:', manualInputType);
+          console.log('  Distance (raw):', moveframe.distance);
+          console.log('  Manual Mode:', moveframe.manualMode);
+          
+          if (manualInputType === 'time') {
+            // Display time format (from distance field which stores deciseconds)
+            const deciseconds = moveframe.distance || 0;
+            console.log('  🕐 Converting deciseconds to time:', deciseconds);
+            console.log('  🔍 manualInputType from database:', moveframe.manualInputType);
+            console.log('  🔍 Full moveframe object:', JSON.stringify({
+              id: moveframe.id,
+              letter: moveframe.letter,
+              distance: moveframe.distance,
+              manualInputType: moveframe.manualInputType,
+              manualMode: moveframe.manualMode
+            }));
+            if (deciseconds > 0) {
+              // Convert deciseconds back to time format
+              const totalSeconds = Math.floor(deciseconds / 10);
+              const ds = deciseconds % 10;
+              const hours = Math.floor(totalSeconds / 3600);
+              const minutes = Math.floor((totalSeconds % 3600) / 60);
+              const seconds = totalSeconds % 60;
+              const timeFormatted = `${hours}h${minutes.toString().padStart(2, '0')}'${seconds.toString().padStart(2, '0')}"${ds}`;
+              durationDisplay = `⏱${timeFormatted}`;  // Add emoji prefix to visually confirm
+              console.log('  ✅ Time display SET TO:', durationDisplay);
+              console.log('  🔍 Variable durationDisplay type:', typeof durationDisplay);
+              console.log('  🔍 Variable durationDisplay length:', durationDisplay.length);
+            } else {
+              durationDisplay = '⏱0h00\'00"0';
+              console.log('  ⚠️ Zero deciseconds, showing:', durationDisplay);
+            }
           } else {
-            durationDisplay = '—';
+            // Display meters (default)
+            // For manual mode, read from moveframe.distance directly
+            const distanceValue = moveframe.distance || firstMovelap?.distance || 0;
+            console.log('  📏 Displaying meters:', distanceValue);
+            if (distanceValue > 0) {
+              durationDisplay = `📏${distanceValue}m`;  // Add emoji prefix to visually confirm
+              console.log('  ✅ Meters display:', durationDisplay);
+            } else {
+              durationDisplay = '—';
+              console.log('  ⚠️ Zero meters, showing:', durationDisplay);
+            }
           }
         } else if (isManualModeDuration && !isAerobicSportDuration) {
-          // For manual mode with non-aerobic sports, display total series from repetitions field
-          const totalSeries = parseInt(moveframe.repetitions) || 0;
-          durationDisplay = totalSeries > 0 ? `${totalSeries} series` : '—';
+          // For manual mode with non-aerobic sports, Duration column should be empty
+          // Series value only shows in Rip\Sets column
+          durationDisplay = '—';
         } else if (isSeriesBased) {
           // Show total series
           const totalSeries = moveframe.movelaps?.length || 0;
@@ -633,6 +677,8 @@ export default function SortableMoveframeRow({
           durationDisplay = totalDistance > 0 ? `${totalDistance}m` : '—';
         }
         
+        console.log(`🎯 [RENDER] About to render Dur cell for ${moveframe.letter}:`, durationDisplay);
+        
         return (
           <td 
             key="duration" 
@@ -650,6 +696,7 @@ export default function SortableMoveframeRow({
                      color: '#1f2937'
                    }
             }
+            title={`Debug: ${durationDisplay} | Type: ${moveframe.manualInputType || 'N/A'} | Distance: ${moveframe.distance || 0}`}
           >
             {durationDisplay}
           </td>
@@ -664,9 +711,10 @@ export default function SortableMoveframeRow({
         if (moveframe.type === 'ANNOTATION') {
           ripDisplay = '—';
         } else if (isManualModeRip && !isAerobicSport) {
-          // For non-aerobic sports in manual mode, show repetitions from moveframe.repetitions field
+          // For non-aerobic sports in manual mode, show repetitions from moveframe.repetitions field with "series" unit
           // (not movelaps count, because manual mode has no movelaps)
-          ripDisplay = moveframe.repetitions || 0;
+          const seriesValue = moveframe.repetitions || 0;
+          ripDisplay = seriesValue > 0 ? `${seriesValue} series` : '—';
         } else if (isManualModeRip && isAerobicSport) {
           // For aerobic sports in manual mode, show "—"
           ripDisplay = '—';

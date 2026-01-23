@@ -228,7 +228,8 @@ model Moveframe {
   manualPriority      Boolean?       @default(false) // Priority flag for manual mode display
   favourite           Boolean?       @default(false)
   repetitions         Int?           // Number of series/repetitions for manual mode
-  distance            Int?           // Distance value for manual mode
+  distance            Int?           // Distance value for manual mode (meters) or time value storage
+  manualInputType     String?        @default("meters") // For aerobic sports: "meters" or "time" (123456 format)
   appliedTechnique    String?        // Body Building technique applied (for BODY_BUILDING sport only)
   aerobicSeries       Int?           @default(1) // Series/Batteries/Groups for aerobic sports (range 1-9, default 1)
   section             WorkoutSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)

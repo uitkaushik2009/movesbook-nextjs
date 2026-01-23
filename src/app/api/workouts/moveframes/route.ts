@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       manualPriority,    // Priority flag for manual mode display
       manualRepetitions, // For storing on Moveframe model (manual mode only)
       manualDistance,    // For storing on Moveframe model (manual mode only)
+      manualInputType,   // For aerobic sports: "meters" or "time"
       appliedTechnique,  // Execution technique for Body Building
       aerobicSeries      // Series/Batteries/Groups for aerobic sports
     } = body;
@@ -65,6 +66,8 @@ export async function POST(request: NextRequest) {
       console.log('   Sport:', sport);
       console.log('   manualMode:', manualMode);
       console.log('   manualPriority:', manualPriority);
+      console.log('   manualInputType (raw):', manualInputType);
+      console.log('   manualInputType (type):', typeof manualInputType);
       console.log('   manualRepetitions (raw):', manualRepetitions);
       console.log('   manualRepetitions (type):', typeof manualRepetitions);
       console.log('   manualRepetitions (parsed):', manualRepetitions !== undefined ? parseInt(manualRepetitions) : null);
@@ -147,6 +150,7 @@ export async function POST(request: NextRequest) {
       manualPriority: manualPriority || false,
       repetitions: manualRepetitions !== undefined && manualRepetitions !== null && manualRepetitions !== '' ? parseInt(manualRepetitions) : null,
       distance: manualDistance !== undefined && manualDistance !== null && manualDistance !== '' ? parseInt(manualDistance) : null,
+      manualInputType: manualInputType || 'meters', // For aerobic sports: "meters" or "time"
       appliedTechnique: appliedTechnique || null, // Execution technique for Body Building
       aerobicSeries: aerobicSeries !== undefined && aerobicSeries !== null && aerobicSeries !== '' ? parseInt(aerobicSeries) : null, // Series/Batteries/Groups for aerobic sports
       annotationText: annotationText || null,
@@ -158,6 +162,7 @@ export async function POST(request: NextRequest) {
     // 🔍 DEBUG: Log what's being saved
     if (manualMode) {
       console.log('📝 [API POST] Moveframe data being saved to database:');
+      console.log('   manualInputType:', moveframeData.manualInputType);
       console.log('   repetitions (from manualRepetitions):', moveframeData.repetitions);
       console.log('   distance (from manualDistance):', moveframeData.distance);
     }
@@ -246,6 +251,7 @@ export async function POST(request: NextRequest) {
     if (manualMode) {
       console.log('✅ [API POST] Moveframe saved and returned:');
       console.log('   ID:', moveframe.id);
+      console.log('   manualInputType (stored in DB):', moveframe.manualInputType);
       console.log('   repetitions (stored on Moveframe):', moveframe.repetitions);
       console.log('   distance (stored on Moveframe):', moveframe.distance);
       console.log('   manualMode:', moveframe.manualMode);
