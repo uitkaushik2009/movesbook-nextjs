@@ -358,7 +358,7 @@ export default function DayRowTable({
           </div>
         ) : '—'}
       </td>
-      <td className="main-work-cell border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-blue-100 cursor-pointer" style={{ position: 'relative' }}
+      <td className="main-work-cell border border-gray-200 px-1 py-1 text-xs text-left text-black font-semibold bg-blue-100 cursor-pointer" style={{ position: 'relative' }}
         onClick={(e) => {
           if (sportSummaries[0]?.mainWorkMoveframe) {
             e.stopPropagation();
@@ -378,14 +378,17 @@ export default function DayRowTable({
           }
         }}
       >
-        {(() => {
-          if (!sportSummaries[0]?.mainWork) return '—';
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = sportSummaries[0].mainWork;
-          const plainText = (tempDiv.textContent || tempDiv.innerText || '').trim();
-          const firstLine = plainText.split('\n')[0];
-          return firstLine || '—';
-        })()}
+        <div className="line-clamp-3 leading-tight whitespace-pre-wrap">
+          {(() => {
+            if (!sportSummaries[0]?.mainWork) return '—';
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = sportSummaries[0].mainWork;
+            const plainText = (tempDiv.textContent || tempDiv.innerText || '').trim();
+            const lines = plainText.split('\n');
+            const firstThreeLines = lines.slice(0, 3).join('\n');
+            return firstThreeLines || '—';
+          })()}
+        </div>
       </td>
 
       {/* S2 - Sport 2 - Green */}
@@ -413,7 +416,7 @@ export default function DayRowTable({
           </div>
         ) : '—'}
       </td>
-      <td className="main-work-cell border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-green-100 cursor-pointer" style={{ position: 'relative' }}
+      <td className="main-work-cell border border-gray-200 px-1 py-1 text-xs text-left text-black font-semibold bg-green-100 cursor-pointer" style={{ position: 'relative' }}
         onClick={(e) => {
           if (sportSummaries[1]?.mainWorkMoveframe) {
             e.stopPropagation();
@@ -433,14 +436,17 @@ export default function DayRowTable({
           }
         }}
       >
-        {(() => {
-          if (!sportSummaries[1]?.mainWork) return '—';
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = sportSummaries[1].mainWork;
-          const plainText = (tempDiv.textContent || tempDiv.innerText || '').trim();
-          const firstLine = plainText.split('\n')[0];
-          return firstLine || '—';
-        })()}
+        <div className="line-clamp-3 leading-tight whitespace-pre-wrap">
+          {(() => {
+            if (!sportSummaries[1]?.mainWork) return '—';
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = sportSummaries[1].mainWork;
+            const plainText = (tempDiv.textContent || tempDiv.innerText || '').trim();
+            const lines = plainText.split('\n');
+            const firstThreeLines = lines.slice(0, 3).join('\n');
+            return firstThreeLines || '—';
+          })()}
+        </div>
       </td>
 
       {/* S3 - Sport 3 - Orange */}
@@ -468,7 +474,7 @@ export default function DayRowTable({
           </div>
         ) : '—'}
       </td>
-      <td className="main-work-cell border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-orange-100 cursor-pointer" style={{ position: 'relative' }}
+      <td className="main-work-cell border border-gray-200 px-1 py-1 text-xs text-left text-black font-semibold bg-orange-100 cursor-pointer" style={{ position: 'relative' }}
         onClick={(e) => {
           if (sportSummaries[2]?.mainWorkMoveframe) {
             e.stopPropagation();
@@ -488,14 +494,17 @@ export default function DayRowTable({
           }
         }}
       >
-        {(() => {
-          if (!sportSummaries[2]?.mainWork) return '—';
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = sportSummaries[2].mainWork;
-          const plainText = (tempDiv.textContent || tempDiv.innerText || '').trim();
-          const firstLine = plainText.split('\n')[0];
-          return firstLine || '—';
-        })()}
+        <div className="line-clamp-3 leading-tight whitespace-pre-wrap">
+          {(() => {
+            if (!sportSummaries[2]?.mainWork) return '—';
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = sportSummaries[2].mainWork;
+            const plainText = (tempDiv.textContent || tempDiv.innerText || '').trim();
+            const lines = plainText.split('\n');
+            const firstThreeLines = lines.slice(0, 3).join('\n');
+            return firstThreeLines || '—';
+          })()}
+        </div>
       </td>
 
       {/* S4 - Sport 4 - Pink */}
@@ -523,7 +532,7 @@ export default function DayRowTable({
           </div>
         ) : '—'}
       </td>
-      <td className="main-work-cell border border-gray-200 px-1 py-1 text-xs text-center text-black font-semibold bg-pink-100 cursor-pointer" style={{ position: 'relative' }}
+      <td className="main-work-cell border border-gray-200 px-1 py-1 text-xs text-left text-black font-semibold bg-pink-100 cursor-pointer" style={{ position: 'relative' }}
         onClick={(e) => {
           if (sportSummaries[3]?.mainWorkMoveframe) {
             e.stopPropagation();
@@ -543,14 +552,17 @@ export default function DayRowTable({
           }
         }}
       >
-        {(() => {
-          if (!sportSummaries[3]?.mainWork) return '—';
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = sportSummaries[3].mainWork;
-          const plainText = (tempDiv.textContent || tempDiv.innerText || '').trim();
-          const firstLine = plainText.split('\n')[0];
-          return firstLine || '—';
-        })()}
+        <div className="line-clamp-3 leading-tight whitespace-pre-wrap">
+          {(() => {
+            if (!sportSummaries[3]?.mainWork) return '—';
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = sportSummaries[3].mainWork;
+            const plainText = (tempDiv.textContent || tempDiv.innerText || '').trim();
+            const lines = plainText.split('\n');
+            const firstThreeLines = lines.slice(0, 3).join('\n');
+            return firstThreeLines || '—';
+          })()}
+        </div>
       </td>
 
       {/* Options */}

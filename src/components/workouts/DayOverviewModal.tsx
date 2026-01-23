@@ -16,6 +16,29 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
   const useImageIcons = isImageIcon(iconType);
   const [showMovelaps, setShowMovelaps] = React.useState(true);
   
+  // Helper function to format deciseconds to time format
+  const formatDecisecondsToTime = (deciseconds: number): string => {
+    if (deciseconds <= 0) return '-';
+    const totalSeconds = Math.floor(deciseconds / 10);
+    const ds = deciseconds % 10;
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours}h${minutes.toString().padStart(2, '0')}'${seconds.toString().padStart(2, '0')}"${ds}`;
+  };
+  
+  // Helper function to format seconds to time format (for normal movelaps)
+  const formatSecondsToTime = (seconds: number): string => {
+    if (seconds <= 0) return '-';
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    const deciseconds = Math.round((seconds % 1) * 10);
+    
+    // Always use the same format: Xh00'00"0
+    return `${hours}h${minutes.toString().padStart(2, '0')}'${secs.toString().padStart(2, '0')}"${deciseconds}`;
+  };
+  
   // Get all workouts from the day
   const workouts = day.workouts || [];
   
@@ -57,10 +80,36 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
       } else {
         // For distance-based sports
         const aerobicSeriesMultiplier = AEROBIC_SPORTS.includes(sport as any) ? (mf.aerobicSeries || 1) : 1;
+        
+        if (mf.manualMode && AEROBIC_SPORTS.includes(sport as any)) {
+          // For manual mode aerobic sports
+          const manualInputType = mf.manualInputType || 'meters';
+          const manualValue = mf.distance || 0;
+          
+          if (manualInputType === 'time') {
+            // Add deciseconds to duration
+            sportTotals[sport].duration += manualValue * aerobicSeriesMultiplier;
+          } else {
+            // Add meters to distance
+            sportTotals[sport].distance += manualValue * aerobicSeriesMultiplier;
+          }
+        } else {
+          // For standard mode: process movelaps
+          mf.movelaps?.forEach((ml: any) => {
+            sportTotals[sport].distance += (parseInt(ml.distance) || 0) * aerobicSeriesMultiplier;
+            // Convert time from seconds to deciseconds (multiply by 10)
+            const timeInSeconds = parseFloat(ml.time) || 0;
+            sportTotals[sport].duration += (timeInSeconds * 10) * aerobicSeriesMultiplier;
+          });
+        }
+      }
+      
+      // For series-based sports, also add time values from movelaps
+      if (isSeriesSport && !mf.manualMode) {
         mf.movelaps?.forEach((ml: any) => {
-          sportTotals[sport].distance += (parseInt(ml.distance) || 0) * aerobicSeriesMultiplier;
-          const durationValue = parseInt(ml.duration) || 0;
-          sportTotals[sport].duration += durationValue * aerobicSeriesMultiplier;
+          // Convert time from seconds to deciseconds (multiply by 10)
+          const timeInSeconds = parseFloat(ml.time) || 0;
+          sportTotals[sport].duration += timeInSeconds * 10;
         });
       }
     });
@@ -172,6 +221,7 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                     <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Moveframes</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Movelaps</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Distance</th>
+                    <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Time</th>
                     <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Series</th>
                   </tr>
                 </thead>
@@ -190,6 +240,11 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                             : '-'}
                         </td>
                         <td className="border border-gray-300 px-2 py-1.5 text-center">
+                          {totals.duration > 0 
+                            ? formatDecisecondsToTime(totals.duration)
+                            : '-'}
+                        </td>
+                        <td className="border border-gray-300 px-2 py-1.5 text-center">
                           {totals.series > 0 || totals.repetitions > 0
                             ? `${totals.series || totals.repetitions} series`
                             : '-'}
@@ -204,6 +259,11 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                     <td className="border border-gray-300 px-2 py-1.5 text-center">{grandTotals.movelaps}</td>
                     <td className="border border-gray-300 px-2 py-1.5 text-center">
                       {grandTotals.distance > 0 ? `${grandTotals.distance}m` : '-'}
+                    </td>
+                    <td className="border border-gray-300 px-2 py-1.5 text-center">
+                      {grandTotals.duration > 0 
+                        ? formatDecisecondsToTime(grandTotals.duration)
+                        : '-'}
                     </td>
                     <td className="border border-gray-300 px-2 py-1.5 text-center">
                       {grandTotals.series > 0 || grandTotals.repetitions > 0
@@ -244,6 +304,7 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                       <>
                         <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">#</th>
                         <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Distance</th>
+                        <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Time</th>
                         <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Series</th>
                         <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold">Notes</th>
                       </>
@@ -268,43 +329,71 @@ export default function DayOverviewModal({ day, onClose }: DayOverviewModalProps
                         );
                       }
                       
-                      return mf.movelaps?.map((ml: any, mlIdx: number) => (
-                        <tr key={`${workout.id}-${mf.id}-${ml.id}`} className="hover:bg-blue-50">
-                          {mlIdx === 0 && (
-                            <>
-                              <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 font-bold text-purple-600 bg-purple-50">
-                                {workoutIdx + 1}
-                              </td>
-                              <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 font-bold bg-gray-50">
-                                {String.fromCharCode(65 + mfIdx)}
-                              </td>
-                              <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 bg-gray-50">
-                                {mf.sport?.replace(/_/g, ' ')}
-                              </td>
-                              <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 bg-gray-50">
-                                {mf.name || '-'}
-                              </td>
-                            </>
-                          )}
-                          <td className="border border-gray-300 px-2 py-1.5 text-center">{mlIdx + 1}</td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-center">
-                            {shouldShowDistance(mf.sport) && ml.distance ? `${ml.distance}${getDistanceUnit(mf.sport)}` : '-'}
-                          </td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-center">
-                            {shouldShowDistance(mf.sport) 
-                              ? (ml.duration ? `${ml.duration}s` : '-')
-                              : '1 series'}
-                          </td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-xs">{ml.notes || '-'}</td>
-                        </tr>
-                      )) || (
+                      // Check if moveframe has movelaps
+                      if (mf.movelaps && mf.movelaps.length > 0) {
+                        return mf.movelaps.map((ml: any, mlIdx: number) => (
+                          <tr key={`${workout.id}-${mf.id}-${ml.id}`} className="hover:bg-blue-50">
+                            {mlIdx === 0 && (
+                              <>
+                                <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 font-bold text-purple-600 bg-purple-50">
+                                  {workoutIdx + 1}
+                                </td>
+                                <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 font-bold bg-gray-50">
+                                  {String.fromCharCode(65 + mfIdx)}
+                                </td>
+                                <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 bg-gray-50">
+                                  {mf.sport?.replace(/_/g, ' ')}
+                                </td>
+                                <td rowSpan={movelapCount} className="border border-gray-300 px-2 py-1.5 bg-gray-50">
+                                  {mf.name || '-'}
+                                </td>
+                              </>
+                            )}
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">{mlIdx + 1}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">
+                              {shouldShowDistance(mf.sport) && ml.distance ? `${ml.distance}${getDistanceUnit(mf.sport)}` : '-'}
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">
+                              {ml.time ? formatSecondsToTime(parseFloat(ml.time)) : '-'}
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">
+                              {!shouldShowDistance(mf.sport) ? '1 series' : '-'}
+                            </td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-xs">{ml.notes || '-'}</td>
+                          </tr>
+                        ));
+                      } else {
+                        return (
+                        // No movelaps - check if it's a manual moveframe
                         <tr key={`${workout.id}-${mf.id}`} className="hover:bg-blue-50">
                           <td className="border border-gray-300 px-2 py-1.5 font-bold text-purple-600">{workoutIdx + 1}</td>
                           <td className="border border-gray-300 px-2 py-1.5 font-bold">{String.fromCharCode(65 + mfIdx)}</td>
                           <td className="border border-gray-300 px-2 py-1.5">{mf.sport?.replace(/_/g, ' ')}</td>
-                          <td className="border border-gray-300 px-2 py-1.5" colSpan={showMovelaps ? 5 : 1}>{mf.name || '-'}</td>
+                          <td className="border border-gray-300 px-2 py-1.5">{mf.description || '-'}</td>
+                          {showMovelaps && (
+                            <>
+                              <td className="border border-gray-300 px-2 py-1.5 text-center">-</td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-center">
+                                {mf.manualMode && AEROBIC_SPORTS.includes(mf.sport as any) && mf.manualInputType === 'meters' && mf.distance > 0
+                                  ? `${mf.distance}${getDistanceUnit(mf.sport)}`
+                                  : '-'}
+                              </td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-center">
+                                {mf.manualMode && AEROBIC_SPORTS.includes(mf.sport as any) && mf.manualInputType === 'time' && mf.distance > 0
+                                  ? formatDecisecondsToTime(mf.distance)
+                                  : '-'}
+                              </td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-center">
+                                {mf.manualMode && !AEROBIC_SPORTS.includes(mf.sport as any) && mf.repetitions > 0
+                                  ? `${mf.repetitions} series`
+                                  : '-'}
+                              </td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-xs">{mf.notes || '-'}</td>
+                            </>
+                          )}
                         </tr>
-                      );
+                        );
+                      }
                     });
                   })}
                 </tbody>

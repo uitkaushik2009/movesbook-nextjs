@@ -123,17 +123,32 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
           const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
           
           if (isDistanceBased) {
-            mf.movelaps?.forEach((lap: any) => {
-              sportData.distance += parseInt(lap.distance) || 0;
-              sportData.time += parseFloat(lap.time) || 0;
-            });
+            // Check if this is a manual mode aerobic moveframe
+            if (mf.manualMode) {
+              const manualInputType = mf.manualInputType || 'meters';
+              const manualValue = mf.distance || 0;
+              
+              if (manualInputType === 'time') {
+                // Convert deciseconds to minutes for time tracking
+                sportData.time += manualValue / 600; // deciseconds to minutes
+              } else {
+                // Add meters to distance
+                sportData.distance += manualValue;
+              }
+            } else {
+              // Standard mode: process movelaps
+              mf.movelaps?.forEach((lap: any) => {
+                sportData.distance += parseInt(lap.distance) || 0;
+                // Convert seconds to minutes for time tracking
+                const timeInSeconds = parseFloat(lap.time) || 0;
+                sportData.time += timeInSeconds / 60;
+              });
+            }
           } else {
             // For series-based sports
             if (mf.manualMode) {
               // For manual mode: use the repetitions field directly
               sportData.series += mf.repetitions || 0;
-              // Add time for manual mode if available
-              sportData.time += parseFloat(mf.duration) || 0;
             } else {
               // For standard mode: count total reps/series (Rip\Series)
               // Exclude movelaps where reps=1 AND pause=0 (unless it's a macro)
@@ -150,8 +165,9 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
                   sportData.series += 1;
                 }
                 
-                // Add time for non-distance sports
-                sportData.time += parseFloat(lap.time) || 0;
+                // Add time for non-distance sports - convert seconds to minutes
+                const timeInSeconds = parseFloat(lap.time) || 0;
+                sportData.time += timeInSeconds / 60;
               });
             }
           }
@@ -269,27 +285,53 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
 
           const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
 
-          const hasMacro = mf.macroRest || mf.macroFinal;
-          (mf.movelaps || []).forEach((lap: any) => {
+          // Check if this is a manual mode moveframe
+          if (mf.manualMode) {
             if (isDistanceBased) {
-              const distance = parseInt(lap.distance) || 0;
-              const duration = parseFloat(lap.time) || 0;
+              // Manual mode aerobic sport
+              const manualInputType = mf.manualInputType || 'meters';
+              const manualValue = mf.distance || 0;
               
-              currentTotals.distance += distance;
-              currentTotals.durationMinutes += duration;
-              totalDistance += distance;
-              totalDuration += duration;
-            } else {
-              // For series-based sports, count reps/series (Rip\Series)
-              // Exclude movelaps where reps=1 AND pause=0 (unless it's a macro)
-              const reps = parseInt(lap.reps) || 1;
-              const pause = parseFloat(lap.pause) || 0;
-              
-              if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
-                currentTotals.totalSeries += 1;
+              if (manualInputType === 'time') {
+                // Convert deciseconds to minutes
+                const durationMinutes = manualValue / 600;
+                currentTotals.durationMinutes += durationMinutes;
+                totalDuration += durationMinutes;
+              } else {
+                // Add meters to distance
+                currentTotals.distance += manualValue;
+                totalDistance += manualValue;
               }
+            } else {
+              // Manual mode series-based sport
+              const manualSeries = mf.repetitions || 0;
+              currentTotals.totalSeries += manualSeries;
             }
-          });
+          } else {
+            // Standard mode: process movelaps
+            const hasMacro = mf.macroRest || mf.macroFinal;
+            (mf.movelaps || []).forEach((lap: any) => {
+              if (isDistanceBased) {
+                const distance = parseInt(lap.distance) || 0;
+                const timeInSeconds = parseFloat(lap.time) || 0;
+                const durationMinutes = timeInSeconds / 60; // Convert seconds to minutes
+                
+                currentTotals.distance += distance;
+                currentTotals.durationMinutes += durationMinutes;
+                totalDistance += distance;
+                totalDuration += durationMinutes;
+              } else {
+                // For series-based sports, count reps/series (Rip\Series)
+                // Exclude movelaps where reps=1 AND pause=0 (unless it's a macro)
+                const reps = parseInt(lap.reps) || 1;
+                const pause = parseFloat(lap.pause) || 0;
+                
+                if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
+                  currentTotals.totalSeries += 1;
+                }
+              }
+            });
+          }
 
           sportMap.set(sport, currentTotals);
         });
@@ -385,28 +427,54 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
             currentTotals.workoutIds.add(workout.id);
 
             const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
-            const hasMacro = mf.macroRest || mf.macroFinal;
 
-            if (!mf.movelaps) return;
-
-            mf.movelaps.forEach((lap: any) => {
+            // Check if this is a manual mode moveframe
+            if (mf.manualMode) {
               if (isDistanceBased) {
-                const distance = parseFloat(lap.distance) || 0;
-                const duration = parseFloat(lap.time) || 0;
-
-                currentTotals.distance += distance;
-                currentTotals.durationMinutes += duration;
-                totalDistanceSum += distance;
-                totalDurationSum += duration;
-              } else {
-                const reps = parseInt(lap.reps) || 1;
-                const pause = parseFloat(lap.pause) || 0;
-
-                if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
-                  currentTotals.totalSeries += 1;
+                // Manual mode aerobic sport
+                const manualInputType = mf.manualInputType || 'meters';
+                const manualValue = mf.distance || 0;
+                
+                if (manualInputType === 'time') {
+                  // Convert deciseconds to minutes
+                  const durationMinutes = manualValue / 600;
+                  currentTotals.durationMinutes += durationMinutes;
+                  totalDurationSum += durationMinutes;
+                } else {
+                  // Add meters to distance
+                  currentTotals.distance += manualValue;
+                  totalDistanceSum += manualValue;
                 }
+              } else {
+                // Manual mode series-based sport
+                const manualSeries = mf.repetitions || 0;
+                currentTotals.totalSeries += manualSeries;
               }
-            });
+            } else {
+              // Standard mode: process movelaps
+              if (!mf.movelaps) return;
+
+              const hasMacro = mf.macroRest || mf.macroFinal;
+              mf.movelaps.forEach((lap: any) => {
+                if (isDistanceBased) {
+                  const distance = parseFloat(lap.distance) || 0;
+                  const timeInSeconds = parseFloat(lap.time) || 0;
+                  const durationMinutes = timeInSeconds / 60; // Convert seconds to minutes
+
+                  currentTotals.distance += distance;
+                  currentTotals.durationMinutes += durationMinutes;
+                  totalDistanceSum += distance;
+                  totalDurationSum += durationMinutes;
+                } else {
+                  const reps = parseInt(lap.reps) || 1;
+                  const pause = parseFloat(lap.pause) || 0;
+
+                  if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
+                    currentTotals.totalSeries += 1;
+                  }
+                }
+              });
+            }
           });
         });
       });
@@ -638,16 +706,41 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
           const isDistanceBased = DISTANCE_BASED_SPORTS.includes(sport as any);
           
           if (isDistanceBased) {
-            mf.movelaps?.forEach((lap: any) => {
-              sportData.distance += parseInt(lap.distance) || 0;
-              sportData.time += parseFloat(lap.time) || 0;
-            });
+            // Check if this is a manual mode aerobic moveframe
+            if (mf.manualMode) {
+              const manualInputType = mf.manualInputType || 'meters';
+              const manualValue = mf.distance || 0;
+              
+              if (manualInputType === 'time') {
+                // Convert deciseconds to minutes
+                sportData.time += manualValue / 600;
+              } else {
+                // Add meters to distance
+                sportData.distance += manualValue;
+              }
+            } else {
+              // Standard mode: process movelaps
+              mf.movelaps?.forEach((lap: any) => {
+                sportData.distance += parseInt(lap.distance) || 0;
+                // Convert seconds to minutes for time tracking
+                const timeInSeconds = parseFloat(lap.time) || 0;
+                sportData.time += timeInSeconds / 60;
+              });
+            }
           } else {
-            // For series-based sports, count total reps/series
-            sportData.series += mf.movelaps?.length || 0;
-            mf.movelaps?.forEach((lap: any) => {
-              sportData.time += parseFloat(lap.time) || 0;
-            });
+            // For series-based sports
+            if (mf.manualMode) {
+              // Manual mode: use repetitions field
+              sportData.series += mf.repetitions || 0;
+            } else {
+              // Standard mode: count total reps/series
+              sportData.series += mf.movelaps?.length || 0;
+              mf.movelaps?.forEach((lap: any) => {
+                // Convert seconds to minutes for time tracking
+                const timeInSeconds = parseFloat(lap.time) || 0;
+                sportData.time += timeInSeconds / 60;
+              });
+            }
           }
         });
       });

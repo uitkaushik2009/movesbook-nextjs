@@ -431,11 +431,22 @@ function SortableMovelapRow({
              if (circuitDataMatch) {
                try {
                  const circuitData = JSON.parse(circuitDataMatch[1]);
-                 if (circuitData.config && circuitData.config.pauses) {
-                   const pauseSeconds = circuitData.config.pauses.circuits;
-                   const minutes = Math.floor(pauseSeconds / 60);
-                   const seconds = pauseSeconds % 60;
-                   return `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+                 if (circuitData.config) {
+                   // Support both old nested structure (pauses.circuits) and new flat structure (pauseCircuits)
+                   let pauseSeconds = null;
+                   if (circuitData.config.pauseCircuits !== undefined) {
+                     // New structure: pauseCircuits in minutes
+                     pauseSeconds = circuitData.config.pauseCircuits * 60; // Convert to seconds
+                   } else if (circuitData.config.pauses && circuitData.config.pauses.circuits) {
+                     // Old structure: pauses.circuits in seconds
+                     pauseSeconds = circuitData.config.pauses.circuits;
+                   }
+                   
+                   if (pauseSeconds !== null) {
+                     const minutes = Math.floor(pauseSeconds / 60);
+                     const seconds = pauseSeconds % 60;
+                     return `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+                   }
                  }
                } catch (e) {
                  console.error('Failed to parse circuit data:', e);
@@ -626,12 +637,23 @@ export default function MovelapDetailTable({
         circuitBasedMoveframe = circuitData.isCircuitBased || false;
         moveframe.isCircuitBased = circuitBasedMoveframe;
         
-        // Extract pause among circuits (pauseCircuits in seconds)
-        if (circuitData.config && circuitData.config.pauses && circuitData.config.pauses.circuits) {
-          const pauseSeconds = circuitData.config.pauses.circuits;
-          const minutes = Math.floor(pauseSeconds / 60);
-          const seconds = pauseSeconds % 60;
-          pauseAmongCircuits = `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+        // Extract pause among circuits (pauseCircuits in minutes or seconds)
+        // Support both old nested structure (pauses.circuits) and new flat structure (pauseCircuits)
+        let pauseValue = null;
+        if (circuitData.config) {
+          if (circuitData.config.pauseCircuits !== undefined) {
+            // New structure: pauseCircuits in minutes
+            pauseValue = circuitData.config.pauseCircuits * 60; // Convert to seconds
+          } else if (circuitData.config.pauses && circuitData.config.pauses.circuits) {
+            // Old structure: pauses.circuits in seconds
+            pauseValue = circuitData.config.pauses.circuits;
+          }
+          
+          if (pauseValue !== null) {
+            const minutes = Math.floor(pauseValue / 60);
+            const seconds = pauseValue % 60;
+            pauseAmongCircuits = `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+          }
         }
       } catch (e) {
         console.error('Failed to parse circuit data:', e);

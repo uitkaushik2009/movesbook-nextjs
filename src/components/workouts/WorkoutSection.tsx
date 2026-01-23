@@ -563,35 +563,34 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       return moveframeData.movelaps;
     }
     
-    // For manual mode, create a single movelap with distance for statistics
+    // For manual mode, ALWAYS create a single movelap (even if distance is 0)
+    // This movelap is used to store notes/summary for the manual moveframe
     if (moveframeData.manualMode) {
       const distanceValue = parseInt(moveframeData.distance) || 0;
-      if (distanceValue > 0) {
-        movelaps.push({
-          repetitionNumber: 1,
-          distance: distanceValue,
-          speed: null,
-          style: null,
-          pace: null,
-          time: null,
-          reps: null,
-          weight: null,
-          tools: null,
-          r1: null,
-          r2: null,
-          muscularSector: null,
-          exercise: null,
-          restType: null,
-          pause: null,
-          macroFinal: null,
-          alarm: null,
-          sound: null,
-          notes: null,
-          status: 'PENDING',
-          isSkipped: false,
-          isDisabled: false
-        });
-      }
+      movelaps.push({
+        repetitionNumber: 1,
+        distance: distanceValue,
+        speed: null,
+        style: null,
+        pace: null,
+        time: null,
+        reps: null,
+        weight: null,
+        tools: null,
+        r1: null,
+        r2: null,
+        muscularSector: null,
+        exercise: null,
+        restType: null,
+        pause: null,
+        macroFinal: null,
+        alarm: null,
+        sound: null,
+        notes: null, // This will store the summary when edited
+        status: 'PENDING',
+        isSkipped: false,
+        isDisabled: false
+      });
       return movelaps;
     }
     

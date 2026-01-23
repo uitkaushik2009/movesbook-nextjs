@@ -13,7 +13,9 @@ import Image from 'next/image';
 // 2026-01-21 20:00 UTC - Old import (kept for reference)
 // import BatteryCircuitPlanner from './BatteryCircuitPlanner';
 // 2026-01-21 20:00 UTC - New Circuit Planner component
-import CircuitPlanner from './CircuitPlanner';
+// import CircuitPlanner from './CircuitPlanner';
+// 2026-01-23 - Redesigned Circuit Planner matching screenshot
+import BatteryCircuitPlanner from './BatteryCircuitPlanner_REDESIGNED';
 
 interface AddEditMoveframeModalProps {
   isOpen: boolean;
@@ -4145,22 +4147,28 @@ export default function AddEditMoveframeModal({
           {/* Battery Mode - Circuit Planner */}
           {/* 2026-01-21 20:00 UTC - Replaced old BatteryCircuitPlanner with new CircuitPlanner */}
           {/* 2026-01-22 14:30 UTC - Show based on batterySubmenu selection */}
+          {/* 2026-01-23 - Using redesigned BatteryCircuitPlanner_REDESIGNED */}
           {type === 'BATTERY' && batterySubmenu === 'circuits' && (
-            <CircuitPlanner
+            <BatteryCircuitPlanner
+              sectionId={workout?.id || ''}
               sport={sport}
-              onSave={(circuitData) => {
+              workout={workout}
+              day={day}
+              onCreateCircuit={(circuitData) => {
                 // 2026-01-21 20:00 UTC - Handle circuit creation
                 // 2026-01-22 10:20 UTC - Include description in moveframe data
                 // 2026-01-22 10:30 UTC - Include movelaps in moveframe data
+                // 2026-01-23 - Updated for redesigned planner
                 console.log('✅ Circuit data generated:', circuitData);
                 
                 // Build complete moveframe data with circuit description and movelaps
                 const moveframeData = buildMoveframeData();
                 const finalData = {
                   ...moveframeData,
-                  description: circuitData.description || '', // Use circuit preview as description
-                  circuitConfig: circuitData.config,
-                  circuits: circuitData.circuits,
+                  description: circuitData.description || '', // Use circuit description
+                  circuitConfig: circuitData.settings, // Circuit settings
+                  circuits: circuitData.circuits, // Active circuits
+                  rows: circuitData.rows, // Circuit rows/stations
                   movelaps: circuitData.movelaps || [], // Include generated movelaps
                   isCircuitBased: true // Flag to indicate this is a circuit-based moveframe
                 };
@@ -4231,7 +4239,7 @@ export default function AddEditMoveframeModal({
                         📝 Editing Manual Moveframe
                       </div>
                       <p className="text-sm text-amber-800">
-                        This moveframe was created with manual input. You can only edit the <strong>{DISTANCE_BASED_SPORTS.includes(sport as any) ? 'distance' : 'series'}</strong> (for statistics) and the <strong>content</strong> below. To change sport or other settings, you need to create a new moveframe.
+                        This moveframe was created with manual input. You can edit the <strong>{DISTANCE_BASED_SPORTS.includes(sport as any) ? 'distance' : 'series'}</strong> (for statistics) and the <strong>content</strong> below. To change sport or other settings, you need to create a new moveframe.
                       </p>
                     </div>
                   </div>
@@ -4263,110 +4271,110 @@ export default function AddEditMoveframeModal({
 
               {/* Distance Meters/Time field for statistics (for aerobic sports) OR Total series (for non-aerobic sports) */}
               <div className="bg-gray-50 p-3 rounded-lg border border-gray-300">
-                {DISTANCE_BASED_SPORTS.includes(sport as any) ? (
-                  <>
-                    {/* Toggle for Meters or Time */}
-                    <div className="mb-3">
-                      <label className="block text-xs font-semibold text-gray-700 mb-2">
-                        Input Type - For Statistics:
-                      </label>
-                      <div className="flex gap-4">
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name="manualInputType"
-                            value="meters"
-                            checked={manualInputType === 'meters'}
-                            onChange={(e) => {
-                              console.log('📻 [RADIO] User selected METERS');
-                              setManualInputType(e.target.value as 'meters' | 'time');
-                              setDistance(''); // Clear distance when switching to meters
-                              console.log('🗑️ [RADIO] Cleared distance field for meters input');
-                            }}
-                            className="mr-2"
-                          />
-                          <span className="text-sm text-gray-700">Meters</span>
+                  {DISTANCE_BASED_SPORTS.includes(sport as any) ? (
+                    <>
+                      {/* Toggle for Meters or Time */}
+                      <div className="mb-3">
+                        <label className="block text-xs font-semibold text-gray-700 mb-2">
+                          Input Type - For Statistics:
                         </label>
-                        <label className="flex items-center cursor-pointer">
-                          <input
-                            type="radio"
-                            name="manualInputType"
-                            value="time"
-                            checked={manualInputType === 'time'}
-                            onChange={(e) => {
-                              console.log('📻 [RADIO] User selected TIME');
-                              setManualInputType(e.target.value as 'meters' | 'time');
-                              setDistance(''); // Clear distance when switching to time
-                              console.log('🗑️ [RADIO] Cleared distance field for time input');
-                            }}
-                            className="mr-2"
-                          />
-                          <span className="text-sm text-gray-700">Time</span>
-                        </label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center cursor-pointer">
+                            <input
+                              type="radio"
+                              name="manualInputType"
+                              value="meters"
+                              checked={manualInputType === 'meters'}
+                              onChange={(e) => {
+                                console.log('📻 [RADIO] User selected METERS');
+                                setManualInputType(e.target.value as 'meters' | 'time');
+                                setDistance(''); // Clear distance when switching to meters
+                                console.log('🗑️ [RADIO] Cleared distance field for meters input');
+                              }}
+                              className="mr-2"
+                            />
+                            <span className="text-sm text-gray-700">Meters</span>
+                          </label>
+                          <label className="flex items-center cursor-pointer">
+                            <input
+                              type="radio"
+                              name="manualInputType"
+                              value="time"
+                              checked={manualInputType === 'time'}
+                              onChange={(e) => {
+                                console.log('📻 [RADIO] User selected TIME');
+                                setManualInputType(e.target.value as 'meters' | 'time');
+                                setDistance(''); // Clear distance when switching to time
+                                console.log('🗑️ [RADIO] Cleared distance field for time input');
+                              }}
+                              className="mr-2"
+                            />
+                            <span className="text-sm text-gray-700">Time</span>
+                          </label>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Input field - Meters or Time */}
-                    {manualInputType === 'meters' ? (
-                      <>
-                        <label className="block text-xs font-semibold text-gray-700 mb-2">
-                          Distance (Meters):
-                        </label>
-                        <input
-                          type="number"
-                          value={distance}
-                          onChange={(e) => setDistance(e.target.value)}
-                          min="0"
-                          step="1"
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
-                          placeholder="Enter distance in meters (e.g., 1000)"
-                        />
-                        <p className="mt-1 text-[10px] text-gray-600">
-                          💡 This value is used for workout statistics and totals calculation.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <label className="block text-xs font-semibold text-gray-700 mb-2">
-                          Time (Format: 123456 = 1h23'45"6):
-                        </label>
-                        <input
-                          type="text"
-                          value={distance}
-                          onChange={(e) => setDistance(e.target.value)}
-                          onBlur={(e) => {
-                            const formatted = formatTime(e.target.value);
-                            setDistance(formatted);
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
-                          placeholder="Type: 123456"
-                        />
-                        <p className="mt-1 text-[10px] text-gray-600">
-                          💡 Type 123456 → formats to 1h23'45"6. Used for workout statistics.
-                        </p>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <label className="block text-xs font-semibold text-gray-700 mb-2">
-                      Total Series - For Statistics:
-                    </label>
-                    <input
-                      type="number"
-                      value={repetitions}
-                      onChange={(e) => setRepetitions(e.target.value)}
-                      min="0"
-                      step="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
-                      placeholder="Enter total number of series (e.g., 4)"
-                    />
-                    <p className="mt-1 text-[10px] text-gray-600">
-                      💡 This value is used for workout statistics and totals calculation.
-                    </p>
-                  </>
-                )}
-              </div>
+                      {/* Input field - Meters or Time */}
+                      {manualInputType === 'meters' ? (
+                        <>
+                          <label className="block text-xs font-semibold text-gray-700 mb-2">
+                            Distance (Meters):
+                          </label>
+                          <input
+                            type="number"
+                            value={distance}
+                            onChange={(e) => setDistance(e.target.value)}
+                            min="0"
+                            step="1"
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
+                            placeholder="Enter distance in meters (e.g., 1000)"
+                          />
+                          <p className="mt-1 text-[10px] text-gray-600">
+                            💡 This value is used for workout statistics and totals calculation.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <label className="block text-xs font-semibold text-gray-700 mb-2">
+                            Time (Format: 123456 = 1h23'45"6):
+                          </label>
+                          <input
+                            type="text"
+                            value={distance}
+                            onChange={(e) => setDistance(e.target.value)}
+                            onBlur={(e) => {
+                              const formatted = formatTime(e.target.value);
+                              setDistance(formatted);
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
+                            placeholder="Type: 123456"
+                          />
+                          <p className="mt-1 text-[10px] text-gray-600">
+                            💡 Type 123456 → formats to 1h23'45"6. Used for workout statistics.
+                          </p>
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <label className="block text-xs font-semibold text-gray-700 mb-2">
+                        Total Series - For Statistics:
+                      </label>
+                      <input
+                        type="number"
+                        value={repetitions}
+                        onChange={(e) => setRepetitions(e.target.value)}
+                        min="0"
+                        step="1"
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 text-sm"
+                        placeholder="Enter total number of series (e.g., 4)"
+                      />
+                      <p className="mt-1 text-[10px] text-gray-600">
+                        💡 This value is used for workout statistics and totals calculation.
+                      </p>
+                    </>
+                  )}
+                </div>
 
               {/* Manual Mode Preview - Show Duration/Rip\Sets */}
               {manualMode && (
@@ -4396,8 +4404,8 @@ export default function AddEditMoveframeModal({
               )}
 
               <>
-                  <div className="flex items-center justify-end">
-              <label className="flex items-center gap-2 cursor-pointer">
+                <div className="flex items-center justify-end">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={manualPriority}
@@ -4408,41 +4416,42 @@ export default function AddEditMoveframeModal({
                         });
                         setManualPriority(e.target.checked);
                       }}
-                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                     />
                     <span className="text-sm text-gray-700">Priority 'manual' in the display (current: {String(manualPriority)})</span>
                   </label>
-                    <div className="ml-2 flex items-center justify-center w-6 h-6 bg-green-500 rounded">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
+                  <div className="ml-2 flex items-center justify-center w-6 h-6 bg-green-500 rounded">
+                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
                   </div>
+                </div>
+              </>
 
-                  {/* Rich Text Editor Toolbar */}
-                  <div className="border border-gray-300 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 border-b border-gray-300 p-2 flex flex-wrap gap-1 items-center">
-                      <select 
-                        onChange={(e) => execCommand('fontName', e.target.value)}
-                        className="px-2 py-1 border border-gray-300 rounded text-xs bg-white"
-                      >
-                        <option value="Arial">Arial</option>
-                        <option value="Times New Roman">Times New Roman</option>
-                        <option value="Courier New">Courier New</option>
-                        <option value="Georgia">Georgia</option>
-                        <option value="Verdana">Verdana</option>
-                      </select>
-                      <select 
-                        onChange={(e) => execCommand('fontSize', e.target.value)}
-                        className="px-2 py-1 border border-gray-300 rounded text-xs bg-white ml-1"
-                      >
-                        <option value="3">Normal</option>
-                        <option value="1">Very Small</option>
-                        <option value="2">Small</option>
-                        <option value="4">Large</option>
-                        <option value="5">Very Large</option>
-                        <option value="6">Huge</option>
-                      </select>
+              {/* Rich Text Editor Toolbar */}
+              <div className="border border-gray-300 rounded-lg overflow-hidden">
+                <div className="bg-gray-50 border-b border-gray-300 p-2 flex flex-wrap gap-1 items-center">
+                  <select 
+                    onChange={(e) => execCommand('fontName', e.target.value)}
+                    className="px-2 py-1 border border-gray-300 rounded text-xs bg-white"
+                  >
+                    <option value="Arial">Arial</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Verdana">Verdana</option>
+                  </select>
+                  <select 
+                    onChange={(e) => execCommand('fontSize', e.target.value)}
+                    className="px-2 py-1 border border-gray-300 rounded text-xs bg-white ml-1"
+                  >
+                    <option value="3">Normal</option>
+                    <option value="1">Very Small</option>
+                    <option value="2">Small</option>
+                    <option value="4">Large</option>
+                    <option value="5">Very Large</option>
+                    <option value="6">Huge</option>
+                  </select>
                       <div className="h-4 w-px bg-gray-300 mx-1"></div>
                       <button 
                         type="button"
@@ -4594,7 +4603,6 @@ export default function AddEditMoveframeModal({
                       />
                     </div>
                   </div>
-              </>
             </div>
           )}
 
