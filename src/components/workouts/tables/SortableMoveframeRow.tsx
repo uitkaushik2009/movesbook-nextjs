@@ -625,12 +625,12 @@ export default function SortableMoveframeRow({
               const minutes = Math.floor((totalSeconds % 3600) / 60);
               const seconds = totalSeconds % 60;
               const timeFormatted = `${hours}h${minutes.toString().padStart(2, '0')}'${seconds.toString().padStart(2, '0')}"${ds}`;
-              durationDisplay = `⏱${timeFormatted}`;  // Add emoji prefix to visually confirm
+              durationDisplay = timeFormatted;
               console.log('  ✅ Time display SET TO:', durationDisplay);
               console.log('  🔍 Variable durationDisplay type:', typeof durationDisplay);
               console.log('  🔍 Variable durationDisplay length:', durationDisplay.length);
             } else {
-              durationDisplay = '⏱0h00\'00"0';
+              durationDisplay = '0h00\'00"0';
               console.log('  ⚠️ Zero deciseconds, showing:', durationDisplay);
             }
           } else {
@@ -639,7 +639,7 @@ export default function SortableMoveframeRow({
             const distanceValue = moveframe.distance || firstMovelap?.distance || 0;
             console.log('  📏 Displaying meters:', distanceValue);
             if (distanceValue > 0) {
-              durationDisplay = `📏${distanceValue}m`;  // Add emoji prefix to visually confirm
+              durationDisplay = `${distanceValue}m`;
               console.log('  ✅ Meters display:', durationDisplay);
             } else {
               durationDisplay = '—';
@@ -696,7 +696,6 @@ export default function SortableMoveframeRow({
                      color: '#1f2937'
                    }
             }
-            title={`Debug: ${durationDisplay} | Type: ${moveframe.manualInputType || 'N/A'} | Distance: ${moveframe.distance || 0}`}
           >
             {durationDisplay}
           </td>
