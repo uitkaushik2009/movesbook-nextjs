@@ -37,7 +37,7 @@ interface BatteryCircuitPlannerProps {
 const extractCircuitData = (notes: string | null) => {
   if (!notes) return null;
   
-  const circuitDataMatch = notes.match(/\[CIRCUIT_DATA\](.*?)\[\/CIRCUIT_DATA\]/s);
+  const circuitDataMatch = notes.match(/\[CIRCUIT_DATA\]([\s\S]*?)\[\/CIRCUIT_DATA\]/);
   if (circuitDataMatch && circuitDataMatch[1]) {
     try {
       const circuitData = JSON.parse(circuitDataMatch[1]);
