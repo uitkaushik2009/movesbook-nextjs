@@ -270,9 +270,8 @@ export default function RightSidebar({ user, onAddMemberClick, activeTab = 'my-p
 
               <div className="flex items-start gap-3 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors">
                 <img
-                  className="hidden"
                   alt="Freewildplayer"
-                  className="w-12 h-12 rounded object-cover"
+                  className="w-12 h-12 rounded object-cover hidden"
                 />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-800">Freewildplayer</p>
@@ -326,9 +325,8 @@ export default function RightSidebar({ user, onAddMemberClick, activeTab = 'my-p
 
               <div className="flex items-start gap-3 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors">
                 <img
-                  className="hidden"
                   alt="Freewildplayer"
-                  className="w-12 h-12 rounded object-cover"
+                  className="w-12 h-12 rounded object-cover hidden"
                 />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-800">Freewildplayer</p>
@@ -461,9 +459,8 @@ export default function RightSidebar({ user, onAddMemberClick, activeTab = 'my-p
 
               <div className="flex items-start gap-3 px-3 py-2 hover:bg-gray-50 rounded-lg transition-colors">
                 <img
-                  className="hidden"
                   alt="Freewildplayer"
-                  className="w-12 h-12 rounded object-cover"
+                  className="w-12 h-12 rounded object-cover hidden"
                 />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-800">Freewildplayer</p>
@@ -573,9 +570,8 @@ export default function RightSidebar({ user, onAddMemberClick, activeTab = 'my-p
               <div className="px-3 py-2 border-b">
                 <div className="flex items-start gap-3 mb-2">
                   <img
-                    className="hidden"
                     alt="Page"
-                    className="w-10 h-10 rounded object-cover"
+                    className="w-10 h-10 rounded object-cover hidden"
                   />
                   <div className="flex-1">
                     <h6 className="text-sm font-semibold text-gray-800">Papa Benedetto XVI</h6>

@@ -776,7 +776,7 @@ export function useMoveframeForm({
     console.log('  🔍 Should save deciseconds?', manualInputType === 'time' ? 'YES' : 'NO');
     
     // Verify manualInputType is actually being set
-    if (data.manualMode && DISTANCE_BASED_SPORTS.includes(data.sport)) {
+    if (data.manualMode && DISTANCE_BASED_SPORTS.includes(data.sport as any)) {
       console.log('🚨 [DEBUG] This is an aerobic sport in manual mode!');
       console.log('🚨 [DEBUG] Expected manualInputType to be saved:', manualInputType);
       console.log('🚨 [DEBUG] Actual manualInputType in data object:', data.manualInputType);

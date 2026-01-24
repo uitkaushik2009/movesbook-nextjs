@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertCircle, RefreshCw, Settings, Clock, Play } from 'lucide-react';
 import Image from 'next/image';
 import CircuitExecutionPlayer from './CircuitExecutionPlayer';
@@ -41,6 +41,7 @@ export default function BatteryCircuitPlanner({
 }: BatteryCircuitPlannerProps) {
   const [description, setDescription] = useState('');
   const [showOldCircuitPlanner, setShowOldCircuitPlanner] = useState(false);
+  const [timeInstructions, setTimeInstructions] = useState('');
   
   // Circuit settings - All 9 circuits (A-I)
   const [circuits, setCircuits] = useState<CircuitExercise[]>([
@@ -74,6 +75,40 @@ export default function BatteryCircuitPlanner({
   
   // Execution player state
   const [showExecutionPlayer, setShowExecutionPlayer] = useState(false);
+  
+  // Fetch time circuit instructions translation on mount
+  useEffect(() => {
+    const fetchTimeInstructions = async () => {
+      try {
+        const response = await fetch('/api/admin/translations');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.translations) {
+            // Find the translation for circuit_time_instructions
+            const translation = data.translations.find(
+              (t: any) => t.key === 'circuit_time_instructions'
+            );
+            
+            if (translation && translation.values) {
+              // Get current language from localStorage or default to 'en'
+              const currentLang = localStorage.getItem('selectedLanguage') || 'en';
+              const text = translation.values[currentLang] || translation.values['en'] || '';
+              setTimeInstructions(text);
+            } else {
+              // Set default English text if translation doesn't exist yet
+              setTimeInstructions('If the series are set in minutes therefore the athlete will repeat all the stations continuosly for the time set. And once finished the time, after the Pause among the series, he will start again with the next serie.');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching time instructions:', error);
+        // Use default English text on error
+        setTimeInstructions('If the series are set in minutes therefore the athlete will repeat all the stations continuosly for the time set. And once finished the time, after the Pause among the series, he will start again with the next serie.');
+      }
+    };
+    
+    fetchTimeInstructions();
+  }, []);
   
   // Toggle circuit active state
   const toggleCircuit = (index: number) => {
@@ -320,32 +355,43 @@ export default function BatteryCircuitPlanner({
                 </div>
                 <div className="flex-1 relative">
                   {/* Large dashed border visualization box WITHOUT timer icon - Screenshot 2 style */}
-                  <div className="relative bg-white border-4 border-dashed border-gray-400 rounded-lg p-3 h-48 flex gap-2">
-                    {/* Left side: Horizontal gray bars (stations) - THICKER */}
-                    <div className="flex-1 flex flex-col justify-between py-2">
-                      {[...Array(Math.min(seriesPerCircuit * 2, 8))].map((_, i) => (
-                        <div key={i} className="h-3 bg-gray-300 border-2 border-gray-400 rounded-sm" />
-                      ))}
-                    </div>
-                    
-                    {/* Right side: Yellow vertical bar with RED ARROWS */}
-                    <div className="relative w-10 bg-yellow-400 border-2 border-yellow-600 rounded flex flex-col justify-center items-center py-2">
-                      {/* Red arrows pointing DOWN on the right outline */}
-                      <div className="absolute right-0 top-8 w-4 h-4 flex items-center justify-center transform translate-x-1/2">
-                        <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-600" />
-                      </div>
-                      <div className="absolute right-0 bottom-8 w-4 h-4 flex items-center justify-center transform translate-x-1/2">
-                        <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-600" />
+                  <div className="relative bg-white border-4 border-dashed border-gray-400 rounded-lg p-3 h-48 flex flex-col">
+                    <div className="flex gap-2 flex-1">
+                      {/* Left side: Horizontal gray bars (stations) - SMALLER */}
+                      <div className="flex-1 flex flex-col justify-around py-2">
+                        {[...Array(Math.min(seriesPerCircuit * 2, 6))].map((_, i) => (
+                          <div key={i} className="h-2 bg-gray-300 border-2 border-gray-400 rounded-sm" />
+                        ))}
                       </div>
                       
-                      {/* Red arrows pointing UP on the left outline */}
-                      <div className="absolute left-0 top-8 w-4 h-4 flex items-center justify-center transform -translate-x-1/2">
-                        <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-600" />
-                      </div>
-                      <div className="absolute left-0 bottom-8 w-4 h-4 flex items-center justify-center transform -translate-x-1/2">
-                        <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-600" />
+                      {/* Right side: Yellow vertical bar with RED ARROWS */}
+                      <div className="relative w-10 bg-yellow-400 border-2 border-yellow-600 rounded flex flex-col justify-center items-center py-2">
+                        {/* Red arrows pointing DOWN on the right outline */}
+                        <div className="absolute right-0 top-6 w-4 h-4 flex items-center justify-center transform translate-x-1/2">
+                          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-600" />
+                        </div>
+                        <div className="absolute right-0 bottom-6 w-4 h-4 flex items-center justify-center transform translate-x-1/2">
+                          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-600" />
+                        </div>
+                        
+                        {/* Red arrows pointing UP on the left outline */}
+                        <div className="absolute left-0 top-6 w-4 h-4 flex items-center justify-center transform -translate-x-1/2">
+                          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-600" />
+                        </div>
+                        <div className="absolute left-0 bottom-6 w-4 h-4 flex items-center justify-center transform -translate-x-1/2">
+                          <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-600" />
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Time Circuit Instructions - Inside the box in red */}
+                    {seriesMode === 'time' && timeInstructions && (
+                      <div className="mt-2 pt-2 border-t border-gray-300">
+                        <p className="text-xs text-red-600 leading-tight">
+                          {timeInstructions}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
