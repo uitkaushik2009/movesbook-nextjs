@@ -26,6 +26,7 @@ interface AddEditMoveframeModalProps {
   day: any;
   existingMoveframe?: any;
   onSetInsertIndex?: (index: number | null) => void;
+  editingFromMovelap?: boolean; // Flag to indicate editing was triggered from movelap edit
 }
 
 export default function AddEditMoveframeModal({
@@ -36,7 +37,8 @@ export default function AddEditMoveframeModal({
   workout,
   day,
   existingMoveframe,
-  onSetInsertIndex
+  onSetInsertIndex,
+  editingFromMovelap
 }: AddEditMoveframeModalProps): JSX.Element | null {
   // Debug: Log mode only when it changes (moved to useEffect below)
   
@@ -4148,12 +4150,15 @@ export default function AddEditMoveframeModal({
           {/* 2026-01-21 20:00 UTC - Replaced old BatteryCircuitPlanner with new CircuitPlanner */}
           {/* 2026-01-22 14:30 UTC - Show based on batterySubmenu selection */}
           {/* 2026-01-23 - Using redesigned BatteryCircuitPlanner_REDESIGNED */}
+          {/* 2026-01-24 - Pass existingMoveframe for edit mode */}
           {type === 'BATTERY' && batterySubmenu === 'circuits' && (
             <BatteryCircuitPlanner
               sectionId={workout?.id || ''}
               sport={sport}
               workout={workout}
               day={day}
+              existingMoveframe={existingMoveframe}
+              startInSecondView={editingFromMovelap === true}
               onCreateCircuit={(circuitData) => {
                 // 2026-01-21 20:00 UTC - Handle circuit creation
                 // 2026-01-22 10:20 UTC - Include description in moveframe data

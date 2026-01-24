@@ -4,6 +4,7 @@ import { GripVertical, Volume2, VolumeX, Bell, BellOff, MoreVertical } from 'luc
 import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import '../../../styles/sticky-table.css';
 
 // Helper function to strip HTML tags from text (defined at module level for accessibility)
 const stripHtmlTags = (html: string): string => {
@@ -12,6 +13,22 @@ const stripHtmlTags = (html: string): string => {
   const tempDiv = document.createElement('div');
   tempDiv.innerHTML = html;
   return tempDiv.textContent || tempDiv.innerText || '';
+};
+
+// Mapping of muscular sectors to images (from CircuitPlanner_OLD)
+const MUSCULAR_SECTOR_IMAGES: Record<string, string> = {
+  'Shoulders': '/muscular/shoulders.png',
+  'Anterior arms': '/muscular/Biceps.png',
+  'Rear arms': '/muscular/Triceps.png',
+  'Forearms': '/muscular/Forearms.png',
+  'Chest': '/muscular/chest.png',
+  'Abdominals': '/muscular/abs.png',
+  'Trapezius': '/muscular/trapezius.png',
+  'Lats': '/muscular/Lats.png',
+  'Front thighs': '/muscular/quadriceps.png',
+  'Hind thighs': '/muscular/hams.png',
+  'Calves': '/muscular/calves.png',
+  'Glutes': '/muscular/glutes.png',
 };
 
 interface MovelapDetailTableProps {
@@ -285,12 +302,12 @@ function SortableMovelapRow({
       </td>
       
       {/* # (Repetition Number) / Circuit Info Column - 2026-01-22 10:30 UTC */}
-      {/* 2026-01-22 11:30 UTC - Updated to show format like "B23" (circuit + series + station) */}
+      {/* 2026-01-24 - Updated to show format like "B-2-3" (circuit-series-station) */}
       <td className={`border border-gray-300 px-1 py-1 text-center font-bold text-xs ${
         movelap.isNewlyAdded ? 'text-red-600' : ''
       }`}>
         {movelap.circuitLetter 
-          ? `${movelap.circuitLetter}${movelap.localSeriesNumber || movelap.seriesNumber}${movelap.stationNumber}` 
+          ? `${movelap.circuitLetter}-${movelap.localSeriesNumber || movelap.seriesNumber}-${movelap.stationNumber}` 
           : sequenceNumber}
       </td>
       
@@ -316,18 +333,31 @@ function SortableMovelapRow({
        {/* BODY BUILDING - Different fields */}
        {isBodyBuilding && (
          <>
-           {/* Muscular Sector */}
-           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
-             {movelap.muscularSector || '—'}
+           {/* Muscular Sector - 2026-01-24 - Added image display and doubled width, left aligned */}
+           <td className={`border border-gray-300 px-2 py-1 text-left text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+             {movelap.muscularSector ? (
+               <div className="flex items-center gap-2">
+                 {MUSCULAR_SECTOR_IMAGES[movelap.muscularSector] && (
+                   <img 
+                     src={MUSCULAR_SECTOR_IMAGES[movelap.muscularSector]} 
+                     alt={movelap.muscularSector}
+                     className="w-8 h-8 object-contain flex-shrink-0"
+                   />
+                 )}
+                 <span className="text-xs font-medium">{movelap.muscularSector}</span>
+               </div>
+             ) : '—'}
            </td>
-           {/* Exercise */}
-           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+           {/* Exercise - 2026-01-24 - Doubled width, left aligned */}
+           <td className={`border border-gray-300 px-2 py-1 text-left text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
              {movelap.exercise || '—'}
            </td>
            {/* Reps */}
            <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
              {movelap.reps || '—'}
            </td>
+           {!moveframe.isCircuitBased && (
+             <>
            {/* Weight */}
            <td className={`border border-gray-300 px-1 py-1 text-center text-xs font-semibold ${movelap.isNewlyAdded ? 'text-red-600' : 'text-blue-700'}`}>
              {movelap.weight || '—'}
@@ -336,10 +366,8 @@ function SortableMovelapRow({
            <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
              {movelap.speed || '—'}
            </td>
-           {/* Rest Type */}
-           <td className={`border border-gray-300 px-1 py-1 text-center text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
-             {movelap.restType?.replace(/_/g, ' ') || '—'}
-           </td>
+             </>
+           )}
          </>
        )}
       
@@ -443,9 +471,9 @@ function SortableMovelapRow({
                    }
                    
                    if (pauseSeconds !== null) {
-                     const minutes = Math.floor(pauseSeconds / 60);
-                     const seconds = pauseSeconds % 60;
-                     return `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+                   const minutes = Math.floor(pauseSeconds / 60);
+                   const seconds = pauseSeconds % 60;
+                   return `${minutes}'${seconds.toString().padStart(2, '0')}"`;
                    }
                  }
                } catch (e) {
@@ -457,16 +485,19 @@ function SortableMovelapRow({
          })() : (movelap.macroFinal || '—')}
        </td>
        
-       {/* Alarm & Sound */}
+       {/* Alarm & Sound - Hide for circuit-based moveframes */}
+       {!moveframe.isCircuitBased && (
        <td className={`border border-gray-300 px-1 py-1 text-center ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
          <div className="flex items-center justify-center gap-1">
            {getSoundIcon(movelap)}
            {movelap.alarm && movelap.alarm !== -1 && <span className="text-[8px]">{Math.abs(movelap.alarm)}</span>}
          </div>
        </td>
+       )}
       
       {/* Notes - Display with increased width for better readability */}
-      <td className="border border-gray-300 px-2 py-1 text-left text-xs" style={{ width: '300px', maxWidth: '300px', minWidth: '300px' }}>
+      {/* 2026-01-24 - Increased width 4x to 1200px for circuit movelap table */}
+      <td className="border border-gray-300 px-2 py-1 text-left text-xs">
         {/* 2026-01-22 11:45 UTC - Made notes field editable */}
         {/* 2026-01-22 12:00 UTC - Fixed to use controlled component with local state */}
         {/* 2026-01-22 15:35 UTC - Added onRefresh callback */}
@@ -478,7 +509,8 @@ function SortableMovelapRow({
       </td>
       
       {/* Options Column - Simplified to Edit + Options dropdown */}
-      <td className="border border-gray-300 px-1 py-1 text-center" style={{ width: '120px', minWidth: '120px' }}>
+      {/* 2026-01-24 - Sticky options column */}
+      <td className="border border-gray-300 px-1 py-1 text-center sticky-options-col bg-white" style={{ minWidth: '140px' }}>
         <div className="flex items-center justify-center gap-1">
           <button
             onClick={(e) => {
@@ -652,7 +684,7 @@ export default function MovelapDetailTable({
           if (pauseValue !== null) {
             const minutes = Math.floor(pauseValue / 60);
             const seconds = pauseValue % 60;
-            pauseAmongCircuits = `${minutes}'${seconds.toString().padStart(2, '0')}"`;
+          pauseAmongCircuits = `${minutes}'${seconds.toString().padStart(2, '0')}"`;
           }
         }
       } catch (e) {
@@ -999,13 +1031,15 @@ export default function MovelapDetailTable({
         </div>
 
         {/* Manual Mode Table - Two separate editable sections */}
-        <table className="w-full border-collapse text-xs table-fixed">
+        {/* 2026-01-24 - Scrollable wrapper for sticky Options column */}
+        <div className="overflow-x-auto overflow-y-visible relative" style={{ maxWidth: '100%' }}>
+          <table className="text-xs" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '1040px', width: '100%' }}>
           <thead className="bg-gradient-to-r from-purple-200 to-pink-200">
             <tr>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '85px' }}>Sport</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '40%' }}>Summary</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '40%' }}>Detail of workout</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '120px', minWidth: '120px' }}>Options</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ minWidth: '400px' }}>Summary</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ minWidth: '400px' }}>Detail of workout</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold sticky-options-header bg-gradient-to-r from-purple-200 to-pink-200" style={{ width: '140px', minWidth: '140px' }}>Options</th>
             </tr>
           </thead>
           <tbody>
@@ -1041,14 +1075,14 @@ export default function MovelapDetailTable({
               {/* Detail of workout (Manual Content from moveframe.notes) */}
               <td 
                 className="border border-gray-300 px-2 py-2 text-xs cursor-pointer hover:bg-gray-50 bg-white align-top"
-                onDoubleClick={() => {
+                onClick={() => {
                   setPopupContentType('detail');
                   setShowManualContentPopup(true);
                 }}
-                title="Double-click to view full text"
+                title="Click to view full text"
               >
                 <div 
-                  className="max-h-48 overflow-y-auto text-left"
+                  className="line-clamp-3 text-left"
                   style={{
                     lineHeight: '1.6',
                     fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -1059,7 +1093,7 @@ export default function MovelapDetailTable({
               </td>
               
               {/* Options */}
-              <td className="border border-gray-300 px-2 py-2 text-center bg-white align-middle" style={{ width: '120px', minWidth: '120px' }}>
+              <td className="border border-gray-300 px-2 py-2 text-center sticky-options-col bg-white align-middle" style={{ minWidth: '140px' }}>
                 <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={(e) => {
@@ -1099,6 +1133,7 @@ export default function MovelapDetailTable({
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Manual Content Popup Modal */}
@@ -1238,7 +1273,9 @@ export default function MovelapDetailTable({
             </div>
           </div>
 
-          <table className="w-full border-collapse text-xs table-fixed bg-white">
+          {/* 2026-01-24 - Scrollable wrapper for sticky Options column */}
+          <div className="overflow-x-auto overflow-y-visible relative" style={{ maxWidth: '100%' }}>
+            <table className="text-xs bg-white" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '1400px', width: '100%' }}>
             {/* Render sport-specific column headers */}
             {(() => {
               const sport = moveframe.sport || 'SWIM';
@@ -1260,17 +1297,22 @@ export default function MovelapDetailTable({
                   <colgroup>
                     <col style={{ width: '30px' }} />
                     <col style={{ width: '30px' }} />
-                    <col style={{ width: '30px' }} />
+                    {/* 2026-01-24 - # column: 3x for circuits */}
+                    <col style={{ width: moveframe.isCircuitBased ? '90px' : '30px' }} />
                     <col style={{ width: '120px' }} />
                     <col style={{ width: '80px' }} />
                     {isBodyBuilding && (
                       <>
-                        <col style={{ width: '100px' }} />
-                        <col style={{ width: '120px' }} />
+                        {/* 2026-01-24 - Musc.Sector: 2x for circuits, Exercise: 2x for circuits */}
+                        <col style={{ width: moveframe.isCircuitBased ? '200px' : '100px' }} />
+                        <col style={{ width: moveframe.isCircuitBased ? '240px' : '120px' }} />
                         <col style={{ width: '50px' }} />
+                        {!moveframe.isCircuitBased && (
+                          <>
                         <col style={{ width: '60px' }} />
                         <col style={{ width: '50px' }} />
-                        <col style={{ width: '80px' }} />
+                          </>
+                        )}
                       </>
                     )}
                     {hasTools && (
@@ -1297,9 +1339,10 @@ export default function MovelapDetailTable({
                     )}
                     <col style={{ width: '45px' }} />
                     <col style={{ width: '40px' }} />
-                    <col style={{ width: '60px' }} />
+                    {!moveframe.isCircuitBased && <col style={{ width: '60px' }} />}
+                    {/* 2026-01-24 - Notes: recovered original width, Options: responsive width for sticky column */}
                     <col style={{ width: '300px' }} />
-                    <col style={{ width: '120px' }} />
+                    <col style={{ minWidth: '140px' }} />
                   </colgroup>
                   <thead className="bg-gray-200">
                     <tr>
@@ -1311,12 +1354,15 @@ export default function MovelapDetailTable({
                       
                       {isBodyBuilding && (
                         <>
-                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Musc.Sector</th>
-                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Exercise</th>
+                          <th className="border border-gray-300 px-1 py-1 text-left text-[10px]">Musc.Sector</th>
+                          <th className="border border-gray-300 px-1 py-1 text-left text-[10px]">Exercise</th>
                           <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Reps</th>
+                          {!moveframe.isCircuitBased && (
+                            <>
                           <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Weight</th>
                           <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Tempo</th>
-                          <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Rest Type</th>
+                            </>
+                          )}
                         </>
                       )}
                       
@@ -1355,9 +1401,11 @@ export default function MovelapDetailTable({
                       {/* Common headers */}
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Pause</th>
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Macro</th>
+                      {!moveframe.isCircuitBased && (
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Alarm&Snd</th>
-                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" style={{ width: '300px', maxWidth: '300px', minWidth: '300px' }}>Notes</th>
-                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" style={{ width: '120px', maxWidth: '120px', minWidth: '120px' }}>Options</th>
+                      )}
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Notes</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px] sticky-options-header bg-gray-200" style={{ minWidth: '140px' }}>Options</th>
                     </tr>
                   </thead>
                 </>
@@ -1406,7 +1454,11 @@ export default function MovelapDetailTable({
                 let totalColumns = 5;
                 
                 if (isBodyBuilding) {
-                  totalColumns += 6; // Musc.Sector + Exercise + Reps + Weight + Tempo + Rest Type
+                  totalColumns += 5; // Musc.Sector + Exercise + Reps + Weight + Tempo (Rest Type removed 2026-01-24)
+                  // For circuit-based bodybuilding, remove Weight and Tempo columns
+                  if (moveframe.isCircuitBased) {
+                    totalColumns -= 2; // Remove Weight + Tempo
+                  }
                 } else if (hasTools) {
                   totalColumns += 2; // Reps + Tools
                 } else if (isDistanceBased) {
@@ -1419,7 +1471,8 @@ export default function MovelapDetailTable({
                 }
                 
                 // Trailing columns: Pause(1) + Macro(1) + Alarm&Snd(1) + Notes(1) + Options(1) = 5
-                totalColumns += 5;
+                // For circuit-based moveframes, remove Alarm&Snd column
+                totalColumns += moveframe.isCircuitBased ? 4 : 5;
                 
                 // 2026-01-22 10:30 UTC - Circuit header logic
                 const isCircuitBased = moveframe.isCircuitBased || movelap.circuitLetter;
@@ -1468,6 +1521,7 @@ export default function MovelapDetailTable({
               })}
             </tbody>
           </table>
+          </div>
         </div>
       </SortableContext>
     </DndContext>

@@ -956,7 +956,7 @@ export default function SortableMoveframeRow({
       {isMovelapsExpanded && (
         <tr>
           <td colSpan={visibleColumns.length} className="border border-gray-200 p-0" style={{ backgroundColor: 'rgb(250, 255, 214)' }}>
-            <div className="pl-8" style={{ maxWidth: '1400px' }}>
+            <div className="pl-8">
               <MovelapDetailTable 
                 moveframe={moveframe}
                 onEditMovelap={(movelap) => onEditMovelap?.(movelap, moveframe)}

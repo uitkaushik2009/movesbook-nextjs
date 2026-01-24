@@ -95,6 +95,23 @@ export default function AddEditMovelapModal({
   
   // Check if this is a manual moveframe
   const isManualMoveframe = moveframe.manualMode === true;
+  
+  // Extract circuit metadata if this is a circuit movelap
+  const extractCircuitMetadata = () => {
+    if (!existingMovelap?.notes || typeof existingMovelap.notes !== 'string') return null;
+    const metaMatch = existingMovelap.notes.match(/\[CIRCUIT_META\](.*?)\[\/CIRCUIT_META\]/);
+    if (metaMatch && metaMatch[1]) {
+      try {
+        return JSON.parse(metaMatch[1]);
+      } catch (e) {
+        console.error('Failed to parse circuit metadata:', e);
+        return null;
+      }
+    }
+    return null;
+  };
+  
+  const circuitMetadata = extractCircuitMetadata();
 
   // Form state - inherit from moveframe
   const [sequence, setSequence] = useState(1);
@@ -503,10 +520,20 @@ export default function AddEditMovelapModal({
           <div>
             <h2 className="text-xl font-bold">
               {mode === 'add' ? 'Add Movelap' : 'Edit Movelap'}
+              {circuitMetadata && (
+                <span className="ml-3 text-sm font-normal bg-white/20 px-3 py-1 rounded">
+                  Circuit {circuitMetadata.circuitLetter} • Series {circuitMetadata.localSeriesNumber || circuitMetadata.seriesNumber} • Station {circuitMetadata.stationNumber}
+                </span>
+              )}
             </h2>
             <p className="text-xs text-blue-100 mt-1">
               Moveframe: {stripCircuitTags(moveframe.description) || 'No description'}
             </p>
+            {circuitMetadata && (
+              <p className="text-xs text-blue-100 mt-1">
+                📍 {circuitMetadata.sector ? `Sector: ${circuitMetadata.sector}` : 'No sector assigned'}
+              </p>
+            )}
             {isManualMoveframe && mode === 'edit' && (
               <p className="text-xs text-yellow-200 font-semibold mt-1">
                 ⚠️ Manual Movelap - Only summary can be edited

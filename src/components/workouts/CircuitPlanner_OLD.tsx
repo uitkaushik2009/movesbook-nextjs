@@ -55,6 +55,8 @@ interface CircuitPlannerProps {
     pauseSeries?: number;
     executionMode?: 'vertical' | 'horizontal';
     startInTablePhase?: boolean;
+    existingCircuits?: any[]; // Pre-existing circuit data with exercises
+    editingFromMovelap?: boolean; // Flag to indicate editing from movelap click
   };
 }
 
@@ -212,12 +214,21 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
   // INITIALIZATION - 2026-01-21 19:35 UTC
   // Generate initial circuit structure when settings change
   // 2026-01-21 20:15 UTC - Only generate when in table phase
+  // 2026-01-24 - Load existing circuits if provided for edit mode
   // ============================================================================
   useEffect(() => {
     // 2026-01-21 20:15 UTC - Only generate circuits in table phase
     // 2026-01-22 10:15 UTC - Include pause settings in generated circuits
     // 2026-01-22 12:15 UTC - Fixed: Create independent stations for each series
+    // 2026-01-24 - Check for existing circuits first
     if (currentPhase !== 'table') return;
+    
+    // If we have existing circuits from edit mode, use them instead of generating new ones
+    if (initialConfig?.existingCircuits && initialConfig.existingCircuits.length > 0) {
+      console.log('🔄 Loading existing circuits for edit:', initialConfig.existingCircuits);
+      setCircuits(initialConfig.existingCircuits);
+      return;
+    }
     
     const newCircuits: Circuit[] = [];
     
@@ -248,7 +259,7 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
     }
     
     setCircuits(newCircuits);
-  }, [currentPhase, numCircuits, stationsPerCircuit, seriesCount, seriesMode, pauseStations]);
+  }, [currentPhase, numCircuits, stationsPerCircuit, seriesCount, seriesMode, pauseStations, initialConfig?.existingCircuits]);
   
   // ============================================================================
   // HANDLERS - 2026-01-21 19:40 UTC
@@ -2124,7 +2135,7 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
              onClick={handleSave}
              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
            >
-             Add Moveframe
+             {initialConfig?.editingFromMovelap || (initialConfig?.existingCircuits && initialConfig.existingCircuits.length > 0) ? 'Save' : 'Add Moveframe'}
            </button>
            <button
              onClick={handleReloadExercises}

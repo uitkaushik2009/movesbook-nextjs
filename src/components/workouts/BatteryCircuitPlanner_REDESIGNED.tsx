@@ -29,7 +29,26 @@ interface BatteryCircuitPlannerProps {
   day: any;
   onCreateCircuit: (data: any) => void;
   onCancel: () => void;
+  existingMoveframe?: any; // For edit mode
+  startInSecondView?: boolean; // Start directly in circuit grid view
 }
+
+// Helper function to extract circuit data from moveframe notes
+const extractCircuitData = (notes: string | null) => {
+  if (!notes) return null;
+  
+  const circuitDataMatch = notes.match(/\[CIRCUIT_DATA\](.*?)\[\/CIRCUIT_DATA\]/s);
+  if (circuitDataMatch && circuitDataMatch[1]) {
+    try {
+      const circuitData = JSON.parse(circuitDataMatch[1]);
+      return circuitData;
+    } catch (e) {
+      console.error('Failed to parse circuit data:', e);
+      return null;
+    }
+  }
+  return null;
+};
 
 export default function BatteryCircuitPlanner({
   sectionId,
@@ -37,40 +56,79 @@ export default function BatteryCircuitPlanner({
   workout,
   day,
   onCreateCircuit,
-  onCancel
+  onCancel,
+  existingMoveframe,
+  startInSecondView
 }: BatteryCircuitPlannerProps) {
-  const [description, setDescription] = useState('');
+  // Extract existing circuit data if in edit mode
+  const existingCircuitData = existingMoveframe ? extractCircuitData(existingMoveframe.notes) : null;
+  const config = existingCircuitData?.config;
+  
+  const [description, setDescription] = useState(existingMoveframe?.description || '');
   const [showOldCircuitPlanner, setShowOldCircuitPlanner] = useState(false);
   const [timeInstructions, setTimeInstructions] = useState('');
+  const [existingCircuits, setExistingCircuits] = useState(existingCircuitData?.circuits || null);
   
   // Circuit settings - All 9 circuits (A-I)
-  const [circuits, setCircuits] = useState<CircuitExercise[]>([
-    { letter: 'A', name: '', isActive: true },
-    { letter: 'B', name: '', isActive: true },
-    { letter: 'C', name: '', isActive: true },
-    { letter: 'D', name: '', isActive: false },
-    { letter: 'E', name: '', isActive: false },
-    { letter: 'F', name: '', isActive: false },
-    { letter: 'G', name: '', isActive: false },
-    { letter: 'H', name: '', isActive: false },
-    { letter: 'I', name: '', isActive: false }
-  ]);
+  // Initialize from existing data if available
+  const initializeCircuits = () => {
+    const defaultCircuits = [
+      { letter: 'A', name: '', isActive: true },
+      { letter: 'B', name: '', isActive: true },
+      { letter: 'C', name: '', isActive: true },
+      { letter: 'D', name: '', isActive: false },
+      { letter: 'E', name: '', isActive: false },
+      { letter: 'F', name: '', isActive: false },
+      { letter: 'G', name: '', isActive: false },
+      { letter: 'H', name: '', isActive: false },
+      { letter: 'I', name: '', isActive: false }
+    ];
+    
+    if (existingCircuitData?.circuits) {
+      // Map existing circuits data to the circuit list
+      return defaultCircuits.map((circuit, index) => {
+        const existingCircuit = existingCircuitData.circuits.find((c: any) => c.letter === circuit.letter);
+        if (existingCircuit) {
+          return {
+            letter: circuit.letter,
+            name: existingCircuit.name || '',
+            isActive: true
+          };
+        }
+        return {
+          ...circuit,
+          isActive: index < (config?.numCircuits || 3)
+        };
+      });
+    }
+    return defaultCircuits;
+  };
   
-  const [numCircuits, setNumCircuits] = useState(3);
-  const [pauseCircuits, setPauseCircuits] = useState(4); // in minutes
+  const [circuits, setCircuits] = useState<CircuitExercise[]>(initializeCircuits());
+  
+  const [numCircuits, setNumCircuits] = useState(config?.numCircuits || 3);
+  const [pauseCircuits, setPauseCircuits] = useState(
+    config?.pauses?.circuits ? Math.round(config.pauses.circuits / 60) : 4
+  ); // in minutes
   
   // Station settings
-  const [stationsPerCircuit, setStationsPerCircuit] = useState(5);
-  const [pauseStations, setPauseStations] = useState(10); // in seconds
+  const [stationsPerCircuit, setStationsPerCircuit] = useState(config?.stationsPerCircuit || 5);
+  const [pauseStations, setPauseStations] = useState(config?.pauses?.stations || 10); // in seconds
   
   // Series settings
-  const [seriesMode, setSeriesMode] = useState<'series' | 'time'>('series');
-  const [seriesPerCircuit, setSeriesPerCircuit] = useState(2);
-  const [timePerCircuit, setTimePerCircuit] = useState(5); // in minutes
-  const [pauseSeries, setPauseSeries] = useState(2); // in minutes
+  const [seriesMode, setSeriesMode] = useState<'series' | 'time'>(
+    config?.seriesMode === 'time' ? 'time' : 'series'
+  );
+  const [seriesPerCircuit, setSeriesPerCircuit] = useState(config?.seriesCount || 2);
+  const [timePerCircuit, setTimePerCircuit] = useState(config?.seriesTime || 5); // in minutes
+  const [pauseSeries, setPauseSeries] = useState(
+    config?.pauses?.series ? Math.round(config.pauses.series / 60) : 2
+  ); // in minutes
   
   // Execution settings
-  const [executionOrder, setExecutionOrder] = useState<'vertical' | 'horizontal'>('vertical');
+  const [executionOrder, setExecutionOrder] = useState<'vertical' | 'horizontal'>(
+    config?.executionMode || 'vertical'
+  );
   const [executionPauseStations, setExecutionPauseStations] = useState('');
   
   // Execution player state
@@ -109,6 +167,13 @@ export default function BatteryCircuitPlanner({
     
     fetchTimeInstructions();
   }, []);
+  
+  // Auto-navigate to second view if requested (e.g., when editing a movelap)
+  useEffect(() => {
+    if (startInSecondView && existingCircuits) {
+      setShowOldCircuitPlanner(true);
+    }
+  }, [startInSecondView, existingCircuits]);
   
   // Toggle circuit active state
   const toggleCircuit = (index: number) => {
@@ -155,7 +220,9 @@ export default function BatteryCircuitPlanner({
           pauseCircuits,
           pauseSeries,
           executionMode: executionOrder,
-          startInTablePhase: true
+          startInTablePhase: true,
+          existingCircuits: existingCircuits, // Pass existing circuit data for edit mode
+          editingFromMovelap: startInSecondView // Pass flag for renaming button
         }}
         onSave={(data: any) => {
           // Pass the circuit data to the parent component
@@ -618,7 +685,7 @@ export default function BatteryCircuitPlanner({
             disabled={!sectionId}
             className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
           >
-            Create circuit
+            {existingMoveframe ? 'Edit circuit' : 'Create circuit'}
           </button>
         </div>
       </div>

@@ -262,6 +262,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [editingMoveframe, setEditingMoveframe] = useState<Moveframe | null>(null);
   const [editingMovelap, setEditingMovelap] = useState<any>(null);
+  const [editingFromMovelap, setEditingFromMovelap] = useState(false); // Track if editing moveframe was triggered from movelap edit
   
   // ==================== UI STATE ====================
   const [excludeStretchingFromTotals, setExcludeStretchingFromTotals] = useState(false);
@@ -567,30 +568,30 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
     // This movelap is used to store notes/summary for the manual moveframe
     if (moveframeData.manualMode) {
       const distanceValue = parseInt(moveframeData.distance) || 0;
-      movelaps.push({
-        repetitionNumber: 1,
-        distance: distanceValue,
-        speed: null,
-        style: null,
-        pace: null,
-        time: null,
-        reps: null,
-        weight: null,
-        tools: null,
-        r1: null,
-        r2: null,
-        muscularSector: null,
-        exercise: null,
-        restType: null,
-        pause: null,
-        macroFinal: null,
-        alarm: null,
-        sound: null,
+        movelaps.push({
+          repetitionNumber: 1,
+          distance: distanceValue,
+          speed: null,
+          style: null,
+          pace: null,
+          time: null,
+          reps: null,
+          weight: null,
+          tools: null,
+          r1: null,
+          r2: null,
+          muscularSector: null,
+          exercise: null,
+          restType: null,
+          pause: null,
+          macroFinal: null,
+          alarm: null,
+          sound: null,
         notes: null, // This will store the summary when edited
-        status: 'PENDING',
-        isSkipped: false,
-        isDisabled: false
-      });
+          status: 'PENDING',
+          isSkipped: false,
+          isDisabled: false
+        });
       return movelaps;
     }
     
@@ -1595,7 +1596,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       {/* Workout area - full width */}
       <div className="flex-1 flex overflow-hidden">
         {/* Center - main workout area (full width, no sidebars) */}
-        <main className="flex-1 bg-white overflow-y-auto overflow-x-hidden w-full">
+        {/* 2026-01-24 - Removed overflow-x to let table containers handle horizontal scrolling */}
+        <main className="flex-1 bg-white overflow-y-auto w-full">
           <div className="p-2">
 
             {isLoading ? (
@@ -2117,6 +2119,21 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    modalActions.setShowAddMoveframeModal(true);
                  }}
                  onEditMovelap={(movelap, moveframe, workout, day) => {
+                  // Check if this movelap is part of a circuit
+                  const isCircuitMovelap = movelap.notes && typeof movelap.notes === 'string' && 
+                                          movelap.notes.includes('[CIRCUIT_META]');
+                  
+                  if (isCircuitMovelap && moveframe) {
+                    // For circuit movelaps, open the circuit planner's second view
+                    setEditingMoveframe(moveframe);
+                    setActiveDay(day);
+                    setActiveWorkout(workout);
+                    setActiveMoveframe(moveframe);
+                    setMoveframeModalMode('edit');
+                    setEditingFromMovelap(true); // Set flag to indicate editing from movelap
+                    modalActions.setShowAddMoveframeModal(true);
+                  } else {
+                    // For regular movelaps, open the movelap edit modal
                   setEditingMovelap(movelap);
                   setActiveDay(day);
                   setActiveWorkout(workout);
@@ -2125,6 +2142,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                   setMovelapInsertIndex(null); // Clear insert index for edit mode
                   modalActions.setMovelapModalMode('edit');
                   modalActions.setShowAddEditMovelapModal(true);
+                  }
                 }}
                 onAddMovelap={(moveframe, workout, day) => {
                   setActiveMoveframe(moveframe);
@@ -2462,6 +2480,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
          <AddEditMoveframeModal
            isOpen={modals.showAddMoveframeModal}
             onSetInsertIndex={(index) => setMoveframeInsertIndex(index)}
+            editingFromMovelap={editingFromMovelap}
             onClose={() => {
               modalActions.setShowAddMoveframeModal(false);
             setActiveWorkout(null);
@@ -2471,6 +2490,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             setEditingMoveframe(null);
             setMoveframeModalMode('add');
             setMoveframeInsertIndex(null); // Reset insert index
+            setEditingFromMovelap(false); // Reset the flag
             }}
              onSave={async (moveframeData) => {
              console.log(`📤 ${moveframeModalMode === 'edit' ? 'Updating' : 'Creating'} moveframe with data:`, moveframeData);
@@ -2657,7 +2677,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 console.log('  Is null?:', moveframeData.manualInputType === null);
                 console.log('  In requestBody:', requestBody.manualInputType);
                 console.log('  Full moveframeData:', moveframeData);
-                
+               
                 console.log('📤 Creating moveframe with request body:', {
                   ...requestBody,
                   manualMode: moveframeData.manualMode,

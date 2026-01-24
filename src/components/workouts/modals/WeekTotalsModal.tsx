@@ -137,12 +137,12 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               }
             } else {
               // Standard mode: process movelaps
-              mf.movelaps?.forEach((lap: any) => {
-                sportData.distance += parseInt(lap.distance) || 0;
+            mf.movelaps?.forEach((lap: any) => {
+              sportData.distance += parseInt(lap.distance) || 0;
                 // Convert seconds to minutes for time tracking
                 const timeInSeconds = parseFloat(lap.time) || 0;
                 sportData.time += timeInSeconds / 60;
-              });
+            });
             }
           } else {
             // For series-based sports
@@ -309,28 +309,28 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
             }
           } else {
             // Standard mode: process movelaps
-            const hasMacro = mf.macroRest || mf.macroFinal;
-            (mf.movelaps || []).forEach((lap: any) => {
-              if (isDistanceBased) {
-                const distance = parseInt(lap.distance) || 0;
+          const hasMacro = mf.macroRest || mf.macroFinal;
+          (mf.movelaps || []).forEach((lap: any) => {
+            if (isDistanceBased) {
+              const distance = parseInt(lap.distance) || 0;
                 const timeInSeconds = parseFloat(lap.time) || 0;
                 const durationMinutes = timeInSeconds / 60; // Convert seconds to minutes
-                
-                currentTotals.distance += distance;
+              
+              currentTotals.distance += distance;
                 currentTotals.durationMinutes += durationMinutes;
-                totalDistance += distance;
+              totalDistance += distance;
                 totalDuration += durationMinutes;
-              } else {
-                // For series-based sports, count reps/series (Rip\Series)
-                // Exclude movelaps where reps=1 AND pause=0 (unless it's a macro)
-                const reps = parseInt(lap.reps) || 1;
-                const pause = parseFloat(lap.pause) || 0;
-                
-                if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
-                  currentTotals.totalSeries += 1;
-                }
+            } else {
+              // For series-based sports, count reps/series (Rip\Series)
+              // Exclude movelaps where reps=1 AND pause=0 (unless it's a macro)
+              const reps = parseInt(lap.reps) || 1;
+              const pause = parseFloat(lap.pause) || 0;
+              
+              if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
+                currentTotals.totalSeries += 1;
               }
-            });
+            }
+          });
           }
 
           sportMap.set(sport, currentTotals);
@@ -452,28 +452,28 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               }
             } else {
               // Standard mode: process movelaps
-              if (!mf.movelaps) return;
+            if (!mf.movelaps) return;
 
               const hasMacro = mf.macroRest || mf.macroFinal;
-              mf.movelaps.forEach((lap: any) => {
-                if (isDistanceBased) {
-                  const distance = parseFloat(lap.distance) || 0;
+            mf.movelaps.forEach((lap: any) => {
+              if (isDistanceBased) {
+                const distance = parseFloat(lap.distance) || 0;
                   const timeInSeconds = parseFloat(lap.time) || 0;
                   const durationMinutes = timeInSeconds / 60; // Convert seconds to minutes
 
-                  currentTotals.distance += distance;
+                currentTotals.distance += distance;
                   currentTotals.durationMinutes += durationMinutes;
-                  totalDistanceSum += distance;
+                totalDistanceSum += distance;
                   totalDurationSum += durationMinutes;
-                } else {
-                  const reps = parseInt(lap.reps) || 1;
-                  const pause = parseFloat(lap.pause) || 0;
+              } else {
+                const reps = parseInt(lap.reps) || 1;
+                const pause = parseFloat(lap.pause) || 0;
 
-                  if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
-                    currentTotals.totalSeries += 1;
-                  }
+                if (hasMacro || reps > 1 || (reps === 1 && pause > 0)) {
+                  currentTotals.totalSeries += 1;
                 }
-              });
+              }
+            });
             }
           });
         });
@@ -720,12 +720,12 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               }
             } else {
               // Standard mode: process movelaps
-              mf.movelaps?.forEach((lap: any) => {
-                sportData.distance += parseInt(lap.distance) || 0;
+            mf.movelaps?.forEach((lap: any) => {
+              sportData.distance += parseInt(lap.distance) || 0;
                 // Convert seconds to minutes for time tracking
                 const timeInSeconds = parseFloat(lap.time) || 0;
                 sportData.time += timeInSeconds / 60;
-              });
+            });
             }
           } else {
             // For series-based sports
@@ -734,12 +734,12 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               sportData.series += mf.repetitions || 0;
             } else {
               // Standard mode: count total reps/series
-              sportData.series += mf.movelaps?.length || 0;
-              mf.movelaps?.forEach((lap: any) => {
+            sportData.series += mf.movelaps?.length || 0;
+            mf.movelaps?.forEach((lap: any) => {
                 // Convert seconds to minutes for time tracking
                 const timeInSeconds = parseFloat(lap.time) || 0;
                 sportData.time += timeInSeconds / 60;
-              });
+            });
             }
           }
         });
