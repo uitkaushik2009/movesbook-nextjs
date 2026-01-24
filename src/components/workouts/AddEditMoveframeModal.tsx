@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Star, ChevronsDown } from 'lucide-react';
-import { SPORTS_LIST, MACRO_FINAL_OPTIONS, MUSCULAR_SECTORS, getPaceLabel, shouldShowPaceField, getSportConfig, getPauseOptions, REST_TYPES, REPS_TYPES, hasRepsTypeSelection, getSportDisplayName, DISTANCE_BASED_SPORTS, sportNeedsExerciseName, AEROBIC_SPORTS } from '@/constants/moveframe.constants';
+import { SPORTS_LIST, MACRO_FINAL_OPTIONS, MUSCULAR_SECTORS, getPaceLabel, shouldShowPaceField, getSportConfig, getPauseOptions, REST_TYPES, REPS_TYPES, hasRepsTypeSelection, getSportDisplayName, DISTANCE_BASED_SPORTS, sportNeedsExerciseName, AEROBIC_SPORTS, isSportSectionB } from '@/constants/moveframe.constants';
 import { useMoveframeForm } from '@/hooks/useMoveframeForm';
 import { getSportIcon } from '@/utils/sportIcons';
 import { useFavoriteSports } from '@/hooks/useFavoriteSports';
@@ -1285,21 +1285,21 @@ export default function AddEditMoveframeModal({
               <button
                 type="button"
                 onClick={(e) => {
-                  if (mode === 'edit') {
+                  if (mode === 'edit' || !isSportSectionB(sport)) {
                     e.preventDefault();
                     e.stopPropagation();
                     return;
                   }
                   setType('BATTERY');
                 }}
-                disabled={mode === 'edit'}
+                disabled={mode === 'edit' || !isSportSectionB(sport)}
                 className={`flex-1 px-4 py-2 text-sm font-medium rounded border-2 transition-colors ${
                   type === 'BATTERY'
                     ? 'bg-blue-50 border-blue-500 text-blue-700'
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                } ${mode === 'edit' ? 'cursor-not-allowed opacity-50 pointer-events-none' : ''}`}
+                } ${(mode === 'edit' || !isSportSectionB(sport)) ? 'cursor-not-allowed opacity-50 pointer-events-none' : ''}`}
               >
-                🔋 Battery
+                ⚡ Mixed test\Circuits
               </button>
               <button
                 type="button"
@@ -1323,11 +1323,11 @@ export default function AddEditMoveframeModal({
             </div>
           </div>
 
-          {/* Battery Submenu Selection - 2026-01-22 14:30 UTC */}
+          {/* Mixed test\Circuits Submenu Selection - 2026-01-22 14:30 UTC */}
           {type === 'BATTERY' && (
             <div className="mb-3">
               <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                Battery Mode
+                Mixed test\Circuits Mode
               </label>
               <div className="grid grid-cols-3 gap-2">
                 <button

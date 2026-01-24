@@ -708,6 +708,132 @@ export const SPORTS_LIST = [
   'CYCLING_TOURISM'
 ] as const;
 
+// ============================================
+// SPORT CATEGORIZATION BY TYPE
+// ============================================
+
+/**
+ * SPORT SECTION A: AEROBIC SPORTS
+ * These sports need a moveframe input form dedicated to aerobic activities
+ * Form examples: SWIM, BIKE, RUNNING, MTB, spinning, hiking, walking, rowing, canoeing, skate, ski, snowboard
+ */
+export const SPORT_SECTION_A_AEROBIC = [
+  'SWIM',
+  'BIKE',
+  'MTB',
+  'SPINNING',
+  'RUN',
+  'ROWING',
+  'CANOEING',
+  'CANOE',
+  'KAYAK',
+  'SKATE',
+  'ICE_SKATING',
+  'SKI',
+  'SNOWBOARD',
+  'CROSS_COUNTRY_SKIING',
+  'DOWNHILL_SKIING',
+  'SKI_SLALOM',
+  'SKI_JUMP',
+  'HIKING',
+  'WALKING',
+  'TREKKING',
+  'CYCLING_TOURISM',
+  'CYCLOCROSS',
+  'MOUNTAIN_BIKE',
+  'TRIATHLON',
+  'TRACK_FIELD'
+] as const;
+
+/**
+ * SPORT SECTION B: NOT AEROBIC SPORTS (with exercise catalogs)
+ * These sports need a moveframe input form dedicated to non-aerobic activities
+ * Each sport has a dedicated catalog of exercises
+ * Mixed test\Circuits button is ONLY available for these sports
+ */
+export const SPORT_SECTION_B_NON_AEROBIC_CATALOG = [
+  'BODY_BUILDING',
+  'STRETCHING',
+  'PILATES',
+  'YOGA',
+  'CALISTENIC',
+  'CROSSFIT',
+  'SPARTAN',
+  'GYMNASTIC',
+  'ARTISTIC_GYMNASTICS',
+  'RHYTHMIC_GYMNASTICS',
+  'POWERLIFTING',
+  'LIFTING',
+  'DIPS',
+  'JUMPS',
+  'THROWS',
+  'SHOT_PUT'
+] as const;
+
+/**
+ * SPORT SECTION C: TECHNICAL NOT AEROBIC SPORTS (manual entry, no catalogs)
+ * These sports need a moveframe input form dedicated to technical activities
+ * Exercises must be typed manually (no dedicated catalogs)
+ */
+export const SPORT_SECTION_C_TECHNICAL = [
+  'SOCCER',
+  'BASKETBALL',
+  'VOLLEYBALL',
+  'TENNIS',
+  'GOLF',
+  'BOXING',
+  'MARTIAL_ARTS',
+  'CLIMBING',
+  'MOUNTAIN_CLIMBING',
+  'DANCING',
+  'DANCE',
+  'CLASSIC_DANCE',
+  'MODERN_DANCE',
+  'TANGO',
+  'AMERICAN_FOOTBALL',
+  'ARCHERY',
+  'ATHLETICS',
+  'BADMINTON',
+  'BASEBALL',
+  'BILLIARDS',
+  'BOATING',
+  'BOWLING',
+  'CRICKET',
+  'FENCING',
+  'FIELD_HOCKEY',
+  'FISHING',
+  'FREESTYLE_WRESTLING',
+  'HANDBALL',
+  'HANG_GLIDING',
+  'HORSE_RACING',
+  'ICE_HOCKEY',
+  'KICKBOXING',
+  'PING_PONG',
+  'POLO',
+  'RACQUETBALL',
+  'RUGBY',
+  'SAILING',
+  'SKATEBOARD',
+  'SNORKELING',
+  'SURFING',
+  'WATER_POLO',
+  'WATER_SKI',
+  'WINDSURF',
+  'DIVING',
+  'MOTORING',
+  'TECHNICAL_MOVES',
+  'FREE_MOVES',
+  'TECHNICAL'
+] as const;
+
+/**
+ * Helper function to check if a sport belongs to Section B (non-aerobic with catalog)
+ * Only Section B sports can use the Mixed test\Circuits feature
+ */
+export const isSportSectionB = (sport: string): boolean => {
+  return SPORT_SECTION_B_NON_AEROBIC_CATALOG.includes(sport as any);
+};
+
 // Sports that use distance/duration tracking (all others use series/repetitions)
 export const DISTANCE_BASED_SPORTS = [
   'SWIM',
