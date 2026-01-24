@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { AlertCircle, RefreshCw, Settings, Clock, Play } from 'lucide-react';
 import Image from 'next/image';
 import CircuitExecutionPlayer from './CircuitExecutionPlayer';
+import CircuitPlanner_OLD from './CircuitPlanner_OLD';
 
 interface CircuitExercise {
   letter: string;
@@ -38,8 +39,8 @@ export default function BatteryCircuitPlanner({
   onCreateCircuit,
   onCancel
 }: BatteryCircuitPlannerProps) {
-  const [plannerMode, setPlannerMode] = useState<'circuits' | 'fast' | 'ai'>('circuits');
   const [description, setDescription] = useState('');
+  const [showOldCircuitPlanner, setShowOldCircuitPlanner] = useState(false);
   
   // Circuit settings - All 9 circuits (A-I)
   const [circuits, setCircuits] = useState<CircuitExercise[]>([
@@ -71,10 +72,6 @@ export default function BatteryCircuitPlanner({
   const [executionOrder, setExecutionOrder] = useState<'vertical' | 'horizontal'>('vertical');
   const [executionPauseStations, setExecutionPauseStations] = useState('');
   
-  // Template state
-  const [showTemplate, setShowTemplate] = useState(false);
-  const [circuitRows, setCircuitRows] = useState<CircuitRow[]>([]);
-  
   // Execution player state
   const [showExecutionPlayer, setShowExecutionPlayer] = useState(false);
   
@@ -105,300 +102,58 @@ export default function BatteryCircuitPlanner({
       return;
     }
     
-    const rows: CircuitRow[] = [];
-    const activeCircuits = circuits.filter(c => c.isActive);
-    
-    for (let c = 0; c < activeCircuits.length; c++) {
-      const circuit = activeCircuits[c];
-      for (let s = 1; s <= seriesPerCircuit; s++) {
-        for (let st = 1; st <= stationsPerCircuit; st++) {
-          rows.push({
-            circuit: circuit.letter,
-            series: s,
-            station: st,
-            sector: '',
-            exercise: '',
-            rip: '',
-            pause: ''
-          });
-        }
-      }
-    }
-    
-    setCircuitRows(rows);
-    setShowTemplate(true);
-  };
-  
-  const handleBackToSettings = () => {
-    setShowTemplate(false);
-  };
-  
-  const handleSaveCircuit = () => {
-    // Generate movelaps from circuit configuration
-    const activeCircuits = circuits.filter(c => c.isActive);
-    const movelaps: any[] = [];
-    
-    // Generate movelaps based on execution order
-    if (executionOrder === 'vertical') {
-      // Vertical execution: 1 series per station across all circuits, then repeat for each series
-      for (let seriesIdx = 0; seriesIdx < seriesPerCircuit; seriesIdx++) {
-        for (const circuit of activeCircuits) {
-          for (let stationIdx = 0; stationIdx < stationsPerCircuit; stationIdx++) {
-            const row = circuitRows.find(r => 
-              r.circuit === circuit.letter && 
-              r.station === stationIdx + 1 &&
-              r.series === seriesIdx + 1
-            );
-            
-            movelaps.push({
-              letter: `${circuit.letter}${seriesIdx + 1}`,
-              sport: sport || 'BODY_BUILDING',
-              distance: 0,
-              time: 0,
-              hr: 0,
-              workType: 'NONE',
-              notes: row ? `${row.sector} - ${row.exercise}` : `Circuit ${circuit.letter} - Station ${stationIdx + 1}`,
-              sector: row?.sector || '',
-              exercise: row?.exercise || '',
-              reps: row?.rip || '',
-              pause: stationIdx < stationsPerCircuit - 1 ? pauseStations : (seriesIdx < seriesPerCircuit - 1 ? pauseSeries * 60 : pauseCircuits * 60)
-            });
-          }
-        }
-      }
-    } else {
-      // Horizontal execution: All series for each station before moving to next
-      for (const circuit of activeCircuits) {
-        for (let stationIdx = 0; stationIdx < stationsPerCircuit; stationIdx++) {
-          for (let seriesIdx = 0; seriesIdx < seriesPerCircuit; seriesIdx++) {
-            const row = circuitRows.find(r => 
-              r.circuit === circuit.letter && 
-              r.station === stationIdx + 1 &&
-              r.series === seriesIdx + 1
-            );
-            
-            movelaps.push({
-              letter: `${circuit.letter}${seriesIdx + 1}`,
-              sport: sport || 'BODY_BUILDING',
-              distance: 0,
-              time: 0,
-              hr: 0,
-              workType: 'NONE',
-              notes: row ? `${row.sector} - ${row.exercise}` : `Circuit ${circuit.letter} - Station ${stationIdx + 1}`,
-              sector: row?.sector || '',
-              exercise: row?.exercise || '',
-              reps: row?.rip || '',
-              pause: seriesIdx < seriesPerCircuit - 1 ? pauseSeries * 60 : (stationIdx < stationsPerCircuit - 1 ? pauseStations : pauseCircuits * 60)
-            });
-          }
-        }
-      }
-    }
-    
-    console.log('✅ Generated movelaps from circuit config:', movelaps);
-    
-    onCreateCircuit({ 
-      circuits: activeCircuits, 
-      rows: circuitRows, 
-      description,
-      movelaps, // Include generated movelaps
-      settings: {
-        numCircuits,
-        pauseCircuits,
-        stationsPerCircuit,
-        pauseStations,
-        seriesMode,
-        seriesPerCircuit,
-        timePerCircuit,
-        pauseSeries,
-        executionOrder,
-        executionPauseStations
-      }
-    });
-  };
-  
-  // Generate preview text
-  const getPreviewText = () => {
-    const activeCircuits = circuits.filter(c => c.isActive);
-    const orderText = executionOrder === 'vertical' ? 'vertically (1 serie for station)' : 'horizontally (all series for station)';
-    const seriesText = seriesMode === 'series' 
-      ? `${seriesPerCircuit} series each` 
-      : `continuous for ${timePerCircuit} minutes`;
-    
-    return `${activeCircuits.length} circuits of ${seriesText}, with ${stationsPerCircuit} stations per circuit
-Pause\\circuits: ${pauseCircuits}' - Pause\\stations: ${pauseStations}" - Pause\\series: ${pauseSeries}' - Execute ${orderText}`;
-  };
-  
-  // Prepare circuit data for execution player
-  const prepareCircuitsForExecution = () => {
-    const activeCircuits = circuits.filter(c => c.isActive);
-    return activeCircuits.map(circuit => ({
-      letter: circuit.letter,
-      name: circuit.name,
-      isActive: true,
-      stations: Array.from({ length: stationsPerCircuit }, (_, i) => {
-        const row = circuitRows.find(r => r.circuit === circuit.letter && r.station === i + 1);
-        return {
-          stationNumber: i + 1,
-          sector: row?.sector || '',
-          exercise: row?.exercise || `Station ${i + 1}`,
-          reps: row?.rip || '10 reps',
-          pause: pauseStations
-        };
-      })
-    }));
+    // Pass current configuration to the old circuit planner
+    setShowOldCircuitPlanner(true);
   };
 
-  const executionSettings = {
-    numCircuits,
-    pauseCircuits: pauseCircuits * 60, // Convert to seconds
-    stationsPerCircuit,
-    pauseStations,
-    seriesMode,
-    seriesPerCircuit,
-    timePerCircuit: timePerCircuit * 60, // Convert to seconds
-    pauseSeries: pauseSeries * 60, // Convert to seconds
-    executionOrder
-  };
-
-  if (showTemplate) {
+  // If showing old circuit planner, render it instead of the first view
+  if (showOldCircuitPlanner) {
     return (
-      <>
-        <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-300 rounded-lg p-3">
-            <h3 className="font-semibold text-sm text-gray-900 mb-2">PREVIEW:</h3>
-            <pre className="text-sm text-gray-800 whitespace-pre-wrap">{getPreviewText()}</pre>
-          </div>
-        
-        <div className="flex gap-2">
-          <button 
-            type="button" 
-            onClick={() => setShowExecutionPlayer(true)}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg text-sm font-bold hover:bg-green-700 flex items-center gap-2 shadow-md"
-          >
-            <Play className="w-4 h-4" />
-            Start Workout
-          </button>
-          <button type="button" className="px-4 py-2 bg-gray-700 text-white rounded text-sm font-medium hover:bg-gray-800">Add a circuit</button>
-          <button type="button" className="px-4 py-2 bg-gray-700 text-white rounded text-sm font-medium hover:bg-gray-800">Add a station</button>
-          <button type="button" className="px-4 py-2 bg-gray-700 text-white rounded text-sm font-medium hover:bg-gray-800">Add serie to a circuit</button>
-          <button type="button" className="px-4 py-2 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700">Remove</button>
-        </div>
-        
-        <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
-          <div className="overflow-x-auto max-h-96 overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100 sticky top-0">
-                <tr>
-                  <th className="px-2 py-2 text-center border-r border-gray-300 w-8"></th>
-                  <th className="px-2 py-2 text-center border-r border-gray-300 font-semibold" colSpan={3}>Parameters of work</th>
-                  <th className="px-2 py-2 text-center border-r border-gray-300 font-semibold" colSpan={2}>Exercises</th>
-                  <th className="px-2 py-2 text-center font-semibold" colSpan={2}>Load of work</th>
-                </tr>
-                <tr className="border-t border-gray-300">
-                  <th className="px-2 py-2 text-center border-r border-gray-300 w-8"><button className="w-6 h-6 rounded-full bg-red-500 text-white hover:bg-red-600">×</button></th>
-                  <th className="px-2 py-2 text-center border-r border-gray-300 bg-gray-50">Circ</th>
-                  <th className="px-2 py-2 text-center border-r border-gray-300 bg-gray-50">Series</th>
-                  <th className="px-2 py-2 text-center border-r border-gray-300 bg-gray-50">Stations</th>
-                  <th className="px-2 py-2 text-center border-r border-gray-300 bg-gray-50">Sectors</th>
-                  <th className="px-2 py-2 text-center border-r border-gray-300 bg-gray-50">Exercise</th>
-                  <th className="px-2 py-2 text-center border-r border-gray-300 bg-gray-50">Rip</th>
-                  <th className="px-2 py-2 text-center bg-gray-50">Pause</th>
-                </tr>
-              </thead>
-              <tbody>
-                {circuitRows.map((row, index) => (
-                  <tr key={index} className="border-t border-gray-200 hover:bg-gray-50">
-                    <td className="px-2 py-2 text-center border-r border-gray-200">
-                      {row.series === 1 && row.station === 1 && (<button className="w-6 h-6 rounded-full bg-red-500 text-white hover:bg-red-600 text-xs">×</button>)}
-                    </td>
-                    <td className="px-2 py-2 text-center border-r border-gray-200 font-semibold">{row.circuit}</td>
-                    <td className="px-2 py-2 text-center border-r border-gray-200">{row.series}</td>
-                    <td className="px-2 py-2 text-center border-r border-gray-200">{row.station}</td>
-                    <td className="px-2 py-2 border-r border-gray-200">
-                      <input type="text" value={row.sector} onChange={(e) => {
-                        const newRows = [...circuitRows];
-                        newRows[index].sector = e.target.value;
-                        setCircuitRows(newRows);
-                      }} className="w-full px-2 py-1 border border-gray-300 rounded text-sm" />
-                    </td>
-                    <td className="px-2 py-2 border-r border-gray-200">
-                      <input type="text" value={row.exercise} onChange={(e) => {
-                        const newRows = [...circuitRows];
-                        newRows[index].exercise = e.target.value;
-                        setCircuitRows(newRows);
-                      }} className="w-full px-2 py-1 bg-green-100 border border-green-300 rounded text-sm" placeholder="Exercise..." />
-                    </td>
-                    <td className="px-2 py-2 border-r border-gray-200">
-                      <select value={row.rip} onChange={(e) => {
-                        const newRows = [...circuitRows];
-                        newRows[index].rip = e.target.value;
-                        setCircuitRows(newRows);
-                      }} className="w-full px-2 py-1 border border-gray-300 rounded text-sm">
-                        <option value=""></option>
-                        <option value="reps">Reps</option>
-                        <option value="time">Time</option>
-                      </select>
-                    </td>
-                    <td className="px-2 py-2">
-                      <select value={row.pause} onChange={(e) => {
-                        const newRows = [...circuitRows];
-                        newRows[index].pause = e.target.value;
-                        setCircuitRows(newRows);
-                      }} className="w-full px-2 py-1 border border-gray-300 rounded text-sm">
-                        <option value=""></option>
-                        <option value="set">Set time</option>
-                        <option value="restart">Restart time</option>
-                      </select>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        
-          <div className="flex items-center justify-between pt-4 border-t">
-            <button type="button" onClick={handleBackToSettings} className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors font-semibold">Back</button>
-            <div className="flex gap-3">
-              <button type="button" onClick={handleSaveCircuit} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold">Add Moveframe</button>
-              <button type="button" className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"><RefreshCw className="w-4 h-4" />Reload exercises</button>
-              <button type="button" className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"><Settings className="w-4 h-4" />Preferences</button>
-            </div>
-          </div>
-        </div>
-
-        {/* Circuit Execution Player */}
-        {showExecutionPlayer && (
-          <CircuitExecutionPlayer
-            circuits={prepareCircuitsForExecution()}
-            settings={executionSettings}
-            onComplete={() => {
-              setShowExecutionPlayer(false);
-              alert('Workout completed! Great job! 🎉');
-            }}
-            onClose={() => setShowExecutionPlayer(false)}
-          />
-        )}
-      </>
+      <CircuitPlanner_OLD
+        sport={sport}
+        initialConfig={{
+          numCircuits,
+          stationsPerCircuit,
+          seriesMode: seriesMode === 'series' ? 'count' : 'time',
+          seriesCount: seriesPerCircuit,
+          pauseStations,
+          pauseCircuits,
+          pauseSeries,
+          executionMode: executionOrder,
+          startInTablePhase: true
+        }}
+        onSave={(data: any) => {
+          // Pass the circuit data to the parent component
+          onCreateCircuit({
+            ...data,
+            description,
+            settings: {
+              numCircuits,
+              pauseCircuits,
+              stationsPerCircuit,
+              pauseStations,
+              seriesMode,
+              seriesPerCircuit,
+              timePerCircuit,
+              pauseSeries,
+              executionOrder,
+              executionPauseStations
+            }
+          });
+          setShowOldCircuitPlanner(false);
+        }}
+        onCancel={() => setShowOldCircuitPlanner(false)}
+      />
     );
   }
-  
+
   return (
     <div className="space-y-4">
-      {/* Planner Mode Selection */}
-      <div className="flex gap-2">
-        <button type="button" onClick={() => setPlannerMode('circuits')} className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg border-2 transition-colors ${plannerMode === 'circuits' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'}`}>Circuits planner</button>
-        <button type="button" onClick={() => setPlannerMode('fast')} className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg border-2 transition-colors ${plannerMode === 'fast' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'}`}>Fast planner of Moveframes</button>
-        <button type="button" onClick={() => setPlannerMode('ai')} className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg border-2 transition-colors ${plannerMode === 'ai' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'}`}>Plan of Moveframes with AI</button>
+      {/* Warning Message */}
+      <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 flex items-start gap-2">
+        <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-yellow-800">⚠️ Here you can create sequences of exercises to be performed in circuits to be repeated</p>
       </div>
-      
-      {plannerMode === 'circuits' && (
-        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 flex items-start gap-2">
-          <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-yellow-800">⚠️ Here you can create sequences of exercises to be performed in circuits to be repeated</p>
-        </div>
-      )}
       
       {/* Descriptions & Instructions */}
       <div>
@@ -412,9 +167,8 @@ Pause\\circuits: ${pauseCircuits}' - Pause\\stations: ${pauseStations}" - Pause\
         />
       </div>
       
-      {plannerMode === 'circuits' && (
-        <div className="space-y-4">
-          {/* ROW 1: Circuit Letters (A-I) with No. Circuits and Pause\circuits */}
+      <div className="space-y-4">
+        {/* ROW 1: Circuit Letters (A-I) with No. Circuits and Pause\circuits */}
           <div className="grid grid-cols-2 gap-4">
             {/* Left: Circuit Letter Buttons WITHOUT pause indicators */}
             <div className="p-4 bg-gray-50 border-2 border-gray-300 rounded-lg">
@@ -807,19 +561,6 @@ Pause\\circuits: ${pauseCircuits}' - Pause\\stations: ${pauseStations}" - Pause\
             </div>
           </div>
         </div>
-      )}
-      
-      {plannerMode === 'fast' && (
-        <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
-          <p className="text-sm text-blue-800">Fast planner of Moveframes - Coming soon</p>
-        </div>
-      )}
-      
-      {plannerMode === 'ai' && (
-        <div className="bg-purple-50 border border-purple-300 rounded-lg p-4">
-          <p className="text-sm text-purple-800">Plan of Moveframes with AI - Coming soon</p>
-        </div>
-      )}
       
       <div className="flex items-center justify-between pt-4 border-t">
         <button type="button" onClick={onCancel} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancel</button>
@@ -828,7 +569,7 @@ Pause\\circuits: ${pauseCircuits}' - Pause\\stations: ${pauseStations}" - Pause\
           <button 
             type="button" 
             onClick={generateCircuitTemplate} 
-            disabled={!sectionId || plannerMode !== 'circuits'}
+            disabled={!sectionId}
             className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
           >
             Create circuit
