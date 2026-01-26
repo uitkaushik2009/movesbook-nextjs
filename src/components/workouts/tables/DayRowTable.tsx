@@ -252,10 +252,10 @@ export default function DayRowTable({
         {dayOfWeek === 0 ? 7 : dayOfWeek}
       </td>
 
-      {/* Dayname - Only for non-3-weeks sections */}
-      {activeSection !== 'A' && activeSection !== 'B' && activeSection !== 'C' && (
+      {/* Dayname - Show for sections B, C, and D (not A which is template mode) */}
+      {activeSection !== 'A' && (
         <td 
-          className="border border-gray-200 px-2 py-2 text-xs font-bold cursor-pointer hover:bg-blue-100 sticky-col-6 w-[80px] min-w-[80px]"
+          className="border border-gray-200 px-2 py-2 text-xs font-bold cursor-pointer hover:bg-blue-100 sticky-col-6 w-[120px] min-w-[120px]"
           style={{ backgroundColor: bgStyle }}
           onClick={(e) => {
             e.stopPropagation(); // Prevent row click
@@ -263,9 +263,14 @@ export default function DayRowTable({
           }}
           title="Click to collapse/expand day only"
         >
-          <div className="flex items-center justify-center gap-1">
-            <span>{isExpanded ? '▼' : '▶'}</span>
-            <span>{dayName}</span>
+          <div className="flex flex-col items-center justify-center gap-0.5">
+            <div className="flex items-center gap-1">
+              <span>{isExpanded ? '▼' : '▶'}</span>
+              <span>{dayName}</span>
+            </div>
+            <span className="text-[10px] text-gray-600">
+              {dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
           </div>
         </td>
       )}
@@ -273,19 +278,19 @@ export default function DayRowTable({
       {/* Match Done (Workout Completion Status) - For Section B and C */}
       {(activeSection === 'B' || activeSection === 'C') && (
         <td 
-          className="border border-gray-200 px-1 py-2 text-center sticky-col-6 w-[60px] min-w-[60px]"
+          className="border border-gray-200 px-1 py-2 text-center sticky-col-7 w-[60px] min-w-[60px]"
           style={{ 
             backgroundColor: bgStyle,
             color: rowTextColor
           }}
         >
-          <input
-            type="checkbox"
-            checked={hasWorkouts}
-            readOnly
-            className="w-4 h-4"
-            title={hasWorkouts ? 'Workouts planned' : 'No workouts'}
-          />
+          <div className="flex items-center justify-center">
+            <div
+              className="w-6 h-6 rounded-full border border-gray-400 flex-shrink-0"
+              style={{ backgroundColor: hasWorkouts ? '#10B981' : '#D1D5DB' }}
+              title={hasWorkouts ? 'Workouts planned' : 'No workouts'}
+            />
+          </div>
         </td>
       )}
 

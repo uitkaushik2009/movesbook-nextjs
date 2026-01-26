@@ -1170,7 +1170,7 @@ export default function WorkoutTable({
         
       {/* MOVEFRAMES SECTION - Level 2: Indented from workout table */}
       {isExpanded && showMoveframes !== false && (workout.moveframes || []).length > 0 && (
-        <div className="ml-8">
+        <div className="ml-8" style={{ maxWidth: 'calc(100vw - 100px)', overflow: 'hidden' }}>
           <MoveframesSection
             moveframes={workout.moveframes}
             workout={workout}

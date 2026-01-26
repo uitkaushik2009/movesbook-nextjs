@@ -154,14 +154,14 @@ export default function BatteryCircuitPlanner({
               setTimeInstructions(text);
             } else {
               // Set default English text if translation doesn't exist yet
-              setTimeInstructions('If the series are set in minutes therefore the athlete will repeat all the stations continuosly for the time set. And once finished the time, after the Pause among the series, he will start again with the next serie.');
+              setTimeInstructions('If the series are set in minutes therefore the athlete will repeat all the stations continuosly for the time set. And once finished the time, after the Pause at the end, he will start again with the next serie.');
             }
           }
         }
       } catch (error) {
         console.error('Error fetching time instructions:', error);
         // Use default English text on error
-        setTimeInstructions('If the series are set in minutes therefore the athlete will repeat all the stations continuosly for the time set. And once finished the time, after the Pause among the series, he will start again with the next serie.');
+        setTimeInstructions('If the series are set in minutes therefore the athlete will repeat all the stations continuosly for the time set. And once finished the time, after the Pause at the end, he will start again with the next serie.');
       }
     };
     
@@ -216,6 +216,7 @@ export default function BatteryCircuitPlanner({
           stationsPerCircuit,
           seriesMode: seriesMode === 'series' ? 'count' : 'time',
           seriesCount: seriesPerCircuit,
+          seriesTime: timePerCircuit,
           pauseStations,
           pauseCircuits,
           pauseSeries,
@@ -325,10 +326,8 @@ export default function BatteryCircuitPlanner({
                     </button>
                     {/* Timer icon below active circuits */}
                     {circuit.isActive && (
-                      <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2">
-                        <div className="w-6 h-6 rounded-full bg-yellow-400 border-2 border-yellow-600 flex items-center justify-center shadow-sm">
-                          <Image src="/timer.png" alt="timer" width={12} height={12} />
-                        </div>
+                      <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
+                        <Image src="/timer.png" alt="timer" width={32} height={32} className="object-contain" />
                       </div>
                     )}
                   </div>
@@ -389,8 +388,8 @@ export default function BatteryCircuitPlanner({
                   <React.Fragment key={i}>
                     <div className="flex-1 h-8 bg-cyan-500 border-2 border-cyan-700 rounded-md shadow-sm" />
                     {i < stationsPerCircuit - 1 && (
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-400 border-2 border-yellow-600 flex items-center justify-center shadow-md">
-                        <Image src="/timer.png" alt="timer" width={16} height={16} />
+                      <div className="flex-shrink-0">
+                        <Image src="/timer.png" alt="timer" width={32} height={32} className="object-contain" />
                       </div>
                     )}
                   </React.Fragment>
@@ -529,19 +528,22 @@ export default function BatteryCircuitPlanner({
                     </div>
                     
                     {/* Right side: WHITE vertical bar with RED ARROWS */}
-                    <div className="relative w-10 bg-white border-2 border-gray-400 rounded flex flex-col justify-end items-center py-2">
-                      {/* Yellow circle at bottom WITH timer icon */}
-                      <div className="relative">
-                        <div className="w-7 h-7 rounded-full bg-yellow-400 border-2 border-yellow-600 shadow-sm flex items-center justify-center">
-                          <Image src="/timer.png" alt="timer" width={14} height={14} />
-                        </div>
+                    <div className="relative w-10 bg-white border-2 border-gray-400 rounded flex flex-col justify-between items-center py-2">
+                      {/* Display pauseSeries value at top */}
+                      <div className="text-xs font-bold text-blue-700 mt-1">
+                        {pauseSeries}'
+                      </div>
+                      
+                      {/* Timer icon at bottom */}
+                      <div className="relative mb-1">
+                        <Image src="/timer.png" alt="timer" width={32} height={32} className="object-contain" />
                       </div>
                       
                       {/* Red arrows pointing DOWN on the right outline */}
                       <div className="absolute right-0 top-8 w-4 h-4 flex items-center justify-center transform translate-x-1/2">
                         <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-600" />
                       </div>
-                      <div className="absolute right-0 bottom-8 w-4 h-4 flex items-center justify-center transform translate-x-1/2">
+                      <div className="absolute right-0 bottom-12 w-4 h-4 flex items-center justify-center transform translate-x-1/2">
                         <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-red-600" />
                       </div>
                       
@@ -549,7 +551,7 @@ export default function BatteryCircuitPlanner({
                       <div className="absolute left-0 top-8 w-4 h-4 flex items-center justify-center transform -translate-x-1/2">
                         <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-600" />
                       </div>
-                      <div className="absolute left-0 bottom-8 w-4 h-4 flex items-center justify-center transform -translate-x-1/2">
+                      <div className="absolute left-0 bottom-12 w-4 h-4 flex items-center justify-center transform -translate-x-1/2">
                         <div className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[8px] border-b-red-600" />
                       </div>
                     </div>
@@ -559,7 +561,7 @@ export default function BatteryCircuitPlanner({
               
               <div className="flex items-center justify-end gap-3">
                 <div className="bg-white border border-gray-300 rounded px-3 py-2">
-                  <label className="text-sm font-medium text-gray-700">Pause among series</label>
+                  <label className="text-sm font-medium text-gray-700">Pause at the end</label>
                 </div>
                 <div className="flex items-center gap-2 bg-white border border-gray-300 rounded px-2 py-1">
                   <select 
@@ -580,38 +582,76 @@ export default function BatteryCircuitPlanner({
           
           {/* ROW 4: Execution Order Visualization */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Left: Execution vertically WITHOUT pause indicators */}
-            <div className="p-4 bg-gray-50 border border-gray-300 rounded-lg">
-              <div className="flex items-start gap-3 mb-4">
-                <div className="w-12 h-12 rounded flex items-center justify-center font-bold bg-yellow-400 border-2 border-yellow-600 text-black text-xl shadow-md flex-shrink-0">
-                  A
-                </div>
-                <div className="flex-1 relative">
-                  {/* Vertical execution visualization - simple bars */}
-                  <div className="space-y-1.5">
-                    {[...Array(6)].map((_, i) => (
+            {/* Left: Execution vertically - showing Circuit A and B */}
+            <div className="p-4 bg-white border-2 border-gray-300 rounded-lg">
+              {/* Circuit A with vertical flow */}
+              <div className="mb-4">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded flex items-center justify-center font-bold bg-yellow-400 border-2 border-yellow-600 text-black text-xl shadow-md flex-shrink-0">
+                    A
+                  </div>
+                  <div className="flex-1" style={{display: 'flex', flexDirection: 'column', gap: '32px'}}>
+                    {[...Array(4)].map((_, i) => (
                       <div key={i} className="flex items-center gap-2">
-                        <div className="flex-1 h-4 bg-cyan-400 border-2 border-cyan-600 rounded-sm" />
-                        <span className="text-orange-500 font-bold text-base">→</span>
-                        {/* Red circle next to first arrow or invisible spacer */}
-                        {i === 0 ? (
-                          <div className="w-6 h-6 rounded-full bg-red-500 border-2 border-red-700 shadow-sm ml-1" />
-                        ) : i === 5 ? (
-                          <div className="w-6 h-6 rounded-full bg-green-500 border-2 border-green-700 shadow-sm ml-1" />
-                        ) : (
-                          <div className="w-6 h-6 ml-1" />
-                        )}
+                        <div className="flex-1 h-6 bg-cyan-400 border border-cyan-600 rounded-sm" />
+                        <span className="text-xs text-gray-600 whitespace-nowrap" style={{minWidth: '90px'}}>1serie for station</span>
                       </div>
                     ))}
                   </div>
-                  {/* Vertical line connecting red and green circles */}
-                  <div className="absolute right-3 top-8 bottom-8">
-                    <div className="w-0.5 bg-gray-400 h-full" />
+                  {/* Red circle, narrow line with arrow, green circle */}
+                  <div className="flex flex-col items-center" style={{width: '28px', height: '165px', justifyContent: 'space-between', marginLeft: '32px'}}>
+                    <div className="w-6 h-6 rounded-full bg-red-500 border-2 border-red-700 shadow-sm flex-shrink-0" />
+                    <div style={{flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '4px 0'}}>
+                      <div style={{position: 'relative', width: '20px', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
+                        {/* Vertical red line */}
+                        <div style={{width: '4px', height: '100%', backgroundColor: '#DC2626'}} />
+                        {/* Arrow triangle at bottom */}
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '-2px',
+                          width: 0,
+                          height: 0,
+                          borderLeft: '8px solid transparent',
+                          borderRight: '8px solid transparent',
+                          borderTop: '12px solid #DC2626'
+                        }} />
+                      </div>
+                    </div>
+                    <div className="w-6 h-6 rounded-full bg-green-500 border-2 border-green-700 shadow-sm flex-shrink-0" />
+                  </div>
+                  {/* Yellow vertical box with timer and arrows */}
+                  <div className="relative flex flex-col items-center justify-between bg-yellow-400 border-2 border-yellow-600 rounded-full shadow-md ml-2" style={{width: '48px', height: '165px', padding: '16px 8px'}}>
+                    {/* Left side - two upward arrows */}
+                    <div className="absolute left-0 top-1/4" style={{transform: 'translateX(-8px)'}}>
+                      <div className="flex flex-col gap-6">
+                        <span className="text-red-600 font-bold text-lg">↑</span>
+                        <span className="text-red-600 font-bold text-lg">↑</span>
+                      </div>
+                    </div>
+                    {/* Right side - two downward arrows */}
+                    <div className="absolute right-0 top-1/4" style={{transform: 'translateX(8px)'}}>
+                      <div className="flex flex-col gap-6">
+                        <span className="text-red-600 font-bold text-lg">↓</span>
+                        <span className="text-red-600 font-bold text-lg">↓</span>
+                      </div>
+                    </div>
+                    {/* Timer icon */}
+                    <div className="w-9 h-9 flex items-center justify-center" style={{marginTop: 'auto', marginBottom: 'auto'}}>
+                      <Image src="/timer.png" alt="Timer" width={36} height={36} className="object-contain" />
+                    </div>
                   </div>
                 </div>
               </div>
               
-              <div className="flex items-center gap-6">
+              {/* Circuit B */}
+              <div className="mb-4">
+                <div className="w-12 h-12 rounded flex items-center justify-center font-bold bg-yellow-400 border-2 border-yellow-600 text-black text-xl shadow-md">
+                  B
+                </div>
+              </div>
+              
+              {/* Radio buttons */}
+              <div>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input 
                     type="radio" 
@@ -620,56 +660,93 @@ export default function BatteryCircuitPlanner({
                     className="w-4 h-4 text-blue-600"
                   />
                   <span className="text-sm font-medium text-gray-700">
-                    Execution vertically
-                    <span className="text-xs text-gray-500 ml-1">(1 serie for station)</span>
-                  </span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input 
-                    type="radio" 
-                    checked={executionOrder === 'horizontal'} 
-                    onChange={() => setExecutionOrder('horizontal')} 
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className="text-sm font-medium text-gray-700">
-                    Execution horizontally
-                    <span className="text-xs text-gray-500 ml-1">(all series for station)</span>
+                    Execution vertically <span className="text-gray-500">(1 serie for station)</span>
                   </span>
                 </label>
               </div>
             </div>
             
-            {/* Right: Horizontal execution with A, B, C circuits */}
-            <div className="p-4 bg-gray-50 border border-gray-300 rounded-lg">
-              <div className="space-y-2 mb-4">
-                {['A', 'B', 'C'].map((letter) => (
-                  <div key={letter} className="flex items-center gap-1">
-                    <div className="w-10 h-10 rounded flex items-center justify-center font-bold bg-yellow-400 border-2 border-yellow-600 text-black text-base shadow-md flex-shrink-0">
-                      {letter}
-                    </div>
-                    {[...Array(3)].map((_, j) => (
-                      <React.Fragment key={j}>
-                        <div className="flex-1 h-5 bg-cyan-400 border-2 border-cyan-600 rounded-sm" />
-                        {j < 2 && <span className="text-orange-500 font-bold text-base">→</span>}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                ))}
+            {/* Right: Horizontal execution - showing Circuit A and B with timer */}
+            <div className="p-4 bg-white border-2 border-gray-300 rounded-lg">
+              {/* Title */}
+              <div className="text-center text-sm font-medium text-gray-700 mb-3">
+                All the series for station
               </div>
               
-              <div className="flex items-center justify-end gap-2 mt-4">
-                <label className="text-sm font-medium text-gray-700">Pause\stations</label>
-                <select 
-                  value={executionPauseStations || ''} 
-                  onChange={(e) => setExecutionPauseStations(e.target.value)}
-                  className="w-20 px-2 py-1.5 border border-gray-400 rounded text-center focus:ring-2 focus:ring-blue-500 text-sm font-semibold"
-                >
-                  <option value=""></option>
-                  {[5,10,15,20,25,30,40,50,60].map(n => (
-                    <option key={n} value={n}>{n}"</option>
+              {/* Circuit A with stations */}
+              <div className="mb-3">
+                <div className="flex-1 space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      {/* Circuit A box - only on first row */}
+                      {i === 0 && (
+                        <div className="w-12 h-12 rounded flex items-center justify-center font-bold bg-yellow-400 border-2 border-yellow-600 text-black text-xl shadow-md flex-shrink-0">
+                          A
+                        </div>
+                      )}
+                      {/* Spacer for other rows to align */}
+                      {i > 0 && <div style={{width: '48px'}} />}
+                      
+                      {/* Station with timer and arrows */}
+                      <div className="relative bg-yellow-300 border-2 border-yellow-500 rounded p-1 flex items-center gap-2 flex-1">
+                        {/* Top arrows - 2 right arrows (far apart) */}
+                        <span className="absolute -top-3 left-8 text-red-600 font-bold text-base">→</span>
+                        <span className="absolute -top-3 right-8 text-red-600 font-bold text-base">→</span>
+                        
+                        {/* Cyan bar */}
+                        <div className="flex-1 h-5 bg-cyan-400 border border-cyan-600 rounded" />
+                        
+                        {/* Timer icon */}
+                        <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+                          <Image src="/timer.png" alt="Timer" width={32} height={32} className="object-contain" />
+                        </div>
+                        
+                        {/* Bottom arrows - 2 left arrows (far apart) */}
+                        <span className="absolute -bottom-3 left-8 text-red-600 font-bold text-base">←</span>
+                        <span className="absolute -bottom-3 right-8 text-red-600 font-bold text-base">←</span>
+                      </div>
+                    </div>
                   ))}
-                </select>
-                <button type="button" className="w-6 h-6 rounded-full bg-gray-300 hover:bg-gray-400 flex items-center justify-center text-gray-700 text-lg font-bold">×</button>
+                </div>
+              </div>
+              
+              {/* Circuit B */}
+              <div className="mb-4">
+                <div className="w-12 h-12 rounded flex items-center justify-center font-bold bg-yellow-400 border-2 border-yellow-600 text-black text-xl shadow-md">
+                  B
+                </div>
+              </div>
+              
+              {/* Radio button and Pause\stations selector */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    checked={executionOrder === 'horizontal'} 
+                    onChange={() => setExecutionOrder('horizontal')} 
+                    disabled={seriesMode === 'time'}
+                    className="w-4 h-4 text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <span className={`text-sm font-medium ${seriesMode === 'time' ? 'text-gray-400' : 'text-gray-700'}`}>
+                    Execution horizontally <span className="text-gray-500">(all series for station)</span>
+                  </span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">Pause\stations</label>
+                  <select 
+                    value={executionPauseStations || ''} 
+                    onChange={(e) => setExecutionPauseStations(e.target.value)}
+                    className="w-20 px-2 py-1 border border-gray-400 rounded text-sm"
+                  >
+                    <option value="">20"</option>
+                    {[5,10,15,20,25,30,40,50,60].map(n => (
+                      <option key={n} value={n}>{n}"</option>
+                    ))}
+                  </select>
+                  <button type="button" className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center text-gray-600 hover:bg-gray-300">
+                    ✕
+                  </button>
+                </div>
               </div>
             </div>
           </div>

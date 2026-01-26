@@ -44,7 +44,8 @@ interface MovelapDetailTableProps {
 
 // Editable Notes Field Component - 2026-01-22 12:00 UTC
 // 2026-01-22 15:35 UTC - Added onRefresh callback to trigger parent refresh after save
-function EditableNotesField({ movelap, stripHtmlTags, onRefresh }: { movelap: any; stripHtmlTags: (html: string) => string; onRefresh?: () => void }) {
+// 2026-01-26 - Added isNewlyAdded prop for red text styling
+function EditableNotesField({ movelap, stripHtmlTags, onRefresh, isNewlyAdded }: { movelap: any; stripHtmlTags: (html: string) => string; onRefresh?: () => void; isNewlyAdded?: boolean }) {
   const [notesValue, setNotesValue] = React.useState('');
   const [isSaving, setIsSaving] = React.useState(false);
   
@@ -121,7 +122,7 @@ function EditableNotesField({ movelap, stripHtmlTags, onRefresh }: { movelap: an
         }
       }}
       disabled={isSaving}
-      className="w-full px-1 py-0.5 text-xs border border-gray-200 rounded focus:border-blue-500 focus:outline-none disabled:bg-gray-100"
+      className={`w-full px-1 py-0.5 text-xs border border-gray-200 rounded focus:border-blue-500 focus:outline-none disabled:bg-gray-100 ${isNewlyAdded ? 'text-red-600' : ''}`}
       placeholder="Add notes..."
       title="Edit notes (press Enter to save)"
     />
@@ -497,14 +498,17 @@ function SortableMovelapRow({
       
       {/* Notes - Display with increased width for better readability */}
       {/* 2026-01-24 - Increased width 4x to 1200px for circuit movelap table */}
-      <td className="border border-gray-300 px-2 py-1 text-left text-xs">
+      {/* 2026-01-26 - Added red text styling for newly added movelaps */}
+      <td className={`border border-gray-300 px-2 py-1 text-left text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
         {/* 2026-01-22 11:45 UTC - Made notes field editable */}
         {/* 2026-01-22 12:00 UTC - Fixed to use controlled component with local state */}
         {/* 2026-01-22 15:35 UTC - Added onRefresh callback */}
+        {/* 2026-01-26 - Added isNewlyAdded prop for red text styling */}
         <EditableNotesField
           movelap={movelap}
           stripHtmlTags={stripHtmlTags}
           onRefresh={onRefresh}
+          isNewlyAdded={movelap.isNewlyAdded}
         />
       </td>
       
@@ -1032,8 +1036,8 @@ export default function MovelapDetailTable({
 
         {/* Manual Mode Table - Two separate editable sections */}
         {/* 2026-01-24 - Scrollable wrapper for sticky Options column */}
-        <div className="overflow-x-auto overflow-y-visible relative" style={{ maxWidth: '100%' }}>
-          <table className="text-xs" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '1040px', width: '100%' }}>
+        <div className="overflow-x-auto overflow-y-visible table-scrollbar" style={{ maxWidth: '100%' }}>
+          <table className="text-xs" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '1100px', width: '100%' }}>
           <thead className="bg-gradient-to-r from-purple-200 to-pink-200">
             <tr>
               <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
@@ -1274,8 +1278,8 @@ export default function MovelapDetailTable({
           </div>
 
           {/* 2026-01-24 - Scrollable wrapper for sticky Options column */}
-          <div className="overflow-x-auto overflow-y-visible relative" style={{ maxWidth: '100%' }}>
-            <table className="text-xs bg-white" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '1400px', width: '100%' }}>
+          <div className="overflow-x-auto overflow-y-visible table-scrollbar" style={{ maxWidth: '100%' }}>
+            <table className="text-xs bg-white" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '1600px', width: '100%' }}>
             {/* Render sport-specific column headers */}
             {(() => {
               const sport = moveframe.sport || 'SWIM';

@@ -48,13 +48,24 @@ td.sticky-options-col {
   opacity: 1 !important; /* Ensure full opacity */
 }
 
-/* Hide default scrollbar on table container */
+/* Style scrollbar on table container */
 .table-scrollbar::-webkit-scrollbar {
-  display: none;
+  height: 12px;
+}
+.table-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+.table-scrollbar::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+.table-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 .table-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  scrollbar-width: thin;  /* Firefox - show thin scrollbar */
+  scrollbar-color: #888 #f1f1f1;  /* Firefox */
 }
 
 /* Sticky bottom scrollbar styling */
@@ -134,27 +145,27 @@ th.sticky-header-5 {
   left: 250px !important;
 }
 
-/* Column 6 - Dayname OR Match done (300px = 50 + 50 + 90 + 60 + 50, width: 80px for Dayname, 60px for Match done) */
-/* For 3 weeks plans (A,B,C): Column 6 = Match done at 300px */
-/* For other sections: Column 6 = Dayname at 300px */
+/* Column 6 - Dayname OR Workouts (300px = 50 + 50 + 90 + 60 + 50, width: 120px for Dayname, 80px for Workouts) */
+/* For Section A: Column 6 = Workouts at 300px */
+/* For Sections B, C, D: Column 6 = Dayname at 300px */
 td.sticky-col-6,
 th.sticky-header-6 { 
   left: 300px !important;
 }
 
-/* Column 7 - Match done OR Workouts */
-/* For 3 weeks plans (A,B,C): Column 7 = Workouts at 360px (300 + 60) */
-/* For other sections: Column 7 = Match done at 380px (300 + 80) */
+/* Column 7 - Match done OR Workouts (420px = 300 + 120) */
+/* For Sections B, C: Column 7 = Match done at 420px */
+/* For Section D: Column 7 = Workouts at 420px */
 td.sticky-col-7,
 th.sticky-header-7 { 
-  left: 360px !important; /* For 3 weeks plans */
+  left: 420px !important;
 }
 
-/* Column 8 - Workouts (440px = 50 + 50 + 90 + 60 + 50 + 80 + 60, width: 80px) */
-/* Only used for non-3-weeks sections */
+/* Column 8 - Workouts (480px = 300 + 120 + 60, width: 80px) */
+/* Only used for Sections B and C (Dayname + Match done + Workouts) */
 td.sticky-col-8,
 th.sticky-header-8 { 
-  left: 440px !important;
+  left: 480px !important;
 }
 
 /* Headers - Higher z-index to stay on top */
@@ -181,6 +192,8 @@ td.sticky-options-col {
   right: 0 !important;
   z-index: 999 !important; /* Match left sticky columns z-index */
   box-shadow: -2px 0 5px -2px rgba(0, 0, 0, 0.15) !important; /* Shadow on left edge */
+  background-clip: padding-box !important;
+  opacity: 1 !important; /* Ensure full opacity */
 }
 
 th.sticky-options-header {
@@ -189,6 +202,7 @@ th.sticky-options-header {
   right: 0 !important;
   z-index: 1000 !important; /* Match left sticky headers z-index */
   box-shadow: -2px 0 5px -2px rgba(0, 0, 0, 0.15) !important; /* Shadow on left edge */
+  background-clip: padding-box !important;
   opacity: 1 !important;
 }
 

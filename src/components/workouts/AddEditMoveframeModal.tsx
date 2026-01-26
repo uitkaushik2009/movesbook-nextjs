@@ -272,6 +272,13 @@ export default function AddEditMoveframeModal({
     setManualContent
   } = setters;
 
+  // Auto-switch to 'fast' when BATTERY mode is selected for non-section B sports
+  useEffect(() => {
+    if (type === 'BATTERY' && batterySubmenu === 'circuits' && !isSportSectionB(sport)) {
+      setBatterySubmenu('fast');
+    }
+  }, [type, sport, batterySubmenu]);
+
   // Filter techniques - ONLY for BODY_BUILDING sport
   const availableTechniques = React.useMemo(() => {
     console.log('🔍 Filtering techniques for sport:', sport);
@@ -1287,19 +1294,19 @@ export default function AddEditMoveframeModal({
               <button
                 type="button"
                 onClick={(e) => {
-                  if (mode === 'edit' || !isSportSectionB(sport)) {
+                  if (mode === 'edit') {
                     e.preventDefault();
                     e.stopPropagation();
                     return;
                   }
                   setType('BATTERY');
                 }}
-                disabled={mode === 'edit' || !isSportSectionB(sport)}
+                disabled={mode === 'edit'}
                 className={`flex-1 px-4 py-2 text-sm font-medium rounded border-2 transition-colors ${
                   type === 'BATTERY'
                     ? 'bg-blue-50 border-blue-500 text-blue-700'
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                } ${(mode === 'edit' || !isSportSectionB(sport)) ? 'cursor-not-allowed opacity-50 pointer-events-none' : ''}`}
+                } ${mode === 'edit' ? 'cursor-not-allowed opacity-50 pointer-events-none' : ''}`}
               >
                 ⚡ Mixed test\Circuits
               </button>
@@ -1334,12 +1341,18 @@ export default function AddEditMoveframeModal({
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setBatterySubmenu('circuits')}
+                  onClick={() => {
+                    if (!isSportSectionB(sport)) {
+                      return;
+                    }
+                    setBatterySubmenu('circuits');
+                  }}
+                  disabled={!isSportSectionB(sport)}
                   className={`px-3 py-2 text-sm font-medium rounded border-2 transition-colors ${
                     batterySubmenu === 'circuits'
                       ? 'bg-blue-50 border-blue-500 text-blue-700'
                       : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
+                  } ${!isSportSectionB(sport) ? 'cursor-not-allowed opacity-50' : ''}`}
                 >
                   Circuits planner
                 </button>

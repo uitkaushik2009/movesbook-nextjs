@@ -820,15 +820,16 @@ export default function SortableMoveframeRow({
         return (
            <td 
              key="options" 
-             className="border border-gray-200 px-1 py-1 text-center" 
+             className="border border-gray-200 px-1 py-1 text-center sticky-options-col" 
              style={{
                width: '250px',
-               position: 'relative',
-               overflow: 'visible',
+               minWidth: '250px',
                ...(isAnnotation ? {
                  backgroundColor: annotationBgColor || '#5168c2',
                  color: annotationTextColor || '#ffffff'
-               } : {})
+               } : {
+                 backgroundColor: '#ffffff'
+               })
              }}
            >
             <div className="flex items-center justify-center gap-1 flex-wrap" style={{ position: 'relative', zIndex: 1 }}>
@@ -955,8 +956,8 @@ export default function SortableMoveframeRow({
       {/* Movelaps Detail Table - Level 3: Indented from moveframe table */}
       {isMovelapsExpanded && (
         <tr>
-          <td colSpan={visibleColumns.length} className="border border-gray-200 p-0" style={{ backgroundColor: 'rgb(250, 255, 214)' }}>
-            <div className="pl-8">
+          <td colSpan={visibleColumns.length} className="border border-gray-200 p-0" style={{ backgroundColor: 'rgb(250, 255, 214)', overflow: 'visible' }}>
+            <div className="pl-8" style={{ maxWidth: '100%', overflow: 'hidden' }}>
               <MovelapDetailTable 
                 moveframe={moveframe}
                 onEditMovelap={(movelap) => onEditMovelap?.(movelap, moveframe)}

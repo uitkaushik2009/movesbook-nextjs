@@ -281,7 +281,7 @@ export default function DayTableView({
     weekNumber: 60,     // Week
     dayNumber: 50,      // Day
     matchDone: 60,      // Match done checkbox (for sections B and C)
-    dayname: 80,
+    dayname: 120,       // Dayname & Date (wider to accommodate both)
     workouts: 80,
     icoSport: 100,      // "Ico Sport" column
     distTime: 100,      // "Dist & Time" column
@@ -292,7 +292,7 @@ export default function DayTableView({
   
   // Calculate minimum table width dynamically based on column widths
   // Section A: 6 sticky columns (no Dayname, no Match done)
-  // Section B, C: 7 sticky columns (no Dayname, has Match done)
+  // Section B, C: 8 sticky columns (has Dayname AND Match done)
   // Section D: 7 sticky columns (has Dayname, no Match done)
   const TABLE_MIN_WIDTH = 
     COL_WIDTHS.noWorkouts + 
@@ -301,7 +301,7 @@ export default function DayTableView({
     COL_WIDTHS.weekNumber + 
     COL_WIDTHS.dayNumber + 
     ((activeSection === 'B' || activeSection === 'C') ? COL_WIDTHS.matchDone : 0) + // Match done for sections B and C
-    (activeSection === 'D' ? COL_WIDTHS.dayname : 0) + // Dayname only for Section D
+    (activeSection !== 'A' ? COL_WIDTHS.dayname : 0) + // Dayname for sections B, C, and D (not A)
     COL_WIDTHS.workouts + 
     (COL_WIDTHS.icoSport + COL_WIDTHS.distTime + COL_WIDTHS.mainWork) * 4 + // 4 sport sections (3 cols each)
     COL_WIDTHS.options;
@@ -1495,10 +1495,16 @@ export default function DayTableView({
                           <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                             Day
                           </th>
+                          {/* Dayname column - For Sections B, C, and D (not A which is template mode) */}
+                          {activeSection !== 'A' && (
+                            <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
+                              Dayname & Date
+                            </th>
+                          )}
                           {/* Match done column - For Section B and C */}
                           {(activeSection === 'B' || activeSection === 'C') && (
                             <th 
-                              className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6"
+                              className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-7"
                               style={{ 
                                 width: COL_WIDTHS.matchDone, 
                                 minWidth: COL_WIDTHS.matchDone,
@@ -1511,7 +1517,7 @@ export default function DayTableView({
                             </th>
                           )}
                           <th 
-                            className={`border border-gray-400 px-2 py-2 text-xs font-bold ${(activeSection === 'B' || activeSection === 'C') ? 'sticky-header-7' : 'sticky-header-6'}`}
+                            className={`border border-gray-400 px-2 py-2 text-xs font-bold ${(activeSection === 'B' || activeSection === 'C') ? 'sticky-header-8' : activeSection === 'D' ? 'sticky-header-7' : 'sticky-header-6'}`}
                             style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
                             rowSpan={2}
                           >
@@ -1666,6 +1672,21 @@ export default function DayTableView({
                                         reloadWorkouts={reloadWorkouts}
                                         columnSettings={columnSettings}
                                       />
+                                      
+                                      {/* Add Workout Button - Only show if less than 3 workouts */}
+                                      {(!day.workouts || day.workouts.length < 3) && (
+                                        <div className="mt-4 py-4" style={{ backgroundColor: '#f9fafb', borderTop: '1px solid #e5e7eb', paddingLeft: '60px' }}>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              onAddWorkout?.(day);
+                                            }}
+                                            className="px-6 py-2 bg-cyan-600 hover:bg-cyan-700 text-white font-semibold rounded-md shadow-md hover:shadow-lg transition-all duration-150"
+                                          >
+                                            Add a workout
+                                          </button>
+                                        </div>
+                                      )}
                                         </div>
                                       </div>
                                     </td>
@@ -1786,16 +1807,16 @@ export default function DayTableView({
                       <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                         Day
                </th>
-              {/* Dayname column - Only for Section D */}
-              {activeSection === 'D' && (
+              {/* Dayname column - For Sections B, C, and D (not A which is template mode) */}
+              {activeSection !== 'A' && (
                 <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
-                 Dayname
+                 Dayname & Date
               </th>
               )}
-              {/* Match done column - For Section C */}
-              {activeSection === 'C' && (
+              {/* Match done column - For Sections B and C */}
+              {(activeSection === 'B' || activeSection === 'C') && (
                 <th 
-                  className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-6"
+                  className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-7"
                   style={{ 
                     width: COL_WIDTHS.matchDone, 
                     minWidth: COL_WIDTHS.matchDone,
@@ -1808,7 +1829,7 @@ export default function DayTableView({
                 </th>
               )}
               <th 
-                className={`border border-gray-400 px-2 py-2 text-xs font-bold ${activeSection === 'A' ? 'sticky-header-6' : 'sticky-header-7'}`}
+                className={`border border-gray-400 px-2 py-2 text-xs font-bold ${(activeSection === 'B' || activeSection === 'C') ? 'sticky-header-8' : activeSection === 'D' ? 'sticky-header-7' : 'sticky-header-6'}`}
                  style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
                  rowSpan={2}
                >
