@@ -2400,7 +2400,19 @@ export default function AddEditMoveframeModal({
                                   min="0"
                                   step="1"
                                 value={strokes}
-                                onChange={(e) => setStrokes(e.target.value)}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  // Only allow numbers (remove any non-numeric characters)
+                                  if (value === '' || /^\d+$/.test(value)) {
+                                    setStrokes(value);
+                                  }
+                                }}
+                                onKeyPress={(e) => {
+                                  // Prevent non-numeric characters from being entered
+                                  if (!/[0-9]/.test(e.key)) {
+                                    e.preventDefault();
+                                  }
+                                }}
                                   disabled={!isWorkEnabled}
                                   className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 ${
                                     isWorkEnabled ? 'bg-white' : 'bg-gray-200 cursor-not-allowed'
@@ -2415,7 +2427,19 @@ export default function AddEditMoveframeModal({
                                   min="0"
                                   step="1"
                                 value={watts}
-                                onChange={(e) => setWatts(e.target.value)}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  // Only allow numbers (remove any non-numeric characters)
+                                  if (value === '' || /^\d+$/.test(value)) {
+                                    setWatts(value);
+                                  }
+                                }}
+                                onKeyPress={(e) => {
+                                  // Prevent non-numeric characters from being entered
+                                  if (!/[0-9]/.test(e.key)) {
+                                    e.preventDefault();
+                                  }
+                                }}
                                   disabled={!isWorkEnabled}
                                   className={`w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 ${
                                     isWorkEnabled ? 'bg-white' : 'bg-gray-200 cursor-not-allowed'

@@ -195,6 +195,33 @@ export function useMoveframeForm({
   // ==================== COMPUTED VALUES ====================
   const sportConfig = getSportConfig(sport);
 
+  // ==================== EFFECTS ====================
+  
+  /**
+   * Set default distance when sport changes to a distance-based sport
+   */
+  useEffect(() => {
+    // Only set default distance if:
+    // 1. Modal is open
+    // 2. Sport is distance-based
+    // 3. Current distance is empty
+    // 4. Not in Time mode
+    // 5. Not in manual mode
+    if (isOpen && !manualMode && repsType !== 'Time') {
+      const distanceBasedSports = ['SWIM', 'BIKE', 'RUN', 'ROWING', 'SKATE', 'SKI', 'SNOWBOARD', 'HIKING', 'WALKING'];
+      const isDistanceBased = distanceBasedSports.includes(sport);
+      
+      if (isDistanceBased && !distance && sportConfig && 'meters' in sportConfig) {
+        const meters = (sportConfig as any).meters;
+        if (meters && Array.isArray(meters) && meters.length > 0) {
+          // Set first available distance as default (usually 100m)
+          console.log('🏊 Setting default distance for', sport, ':', meters[0]);
+          setDistance(meters[0]);
+        }
+      }
+    }
+  }, [sport, isOpen, manualMode, repsType, distance, sportConfig]);
+
   // ==================== HELPER FUNCTIONS ====================
   
   /**

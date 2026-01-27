@@ -288,12 +288,12 @@ export default function DayTableView({
     dayNumber: 50,      // Day
     matchDone: 60,      // Match done checkbox (for sections B and C)
     dayname: 120,       // Dayname & Date (wider to accommodate both)
-    workouts: 80,
+    workouts: 120,
     icoSport: 100,      // "Ico Sport" column
     distTime: 100,      // "Dist & Time" column
     mainWork: 200,      // "Main work" column
     secondaryWork: 200, // "Secondary work" column
-    options: 250
+    options: 320
   };
   
   // Calculate minimum table width dynamically based on column widths
@@ -1422,7 +1422,7 @@ export default function DayTableView({
                       ref={weekIdx === 0 ? tableContainerRef : null}
                       className="overflow-x-auto overflow-y-visible table-scrollbar" 
                     >
-                        <table className="text-sm" style={{ minWidth: `${TABLE_MIN_WIDTH}px`, width: '100%' }}>
+                        <table className="text-sm" style={{ tableLayout: 'fixed', minWidth: `${TABLE_MIN_WIDTH}px`, width: '100%' }}>
                         <thead className="sticky-table-header">
                           <tr style={{ backgroundColor: colors.weekHeader, color: colors.weekHeaderText }}>
                             <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
@@ -1785,7 +1785,7 @@ export default function DayTableView({
             ref={tableContainerRef}
             className="overflow-x-auto overflow-y-visible table-scrollbar" 
           >
-            <table className="text-sm" style={{ minWidth: `${TABLE_MIN_WIDTH}px`, width: '100%' }}>
+            <table className="text-sm" style={{ tableLayout: 'fixed', minWidth: `${TABLE_MIN_WIDTH}px`, width: '100%' }}>
                   <thead className="sticky-table-header">
                     <tr style={{ backgroundColor: colors.weekHeader, color: colors.weekHeaderText }}>
                       <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
