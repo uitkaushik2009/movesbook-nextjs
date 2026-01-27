@@ -287,9 +287,10 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
                     {showMovelaps && (
                       <>
                         <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">#</th>
-                        <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Distance</th>
-                        <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Time</th>
-                        <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Series</th>
+                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold">Musc.Sector</th>
+                        <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold">Exercise</th>
+                        <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Reps</th>
+                        <th className="border border-gray-300 px-2 py-1.5 text-center font-semibold">Pause</th>
                         <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold">Notes</th>
                       </>
                     )}
@@ -298,6 +299,7 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
                 <tbody>
                   {moveframes.map((mf: any, mfIdx: number) => {
                     const movelapCount = mf.movelaps?.length || 0;
+                    const isCircuit = mf.isCircuitBased;
                     
                     if (!showMovelaps) {
                       return (
@@ -326,22 +328,36 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
                               </td>
                             </>
                           )}
-                          <td className="border border-gray-300 px-2 py-1.5 text-center">{mlIdx + 1}</td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-center">
-                            {shouldShowDistance(mf.sport) && ml.distance ? `${ml.distance}${getDistanceUnit(mf.sport)}` : '-'}
-                          </td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-center">
-                            {ml.time ? formatSecondsToTime(parseFloat(ml.time)) : '-'}
-                          </td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-center">
-                            {!shouldShowDistance(mf.sport) ? '1 series' : '-'}
-                          </td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-xs">{stripCircuitTags(ml.notes) || '-'}</td>
+                          {isCircuit ? (
+                            <>
+                              {/* Circuit columns */}
+                              <td className="border border-gray-300 px-2 py-1.5 text-center">
+                                {ml.circuitLetter 
+                                  ? `${ml.circuitLetter}-${ml.localSeriesNumber || ml.seriesNumber}-${ml.stationNumber}` 
+                                  : (mlIdx + 1)}
+                              </td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-xs">{ml.sector || '-'}</td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-xs">{ml.exercise || '-'}</td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-center">{ml.reps || '-'}</td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-center">{ml.pause || '-'}</td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-xs">{stripCircuitTags(ml.notes) || '-'}</td>
+                            </>
+                          ) : (
+                            <>
+                              {/* Regular aerobic columns */}
+                              <td className="border border-gray-300 px-2 py-1.5 text-center">{mlIdx + 1}</td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-xs">{ml.sector || '-'}</td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-xs">{ml.exercise || '-'}</td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-center">{ml.reps || '-'}</td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-center">{ml.pause || '-'}</td>
+                              <td className="border border-gray-300 px-2 py-1.5 text-xs">{stripCircuitTags(ml.notes) || '-'}</td>
+                            </>
+                          )}
                         </tr>
                       ));
                     } else {
                       return (
-                      // No movelaps - check if it's a manual moveframe
+                      // No movelaps - manual moveframe or circuit description row
                       <tr key={mf.id} className="hover:bg-blue-50">
                         <td className="border border-gray-300 px-2 py-1.5 font-bold">{String.fromCharCode(65 + mfIdx)}</td>
                         <td className="border border-gray-300 px-2 py-1.5">{mf.sport?.replace(/_/g, ' ')}</td>
@@ -349,21 +365,10 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
                         {showMovelaps && (
                           <>
                             <td className="border border-gray-300 px-2 py-1.5 text-center">-</td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-center">
-                              {mf.manualMode && AEROBIC_SPORTS.includes(mf.sport as any) && mf.manualInputType === 'meters' && mf.distance > 0
-                                ? `${mf.distance}${getDistanceUnit(mf.sport)}`
-                                : '-'}
-                            </td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-center">
-                              {mf.manualMode && AEROBIC_SPORTS.includes(mf.sport as any) && mf.manualInputType === 'time' && mf.distance > 0
-                                ? formatDecisecondsToTime(mf.distance)
-                                : '-'}
-                            </td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-center">
-                              {mf.manualMode && !AEROBIC_SPORTS.includes(mf.sport as any) && mf.repetitions > 0
-                                ? `${mf.repetitions} series`
-                                : '-'}
-                            </td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">-</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">-</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">-</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-center">-</td>
                             <td className="border border-gray-300 px-2 py-1.5 text-xs">{stripCircuitTags(mf.notes) || '-'}</td>
                           </>
                         )}
