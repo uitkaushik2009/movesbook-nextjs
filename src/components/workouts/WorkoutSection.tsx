@@ -148,6 +148,9 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
   const [weeksPerPage, setWeeksPerPage] = useState<number>(3); // 1, 2, 3, 4, 6, 8, 13
   const [currentPageStart, setCurrentPageStart] = useState<number>(1); // Starting week number for current page
   
+  // Week index for Section A (Weekly Plans)
+  const [currentWeekIndex, setCurrentWeekIndex] = useState<number>(0);
+  
   // 3-state expand/collapse for tree view
   // State 0: All collapsed, State 1: Days/workouts visible (no moveframes), State 2: All visible
   const [treeExpandState, setTreeExpandState] = useState<number>(0);
@@ -1492,6 +1495,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             totalWeeks={workoutPlan?.weeks?.length || 0}
             workoutPlan={workoutPlan}
             iconType={iconType}
+            currentWeekIndex={currentWeekIndex}
+            onWeekIndexChange={setCurrentWeekIndex}
             onSectionChange={(section) => {
               setActiveSection(section);
               // Template plans (Section A) don't have calendar view since they don't have specific dates
@@ -1971,12 +1976,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                        })()
                      : workoutPlan
                  }
-                 activeSection={activeSection}
-                 iconType={iconType}
-                 currentPageStart={currentPageStart}
-                 setCurrentPageStart={setCurrentPageStart}
-                 weeksPerPage={weeksPerPage}
-                 expandedDays={expandedDays}
+                activeSection={activeSection}
+                iconType={iconType}
+                currentPageStart={currentPageStart}
+                setCurrentPageStart={setCurrentPageStart}
+                weeksPerPage={weeksPerPage}
+                currentWeekIndex={currentWeekIndex}
+                onWeekIndexChange={setCurrentWeekIndex}
+                expandedDays={expandedDays}
                  expandedWorkouts={expandedWorkouts}
                  fullyExpandedWorkouts={fullyExpandedWorkouts}
                  workoutsWithExpandedMovelaps={workoutsWithExpandedMovelaps}

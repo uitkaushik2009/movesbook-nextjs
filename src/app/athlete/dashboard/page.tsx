@@ -988,40 +988,6 @@ function PersonalSettingsContent({ t, user }: { t: (key: string) => string; user
     }
   };
 
-  const savePersonalSettings = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login to save settings.');
-        setLoading(false);
-        return;
-      }
-
-      // Get current settings and save
-      const response = await fetch('/api/user/settings/save', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({}) // Settings are managed by individual components
-      });
-      
-      if (response.ok) {
-        alert('✅ Personal settings saved successfully!');
-      } else {
-        const data = await response.json();
-        alert(`Failed to save settings: ${data.details || data.error}`);
-      }
-    } catch (error: any) {
-      console.error('Error saving personal settings:', error);
-      alert(`Error saving settings: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const settingsSections = [
     { id: 'backgrounds' as const, label: 'Backgrounds & Colors', icon: Palette },
     { id: 'tools' as const, label: 'Tools', icon: Settings },
@@ -1100,15 +1066,11 @@ function PersonalSettingsContent({ t, user }: { t: (key: string) => string; user
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer - Auto-save enabled, no manual save button needed */}
       <div className="border-t bg-gray-50 px-6 py-4 flex items-center justify-end flex-shrink-0">
-        <button
-          onClick={savePersonalSettings}
-          disabled={loading}
-          className="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
-        >
-          {loading ? 'Saving...' : 'Save My Personal Settings'}
-        </button>
+        <p className="text-sm text-gray-600 italic">
+          ✓ All changes are saved automatically
+        </p>
       </div>
     </div>
   );

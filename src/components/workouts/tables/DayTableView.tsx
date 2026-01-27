@@ -25,6 +25,8 @@ interface DayTableViewProps {
   weeksPerPage?: number; // Weeks per page for Section B navigation
   excludeStretchingCheckbox?: React.ReactNode; // Checkbox for excluding stretching
   totalYearWeeks?: number; // Total weeks in year (default 52)
+  currentWeekIndex?: number; // Current week index for Section A
+  onWeekIndexChange?: (index: number) => void; // Setter for current week index in Section A
   expandedDays?: Set<string>;
   expandedWorkouts?: Set<string>;
   fullyExpandedWorkouts?: Set<string>; // Workouts with moveframes visible
@@ -96,6 +98,8 @@ export default function DayTableView({
   weeksPerPage = 3,
   excludeStretchingCheckbox,
   totalYearWeeks = 52,
+  currentWeekIndex: externalCurrentWeekIndex,
+  onWeekIndexChange,
   expandedDays,
   expandedWorkouts,
   fullyExpandedWorkouts,
@@ -144,7 +148,9 @@ export default function DayTableView({
   const defaultIconType = useSportIconType();
   const [localIconType, setLocalIconType] = useState<'emoji' | 'icon'>(defaultIconType);
   const iconType = iconTypeProp || localIconType;
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+  const [localCurrentWeekIndex, setLocalCurrentWeekIndex] = useState(0);
+  const currentWeekIndex = externalCurrentWeekIndex !== undefined ? externalCurrentWeekIndex : localCurrentWeekIndex;
+  const setCurrentWeekIndex = onWeekIndexChange || setLocalCurrentWeekIndex;
   const [isWeeklyInfoModalOpen, setIsWeeklyInfoModalOpen] = useState(false);
   const [weeklyNotes, setWeeklyNotes] = useState<Record<string, { periodId: string; notes: string }>>({});
   const [dayInfoModalOpen, setDayInfoModalOpen] = useState(false);
@@ -804,48 +810,10 @@ export default function DayTableView({
         {/* Week Navigation - Redesigned Sticky Header */}
         <div className="sticky top-0 z-50 bg-gradient-to-r from-gray-50 to-white shadow-xl border-b-2 border-gray-200">
           <div className="flex items-stretch">
-            {/* LEFT: Week Number Button - Only for Section A */}
+            {/* Week buttons moved to WorkoutSectionHeader for Section A */}
             {activeSection === 'A' && (
               <div className="flex flex-col gap-2 px-4 py-3 bg-white border-r-2 border-gray-200">
-                {workoutPlan?.weeks && (
-            <div className="flex items-center gap-2">
-                    {workoutPlan.weeks.map((week: any, index: number) => (
-                <button
-                        key={week.id}
-                        onClick={() => setCurrentWeekIndex(index)}
-                        className="px-5 py-3 rounded-xl transition-all duration-200 font-bold text-sm shadow-md"
-                        style={
-                          currentWeekIndex === index
-                            ? { 
-                                backgroundColor: colors.weekHeader,
-                                color: colors.weekHeaderText,
-                                transform: 'scale(1.05)'
-                              }
-                            : { 
-                                backgroundColor: colors.dayAlternateRow,
-                                color: colors.dayAlternateRowText
-                              }
-                        }
-                        onMouseEnter={(e) => {
-                          if (currentWeekIndex !== index) {
-                            e.currentTarget.style.backgroundColor = colors.dayHeader;
-                            e.currentTarget.style.transform = 'scale(1.02)';
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (currentWeekIndex !== index) {
-                            e.currentTarget.style.backgroundColor = colors.dayAlternateRow;
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }
-                        }}
-                      >
-                        Week {index + 1}
-                </button>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Set Periods Button - Under Week Buttons */}
+                {/* Set Periods Button */}
                 <button
                   onClick={() => {
                     // Initialize week range to all displayed weeks in Section A

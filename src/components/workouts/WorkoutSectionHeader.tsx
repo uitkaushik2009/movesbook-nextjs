@@ -18,6 +18,7 @@ interface WorkoutSectionHeaderProps {
   workoutPlan?: any; // Workout plan data for color calculation
   excludeStretchingCheckbox?: React.ReactNode; // Checkbox for excluding stretching
   iconType?: 'emoji' | 'icon'; // Current icon type
+  currentWeekIndex?: number; // Current week index for Section A
   
   // Actions
   onSectionChange: (section: SectionId) => void;
@@ -33,6 +34,7 @@ interface WorkoutSectionHeaderProps {
   onWeeksPerPageChange?: (weeks: number) => void;
   onPrevPage?: () => void;
   onNextPage?: () => void;
+  onWeekIndexChange?: (index: number) => void; // For Section A week navigation
 }
 
 export default function WorkoutSectionHeader({
@@ -50,6 +52,7 @@ export default function WorkoutSectionHeader({
   workoutPlan,
   excludeStretchingCheckbox,
   iconType = 'emoji',
+  currentWeekIndex = 0,
   onSectionChange,
   onViewModeChange,
   onIconTypeToggle,
@@ -61,7 +64,8 @@ export default function WorkoutSectionHeader({
   onClose,
   onWeeksPerPageChange,
   onPrevPage,
-  onNextPage
+  onNextPage,
+  onWeekIndexChange
 }: WorkoutSectionHeaderProps) {
   
   // Local state for plan descriptions
@@ -262,6 +266,25 @@ export default function WorkoutSectionHeader({
                     </div>
                   )}
                 </div>
+                
+                {/* Week Navigation Buttons - Right of Info Icon */}
+                {workoutPlan?.weeks && workoutPlan.weeks.length > 0 && (
+                  <div className="flex items-center gap-2 ml-4">
+                    {workoutPlan.weeks.map((week: any, index: number) => (
+                      <button
+                        key={week.id}
+                        onClick={() => onWeekIndexChange?.(index)}
+                        className={`px-4 py-1.5 rounded-lg font-semibold text-sm transition-all ${
+                          currentWeekIndex === index
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        Week {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
             
@@ -309,23 +332,6 @@ export default function WorkoutSectionHeader({
               >
                 <Plus className="w-4 h-4" />
                 {selectedAthlete ? `Viewing: ${selectedAthlete.name}` : 'Select Athlete'}
-              </button>
-            )}
-            
-            {/* Add Day Button - Available for sections A & C */}
-            {activeSection === 'A' && (
-              <button
-                onClick={onAddDay}
-                disabled={!canAddDay}
-                className={`px-3 py-1.5 rounded text-sm font-medium flex items-center gap-2 transition-colors ${
-                  canAddDay 
-                    ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer' 
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-                title={!canAddDay ? 'All weeks are full (7 days each)' : 'Add a new day'}
-              >
-                <Plus className="w-4 h-4" />
-                Add Day
               </button>
             )}
             

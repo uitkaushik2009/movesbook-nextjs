@@ -158,6 +158,7 @@ model Period {
   name        String
   description String
   color       String
+  displayOrder Int          @default(0) // Order for display in lists
   createdAt   DateTime      @default(now())
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   days        WorkoutDay[]
@@ -248,6 +249,7 @@ model WorkoutSection {
   code        String? // Short code (max 5 characters) for compact display
   description String
   color       String
+  displayOrder Int        @default(0) // Order for display in lists
   createdAt   DateTime    @default(now())
   moveframes  Moveframe[]
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -263,6 +265,7 @@ model ExecutionTechnique {
   description String
   color       String
   sports      String   @default("") // Comma-separated list of sports that can use this technique
+  displayOrder Int     @default(0) // Order for display in lists
   createdAt   DateTime @default(now())
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
