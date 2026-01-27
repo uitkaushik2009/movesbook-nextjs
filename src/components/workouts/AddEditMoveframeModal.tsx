@@ -4177,7 +4177,9 @@ export default function AddEditMoveframeModal({
                 // 2026-01-22 10:20 UTC - Include description in moveframe data
                 // 2026-01-22 10:30 UTC - Include movelaps in moveframe data
                 // 2026-01-23 - Updated for redesigned planner
-                console.log('✅ Circuit data generated:', circuitData);
+                console.log('✅ [AddEditMoveframeModal] Circuit data received:', circuitData);
+                console.log('✅ [AddEditMoveframeModal] Circuit description:', circuitData.description);
+                console.log('✅ [AddEditMoveframeModal] Description length:', circuitData.description?.length || 0);
                 
                 // Build complete moveframe data with circuit description and movelaps
                 const moveframeData = buildMoveframeData();
@@ -4191,7 +4193,8 @@ export default function AddEditMoveframeModal({
                   isCircuitBased: true // Flag to indicate this is a circuit-based moveframe
                 };
                 
-                console.log('✅ Moveframe data with circuit movelaps:', finalData);
+                console.log('✅ [AddEditMoveframeModal] Final moveframe data:', finalData);
+                console.log('✅ [AddEditMoveframeModal] Final description:', finalData.description);
                 onSave(finalData);
                 // 2026-01-22 14:40 UTC - Close modal after saving circuit
                 onClose();

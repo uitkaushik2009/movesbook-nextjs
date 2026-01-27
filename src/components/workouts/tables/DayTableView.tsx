@@ -782,7 +782,8 @@ export default function DayTableView({
         .workout-details-wrapper {
           position: relative;
           left: 0;
-          width: 100vw;
+          width: 100%;
+          max-width: 100%;
           transform: translateX(0);
           transition: transform 0s;
           z-index: 25;
@@ -1495,29 +1496,25 @@ export default function DayTableView({
                           <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                             Day
                           </th>
-                          {/* Dayname column - For Sections B, C, and D (not A which is template mode) */}
-                          {activeSection !== 'A' && (
-                            <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
-                              Dayname & Date
-                            </th>
-                          )}
-                          {/* Match done column - For Section B and C */}
-                          {(activeSection === 'B' || activeSection === 'C') && (
-                            <th 
-                              className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-7"
-                              style={{ 
-                                width: COL_WIDTHS.matchDone, 
-                                minWidth: COL_WIDTHS.matchDone,
-                                backgroundColor: colors.weekHeader,
-                                color: colors.weekHeaderText
-                              }} 
-                              rowSpan={2}
-                            >
-                              Match<br/>done
-                            </th>
-                          )}
+                          {/* Dayname column - Always shown in Section B */}
+                          <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
+                            Dayname & Date
+                          </th>
+                          {/* Match done column - Always shown in Section B */}
                           <th 
-                            className={`border border-gray-400 px-2 py-2 text-xs font-bold ${(activeSection === 'B' || activeSection === 'C') ? 'sticky-header-8' : activeSection === 'D' ? 'sticky-header-7' : 'sticky-header-6'}`}
+                            className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-7"
+                            style={{ 
+                              width: COL_WIDTHS.matchDone, 
+                              minWidth: COL_WIDTHS.matchDone,
+                              backgroundColor: colors.weekHeader,
+                              color: colors.weekHeaderText
+                            }} 
+                            rowSpan={2}
+                          >
+                              Match<br/>done
+                          </th>
+                          <th 
+                            className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-8"
                             style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
                             rowSpan={2}
                           >
@@ -1807,14 +1804,14 @@ export default function DayTableView({
                       <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-5" style={{ width: COL_WIDTHS.dayNumber, minWidth: COL_WIDTHS.dayNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                         Day
                </th>
-              {/* Dayname column - For Sections B, C, and D (not A which is template mode) */}
+              {/* Dayname column - For Sections C and D (not A which is template mode, B has its own table) */}
               {activeSection !== 'A' && (
                 <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-6" style={{ width: COL_WIDTHS.dayname, minWidth: COL_WIDTHS.dayname, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                  Dayname & Date
               </th>
               )}
-              {/* Match done column - For Sections B and C */}
-              {(activeSection === 'B' || activeSection === 'C') && (
+              {/* Match done column - For Section C only (B has its own table) */}
+              {activeSection === 'C' && (
                 <th 
                   className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-7"
                   style={{ 
@@ -1829,7 +1826,7 @@ export default function DayTableView({
                 </th>
               )}
               <th 
-                className={`border border-gray-400 px-2 py-2 text-xs font-bold ${(activeSection === 'B' || activeSection === 'C') ? 'sticky-header-8' : activeSection === 'D' ? 'sticky-header-7' : 'sticky-header-6'}`}
+                className={`border border-gray-400 px-2 py-2 text-xs font-bold ${activeSection === 'C' ? 'sticky-header-8' : activeSection === 'D' ? 'sticky-header-7' : 'sticky-header-6'}`}
                  style={{ width: COL_WIDTHS.workouts, minWidth: COL_WIDTHS.workouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} 
                  rowSpan={2}
                >

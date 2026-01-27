@@ -496,12 +496,26 @@ export default function SortableMoveframeRow({
         // Description field might be truncated for database constraints
         // If manual mode WITHOUT priority, show blank (user wants to hide content)
         // 2026-01-22 14:45 UTC - Strip circuit tags from all content
+        // 2026-01-27 - For circuit-based moveframes, always show description
+        const isCircuitBased = moveframe.isCircuitBased === true;
         const rawContent = (isManualMode && hasManualPriority)
           ? (moveframe.notes || moveframe.description || '') 
           : isManualMode && !hasManualPriority
           ? '' // Blank for manual mode without priority
           : moveframe.description;
         const manualContent = stripCircuitTags(rawContent);
+        
+        // Debug logging for circuit-based moveframes
+        if (isCircuitBased) {
+          console.log(`🔄 [SortableMoveframeRow] Circuit-based moveframe ${moveframe.letter}:`, {
+            isCircuitBased,
+            hasDescription: !!moveframe.description,
+            description: moveframe.description,
+            descriptionLength: moveframe.description?.length || 0,
+            manualContent,
+            manualContentLength: manualContent?.length || 0
+          });
+        }
         
         // Debug logging for manual mode
         if (isManualMode) {
@@ -572,6 +586,12 @@ export default function SortableMoveframeRow({
                   if (isManualMode && !hasManualPriority) {
                     console.log(`📄 [SortableMoveframeRow] Manual mode without priority for ${moveframe.letter}: showing BLANK`);
                     return ''; // Return empty string for blank cell
+                  }
+                  // For circuit-based moveframes, show description or "No description"
+                  if (moveframe.isCircuitBased) {
+                    const displayText = manualContent || 'No circuit description';
+                    console.log(`🔄 [SortableMoveframeRow] Circuit display for ${moveframe.letter}:`, displayText);
+                    return displayText;
                   }
                   const displayText = manualContent || moveframe.annotationText || 'No description';
                   return displayText;
@@ -956,8 +976,8 @@ export default function SortableMoveframeRow({
       {/* Movelaps Detail Table - Level 3: Indented from moveframe table */}
       {isMovelapsExpanded && (
         <tr>
-          <td colSpan={visibleColumns.length} className="border border-gray-200 p-0" style={{ backgroundColor: 'rgb(250, 255, 214)', overflow: 'visible' }}>
-            <div className="pl-8" style={{ maxWidth: '100%', overflow: 'hidden' }}>
+          <td colSpan={visibleColumns.length} className="border border-gray-200 p-0" style={{ backgroundColor: 'rgb(250, 255, 214)', overflow: 'visible', maxWidth: 0 }}>
+            <div className="pl-8">
               <MovelapDetailTable 
                 moveframe={moveframe}
                 onEditMovelap={(movelap) => onEditMovelap?.(movelap, moveframe)}

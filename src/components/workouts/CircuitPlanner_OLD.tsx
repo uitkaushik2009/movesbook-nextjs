@@ -185,6 +185,13 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
     }
   }, [showExerciseMenu]);
   
+  // 2026-01-27 - Auto-switch to vertical execution mode when time mode is selected
+  useEffect(() => {
+    if (seriesMode === 'time' && executionMode === 'horizontal') {
+      setExecutionMode('vertical');
+    }
+  }, [seriesMode, executionMode]);
+  
   // 2026-01-21 22:00 UTC - Added preferences modal state
   const [showPreferencesModal, setShowPreferencesModal] = useState(false);
   const [exercisePreferences, setExercisePreferences] = useState<ExercisePreferences>({
@@ -627,9 +634,10 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
     const description = generatePreview();
     const movelaps = generateMovelaps();
     
-    console.log('G�� Generated movelaps:', movelaps);
+    console.log('💾 [handleSave] Generated movelaps:', movelaps);
+    console.log('💾 [handleSave] Description to save:', description);
     
-    onSave({
+    const circuitData = {
       circuits,
       description, // Preview to be used as moveframe description
       movelaps, // Generated movelaps for the moveframe
@@ -647,7 +655,10 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
           horizontalSeries: pauseHorizontalSeries
         }
       }
-    });
+    };
+    
+    console.log('💾 [handleSave] Calling onSave with circuitData:', circuitData);
+    onSave(circuitData);
   };
   
   const handleSavePreferences = (prefs: ExercisePreferences) => {
@@ -916,16 +927,16 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
       
       let exercisesLoaded = 0;
       
-      newCircuits.forEach((circuit: any) => {
+      newCircuits.forEach((circuit: Circuit) => {
         // For each station position, track used exercises across all series
-        const maxStations = Math.max(...circuit.stationsBySeries.map((ss: any[]) => ss.length));
+        const maxStations = Math.max(...circuit.stationsBySeries.map((ss: Station[]) => ss.length));
         console.log(`Circuit ${circuit.letter}: ${maxStations} stations, ${circuit.stationsBySeries.length} series`);
         
         for (let stationPos = 0; stationPos < maxStations; stationPos++) {
           const usedExercisesForThisPosition = new Set<string>();
           
           // Iterate through all series for this station position
-          circuit.stationsBySeries.forEach((seriesStations: any[], seriesIdx: number) => {
+          circuit.stationsBySeries.forEach((seriesStations: Station[], seriesIdx: number) => {
             const station = seriesStations[stationPos];
             console.log(`  Circuit ${circuit.letter}, Series ${seriesIdx + 1}, Station ${stationPos + 1}:`, {
               hasSector: !!station?.sector,
@@ -980,6 +991,7 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
   const generatePreview = (): string => {
     // 2026-01-21 22:10 UTC - Generate preview text
     // 2026-01-22 10:20 UTC - Format like: "Circuit: X circuits x Y series Pause Z" M0'"
+    // 2026-01-27 - Modified for time mode: "Circuit X of Y stations to do for Z' x N series"
     const parts: string[] = [];
     
     // Circuit info
@@ -987,17 +999,23 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
       ? Math.round(circuits.reduce((sum, c) => sum + c.series, 0) / circuits.length)
       : seriesCount;
     
-    parts.push(`Circuit: ${circuits.length || numCircuits} circuits x ${avgSeries} series`);
+    if (seriesMode === 'time') {
+      parts.push(`Circuit ${circuits.length || numCircuits} of ${stationsPerCircuit} stations to do for ${seriesTime}' x ${avgSeries} series`);
+    } else {
+      parts.push(`Circuit: ${circuits.length || numCircuits} circuits x ${avgSeries} series`);
+    }
     
     // Pause info
     const pauseCircStr = CIRCUIT_PAUSE_OPTIONS.find(p => p.value === pauseCircuits)?.label || '0"';
     const pauseStatStr = STATION_PAUSE_OPTIONS.find(p => p.value === pauseStations)?.label || '0"';
     const pauseSerStr = SERIES_PAUSE_OPTIONS.find(p => p.value === pauseSeries)?.label || '0"';
     
-    parts.push(`Pause circ ${pauseCircStr} - stations ${pauseStatStr} - series ${pauseSerStr}`);
+    parts.push(`Pause circ. ${pauseCircStr} - stations ${pauseStatStr} - series ${pauseSerStr}`);
     parts.push(`M0'`);
     
-    return parts.join(' ');
+    const preview = parts.join(' ');
+    console.log('🔄 [generatePreview] Generated preview:', preview);
+    return preview;
   };
   
   // ============================================================================
@@ -1396,9 +1414,9 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
             </div>
             
             {/* Right Box - Horizontal Flow */}
-            <div className={`bg-gray-50 border-2 rounded-lg p-4 cursor-pointer transition-all ${
-              executionMode === 'horizontal' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white'
-            }`} onClick={() => setExecutionMode('horizontal')}>
+            <div className={`bg-gray-50 border-2 rounded-lg p-4 transition-all ${
+              seriesMode === 'time' ? 'opacity-50 cursor-not-allowed border-gray-300 bg-gray-100' : 'cursor-pointer ' + (executionMode === 'horizontal' ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white')
+            }`} onClick={() => seriesMode !== 'time' && setExecutionMode('horizontal')}>
               <div className="text-center text-sm font-medium text-gray-700 mb-3">
                 All the series for station
               </div>
@@ -1448,9 +1466,10 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
                   value="horizontal"
                   checked={executionMode === 'horizontal'}
                   onChange={(e) => setExecutionMode(e.target.value as 'horizontal')}
-                  className="mr-2 w-4 h-4"
+                  disabled={seriesMode === 'time'}
+                  className="mr-2 w-4 h-4 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <span className="text-sm">Execution horizontally <span className="text-gray-600">(all series for station)</span></span>
+                <span className={`text-sm ${seriesMode === 'time' ? 'text-gray-400' : ''}`}>Execution horizontally <span className="text-gray-600">(all series for station)</span></span>
               </label>
             </div>
           </div>
@@ -1580,9 +1599,10 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
                 value="horizontal"
                 checked={executionMode === 'horizontal'}
                 onChange={(e) => setExecutionMode(e.target.value as 'horizontal')}
-                className="mr-2"
+                disabled={seriesMode === 'time'}
+                className="mr-2 disabled:opacity-50 disabled:cursor-not-allowed"
               />
-              <span className="text-sm">Horizontal (all series, then next exercise)</span>
+              <span className={`text-sm ${seriesMode === 'time' ? 'text-gray-400' : ''}`}>Horizontal (all series, then next exercise)</span>
             </label>
           </div>
         </div>
@@ -1694,9 +1714,9 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
               const newCircuits = JSON.parse(JSON.stringify(prevCircuits)); // Deep clone
               let replacedCount = 0;
               
-              newCircuits.forEach((circuit) => {
-                circuit.stationsBySeries.forEach((seriesStations) => {
-                  seriesStations.forEach((station) => {
+              newCircuits.forEach((circuit: Circuit) => {
+                circuit.stationsBySeries.forEach((seriesStations: Station[]) => {
+                  seriesStations.forEach((station: Station) => {
                     // Only replace if station has both sector and exercise
                     if (station.sector && station.exercise) {
                       const randomExercise = getRandomExercise(station.sector, station.exercise);
@@ -2768,15 +2788,15 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
                  return;
                }
                
-               setCircuits(prevCircuits => {
-                 const newCircuits = JSON.parse(JSON.stringify(prevCircuits)); // Deep clone
-                 let replacedCount = 0;
-                 
-                 newCircuits.forEach((circuit) => {
-                   circuit.stationsBySeries.forEach((seriesStations) => {
-                     seriesStations.forEach((station) => {
-                       // Only replace if station has both sector and exercise
-                       if (station.sector && station.exercise) {
+              setCircuits(prevCircuits => {
+                const newCircuits = JSON.parse(JSON.stringify(prevCircuits)); // Deep clone
+                let replacedCount = 0;
+                
+                newCircuits.forEach((circuit: Circuit) => {
+                  circuit.stationsBySeries.forEach((seriesStations: Station[]) => {
+                    seriesStations.forEach((station: Station) => {
+                      // Only replace if station has both sector and exercise
+                      if (station.sector && station.exercise) {
                          const randomExercise = getRandomExercise(station.sector, station.exercise);
                          if (randomExercise) {
                            station.exercise = randomExercise.name;

@@ -32,6 +32,7 @@ export default function ToolsSettings({ isAdmin = false, userType = 'ATHLETE' }:
   
   // Use custom hook for data management
   const {
+    periods,
     sections,
     bodyBuildingTechniques,
     sports,

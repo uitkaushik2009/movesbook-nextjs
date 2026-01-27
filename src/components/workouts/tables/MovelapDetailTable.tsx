@@ -499,7 +499,7 @@ function SortableMovelapRow({
       {/* Notes - Display with increased width for better readability */}
       {/* 2026-01-24 - Increased width 4x to 1200px for circuit movelap table */}
       {/* 2026-01-26 - Added red text styling for newly added movelaps */}
-      <td className={`border border-gray-300 px-2 py-1 text-left text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`}>
+      <td className={`border border-gray-300 px-2 py-1 text-left text-xs ${movelap.isNewlyAdded ? 'text-red-600' : ''}`} style={{ width: '300px' }}>
         {/* 2026-01-22 11:45 UTC - Made notes field editable */}
         {/* 2026-01-22 12:00 UTC - Fixed to use controlled component with local state */}
         {/* 2026-01-22 15:35 UTC - Added onRefresh callback */}
@@ -514,7 +514,7 @@ function SortableMovelapRow({
       
       {/* Options Column - Simplified to Edit + Options dropdown */}
       {/* 2026-01-24 - Sticky options column */}
-      <td className="border border-gray-300 px-1 py-1 text-center sticky-options-col bg-white" style={{ minWidth: '140px' }}>
+      <td className="border border-gray-300 px-1 py-1 text-center sticky-options-col bg-white" style={{ width: '110px', minWidth: '110px' }}>
         <div className="flex items-center justify-center gap-1">
           <button
             onClick={(e) => {
@@ -1036,20 +1036,20 @@ export default function MovelapDetailTable({
 
         {/* Manual Mode Table - Two separate editable sections */}
         {/* 2026-01-24 - Scrollable wrapper for sticky Options column */}
-        <div className="overflow-x-auto overflow-y-visible table-scrollbar" style={{ maxWidth: '100%' }}>
+        <div className="overflow-x-auto overflow-y-visible table-scrollbar">
           <table className="text-xs" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '1100px', width: '100%' }}>
           <thead className="bg-gradient-to-r from-purple-200 to-pink-200">
             <tr>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '100px', minWidth: '100px' }}>Sport</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ width: '80px', minWidth: '80px' }}>Sport</th>
               <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ minWidth: '400px' }}>Summary</th>
               <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold" style={{ minWidth: '400px' }}>Detail of workout</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold sticky-options-header bg-gradient-to-r from-purple-200 to-pink-200" style={{ width: '140px', minWidth: '140px' }}>Options</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-[11px] font-bold sticky-options-header bg-gradient-to-r from-purple-200 to-pink-200" style={{ width: '100px', minWidth: '100px' }}>Options</th>
             </tr>
           </thead>
           <tbody>
             <tr className="hover:bg-blue-50">
               {/* Sport */}
-              <td className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold bg-white align-middle">
+              <td className="border border-gray-300 px-2 py-2 text-center text-xs font-semibold bg-white align-middle" style={{ width: '80px', minWidth: '80px' }}>
                 <span className="font-bold text-purple-800">
                   {moveframe.sport?.replace(/_/g, ' ') || '—'}
                 </span>
@@ -1097,7 +1097,7 @@ export default function MovelapDetailTable({
               </td>
               
               {/* Options */}
-              <td className="border border-gray-300 px-2 py-2 text-center sticky-options-col bg-white align-middle" style={{ minWidth: '140px' }}>
+              <td className="border border-gray-300 px-2 py-2 text-center sticky-options-col bg-white align-middle" style={{ width: '100px', minWidth: '100px' }}>
                 <div className="flex items-center justify-center gap-2">
                   <button
                     onClick={(e) => {
@@ -1278,8 +1278,8 @@ export default function MovelapDetailTable({
           </div>
 
           {/* 2026-01-24 - Scrollable wrapper for sticky Options column */}
-          <div className="overflow-x-auto overflow-y-visible table-scrollbar" style={{ maxWidth: '100%' }}>
-            <table className="text-xs bg-white" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '1600px', width: '100%' }}>
+          <div className="overflow-x-auto overflow-y-visible table-scrollbar">
+            <table className="text-xs bg-white" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: moveframe.isCircuitBased ? '1340px' : '1600px', width: '100%' }}>
             {/* Render sport-specific column headers */}
             {(() => {
               const sport = moveframe.sport || 'SWIM';
@@ -1301,16 +1301,16 @@ export default function MovelapDetailTable({
                   <colgroup>
                     <col style={{ width: '30px' }} />
                     <col style={{ width: '30px' }} />
-                    {/* 2026-01-24 - # column: 3x for circuits */}
-                    <col style={{ width: moveframe.isCircuitBased ? '90px' : '30px' }} />
+                    {/* 2026-01-27 - Reduced widths for circuit movelap table */}
+                    <col style={{ width: moveframe.isCircuitBased ? '60px' : '30px' }} />
                     <col style={{ width: '120px' }} />
                     <col style={{ width: '80px' }} />
                     {isBodyBuilding && (
                       <>
-                        {/* 2026-01-24 - Musc.Sector: 2x for circuits, Exercise: 2x for circuits */}
-                        <col style={{ width: moveframe.isCircuitBased ? '200px' : '100px' }} />
-                        <col style={{ width: moveframe.isCircuitBased ? '240px' : '120px' }} />
-                        <col style={{ width: '50px' }} />
+                        {/* 2026-01-27 - Reduced Musc.Sector and Exercise widths for circuits */}
+                        <col style={{ width: moveframe.isCircuitBased ? '140px' : '100px' }} />
+                        <col style={{ width: moveframe.isCircuitBased ? '180px' : '120px' }} />
+                        <col style={{ width: moveframe.isCircuitBased ? '40px' : '50px' }} />
                         {!moveframe.isCircuitBased && (
                           <>
                         <col style={{ width: '60px' }} />
@@ -1344,9 +1344,9 @@ export default function MovelapDetailTable({
                     <col style={{ width: '45px' }} />
                     <col style={{ width: '40px' }} />
                     {!moveframe.isCircuitBased && <col style={{ width: '60px' }} />}
-                    {/* 2026-01-24 - Notes: recovered original width, Options: responsive width for sticky column */}
-                    <col style={{ width: '300px' }} />
-                    <col style={{ minWidth: '140px' }} />
+                    {/* 2026-01-27 - Reduced Notes width for circuits */}
+                    <col style={{ width: moveframe.isCircuitBased ? '200px' : '300px' }} />
+                    <col style={{ width: '110px', minWidth: '110px' }} />
                   </colgroup>
                   <thead className="bg-gray-200">
                     <tr>
@@ -1408,8 +1408,8 @@ export default function MovelapDetailTable({
                       {!moveframe.isCircuitBased && (
                       <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Alarm&Snd</th>
                       )}
-                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]">Notes</th>
-                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px] sticky-options-header bg-gray-200" style={{ minWidth: '140px' }}>Options</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px]" style={{ width: '300px' }}>Notes</th>
+                      <th className="border border-gray-300 px-1 py-1 text-center text-[10px] sticky-options-header bg-gray-200" style={{ width: '110px', minWidth: '110px' }}>Options</th>
                     </tr>
                   </thead>
                 </>

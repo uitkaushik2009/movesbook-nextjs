@@ -374,8 +374,8 @@ export default function MoveframesSection({
             items={orderedMoveframes.map((mf: any) => mf.id)}
             strategy={verticalListSortingStrategy}
           >
-            <div className="p-2" style={{ maxWidth: '100%', overflow: 'hidden' }}>
-              <div className="overflow-x-auto overflow-y-visible table-scrollbar" style={{ maxWidth: '100%' }}>
+            <div className="p-2">
+              <div className="overflow-x-auto overflow-y-visible table-scrollbar">
                 <table className="text-xs bg-white" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '1400px', width: '100%' }}>
                   <thead className="bg-purple-300 text-purple-900">
                     <tr>
