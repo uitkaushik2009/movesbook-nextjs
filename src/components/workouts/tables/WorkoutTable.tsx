@@ -11,6 +11,15 @@ import { isSeriesBasedSport, getDistTimeColumnHeader, isDistanceBasedSport } fro
 import { useDropdownPosition } from '@/hooks/useDropdownPosition';
 import MoveframesSection from './MoveframesSection';
 
+// Helper function to strip circuit metadata tags from content
+const stripCircuitTags = (content: string | null | undefined): string => {
+  if (!content) return '';
+  return content
+    .replace(/\[CIRCUIT_DATA\][\s\S]*?\[\/CIRCUIT_DATA\]/g, '')
+    .replace(/\[CIRCUIT_META\][\s\S]*?\[\/CIRCUIT_META\]/g, '')
+    .trim();
+};
+
 interface WorkoutTableProps {
   day: any;
   workout: any;
@@ -1321,7 +1330,7 @@ export default function WorkoutTable({
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <div className="font-semibold text-gray-700 mb-1 text-[10px]">Notes:</div>
                 <div className="text-gray-900 bg-gray-50 p-2 rounded text-[10px]">
-                  {clickedMoveframe.notes}
+                  {stripCircuitTags(clickedMoveframe.notes)}
                 </div>
               </div>
             )}

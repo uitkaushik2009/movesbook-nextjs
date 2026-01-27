@@ -837,11 +837,17 @@ export default function WeekTotalsModal({ isOpen, week, weeks, isMultiWeekView =
               `;
 
               moveframe.movelaps.forEach((movelap: any) => {
-                // Strip HTML from notes
+                // Strip HTML and circuit tags from notes
                 let notes = '—';
                 if (movelap.notes) {
+                  // First strip circuit metadata tags
+                  let cleanNotes = movelap.notes
+                    .replace(/\[CIRCUIT_DATA\][\s\S]*?\[\/CIRCUIT_DATA\]/g, '')
+                    .replace(/\[CIRCUIT_META\][\s\S]*?\[\/CIRCUIT_META\]/g, '')
+                    .trim();
+                  // Then strip HTML
                   const tempDiv = document.createElement('div');
-                  tempDiv.innerHTML = movelap.notes;
+                  tempDiv.innerHTML = cleanNotes;
                   const strippedNotes = tempDiv.textContent || tempDiv.innerText || '';
                   notes = strippedNotes.length > 30 ? strippedNotes.substring(0, 30) + '...' : strippedNotes;
                 }

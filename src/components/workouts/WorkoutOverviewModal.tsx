@@ -6,6 +6,15 @@ import { shouldShowDistance, getDistanceUnit, AEROBIC_SPORTS } from '@/constants
 import { useSportIconType } from '@/hooks/useSportIconType';
 import { isImageIcon } from '@/utils/sportIcons';
 
+// Helper function to strip circuit metadata tags from content
+const stripCircuitTags = (content: string | null | undefined): string => {
+  if (!content) return '';
+  return content
+    .replace(/\[CIRCUIT_DATA\][\s\S]*?\[\/CIRCUIT_DATA\]/g, '')
+    .replace(/\[CIRCUIT_META\][\s\S]*?\[\/CIRCUIT_META\]/g, '')
+    .trim();
+};
+
 interface WorkoutOverviewModalProps {
   workout: any;
   onClose: () => void;
@@ -327,7 +336,7 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
                           <td className="border border-gray-300 px-2 py-1.5 text-center">
                             {!shouldShowDistance(mf.sport) ? '1 series' : '-'}
                           </td>
-                          <td className="border border-gray-300 px-2 py-1.5 text-xs">{ml.notes || '-'}</td>
+                          <td className="border border-gray-300 px-2 py-1.5 text-xs">{stripCircuitTags(ml.notes) || '-'}</td>
                         </tr>
                       ));
                     } else {
@@ -355,7 +364,7 @@ export default function WorkoutOverviewModal({ workout, onClose }: WorkoutOvervi
                                 ? `${mf.repetitions} series`
                                 : '-'}
                             </td>
-                            <td className="border border-gray-300 px-2 py-1.5 text-xs">{mf.notes || '-'}</td>
+                            <td className="border border-gray-300 px-2 py-1.5 text-xs">{stripCircuitTags(mf.notes) || '-'}</td>
                           </>
                         )}
                       </tr>

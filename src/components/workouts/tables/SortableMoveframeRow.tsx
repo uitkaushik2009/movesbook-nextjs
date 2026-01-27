@@ -1135,7 +1135,7 @@ export default function SortableMoveframeRow({
               <div className="mt-2 pt-2 border-t border-gray-200">
                 <div className="font-semibold text-gray-700 mb-1 text-[10px]">Notes:</div>
                 <div className="text-gray-900 bg-yellow-50 p-2 rounded text-[10px]">
-                  {hoveredMoveframe.notes}
+                  {stripCircuitTags(hoveredMoveframe.notes)}
                 </div>
               </div>
             )}
