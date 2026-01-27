@@ -1539,6 +1539,14 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           const totalWeeks = workoutPlan?.weeks?.length || 0;
           setCurrentPageStart(Math.min(totalWeeks, currentPageStart + weeksPerPage));
         }}
+        onPrintWeek={() => {
+          // Get the current week for Section A based on currentWeekIndex
+          if (workoutPlan?.weeks && workoutPlan.weeks[currentWeekIndex]) {
+            setCurrentWeek(workoutPlan.weeks[currentWeekIndex]);
+            setAutoPrintWeek(true);
+            setShowWeekTotalsModal(true);
+          }
+        }}
         excludeStretchingCheckbox={
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2">

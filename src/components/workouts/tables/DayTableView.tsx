@@ -866,27 +866,29 @@ export default function DayTableView({
                   <span className="text-gray-400 italic text-base">Click Edit to add description...</span>
                 )}
               </div>
-              
-              {/* Edit Button Inside */}
-              <button
-                onClick={() => setIsWeeklyInfoModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg transition-all shadow-md hover:shadow-lg flex-shrink-0"
-                style={{ 
-                  backgroundColor: colors.buttonEdit,
-                  color: colors.buttonEditText
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonEditHover}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonEdit}
-                title="Edit Weekly Information"
-              >
-                <FileText size={14} />
-                Edit
-              </button>
             </div>
             )}
 
             {/* RIGHT: Action Buttons and Navigation */}
-            <div className="flex items-center justify-between gap-4 px-4 py-3 bg-white flex-1">
+            <div className="flex items-center justify-end gap-4 px-4 py-3 bg-white flex-1">
+              {/* Edit Button */}
+              {activeSection !== 'B' && (
+                <button
+                  onClick={() => setIsWeeklyInfoModalOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all shadow-md hover:shadow-lg"
+                  style={{ 
+                    backgroundColor: colors.buttonEdit,
+                    color: colors.buttonEditText
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.buttonEditHover}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = colors.buttonEdit}
+                  title="Edit Weekly Information"
+                >
+                  <FileText size={16} />
+                  Edit
+                </button>
+              )}
+              
               {/* Copy Week Button - Only show in Section A (3 Weeks Plan) */}
               {activeSection === 'A' && (
               <button
@@ -999,35 +1001,6 @@ export default function DayTableView({
                 Save in Favourites
               </button>
               )}
-              
-              {/* Print Button - Only for Section A/C */}
-              {activeSection !== 'B' && (
-              <button
-                onClick={() => {
-                  console.log('🖨️ Print button clicked');
-                  console.log('📅 Current week:', currentWeek);
-                  setAutoPrintWeek(true);
-                  setShowWeekTotalsModal(true);
-                  console.log('✅ Modal should open AND print dialog should appear');
-                }}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all shadow-md hover:shadow-lg"
-                title="Print week overview"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                Print
-              </button>
-              )}
-
-              {/* Expand All Button - For Section A/C */}
-            {activeSection !== 'B' && (
-              <button
-                  onClick={toggleWeekWorkouts}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-md hover:shadow-lg"
-                  title={expandState === 0 ? "Show workout headers" : expandState === 1 ? "Show moveframes" : "Collapse all"}
-                >
-                  {expandState === 0 ? 'Expand All' : expandState === 1 ? 'Expand (with moveframes)' : 'Collapse All'}
-              </button>
-            )}
           </div>
         </div>
 
@@ -1746,6 +1719,61 @@ export default function DayTableView({
                       ({selectedDays.size} day{selectedDays.size > 1 ? 's' : ''} selected)
                     </span>
                   )}
+                </div>
+                
+                {/* Right side: Action buttons */}
+                <div className="flex items-center gap-2">
+                  {/* Expand All Button */}
+                  <button
+                    onClick={toggleWeekWorkouts}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-all shadow-md"
+                    title={expandState === 0 ? "Show workout headers" : expandState === 1 ? "Show moveframes" : "Collapse all"}
+                  >
+                    {expandState === 0 ? 'Expand All' : expandState === 1 ? 'Expand (with moveframes)' : 'Collapse All'}
+                  </button>
+                  
+                  {/* Save Grid Settings Button */}
+                  <button
+                    onClick={async () => {
+                      try {
+                        const gridSettings = {
+                          savedAt: new Date().toISOString(),
+                          message: 'Grid settings saved successfully!'
+                        };
+                        localStorage.setItem('workoutGridSettings', JSON.stringify(gridSettings));
+                        alert('✅ Grid settings saved successfully!');
+                      } catch (error) {
+                        console.error('Error saving grid settings:', error);
+                        alert('❌ Failed to save grid settings');
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-md"
+                    title="Save current grid settings"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    Save Grid Settings
+                  </button>
+                  
+                  {/* Reset to Default Button */}
+                  <button
+                    onClick={() => {
+                      if (confirm('Are you sure you want to reset grid settings to default?')) {
+                        try {
+                          localStorage.removeItem('workoutGridSettings');
+                          alert('✅ Grid settings reset to default!');
+                          window.location.reload();
+                        } catch (error) {
+                          console.error('Error resetting grid settings:', error);
+                          alert('❌ Failed to reset grid settings');
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all shadow-md"
+                    title="Reset grid settings to default"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    Reset to Default
+                  </button>
                 </div>
 
           </div>

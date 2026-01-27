@@ -35,6 +35,7 @@ interface WorkoutSectionHeaderProps {
   onPrevPage?: () => void;
   onNextPage?: () => void;
   onWeekIndexChange?: (index: number) => void; // For Section A week navigation
+  onPrintWeek?: () => void; // For Section A/C print button
 }
 
 export default function WorkoutSectionHeader({
@@ -65,7 +66,8 @@ export default function WorkoutSectionHeader({
   onWeeksPerPageChange,
   onPrevPage,
   onNextPage,
-  onWeekIndexChange
+  onWeekIndexChange,
+  onPrintWeek
 }: WorkoutSectionHeaderProps) {
   
   // Local state for plan descriptions
@@ -170,21 +172,57 @@ export default function WorkoutSectionHeader({
       {/* Weekly Plan Subsections (A, B, C) - Only show when Section A is active */}
       {activeSection === 'A' && (
         <div className="bg-gray-100 border-b border-gray-300 px-4 py-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-gray-700 mr-2">Weekly Plans:</span>
-            {(['A', 'B', 'C'] as const).map((plan) => (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-gray-700 mr-2">Weekly Plans:</span>
+              {(['A', 'B', 'C'] as const).map((plan) => (
+                <button
+                  key={plan}
+                  onClick={() => onSubSectionChange?.(plan)}
+                  className={`px-4 py-1.5 rounded font-semibold text-sm transition-colors ${
+                    activeSubSection === plan 
+                      ? 'bg-purple-600 text-white' 
+                      : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-300'
+                  }`}
+                >
+                  Plan {plan}
+                </button>
+              ))}
+            </div>
+            
+            {/* View Toggle Buttons - Right side */}
+            <div className="flex gap-2 items-center">
+              {/* Icon Type Toggle Button */}
+              {onIconTypeToggle && (
+                <button
+                  onClick={onIconTypeToggle}
+                  className="px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors bg-green-500 text-white hover:bg-green-600"
+                  title={`Switch to ${iconType === 'emoji' ? 'image' : 'emoji'} icons`}
+                >
+                  {iconType === 'emoji' ? '🎨 Images' : '😀 Emojis'}
+                </button>
+              )}
+              
               <button
-                key={plan}
-                onClick={() => onSubSectionChange?.(plan)}
-                className={`px-4 py-1.5 rounded font-semibold text-sm transition-colors ${
-                  activeSubSection === plan 
-                    ? 'bg-purple-600 text-white' 
-                    : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-300'
+                onClick={() => onViewModeChange('tree')}
+                className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                  viewMode === 'tree' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                Plan {plan}
+                <List className="w-4 h-4" />
+                Tree
               </button>
-            ))}
+              
+              <button
+                onClick={() => onViewModeChange('table')}
+                className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
+                  viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <Table className="w-4 h-4" />
+                Table
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -392,39 +430,20 @@ export default function WorkoutSectionHeader({
               </button>
             )}
             
-            {/* View Toggle - Only for non-B sections */}
+            {/* Action Buttons - Only for non-B sections */}
             {activeSection !== 'B' && (
               <>
-                {/* Icon Type Toggle Button */}
-                {onIconTypeToggle && (
+                {/* Print Button */}
+                {onPrintWeek && (
                   <button
-                    onClick={onIconTypeToggle}
-                    className="px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors bg-green-500 text-white hover:bg-green-600"
-                    title={`Switch to ${iconType === 'emoji' ? 'image' : 'emoji'} icons`}
+                    onClick={onPrintWeek}
+                    className="px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors bg-gray-700 text-white hover:bg-gray-800"
+                    title="Print week overview"
                   >
-                    {iconType === 'emoji' ? '🎨 Images' : '😀 Emojis'}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Print
                   </button>
                 )}
-                
-                <button
-                  onClick={() => onViewModeChange('tree')}
-                  className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
-                    viewMode === 'tree' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  <List className="w-4 h-4" />
-                  Tree
-                </button>
-                
-                <button
-                  onClick={() => onViewModeChange('table')}
-                  className={`px-3 py-1.5 rounded flex items-center gap-2 text-sm font-medium transition-colors ${
-                    viewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  }`}
-                >
-                  <Table className="w-4 h-4" />
-                  Table
-                </button>
               </>
             )}
           </div>
