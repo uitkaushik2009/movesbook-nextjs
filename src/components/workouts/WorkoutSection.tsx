@@ -2553,7 +2553,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                 // ALWAYS regenerate movelaps for non-ANNOTATION types when editing
                 // This ensures Rip\Sets column and all movelap data stays in sync
                 // 2026-01-22 10:35 UTC - Skip regeneration for circuit-based moveframes (BATTERY type)
-                if (moveframeData.type !== 'ANNOTATION' && moveframeData.type !== 'BATTERY') {
+                // 2026-01-28 - Skip regeneration for manual mode moveframes (preserve user's custom summary)
+                if (moveframeData.type !== 'ANNOTATION' && moveframeData.type !== 'BATTERY' && !moveframeData.manualMode) {
                    const baseReps = parseInt(moveframeData.repetitions) || 1;
                    const AEROBIC_SPORTS = ['SWIM', 'BIKE', 'MTB', 'SPINNING', 'RUN', 'ROWING', 'CANOEING', 'KAYAKING', 'SKATE', 'SKI', 'SNOWBOARD', 'WALKING', 'HIKING'];
                    const seriesMultiplier = AEROBIC_SPORTS.includes(moveframeData.sport) ? (parseInt(moveframeData.aerobicSeries) || 1) : 1;
@@ -2592,6 +2593,25 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    
                    console.log(`✅ Created ${newMovelaps.length} new movelaps with updated data`);
                    console.log(`📊 Rip\\Sets column will now show: ${newMovelaps.length}`);
+                 } else if (moveframeData.manualMode && editingMoveframe.movelaps && editingMoveframe.movelaps.length > 0) {
+                   // For manual mode moveframes, update the existing movelap's notes instead of regenerating
+                   const token = localStorage.getItem('token');
+                   const existingMovelap = editingMoveframe.movelaps[0];
+                   
+                   console.log('📝 [UPDATE] Updating manual movelap notes with moveframe content...');
+                   
+                   await fetch(`/api/workouts/movelaps/${existingMovelap.id}`, {
+                     method: 'PUT',
+                     headers: {
+                       'Content-Type': 'application/json',
+                       'Authorization': `Bearer ${token}`
+                     },
+                     body: JSON.stringify({
+                       notes: moveframeData.notes || moveframeData.description || ''
+                     })
+                   });
+                   
+                   console.log('✅ Updated manual movelap notes');
                  }
                  
                  // Reload data to show changes (updates Rip\Sets column)

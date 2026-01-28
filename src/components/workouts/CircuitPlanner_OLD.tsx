@@ -1002,7 +1002,7 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
     if (seriesMode === 'time') {
       parts.push(`Circuit ${circuits.length || numCircuits} of ${stationsPerCircuit} stations to do for ${seriesTime}' x ${avgSeries} series`);
     } else {
-      parts.push(`Circuit: ${circuits.length || numCircuits} circuits x ${avgSeries} series`);
+    parts.push(`Circuit: ${circuits.length || numCircuits} circuits x ${avgSeries} series`);
     }
     
     // Pause info
@@ -1216,7 +1216,7 @@ export default function CircuitPlanner({ sport, onSave, onCancel, initialConfig 
               ...station,
                 reps: sourceStation.reps, // Only copy reps (Load of work)
                 // Keep original: exercise, pause, sector
-              };
+            };
               copiedCount++;
             }
           });

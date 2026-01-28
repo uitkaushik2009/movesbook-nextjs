@@ -370,28 +370,28 @@ export default function WorkoutTreeView({
                                     })}
                                   </>
                                 )}
-                              </div>
                             </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDayClick?.(day);
-                              }}
-                              className="text-xs px-3 py-1 rounded font-medium transition-colors"
-                              style={{
-                                backgroundColor: 'rgba(255,255,255,0.2)',
-                                color: 'inherit'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
-                              }}
-                              title="Switch to table view"
-                            >
-                              Open →
-                            </button>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onDayClick?.(day);
+                                }}
+                                className="text-xs px-3 py-1 rounded font-medium transition-colors"
+                                style={{
+                                  backgroundColor: 'rgba(255,255,255,0.2)',
+                                  color: 'inherit'
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.3)';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.2)';
+                                }}
+                                title="Switch to table view"
+                              >
+                                Open →
+                              </button>
                           </div>
                         </div>
 

@@ -222,7 +222,7 @@ export default function DayRowTable({
       }}
     >
       {/* Check Checkbox */}
-      <td className="px-1 py-2 text-center sticky-col-1 w-[50px] min-w-[50px]" style={{ backgroundColor: bgStyle, color: rowTextColor }} onClick={(e) => e.stopPropagation()}>
+      <td className="border border-gray-200 px-1 py-2 text-center sticky-col-1 w-[50px] min-w-[50px]" style={{ backgroundColor: bgStyle, color: rowTextColor }} onClick={(e) => e.stopPropagation()}>
         <input
           type="checkbox"
           checked={isSelected}

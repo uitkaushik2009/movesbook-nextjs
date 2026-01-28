@@ -532,7 +532,7 @@ export default function BatteryCircuitPlanner({
                       {/* Display pauseSeries value at top */}
                       <div className="text-xs font-bold text-blue-700 mt-1">
                         {pauseSeries}'
-                      </div>
+                        </div>
                       
                       {/* Timer icon at bottom */}
                       <div className="relative mb-1">
@@ -587,9 +587,9 @@ export default function BatteryCircuitPlanner({
               {/* Circuit A with vertical flow */}
               <div className="mb-4">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded flex items-center justify-center font-bold bg-yellow-400 border-2 border-yellow-600 text-black text-xl shadow-md flex-shrink-0">
-                    A
-                  </div>
+                <div className="w-12 h-12 rounded flex items-center justify-center font-bold bg-yellow-400 border-2 border-yellow-600 text-black text-xl shadow-md flex-shrink-0">
+                  A
+                </div>
                   <div className="flex-1" style={{display: 'flex', flexDirection: 'column', gap: '32px'}}>
                     {[...Array(4)].map((_, i) => (
                       <div key={i} className="flex items-center gap-2">
@@ -732,17 +732,17 @@ export default function BatteryCircuitPlanner({
                   </span>
                 </label>
                 <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700">Pause\stations</label>
-                  <select 
-                    value={executionPauseStations || ''} 
-                    onChange={(e) => setExecutionPauseStations(e.target.value)}
+                <label className="text-sm font-medium text-gray-700">Pause\stations</label>
+                <select 
+                  value={executionPauseStations || ''} 
+                  onChange={(e) => setExecutionPauseStations(e.target.value)}
                     className="w-20 px-2 py-1 border border-gray-400 rounded text-sm"
-                  >
+                >
                     <option value="">20"</option>
-                    {[5,10,15,20,25,30,40,50,60].map(n => (
-                      <option key={n} value={n}>{n}"</option>
-                    ))}
-                  </select>
+                  {[5,10,15,20,25,30,40,50,60].map(n => (
+                    <option key={n} value={n}>{n}"</option>
+                  ))}
+                </select>
                   <button type="button" className="w-6 h-6 bg-gray-200 rounded flex items-center justify-center text-gray-600 hover:bg-gray-300">
                     ✕
                   </button>

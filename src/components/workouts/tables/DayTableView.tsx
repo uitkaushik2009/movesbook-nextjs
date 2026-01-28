@@ -355,6 +355,19 @@ export default function DayTableView({
         // Position scrollbar to match table wrapper
         scrollbar.style.left = `${rect.left}px`;
         scrollbar.style.width = `${rect.width}px`;
+        
+        // Hide scrollbar when table is not in viewport (scrolled past to footer)
+        const viewportHeight = window.innerHeight;
+        const tableBottom = rect.bottom;
+        const tableTop = rect.top;
+        
+        // Show scrollbar only when table is visible in viewport
+        // Hide if table bottom is above viewport or table top is below viewport
+        if (tableBottom < 0 || tableTop > viewportHeight) {
+          scrollbar.style.display = 'none';
+        } else {
+          scrollbar.style.display = 'block';
+        }
       }
     };
     
@@ -396,35 +409,6 @@ export default function DayTableView({
   // For Section B, show ALL weeks (already filtered by parent)
   // For Section A/C, use pagination (show one week at a time)
   const weeksToDisplay = activeSection === 'B' ? sortedWeeks : [sortedWeeks[currentWeekIndex]].filter(Boolean);
-  
-  // Debug logging for Section B
-  React.useEffect(() => {
-    if (activeSection === 'B') {
-      console.log('📊 [DayTableView] Section B RENDERING:', {
-        totalWeeks: workoutPlan?.weeks?.length || 0,
-        weeksToDisplay: weeksToDisplay.length,
-        weekNumbers: weeksToDisplay.map((w: any) => w.weekNumber),
-        weeksData: weeksToDisplay.map((w: any) => ({
-          weekNumber: w.weekNumber,
-          daysCount: w.days?.length || 0
-        })),
-        currentPageStart,
-        weeksPerPage
-      });
-      
-      // Log each week's days
-      weeksToDisplay.forEach((week: any) => {
-        console.log(`📊 [DayTableView] Week ${week.weekNumber}:`, {
-          daysCount: week.days?.length || 0,
-          days: week.days?.map((d: any) => ({
-            id: d.id,
-            date: d.date,
-            workoutsCount: d.workouts?.length || 0
-          })) || []
-        });
-      });
-    }
-  }, [activeSection, weeksToDisplay, currentPageStart, weeksPerPage]);
   
   // Legacy variables for backward compatibility
   const currentWeek = sortedWeeks[currentWeekIndex];
@@ -1428,7 +1412,10 @@ export default function DayTableView({
                             <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                               Check
                             </th>
-                          <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-2" style={{ width: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} colSpan={2} rowSpan={2}>
+                          <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-2" style={{ width: COL_WIDTHS.colorCycle, minWidth: COL_WIDTHS.colorCycle, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
+                            
+                          </th>
+                          <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-3" style={{ width: COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.nameCycle, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                             Period
                           </th>
                           <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-4" style={{ width: COL_WIDTHS.weekNumber, minWidth: COL_WIDTHS.weekNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
@@ -1791,9 +1778,12 @@ export default function DayTableView({
                       <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-1" style={{ width: COL_WIDTHS.noWorkouts, minWidth: COL_WIDTHS.noWorkouts, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                  Check
                </th>
-                      <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-2" style={{ width: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.colorCycle + COL_WIDTHS.nameCycle, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} colSpan={2} rowSpan={2}>
+                      <th className="border border-gray-400 px-1 py-2 text-xs font-bold sticky-header-2" style={{ width: COL_WIDTHS.colorCycle, minWidth: COL_WIDTHS.colorCycle, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
+                        
+                      </th>
+                      <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-3" style={{ width: COL_WIDTHS.nameCycle, minWidth: COL_WIDTHS.nameCycle, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                         Period
-               </th>
+                      </th>
                       <th className="border border-gray-400 px-2 py-2 text-xs font-bold sticky-header-4" style={{ width: COL_WIDTHS.weekNumber, minWidth: COL_WIDTHS.weekNumber, backgroundColor: colors.weekHeader, color: colors.weekHeaderText }} rowSpan={2}>
                         Week
                </th>
@@ -2027,7 +2017,7 @@ export default function DayTableView({
         </>
       )}
 
-      {/* Horizontal Scrollbar - Fixed at bottom of viewport */}
+      {/* Horizontal Scrollbar - Fixed at bottom of viewport, below footer */}
       <div 
         ref={scrollbarRef}
         className="overflow-x-auto custom-scrollbar bg-gradient-to-b from-gray-300 to-gray-200 border-t-2 border-blue-400 shadow-lg"
@@ -2037,7 +2027,7 @@ export default function DayTableView({
           left: 0,
           right: 0,
           height: `${SCROLLBAR_HEIGHT}px`,
-          zIndex: 50,
+          zIndex: 10, // Lower z-index so footer appears above it
         }}
         title="Horizontal scroll - Drag to navigate table"
       >

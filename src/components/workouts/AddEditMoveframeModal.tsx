@@ -300,44 +300,21 @@ export default function AddEditMoveframeModal({
   const formatPace = (value: string, isKmPace: boolean = false): string => {
     if (!value) return '';
     
-    // BIKE: Speed km/h format (00.0 to 99.9)
+    // BIKE: Speed km/h format (0.0 to 999.9) - Manual decimal entry
     if (sport === 'BIKE') {
-      // Extract digits only (no decimal point yet)
-      const digitsOnly = value.replace(/\D/g, '');
-      if (!digitsOnly) return '';
-      
-      // If user already typed a decimal point, handle normally
-      if (value.includes('.')) {
+      // Allow digits and decimal point
       const numValue = value.replace(/[^\d.]/g, '');
+      if (!numValue) return '';
+      
+      // Parse the value
       const speed = parseFloat(numValue);
         if (isNaN(speed)) return '';
       
-        // Validate range: 0.0 to 99.9
+      // Validate range: 0.0 to 999.9
       if (speed < 0) return '0.0';
-        if (speed > 99.9) return '99.9';
-        
-        return speed.toFixed(1);
-      }
+      if (speed > 999.9) return '999.9';
       
-      // Auto-format: Insert decimal before last digit
-      // Examples: "353" → "35.3", "45" → "4.5", "8" → "0.8", "999" → "99.9", "12345" → "12.3"
-      let formatted: string;
-      if (digitsOnly.length === 1) {
-        // Single digit: "8" → "0.8"
-        formatted = `0.${digitsOnly}`;
-      } else {
-        // Take only first 3 digits maximum (XX.X format)
-        const first3Digits = digitsOnly.slice(0, 3);
-        // Insert decimal before last digit
-        const beforeDecimal = first3Digits.slice(0, -1);
-        const afterDecimal = first3Digits.slice(-1);
-        formatted = `${beforeDecimal}.${afterDecimal}`;
-      }
-      
-      // Parse and validate range (00.0 to 99.9)
-      const speed = parseFloat(formatted);
-      if (speed < 0) return '0.0';
-      
+      // Return with one decimal place
       return speed.toFixed(1);
     }
     
@@ -2651,21 +2628,16 @@ export default function AddEditMoveframeModal({
                                     setPausePace(value);
                                   }}
                                   onBlur={(e) => {
-                                    // Format on blur: 00.0 (max 99.9)
+                                    // Format on blur: 0.0 (max 999.9)
                                     const value = parseFloat(e.target.value.replace(/[^\d.]/g, '')) || 0;
-                                    if (value > 99.9) {
-                                      // Round down: 12345 -> 12.3
-                                      const digits = value.toString().replace(/\D/g, '');
-                                      const first = digits.slice(0, -1) || '0';
-                                      const last = digits.slice(-1) || '0';
-                                      const rounded = parseFloat(`${first}.${last}`);
-                                      setPausePace(rounded.toFixed(1));
+                                    if (value > 999.9) {
+                                      setPausePace('999.9');
                                     } else {
                                       setPausePace(value.toFixed(1));
                                     }
                                   }}
                                   className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-cyan-500 font-mono"
-                                  placeholder="e.g., 35.3 (00.0 to 99.9)"
+                                  placeholder="e.g., 35.3 (0.0 to 999.9)"
                                 />
                               ) : pauseMode === 'watts' ? (
                                 <input
@@ -2942,7 +2914,7 @@ export default function AddEditMoveframeModal({
                         onBlur={(e) => setPace(formatPace(e.target.value))}
                         className="w-full px-3 py-2 text-lg border-2 border-green-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 font-mono bg-green-50"
                         placeholder={
-                          sport === 'BIKE' ? '353→35.3 or 12345→12.3' :
+                          sport === 'BIKE' ? 'e.g., 35.3 or 120.5' :
                           sport === 'ROWING' ? "1'30\" or 130" :
                           sport === 'SKI' ? "2'45\" or 245" :
                           "1.30 or 130 or 1:30"
@@ -2950,7 +2922,7 @@ export default function AddEditMoveframeModal({
                       />
                       <p className="mt-1 text-[10px] text-green-600">
                         {sport === 'BIKE' ? (
-                          <>✨ Type: <strong>353</strong> → <strong>35.3</strong>, <strong>12345</strong> → <strong>12.3 km/h</strong> (auto XX.X format)</>
+                          <>✨ Enter speed manually with decimal point: <strong>35.3</strong>, <strong>120.5</strong>, or <strong>185.0 km/h</strong> (range: 0.0 to 999.9)</>
                         ) : sport === 'ROWING' ? (
                           <>✨ Type: <strong>1:30.5</strong> or <strong>1305</strong> → <strong>1'30"5</strong> (Speed per 500m, range: 0'00"0 to 9'59"9)</>
                         ) : sport === 'SKI' ? (
@@ -3115,15 +3087,11 @@ export default function AddEditMoveframeModal({
                                       // Format on blur
                                       const mode = plan.pauseMode;
                                       if (mode === 'speed') {
-                                        // Format: 00.0 (max 99.9) for all sports
+                                        // Format: 0.0 (max 999.9) for all sports
                                         let value = parseFloat(e.target.value);
                                         if (!isNaN(value)) {
-                                          if (value > 99.9) {
-                                            // Round to XX.X
-                                            const digits = value.toString().replace(/\./g, '').slice(0, 3);
-                                            const first = digits.slice(0, -1) || '0';
-                                            const last = digits.slice(-1) || '0';
-                                            value = parseFloat(`${first}.${last}`);
+                                          if (value > 999.9) {
+                                            value = 999.9;
                                           }
                                           updateIndividualPlan(idx, 'pausePace', value.toFixed(1));
                                         }
@@ -3832,14 +3800,14 @@ export default function AddEditMoveframeModal({
                                 "130 or 1:30 or 1.30"
                               }
                               title={
-                                sport === 'BIKE' ? 'Type digits: 353→35.3, 12345→12.3 (auto XX.X)' :
+                                sport === 'BIKE' ? 'Enter speed with decimal: e.g., 35.3, 120.5 (0.0 to 999.9 km/h)' :
                                 sport === 'ROWING' || sport === 'SKI' ? "Type freely: 1:30, 130, 1'30" :
                                 "Type freely: 130, 1:30, 1.30"
                               }
                             />
                             <p className="mt-0.5 text-[10px] text-green-600">
                               {sport === 'BIKE' ? (
-                                <>⚡ Fast input: Type <strong>353</strong> → <strong>35.3</strong>, <strong>12345</strong> → <strong>12.3 km/h</strong></>
+                                <>⚡ Enter speed with decimal: <strong>35.3</strong>, <strong>120.5</strong>, <strong>185.0 km/h</strong> (range: 0.0 to 999.9)</>
                               ) : (
                                 <>⚡ Fast input: Type <strong>130</strong> → <strong>1'30"0</strong></>
                               )}

@@ -1000,9 +1000,20 @@ export function useMoveframeForm({
         
         // Manual content - check both description and notes fields
         // For manual mode, content might be in notes field
-        const manualModeContent = existingMoveframe.manualMode 
-          ? (existingMoveframe.notes || existingMoveframe.description || '')
-          : (existingMoveframe.description || '');
+        // 2026-01-28 - For manual moveframes, load content from movelap.notes if available
+        let manualModeContent = '';
+        if (existingMoveframe.manualMode) {
+          // Check if there are movelaps and load from the first movelap's notes
+          if (existingMoveframe.movelaps && existingMoveframe.movelaps.length > 0) {
+            manualModeContent = existingMoveframe.movelaps[0].notes || existingMoveframe.notes || existingMoveframe.description || '';
+            console.log('📥 [LOAD] Loading manual content from movelap notes:', manualModeContent.substring(0, 50) + '...');
+          } else {
+            manualModeContent = existingMoveframe.notes || existingMoveframe.description || '';
+            console.log('📥 [LOAD] Loading manual content from moveframe notes/description');
+          }
+        } else {
+          manualModeContent = existingMoveframe.description || '';
+        }
         setManualContent(manualModeContent);
         
         // Check if manual mode was used

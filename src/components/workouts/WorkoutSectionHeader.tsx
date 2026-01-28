@@ -173,21 +173,21 @@ export default function WorkoutSectionHeader({
       {activeSection === 'A' && (
         <div className="bg-gray-100 border-b border-gray-300 px-4 py-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-gray-700 mr-2">Weekly Plans:</span>
-              {(['A', 'B', 'C'] as const).map((plan) => (
-                <button
-                  key={plan}
-                  onClick={() => onSubSectionChange?.(plan)}
-                  className={`px-4 py-1.5 rounded font-semibold text-sm transition-colors ${
-                    activeSubSection === plan 
-                      ? 'bg-purple-600 text-white' 
-                      : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-300'
-                  }`}
-                >
-                  Plan {plan}
-                </button>
-              ))}
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-gray-700 mr-2">Weekly Plans:</span>
+            {(['A', 'B', 'C'] as const).map((plan) => (
+              <button
+                key={plan}
+                onClick={() => onSubSectionChange?.(plan)}
+                className={`px-4 py-1.5 rounded font-semibold text-sm transition-colors ${
+                  activeSubSection === plan 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-300'
+                }`}
+              >
+                Plan {plan}
+              </button>
+            ))}
             </div>
             
             {/* View Toggle Buttons - Right side */}
