@@ -1069,11 +1069,13 @@ export default function MovelapDetailTable({
                   style={{
                     lineHeight: '1.6',
                     fontFamily: 'system-ui, -apple-system, sans-serif',
-                    fontSize: '12px'
+                    fontSize: '12px',
+                    whiteSpace: 'pre-wrap'
                   }}
-                >
-                  {stripHtmlTags(moveframe.movelaps?.[0]?.notes || 'No summary')}
-                </div>
+                  dangerouslySetInnerHTML={{ 
+                    __html: moveframe.movelaps?.[0]?.notes || 'No summary' 
+                  }}
+                />
               </td>
               
               {/* Detail of workout (Manual Content from moveframe.notes) */}

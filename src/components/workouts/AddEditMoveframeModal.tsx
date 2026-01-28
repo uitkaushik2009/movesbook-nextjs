@@ -16,6 +16,8 @@ import Image from 'next/image';
 // import CircuitPlanner from './CircuitPlanner';
 // 2026-01-23 - Redesigned Circuit Planner matching screenshot
 import BatteryCircuitPlanner from './BatteryCircuitPlanner_REDESIGNED';
+// 2026-01-29 - Fast Planner of Moveframes component
+import FastPlannerOfMoveframes from './FastPlannerOfMoveframes';
 
 interface AddEditMoveframeModalProps {
   isOpen: boolean;
@@ -1285,7 +1287,7 @@ export default function AddEditMoveframeModal({
                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                 } ${mode === 'edit' ? 'cursor-not-allowed opacity-50 pointer-events-none' : ''}`}
               >
-                ⚡ Mixed test\Circuits
+                ⚡ Fast plannings
               </button>
               <button
                 type="button"
@@ -1309,58 +1311,9 @@ export default function AddEditMoveframeModal({
             </div>
           </div>
 
-          {/* Mixed test\Circuits Submenu Selection - 2026-01-22 14:30 UTC */}
-          {type === 'BATTERY' && (
-            <div className="mb-3">
-              <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                Mixed test\Circuits Mode
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!isSportSectionB(sport)) {
-                      return;
-                    }
-                    setBatterySubmenu('circuits');
-                  }}
-                  disabled={!isSportSectionB(sport)}
-                  className={`px-3 py-2 text-sm font-medium rounded border-2 transition-colors ${
-                    batterySubmenu === 'circuits'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                  } ${!isSportSectionB(sport) ? 'cursor-not-allowed opacity-50' : ''}`}
-                >
-                  Circuits planner
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBatterySubmenu('fast')}
-                  className={`px-3 py-2 text-sm font-medium rounded border-2 transition-colors ${
-                    batterySubmenu === 'fast'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Fast planner of Moveframes
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setBatterySubmenu('ai')}
-                  className={`px-3 py-2 text-sm font-medium rounded border-2 transition-colors ${
-                    batterySubmenu === 'ai'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  Plan of Moveframes with AI
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Workout Section Selection - Only for STANDARD and BATTERY modes */}
           {/* 2026-01-22 15:30 UTC - Reduced width to 50% and centered */}
+          {/* 2026-01-29 - Moved above Fast plannings Mode */}
           {(type === 'STANDARD' || type === 'BATTERY') && (
           <div className="mb-3 w-1/2 mx-auto">
               {mode === 'edit' && (
@@ -1437,6 +1390,74 @@ export default function AddEditMoveframeModal({
                 </p>
               )}
           </div>
+          )}
+
+          {/* Fast plannings Submenu Selection - 2026-01-22 14:30 UTC */}
+          {/* 2026-01-29 - Moved below Workout Section Selection */}
+          {type === 'BATTERY' && (
+            <div className="mb-3">
+              <label className="block text-xs font-bold text-gray-700 mb-1.5">
+                Fast plannings Mode
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isSportSectionB(sport)) {
+                      return;
+                    }
+                    setBatterySubmenu('circuits');
+                  }}
+                  disabled={!isSportSectionB(sport)}
+                  className={`px-3 py-2 text-sm font-medium rounded border-2 transition-colors ${
+                    batterySubmenu === 'circuits'
+                      ? 'bg-blue-50 border-blue-500 text-blue-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  } ${!isSportSectionB(sport) ? 'cursor-not-allowed opacity-50' : ''}`}
+                >
+                  Circuits planner
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isSportSectionB(sport)) {
+                      return;
+                    }
+                    setBatterySubmenu('fast');
+                  }}
+                  disabled={!isSportSectionB(sport)}
+                  className={`px-3 py-2 text-sm font-medium rounded border-2 transition-colors ${
+                    batterySubmenu === 'fast'
+                      ? 'bg-blue-50 border-blue-500 text-blue-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  } ${!isSportSectionB(sport) ? 'cursor-not-allowed opacity-50' : ''}`}
+                >
+                  Fast planner of Moveframes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isSportSectionB(sport)) {
+                      return;
+                    }
+                    setBatterySubmenu('ai');
+                  }}
+                  disabled={!isSportSectionB(sport)}
+                  className={`px-3 py-2 text-sm font-medium rounded border-2 transition-colors ${
+                    batterySubmenu === 'ai'
+                      ? 'bg-blue-50 border-blue-500 text-blue-700'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                  } ${!isSportSectionB(sport) ? 'cursor-not-allowed opacity-50' : ''}`}
+                >
+                  Plan of Moveframes with AI
+                </button>
+              </div>
+              {!isSportSectionB(sport) && (
+                <p className="mt-2 text-xs text-orange-600">
+                  ℹ️ <strong>Note:</strong> Fast plannings mode (all features) is only available for non-aerobic sports with exercise catalogs (e.g., Body Building, Calisthenics, CrossFit, Gymnastic, etc.)
+                </p>
+              )}
+            </div>
           )}
           
           {/* Annotation Section - Show when type is ANNOTATION, or optional for other types */}
@@ -2941,7 +2962,7 @@ export default function AddEditMoveframeModal({
                             <tr>
                               <th className="border border-gray-300 px-2 py-2 text-center w-12">#</th>
                               <th className="border border-gray-300 px-2 py-2 text-center" colSpan={4}>WORK</th>
-                              <th className="border border-gray-300 px-2 py-2 text-center" colSpan={3}>PAUSE</th>
+                              <th className="border border-gray-300 px-2 py-2 text-center" colSpan={4}>PAUSE</th>
                               <th className="border border-gray-300 px-2 py-2 text-center w-20"></th>
                             </tr>
                             <tr>
@@ -2951,6 +2972,7 @@ export default function AddEditMoveframeModal({
                               <th className="border border-gray-300 px-2 py-1.5 text-center bg-blue-50">Strokes</th>
                               <th className="border border-gray-300 px-2 py-1.5 text-center bg-blue-50">Watts</th>
                               <th className="border border-gray-300 px-2 py-1.5 text-center bg-amber-50 min-w-[120px]">Rest Type</th>
+                              <th className="border border-gray-300 px-2 py-1.5 text-center bg-amber-50 min-w-[100px]">Time</th>
                               <th className="border border-gray-300 px-2 py-1.5 text-center bg-amber-50 min-w-[120px]">Mode</th>
                               <th className="border border-gray-300 px-2 py-1.5 text-center bg-amber-50 min-w-[120px]">Pace</th>
                               <th className="border-b border-gray-300"></th>
@@ -2968,7 +2990,7 @@ export default function AddEditMoveframeModal({
                                   {/* Group Header */}
                                   {AEROBIC_SPORTS.includes(sport as any) && aerobicSeriesNum > 1 && isFirstInGroup && (
                                     <tr>
-                                      <td colSpan={9} className="border border-gray-400 bg-rose-100 px-3 py-2 text-sm font-bold text-rose-900 text-center">
+                                      <td colSpan={10} className="border border-gray-400 bg-rose-100 px-3 py-2 text-sm font-bold text-rose-900 text-center">
                                         Serie\Group {currentGroup}
                                       </td>
                                     </tr>
@@ -3041,6 +3063,29 @@ export default function AddEditMoveframeModal({
                                     <option value="Restart time">Restart time</option>
                                     <option value="Restart pulse">Restart pulse</option>
                                   </select>
+                                </td>
+                                {/* Pause Time */}
+                                <td className="border border-gray-300 px-2 py-1.5">
+                                  <input
+                                    type="text"
+                                    value={plan.pause || ''}
+                                    onChange={(e) => updateIndividualPlan(idx, 'pause', e.target.value)}
+                                    onBlur={(e) => {
+                                      const restType = plan.restType || 'Set time';
+                                      if (restType === 'Restart time') {
+                                        updateIndividualPlan(idx, 'pause', formatTime(e.target.value));
+                                      } else if (restType === 'Restart pulse') {
+                                        const value = e.target.value.replace(/\D/g, '').slice(0, 3);
+                                        updateIndividualPlan(idx, 'pause', value);
+                                      } else {
+                                        updateIndividualPlan(idx, 'pause', formatTime(e.target.value));
+                                      }
+                                    }}
+                                    className="w-full px-2 py-1.5 border-2 border-green-300 rounded text-xs focus:ring-1 focus:ring-green-500 font-mono bg-green-50"
+                                    placeholder={(plan.restType || 'Set time') === 'Restart pulse' ? 'bpm' : '123456'}
+                                    autoComplete="off"
+                                    title={(plan.restType || 'Set time') === 'Restart pulse' ? 'Enter pulse (bpm)' : 'Type: 123456 â†’ formats to 1h23\'45"6'}
+                                  />
                                 </td>
                                 {/* Mode */}
                                 <td className="border border-gray-300 px-2 py-1.5">
@@ -4196,12 +4241,21 @@ export default function AddEditMoveframeModal({
           )}
 
           {/* Battery Mode - Fast Planner */}
-          {/* 2026-01-22 14:30 UTC - Placeholder for Fast planner */}
+          {/* 2026-01-29 - Fast planner of Moveframes - Custom keyboard for quick value selection */}
           {type === 'BATTERY' && batterySubmenu === 'fast' && (
-            <div className="p-8 text-center bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg">
-              <h3 className="text-lg font-bold text-gray-700 mb-2">Fast Planner of Moveframes</h3>
-              <p className="text-gray-600">Coming soon...</p>
-            </div>
+            <FastPlannerOfMoveframes
+              sport={sport}
+              sectionId={sectionId}
+              workout={workout}
+              day={day}
+              mode={mode}
+              existingMoveframe={existingMoveframe}
+              onSave={(moveframeData: any) => {
+                onSave(moveframeData);
+                onClose();
+              }}
+              onCancel={onClose}
+            />
           )}
 
           {/* Battery Mode - AI Planner */}

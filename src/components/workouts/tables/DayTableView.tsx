@@ -1049,7 +1049,14 @@ export default function DayTableView({
 
                  {/* Print Button */}
                  <button
-                   onClick={() => window.print()}
+                   onClick={() => {
+                     console.log('ðŸ–¨ï¸ Print current view clicked');
+                     console.log('ðŸ–¨ï¸ Total weeks in sortedWeeks:', sortedWeeks.length);
+                     setAutoPrintWeek(true);
+                     setShowAllWeeksInModal(true);
+                     setCurrentWeekForModal(null);
+                     setShowWeekTotalsModal(true);
+                   }}
                    className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all shadow-md"
                    title="Print current view"
                  >
@@ -2447,4 +2454,3 @@ export default function DayTableView({
     </div>
   );
 }
-
