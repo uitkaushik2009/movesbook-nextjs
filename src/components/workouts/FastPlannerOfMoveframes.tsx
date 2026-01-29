@@ -54,13 +54,13 @@ export default function FastPlannerOfMoveframes({
 }: FastPlannerProps) {
   // State for sector selection mode
   const [sectorMode, setSectorMode] = useState<'exercises' | 'series'>('exercises');
-  
+
   // State for exercise search
   const [exerciseSearch, setExerciseSearch] = useState('');
-  
+
   // State for showing exercise selector popup
   const [showExercisePopup, setShowExercisePopup] = useState(false);
-  
+
   // State for execution toolbar values (quick selection bar)
   const [execSpeed, setExecSpeed] = useState('');
   const [execSeries, setExecSeries] = useState('');
@@ -68,10 +68,10 @@ export default function FastPlannerOfMoveframes({
   const [execWeight, setExecWeight] = useState('');
   const [execBreak, setExecBreak] = useState('');
   const [execMode, setExecMode] = useState('');
-  
+
   // State for selected cell (for keyboard-like input)
   const [selectedCell, setSelectedCell] = useState<{ rowId: number; field: string } | null>(null);
-  
+
   // State for exercise rows
   const [rows, setRows] = useState<FastPlannerRow[]>([
     { id: 1, exercise: '', speed: '', series: '', ripTime: '', weight: '', break: '', mode: '' },
@@ -79,62 +79,56 @@ export default function FastPlannerOfMoveframes({
     { id: 3, exercise: '', speed: '', series: '', ripTime: '', weight: '', break: '', mode: '' },
     { id: 4, exercise: '', speed: '', series: '', ripTime: '', weight: '', break: '', mode: '' }
   ]);
-  
+
   // Selected muscle group for filtering exercises
   const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string>('all');
-  
+
   // State for which exercise toolbar button is active (speed, series, etc.)
   const [activeExerciseButton, setActiveExerciseButton] = useState<'speed' | 'series' | 'riptime' | 'weight' | 'break' | 'mode' | null>(null);
-  
+
   // State for Rip\Time input mode
   const [ripTimeMode, setRipTimeMode] = useState<'reps' | 'time'>('reps');
   const [ripTimeValue, setRipTimeValue] = useState<string>('');
-  
+
   // State for Weight input
   const [weightValue, setWeightValue] = useState<string>('');
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>('kg');
-  
+
   // State for Break input
   const [breakMode, setBreakMode] = useState<'rest' | 'cardio'>('rest');
   const [cardioValue, setCardioValue] = useState<string>('120');
-  
+
   // Speed options for body building and similar sports
   const SPEED_OPTIONS = ['Very slow', 'Slow', 'Normal', 'Quick', 'Fast', 'Very fast', 'Explosive', 'Negative'];
-  
+
   // Break/Pause options
   const BREAK_OPTIONS = ['0', '0"', '5"', '10"', '15"', '20"', '30"', '45"', "1'", "1'15\"", "1'30\"", "2'", "2'30\"", "3'", "4'", "5'", "6'", "7'"];
-  
+
   // Mode options - Breaking modality among series
   const MODE_OPTIONS = [
     { id: 'stopped', label: 'Stopped', icon: '/icons/stopped.png' },
     { id: 'superset', label: 'Superset', icon: '/icons/superset.png' },
     { id: 'movement', label: 'Movement Customized', icon: '/icons/movement.png' }
   ];
-  
+
   // Helper function to format time input (MM'SS" format)
-  const formatRipTime = (value: string): string => {
+  const formatRipTime = (value: string, finalize = false): string => {
     const digits = value.replace(/\D/g, '');
     if (!digits) return '';
-    
-    if (digits.length === 1) {
-      // 1 digit: pad to 00'0X"
-      return `00'0${digits}"`;
-    } else if (digits.length === 2) {
-      // 2 digits: format as 00'XX"
-      return `00'${digits}"`;
-    } else if (digits.length === 3) {
-      // 3 digits: pad to 0X'XX"
-      return `0${digits[0]}'${digits.slice(1)}"`;
-    } else {
-      // 4+ digits: no padding, last 2 are seconds, rest are minutes
-      const seconds = digits.slice(-2);
-      const minutes = digits.slice(0, -2);
-      return `${minutes}'${seconds}"`;
-    }
+
+    // While typing → don't force zeros
+    if (!finalize) return digits;
+
+    // On blur → format
+    const padded = digits.length < 4 ? digits.padStart(4, '0') : digits;
+    const seconds = padded.slice(-2);
+    const minutes = padded.slice(0, -2);
+
+    return `${minutes}'${seconds}"`;
   };
-  
+
   // Mock exercise data (placeholder until we have real exercise library)
-  const mockExercises = MUSCLE_GROUPS.flatMap(group => 
+  const mockExercises = MUSCLE_GROUPS.flatMap(group =>
     Array.from({ length: 12 }, (_, i) => ({
       id: `${group.id}-${i}`,
       name: `${group.label} Exercise ${i + 1}`,
@@ -149,35 +143,35 @@ export default function FastPlannerOfMoveframes({
       image: '/muscular/abs.png' // Default image for general exercises
     }))
   ).sort((a, b) => a.name.localeCompare(b.name));
-  
+
   // Mock frequently used exercises (for blue indicator)
   const frequentlyUsedExercises = ['shoulders-0', 'chest-0', 'biceps-1', 'quadriceps-0'];
-  
+
   // Function to get indicator color for an exercise
   const getExerciseIndicatorColor = (exerciseName: string): 'green' | 'blue' | null => {
     // Check if exercise is already selected in current workout (green has priority)
     const isSelected = rows.some(row => row.exercise === exerciseName);
     if (isSelected) return 'green';
-    
+
     // Check if exercise is frequently used
     const exercise = mockExercises.find(ex => ex.name === exerciseName);
     if (exercise && frequentlyUsedExercises.includes(exercise.id)) return 'blue';
-    
+
     return null;
   };
-  
+
   // Handle quick value selection from execution toolbar (keyboard-like input)
   const handleQuickFill = (field: string, value: string) => {
     if (!selectedCell) {
       // No cell selected - show a hint to user
       return;
     }
-    
+
     // Only fill if the selected cell matches the field
     if (selectedCell.field !== field) {
       return;
     }
-    
+
     // Fill the selected cell with the value
     setRows(prevRows => prevRows.map(row => {
       if (row.id === selectedCell.rowId) {
@@ -186,7 +180,7 @@ export default function FastPlannerOfMoveframes({
       return row;
     }));
   };
-  
+
   // Handle cell click (select cell for quick input)
   const handleCellClick = (rowId: number, field: string) => {
     setSelectedCell({ rowId, field });
@@ -195,13 +189,13 @@ export default function FastPlannerOfMoveframes({
       setShowExercisePopup(true);
     }
   };
-  
+
   // Add new row
   const handleGoNext = () => {
     const newId = rows.length > 0 ? Math.max(...rows.map(r => r.id)) + 1 : 1;
     setRows([...rows, { id: newId, exercise: '', speed: '', series: '', ripTime: '', weight: '', break: '', mode: '' }]);
   };
-  
+
   // Duplicate last row
   const handleDuplicate = () => {
     if (rows.length === 0) return;
@@ -209,7 +203,7 @@ export default function FastPlannerOfMoveframes({
     const newId = Math.max(...rows.map(r => r.id)) + 1;
     setRows([...rows, { ...lastRow, id: newId }]);
   };
-  
+
   // Triplicate last row
   const handleTriplicate = () => {
     if (rows.length === 0) return;
@@ -222,14 +216,14 @@ export default function FastPlannerOfMoveframes({
     ];
     setRows([...rows, ...newRows]);
   };
-  
+
   // Remove last row
   const handleRemove = () => {
     if (rows.length > 1) {
       setRows(rows.slice(0, -1));
     }
   };
-  
+
   // Reset current row
   const handleResetRow = () => {
     if (!selectedCell) return;
@@ -240,7 +234,7 @@ export default function FastPlannerOfMoveframes({
       return row;
     }));
   };
-  
+
   // Reset all rows
   const handleResetAll = () => {
     setRows([
@@ -248,7 +242,7 @@ export default function FastPlannerOfMoveframes({
     ]);
     setSelectedCell(null);
   };
-  
+
   // Save moveframe
   const handleSaveMoveframe = () => {
     // Build moveframe data
@@ -268,10 +262,10 @@ export default function FastPlannerOfMoveframes({
         rows
       }
     };
-    
+
     onSave(moveframeData);
   };
-  
+
   return (
     <div className="space-y-4">
       {/* Top Row: Execution, Intensity of work, Break between series */}
@@ -301,7 +295,7 @@ export default function FastPlannerOfMoveframes({
       <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 2fr 1fr' }}>
         {/* Sector button with radio selections - Under Execution */}
         <div className="flex items-center gap-2">
-          <button 
+          <button
             className="px-3 py-2 text-sm font-bold border rounded bg-gray-100 text-gray-700 border-gray-300 whitespace-nowrap"
           >
             Sector
@@ -366,11 +360,10 @@ export default function FastPlannerOfMoveframes({
           <div className="flex-shrink-0 bg-gray-900 rounded-lg p-3">
             <button
               onClick={() => setSelectedMuscleGroup('all')}
-              className={`flex flex-col items-center justify-center px-6 py-4 rounded-lg transition-colors ${
-                selectedMuscleGroup === 'all'
-                  ? 'bg-red-500 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-              }`}
+              className={`flex flex-col items-center justify-center px-6 py-4 rounded-lg transition-colors ${selectedMuscleGroup === 'all'
+                ? 'bg-red-500 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
             >
               <span className="text-5xl mb-2">👤</span>
               <span className="text-base font-medium">All</span>
@@ -384,11 +377,10 @@ export default function FastPlannerOfMoveframes({
                 <button
                   key={group.id}
                   onClick={() => setSelectedMuscleGroup(group.id)}
-                  className={`flex flex-col items-center justify-center px-4 py-4 rounded-lg transition-colors flex-shrink-0 ${
-                    selectedMuscleGroup === group.id
-                      ? 'bg-red-500 text-white'
-                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                  }`}
+                  className={`flex flex-col items-center justify-center px-4 py-4 rounded-lg transition-colors flex-shrink-0 ${selectedMuscleGroup === group.id
+                    ? 'bg-red-500 text-white'
+                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    }`}
                 >
                   <div className="w-32 h-32 mb-2 flex items-center justify-center relative">
                     <Image
@@ -440,13 +432,13 @@ export default function FastPlannerOfMoveframes({
 
             {/* Buttons row with search box */}
             <div className="flex gap-2 items-center">
-              <button 
+              <button
                 onClick={() => setActiveExerciseButton(null)}
                 className="flex-1 px-3 py-2 text-sm font-bold border rounded bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 whitespace-nowrap"
               >
                 Sector
               </button>
-              
+
               {/* Search box between Sector and Speed */}
               <input
                 type="text"
@@ -455,64 +447,58 @@ export default function FastPlannerOfMoveframes({
                 placeholder="Name exercise"
                 className="w-80 px-3 py-2 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              
-              <button 
+
+              <button
                 onClick={() => setActiveExerciseButton(activeExerciseButton === 'speed' ? null : 'speed')}
-                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${
-                  activeExerciseButton === 'speed'
-                    ? 'bg-blue-500 text-white border-blue-600'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                }`}
+                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${activeExerciseButton === 'speed'
+                  ? 'bg-blue-500 text-white border-blue-600'
+                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                  }`}
               >
                 Speed
               </button>
-              <button 
+              <button
                 onClick={() => setActiveExerciseButton(activeExerciseButton === 'series' ? null : 'series')}
-                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${
-                  activeExerciseButton === 'series'
-                    ? 'bg-blue-500 text-white border-blue-600'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                }`}
+                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${activeExerciseButton === 'series'
+                  ? 'bg-blue-500 text-white border-blue-600'
+                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                  }`}
               >
                 Series
               </button>
-              <button 
+              <button
                 onClick={() => setActiveExerciseButton(activeExerciseButton === 'riptime' ? null : 'riptime')}
-                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${
-                  activeExerciseButton === 'riptime'
-                    ? 'bg-blue-500 text-white border-blue-600'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                }`}
+                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${activeExerciseButton === 'riptime'
+                  ? 'bg-blue-500 text-white border-blue-600'
+                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                  }`}
               >
                 Rip\Time
               </button>
-              <button 
+              <button
                 onClick={() => setActiveExerciseButton(activeExerciseButton === 'weight' ? null : 'weight')}
-                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${
-                  activeExerciseButton === 'weight'
-                    ? 'bg-blue-500 text-white border-blue-600'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                }`}
+                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${activeExerciseButton === 'weight'
+                  ? 'bg-blue-500 text-white border-blue-600'
+                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                  }`}
               >
                 Weight
               </button>
-              <button 
+              <button
                 onClick={() => setActiveExerciseButton(activeExerciseButton === 'break' ? null : 'break')}
-                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${
-                  activeExerciseButton === 'break'
-                    ? 'bg-blue-500 text-white border-blue-600'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                }`}
+                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${activeExerciseButton === 'break'
+                  ? 'bg-blue-500 text-white border-blue-600'
+                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                  }`}
               >
                 Break
               </button>
-              <button 
+              <button
                 onClick={() => setActiveExerciseButton(activeExerciseButton === 'mode' ? null : 'mode')}
-                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${
-                  activeExerciseButton === 'mode'
-                    ? 'bg-blue-500 text-white border-blue-600'
-                    : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
-                }`}
+                className={`flex-1 px-3 py-2 text-sm font-medium border rounded whitespace-nowrap ${activeExerciseButton === 'mode'
+                  ? 'bg-blue-500 text-white border-blue-600'
+                  : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                  }`}
               >
                 Mode
               </button>
@@ -691,19 +677,22 @@ export default function FastPlannerOfMoveframes({
                         type="text"
                         value={ripTimeValue}
                         onChange={(e) => {
-                          const formatted = formatRipTime(e.target.value);
-                          setRipTimeValue(formatted);
+                          // allow free typing
+                          const raw = e.target.value.replace(/\D/g, '');
+                          setRipTimeValue(raw);
                         }}
-                        onBlur={(e) => {
-                          const formatted = formatRipTime(e.target.value);
+                        onBlur={() => {
+                          const formatted = formatRipTime(ripTimeValue, true);
                           setRipTimeValue(formatted);
+
                           if (selectedCell && selectedCell.field === 'ripTime') {
-                            setRows(prevRows => prevRows.map(row => {
-                              if (row.id === selectedCell.rowId) {
-                                return { ...row, ripTime: formatted };
-                              }
-                              return row;
-                            }));
+                            setRows(prev =>
+                              prev.map(row =>
+                                row.id === selectedCell.rowId
+                                  ? { ...row, ripTime: formatted }
+                                  : row
+                              )
+                            );
                           }
                         }}
                         placeholder="MM'SS&quot;"
@@ -711,6 +700,7 @@ export default function FastPlannerOfMoveframes({
                       />
                     </div>
                   )}
+
                 </div>
               </div>
             )}
@@ -829,11 +819,13 @@ export default function FastPlannerOfMoveframes({
                       checked={breakMode === 'rest'}
                       onChange={() => {
                         setBreakMode('rest');
+                        setActiveExerciseButton('break'); // 👈 keep panel open
                       }}
                       className="w-5 h-5"
                     />
                     <span className="text-base font-medium">Rest time</span>
                   </label>
+
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
@@ -841,12 +833,15 @@ export default function FastPlannerOfMoveframes({
                       checked={breakMode === 'cardio'}
                       onChange={() => {
                         setBreakMode('cardio');
+                        setCardioValue('120');             // 👈 default
+                        setActiveExerciseButton('break');  // 👈 keep panel open
                       }}
                       className="w-5 h-5"
                     />
                     <span className="text-base font-medium">Cardio</span>
                   </label>
                 </div>
+
 
                 {/* Input Area */}
                 <div>
@@ -876,79 +871,86 @@ export default function FastPlannerOfMoveframes({
 
                   {/* Cardio - Numeric Input */}
                   {breakMode === 'cardio' && (
-                    <div className="flex items-center gap-2">
-                      {/* Decrease Button */}
-                      <button
-                        onClick={() => {
-                          const currentValue = parseInt(cardioValue) || 120;
-                          if (currentValue > 60) {
-                            const newValue = Math.max(60, currentValue - 1).toString();
-                            setCardioValue(newValue);
-                            if (selectedCell && selectedCell.field === 'break') {
-                              setRows(prevRows => prevRows.map(row => {
-                                if (row.id === selectedCell.rowId) {
-                                  return { ...row, break: `${newValue} bpm` };
-                                }
-                                return row;
-                              }));
+                    <div className="flex items-center gap-4">
+                      {/* Cardio Input with +/- buttons */}
+                      <div className="flex items-center gap-2">
+                        {/* Decrease Button */}
+                        <button
+                          onClick={() => {
+                            const currentValue = parseInt(cardioValue) || 120;
+                            if (currentValue > 60) {
+                              const newValue = Math.max(60, currentValue - 1).toString();
+                              setCardioValue(newValue);
+                              if (selectedCell && selectedCell.field === 'break') {
+                                setRows(prevRows => prevRows.map(row => {
+                                  if (row.id === selectedCell.rowId) {
+                                    return { ...row, break: `${newValue} bpm` };
+                                  }
+                                  return row;
+                                }));
+                              }
                             }
-                          }
-                        }}
-                        className="w-12 h-12 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-100 flex items-center justify-center text-2xl font-bold"
-                      >
-                        −
-                      </button>
+                          }}
+                          className="w-12 h-12 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-100 flex items-center justify-center text-2xl font-bold"
+                        >
+                          −
+                        </button>
 
-                      {/* Cardio Input */}
-                      <input
-                        type="number"
-                        value={cardioValue}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setCardioValue(value);
-                        }}
-                        onBlur={(e) => {
-                          const value = e.target.value;
-                          const numValue = parseInt(value);
-                          if (numValue >= 60 && numValue <= 200) {
-                            if (selectedCell && selectedCell.field === 'break') {
-                              setRows(prevRows => prevRows.map(row => {
-                                if (row.id === selectedCell.rowId) {
-                                  return { ...row, break: `${value} bpm` };
-                                }
-                                return row;
-                              }));
+                        {/* Cardio Input */}
+                        <input
+                          type="number"
+                          value={cardioValue}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setCardioValue(value);
+                          }}
+                          onBlur={(e) => {
+                            const value = e.target.value;
+                            const numValue = parseInt(value);
+                            if (numValue >= 60 && numValue <= 200) {
+                              setCardioValue(value);
+                              if (selectedCell && selectedCell.field === 'break') {
+                                setRows(prevRows => prevRows.map(row => {
+                                  if (row.id === selectedCell.rowId) {
+                                    return { ...row, break: `${value} bpm` };
+                                  }
+                                  return row;
+                                }));
+                              }
+                            } else {
+                              // Reset to default if invalid
+                              setCardioValue('120');
                             }
-                          }
-                        }}
-                        placeholder="120"
-                        min="60"
-                        max="200"
-                        className="w-32 h-16 text-center text-3xl font-bold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                          }}
+                          placeholder="120"
+                          min="60"
+                          max="200"
+                          className="w-32 h-16 text-center text-3xl font-bold border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
 
-                      {/* Increase Button */}
-                      <button
-                        onClick={() => {
-                          const currentValue = parseInt(cardioValue) || 120;
-                          if (currentValue < 200) {
-                            const newValue = Math.min(200, currentValue + 1).toString();
-                            setCardioValue(newValue);
-                            if (selectedCell && selectedCell.field === 'break') {
-                              setRows(prevRows => prevRows.map(row => {
-                                if (row.id === selectedCell.rowId) {
-                                  return { ...row, break: `${newValue} bpm` };
-                                }
-                                return row;
-                              }));
+                        {/* Increase Button */}
+                        <button
+                          onClick={() => {
+                            const currentValue = parseInt(cardioValue) || 120;
+                            if (currentValue < 200) {
+                              const newValue = Math.min(200, currentValue + 1).toString();
+                              setCardioValue(newValue);
+                              if (selectedCell && selectedCell.field === 'break') {
+                                setRows(prevRows => prevRows.map(row => {
+                                  if (row.id === selectedCell.rowId) {
+                                    return { ...row, break: `${newValue} bpm` };
+                                  }
+                                  return row;
+                                }));
+                              }
                             }
-                          }
-                        }}
-                        className="w-12 h-12 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-100 flex items-center justify-center text-2xl font-bold"
-                      >
-                        +
-                      </button>
-                      <span className="text-lg text-gray-600">bpm</span>
+                          }}
+                          className="w-12 h-12 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-100 flex items-center justify-center text-2xl font-bold"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="text-lg text-gray-600 font-medium">bpm (60-200)</span>
                     </div>
                   )}
                 </div>
@@ -990,48 +992,47 @@ export default function FastPlannerOfMoveframes({
                 </p>
                 <div className="overflow-x-auto">
                   <div className="flex gap-3 pb-2">
-                {mockExercises
-                  .filter(exercise => {
-                    if (selectedMuscleGroup !== 'all' && !exercise.id.startsWith(selectedMuscleGroup)) return false;
-                    if (exerciseSearch && !exercise.name.toLowerCase().includes(exerciseSearch.toLowerCase())) return false;
-                    return true;
-                  })
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((exercise) => {
-                    const indicatorColor = getExerciseIndicatorColor(exercise.name);
-                    return (
-                      <div
-                        key={exercise.id}
-                        className="flex-shrink-0 w-40 bg-white border-2 border-gray-300 rounded-lg p-3 cursor-pointer hover:border-blue-500 hover:shadow-md transition-all relative"
-                        onClick={() => {
-                          if (selectedCell) {
-                            setRows(prevRows => prevRows.map(row => {
-                              if (row.id === selectedCell.rowId) {
-                                return { ...row, exercise: exercise.name };
+                    {mockExercises
+                      .filter(exercise => {
+                        if (selectedMuscleGroup !== 'all' && !exercise.id.startsWith(selectedMuscleGroup)) return false;
+                        if (exerciseSearch && !exercise.name.toLowerCase().includes(exerciseSearch.toLowerCase())) return false;
+                        return true;
+                      })
+                      .sort((a, b) => a.name.localeCompare(b.name))
+                      .map((exercise) => {
+                        const indicatorColor = getExerciseIndicatorColor(exercise.name);
+                        return (
+                          <div
+                            key={exercise.id}
+                            className="flex-shrink-0 w-40 bg-white border-2 border-gray-300 rounded-lg p-3 cursor-pointer hover:border-blue-500 hover:shadow-md transition-all relative"
+                            onClick={() => {
+                              if (selectedCell) {
+                                setRows(prevRows => prevRows.map(row => {
+                                  if (row.id === selectedCell.rowId) {
+                                    return { ...row, exercise: exercise.name };
+                                  }
+                                  return row;
+                                }));
                               }
-                              return row;
-                            }));
-                          }
-                        }}
-                      >
-                        {/* Color indicator circle */}
-                        {indicatorColor && (
-                          <div className={`absolute top-2 left-2 w-4 h-4 rounded-full border-2 border-white ${
-                            indicatorColor === 'green' ? 'bg-green-500' : 'bg-blue-500'
-                          }`} />
-                        )}
-                        
-                        <div className="aspect-square bg-gray-100 rounded mb-2 flex items-center justify-center">
-                          <div className="text-center">
-                            <p className="text-sm font-bold text-gray-600">{exercise.sector}</p>
+                            }}
+                          >
+                            {/* Color indicator circle */}
+                            {indicatorColor && (
+                              <div className={`absolute top-2 left-2 w-4 h-4 rounded-full border-2 border-white ${indicatorColor === 'green' ? 'bg-green-500' : 'bg-blue-500'
+                                }`} />
+                            )}
+
+                            <div className="aspect-square bg-gray-100 rounded mb-2 flex items-center justify-center">
+                              <div className="text-center">
+                                <p className="text-sm font-bold text-gray-600">{exercise.sector}</p>
+                              </div>
+                            </div>
+                            <p className="text-sm text-center text-gray-700 font-medium" title={exercise.name}>
+                              {exercise.name}
+                            </p>
                           </div>
-                        </div>
-                        <p className="text-sm text-center text-gray-700 font-medium" title={exercise.name}>
-                          {exercise.name}
-                        </p>
-                      </div>
-                    );
-                  })}
+                        );
+                      })}
                   </div>
                 </div>
               </div>
@@ -1039,7 +1040,7 @@ export default function FastPlannerOfMoveframes({
           </div>
         </div>
       )}
-      
+
       {/* Exercise Table */}
       <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
@@ -1063,11 +1064,10 @@ export default function FastPlannerOfMoveframes({
                   <td className="px-1 py-1 border-r">
                     <div
                       onClick={() => handleCellClick(row.id, 'exercise')}
-                      className={`cursor-pointer border-2 rounded overflow-hidden ${
-                        selectedCell?.rowId === row.id && selectedCell?.field === 'exercise'
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-gray-200'
-                      }`}
+                      className={`cursor-pointer border-2 rounded overflow-hidden ${selectedCell?.rowId === row.id && selectedCell?.field === 'exercise'
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : 'border-gray-200'
+                        }`}
                     >
                       {row.exercise ? (
                         <div className="flex items-center gap-3 p-2">
@@ -1102,11 +1102,10 @@ export default function FastPlannerOfMoveframes({
                       value={row.speed}
                       onChange={(e) => setRows(prevRows => prevRows.map(r => r.id === row.id ? { ...r, speed: e.target.value } : r))}
                       onClick={() => handleCellClick(row.id, 'speed')}
-                      className={`w-full px-2 py-1 text-sm border rounded ${
-                        selectedCell?.rowId === row.id && selectedCell?.field === 'speed'
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-gray-200'
-                      }`}
+                      className={`w-full px-2 py-1 text-sm border rounded ${selectedCell?.rowId === row.id && selectedCell?.field === 'speed'
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : 'border-gray-200'
+                        }`}
                     />
                   </td>
                   <td className="px-1 py-1 border-r bg-green-50">
@@ -1115,11 +1114,10 @@ export default function FastPlannerOfMoveframes({
                       value={row.series}
                       onChange={(e) => setRows(prevRows => prevRows.map(r => r.id === row.id ? { ...r, series: e.target.value } : r))}
                       onClick={() => handleCellClick(row.id, 'series')}
-                      className={`w-full px-2 py-1 text-sm border rounded bg-green-50 ${
-                        selectedCell?.rowId === row.id && selectedCell?.field === 'series'
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-green-200'
-                      }`}
+                      className={`w-full px-2 py-1 text-sm border rounded bg-green-50 ${selectedCell?.rowId === row.id && selectedCell?.field === 'series'
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : 'border-green-200'
+                        }`}
                     />
                   </td>
                   <td className="px-1 py-1 border-r bg-green-50">
@@ -1128,11 +1126,10 @@ export default function FastPlannerOfMoveframes({
                       value={row.ripTime}
                       onChange={(e) => setRows(prevRows => prevRows.map(r => r.id === row.id ? { ...r, ripTime: e.target.value } : r))}
                       onClick={() => handleCellClick(row.id, 'ripTime')}
-                      className={`w-full px-2 py-1 text-sm border rounded bg-green-50 ${
-                        selectedCell?.rowId === row.id && selectedCell?.field === 'ripTime'
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-green-200'
-                      }`}
+                      className={`w-full px-2 py-1 text-sm border rounded bg-green-50 ${selectedCell?.rowId === row.id && selectedCell?.field === 'ripTime'
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : 'border-green-200'
+                        }`}
                     />
                   </td>
                   <td className="px-1 py-1 border-r">
@@ -1141,11 +1138,10 @@ export default function FastPlannerOfMoveframes({
                       value={row.weight}
                       onChange={(e) => setRows(prevRows => prevRows.map(r => r.id === row.id ? { ...r, weight: e.target.value } : r))}
                       onClick={() => handleCellClick(row.id, 'weight')}
-                      className={`w-full px-2 py-1 text-sm border rounded ${
-                        selectedCell?.rowId === row.id && selectedCell?.field === 'weight'
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-gray-200'
-                      }`}
+                      className={`w-full px-2 py-1 text-sm border rounded ${selectedCell?.rowId === row.id && selectedCell?.field === 'weight'
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : 'border-gray-200'
+                        }`}
                     />
                   </td>
                   <td className="px-1 py-1 border-r bg-yellow-50">
@@ -1154,21 +1150,19 @@ export default function FastPlannerOfMoveframes({
                       value={row.break}
                       onChange={(e) => setRows(prevRows => prevRows.map(r => r.id === row.id ? { ...r, break: e.target.value } : r))}
                       onClick={() => handleCellClick(row.id, 'break')}
-                      className={`w-full px-2 py-1 text-sm border rounded bg-yellow-50 ${
-                        selectedCell?.rowId === row.id && selectedCell?.field === 'break'
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-yellow-200'
-                      }`}
+                      className={`w-full px-2 py-1 text-sm border rounded bg-yellow-50 ${selectedCell?.rowId === row.id && selectedCell?.field === 'break'
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : 'border-yellow-200'
+                        }`}
                     />
                   </td>
                   <td className="px-1 py-1 bg-yellow-50">
                     <div
                       onClick={() => handleCellClick(row.id, 'mode')}
-                      className={`cursor-pointer border-2 rounded p-2 bg-yellow-50 min-h-[40px] flex items-center justify-center ${
-                        selectedCell?.rowId === row.id && selectedCell?.field === 'mode'
-                          ? 'border-blue-500 ring-2 ring-blue-200'
-                          : 'border-yellow-200'
-                      }`}
+                      className={`cursor-pointer border-2 rounded p-2 bg-yellow-50 min-h-[40px] flex items-center justify-center ${selectedCell?.rowId === row.id && selectedCell?.field === 'mode'
+                        ? 'border-blue-500 ring-2 ring-blue-200'
+                        : 'border-yellow-200'
+                        }`}
                     >
                       {row.mode ? (
                         <div className="flex items-center gap-2">
@@ -1200,7 +1194,7 @@ export default function FastPlannerOfMoveframes({
             </tbody>
           </table>
         </div>
-        
+
         {/* Scroll to view all repetitions note */}
         <div className="px-4 py-2 bg-blue-50 border-t border-blue-200">
           <p className="text-xs text-blue-700">
@@ -1208,7 +1202,7 @@ export default function FastPlannerOfMoveframes({
           </p>
         </div>
       </div>
-      
+
       {/* Action Buttons */}
       <div className="flex gap-2 flex-wrap">
         <button
@@ -1264,7 +1258,7 @@ export default function FastPlannerOfMoveframes({
           placeholder="Add descriptions or instructions here..."
         />
       </div>
-      
+
       {/* Bottom Action Buttons */}
       <div className="flex justify-between items-center pt-4 border-t">
         <button
@@ -1290,8 +1284,8 @@ export default function FastPlannerOfMoveframes({
               <div>
                 <h3 className="text-lg font-bold text-gray-900">Select Exercise</h3>
                 <p className="text-sm text-gray-600">
-                  {selectedMuscleGroup === 'all' 
-                    ? 'Showing all exercises' 
+                  {selectedMuscleGroup === 'all'
+                    ? 'Showing all exercises'
                     : `Showing ${MUSCLE_GROUPS.find(g => g.id === selectedMuscleGroup)?.label || 'All'} exercises`}
                 </p>
               </div>
@@ -1347,11 +1341,10 @@ export default function FastPlannerOfMoveframes({
                       >
                         {/* Color indicator circle */}
                         {indicatorColor && (
-                          <div className={`absolute top-2 left-2 w-4 h-4 rounded-full border-2 border-white ${
-                            indicatorColor === 'green' ? 'bg-green-500' : 'bg-blue-500'
-                          }`} />
+                          <div className={`absolute top-2 left-2 w-4 h-4 rounded-full border-2 border-white ${indicatorColor === 'green' ? 'bg-green-500' : 'bg-blue-500'
+                            }`} />
                         )}
-                        
+
                         <div className="aspect-square bg-gray-100 rounded mb-3 flex items-center justify-center">
                           <div className="text-center">
                             <p className="text-sm font-bold text-gray-600">{exercise.sector}</p>
