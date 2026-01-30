@@ -4220,9 +4220,18 @@ export default function AddEditMoveframeModal({
                 
                 // Build complete moveframe data with circuit description and movelaps
                 const moveframeData = buildMoveframeData();
+                
+                // 2026-01-30 - Serialize circuit data into notes for future editing
+                const serializedCircuitData = JSON.stringify({
+                  config: circuitData.settings,
+                  circuits: circuitData.circuits
+                });
+                const notesWithCircuitData = `[CIRCUIT_DATA]${serializedCircuitData}[/CIRCUIT_DATA]`;
+                
                 const finalData = {
                   ...moveframeData,
                   description: circuitData.description || '', // Use circuit description
+                  notes: notesWithCircuitData, // Store circuit data in notes
                   circuitConfig: circuitData.settings, // Circuit settings
                   circuits: circuitData.circuits, // Active circuits
                   rows: circuitData.rows, // Circuit rows/stations

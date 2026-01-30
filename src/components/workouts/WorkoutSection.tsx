@@ -2492,11 +2492,15 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
       )}
       
        {modals.showAddMoveframeModal && activeWorkout && activeDay && (
-         <AddEditMoveframeModal
-           isOpen={modals.showAddMoveframeModal}
-            onSetInsertIndex={(index) => setMoveframeInsertIndex(index)}
-            editingFromMovelap={editingFromMovelap}
-            onClose={() => {
+        <AddEditMoveframeModal
+          isOpen={modals.showAddMoveframeModal}
+          mode={moveframeModalMode}
+          workout={activeWorkout}
+          day={activeDay}
+          existingMoveframe={editingMoveframe}
+          onSetInsertIndex={(index) => setMoveframeInsertIndex(index)}
+          editingFromMovelap={editingFromMovelap}
+          onClose={() => {
               modalActions.setShowAddMoveframeModal(false);
             setActiveWorkout(null);
             setActiveDay(null);
@@ -2593,6 +2597,36 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                    
                    console.log(`✅ Created ${newMovelaps.length} new movelaps with updated data`);
                    console.log(`📊 Rip\\Sets column will now show: ${newMovelaps.length}`);
+                 } else if (moveframeData.type === 'BATTERY' && moveframeData.movelaps) {
+                   // 2026-01-30 - Regenerate movelaps for BATTERY/Circuit type
+                   console.log(`🔄 Editing BATTERY moveframe - regenerating ${moveframeData.movelaps.length} movelaps...`);
+                   
+                   const token = localStorage.getItem('token');
+                   
+                   // Delete ALL existing movelaps
+                   const deletePromises = (editingMoveframe.movelaps || []).map((movelap: any) =>
+                     fetch(`/api/workouts/movelaps/${movelap.id}`, {
+                       method: 'DELETE',
+                       headers: { 'Authorization': `Bearer ${token}` }
+                     })
+                   );
+                   await Promise.all(deletePromises);
+                   
+                   // Create new movelaps from the provided list
+                   for (const movelap of moveframeData.movelaps) {
+                     await fetch('/api/workouts/movelaps', {
+                       method: 'POST',
+                       headers: {
+                         'Content-Type': 'application/json',
+                         'Authorization': `Bearer ${token}`
+                       },
+                       body: JSON.stringify({
+                         ...movelap,
+                         moveframeId: editingMoveframe.id
+                       })
+                     });
+                   }
+                   console.log(`✅ Replaced movelaps for BATTERY moveframe`);
                  } else if (moveframeData.manualMode && editingMoveframe.movelaps && editingMoveframe.movelaps.length > 0) {
                    // For manual mode moveframes, update the existing movelap's notes instead of regenerating
                    const token = localStorage.getItem('token');
