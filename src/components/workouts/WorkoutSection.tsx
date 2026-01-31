@@ -2146,6 +2146,17 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                     setActiveMoveframe(moveframe);
                     setMoveframeModalMode('edit');
                     setEditingFromMovelap(true); // Set flag to indicate editing from movelap
+                    
+                    // Extract target station info if available
+                    // We'll pass this via a new state or just attach it to the moveframe object temporarily?
+                    // Better to use a dedicated state in the modal actions or similar, but let's see what we have.
+                    // For now, let's just trigger the modal. We might need to enhance the modal props.
+                    // We'll add a 'targetStation' property to the modal state/store or context if possible.
+                    // Or we can pass it as a separate prop if we control the modal rendering.
+                    
+                    // Actually, 'editingMovelap' state might be useful.
+                    setEditingMovelap(movelap); 
+                    
                     modalActions.setShowAddMoveframeModal(true);
                   } else {
                     // For regular movelaps, open the movelap edit modal
@@ -2500,6 +2511,8 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
           existingMoveframe={editingMoveframe}
           onSetInsertIndex={(index) => setMoveframeInsertIndex(index)}
           editingFromMovelap={editingFromMovelap}
+          targetMovelap={editingMovelap}
+          hideUI={editingFromMovelap && !!editingMovelap}
           onClose={() => {
               modalActions.setShowAddMoveframeModal(false);
             setActiveWorkout(null);
@@ -2510,6 +2523,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
             setMoveframeModalMode('add');
             setMoveframeInsertIndex(null); // Reset insert index
             setEditingFromMovelap(false); // Reset the flag
+            setEditingMovelap(undefined); // Reset the target movelap
             }}
              onSave={async (moveframeData) => {
              console.log(`📤 ${moveframeModalMode === 'edit' ? 'Updating' : 'Creating'} moveframe with data:`, moveframeData);
@@ -2853,11 +2867,7 @@ export default function WorkoutSection({ onClose }: WorkoutSectionProps) {
                throw error;
                }
            }}
-           mode={moveframeModalMode}
-           workout={activeWorkout}
-           day={activeDay}
-           existingMoveframe={moveframeModalMode === 'edit' ? editingMoveframe : undefined}
-         />
+        />
        )}
        
       {modals.showImportModal && (activeSection === 'A' || activeSection === 'B') && (

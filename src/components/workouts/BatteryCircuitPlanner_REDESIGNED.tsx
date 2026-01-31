@@ -31,6 +31,8 @@ interface BatteryCircuitPlannerProps {
   onCancel: () => void;
   existingMoveframe?: any; // For edit mode
   startInSecondView?: boolean; // Start directly in circuit grid view
+  targetMovelap?: any; // The specific movelap being edited
+  hideUI?: boolean; // Hide UI elements (for single movelap editing)
 }
 
 // Helper function to extract circuit data from moveframe notes
@@ -58,7 +60,9 @@ export default function BatteryCircuitPlanner({
   onCreateCircuit,
   onCancel,
   existingMoveframe,
-  startInSecondView
+  startInSecondView,
+  targetMovelap,
+  hideUI
 }: BatteryCircuitPlannerProps) {
   // Extract existing circuit data if in edit mode
   const existingCircuitData = existingMoveframe ? extractCircuitData(existingMoveframe.notes) : null;
@@ -223,7 +227,9 @@ export default function BatteryCircuitPlanner({
           executionMode: executionOrder,
           startInTablePhase: true,
           existingCircuits: existingCircuits, // Pass existing circuit data for edit mode
-          editingFromMovelap: startInSecondView // Pass flag for renaming button
+          editingFromMovelap: startInSecondView, // Pass flag for renaming button
+          targetMovelap: targetMovelap, // Pass target movelap for auto-opening exercise modal
+          hideUI: hideUI // Pass hideUI flag
         }}
         onSave={(data: any) => {
           // Pass the circuit data to the parent component
@@ -245,7 +251,13 @@ export default function BatteryCircuitPlanner({
           });
           setShowOldCircuitPlanner(false);
         }}
-        onCancel={() => setShowOldCircuitPlanner(false)}
+        onCancel={() => {
+          if (hideUI) {
+            onCancel();
+          } else {
+            setShowOldCircuitPlanner(false);
+          }
+        }}
       />
     );
   }
